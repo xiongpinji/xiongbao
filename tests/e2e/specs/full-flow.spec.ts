@@ -41,12 +41,12 @@ test.describe("X-Agent 核心流程", () => {
   });
 
   test("对话运行 agent", async ({ page }) => {
+    test.setTimeout(120_000);  // 真实本地模型推理较慢
     await page.goto("/chat");
     await page.fill("textarea", "你好");
     await page.click("button:has-text('运行')");
-    // 等待回答区域出现（真实模型可能需较久）
     await expect(page.locator("text=最终回答").or(page.locator("text=流式输出")).or(page.locator("text=事件序列"))).toBeVisible({
-      timeout: 60_000,
+      timeout: 100_000,
     });
   });
 
@@ -58,14 +58,16 @@ test.describe("X-Agent 核心流程", () => {
   });
 
   test("工作流创建执行", async ({ page }) => {
+    test.setTimeout(120_000);  // 工作流步骤调用真实模型
     await page.goto("/workflows");
     await page.click("button:has-text('创建并执行')");
     await expect(page.locator("text=completed").or(page.locator("text=succeeded")).or(page.locator("text=状态"))).toBeVisible({
-      timeout: 60_000,
+      timeout: 100_000,
     });
   });
 
   test("短剧工厂生成草稿 + 节点画布", async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto("/creative");
     await page.fill('input[placeholder*="brief"]', "霸总逆袭短剧");
     await page.click("button:has-text('生成')");

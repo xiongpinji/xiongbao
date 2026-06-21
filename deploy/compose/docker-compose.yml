@@ -65,9 +65,9 @@ services:
       - OPENAI_API_KEY=${XAGENT_LLM__OPENAI_API_KEY:-}
       - DEEPSEEK_API_KEY=${XAGENT_LLM__DEEPSEEK_API_KEY:-}
 
-  # Langfuse：运行时追踪 + prompt 管理 + evals（OTel 原生）
+  # Langfuse v2：运行时追踪 + prompt 管理（v2 只需 Postgres；v3 需 ClickHouse 太重）
   langfuse:
-    image: langfuse/langfuse:latest
+    image: langfuse/langfuse:2
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,10 +75,17 @@ services:
       - "3001:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/langfuse
-      - NEXTAUTH_SECRET=change-me
-      - SALT=change-me
+      - NEXTAUTH_SECRET=change-me-to-random-secret
+      - SALT=change-me-to-random-salt
       - NEXTAUTH_URL=http://localhost:3001
       - TELEMETRY_ENABLED=false
+      - LANGFUSE_INIT_ORG_ID=xagent
+      - LANGFUSE_INIT_PROJECT_ID=xagent
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-xagent-local
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-xagent-local
+      - LANGFUSE_INIT_USER_EMAIL=admin@xagent.local
+      - LANGFUSE_INIT_USER_PASSWORD=admin12345
+      - LANGFUSE_INIT_USER_NAME=admin
 
   # X-Agent 后端 API
   api:
@@ -101,8 +108,8 @@ services:
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
       # LLM：默认走本地 Ollama（host.docker.internal 访问宿主机）；有 proxy key 时走 LiteLLM
       - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen2.5:1.5b}
-      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_HOST=http://langfuse:3000
@@ -128,8 +135,8 @@ services:
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
       - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen2.5:1.5b}
-      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
