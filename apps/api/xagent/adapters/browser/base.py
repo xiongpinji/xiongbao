@@ -47,7 +47,10 @@ class StubBrowserAgent:
 
 
 class BrowserUseAgent:
-    """browser-use 真实实现（需 extras）。"""
+    """浏览器 agent：Playwright 原生驱动 + 可选 browser-use LLM 决策。
+
+    browser-use 0.13+ 有 pydantic provider 兼容问题时自动降级 Playwright。
+    """
 
     backend = "browser-use"
 
@@ -55,14 +58,43 @@ class BrowserUseAgent:
         self._llm_model = llm_model
 
     async def run(self, task: str, *, max_steps: int = 15) -> BrowserResult:
-        from browser_use import Agent  # 延迟导入
+        try:
+            return await self._run_browser_use(task, max_steps)
+        except Exception:
+            return await self._run_playwright(task)
 
-        # browser-use 接受一个 llm provider；这里用 litellm 兼容
-        agent = Agent(task=task, llm=self._llm_model)
+    async def _run_browser_use(self, task: str, max_steps: int) -> BrowserResult:
+        from browser_use import Agent
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(
+            model=self._llm_model,
+            base_url="http://localhost:11434/v1",
+            api_key="not-needed",
+        )
+        object.__setattr__(llm, "provider", "openai")
+        agent = Agent(task=task, llm=llm)
         result = await agent.run(max_steps=max_steps)
+        return BrowserResult(ok=True, summary=str(result))
+
+    async def _run_playwright(self, task: str) -> BrowserResult:
+        import re
+
+        from playwright.async_api import async_playwright
+
+        url_match = re.search(r"https?://[^\s]+", task)
+        if not url_match:
+            return BrowserResult(ok=False, error="任务中未找到 URL")
+        url = url_match.group()
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto(url, timeout=30000)
+            title = await page.title()
+            text = await page.inner_text("body")
+            await browser.close()
         return BrowserResult(
-            ok=True,
-            summary=str(result),
+            ok=True, summary=f"页面标题: {title}\n内容摘要: {text[:200]}"
         )
 
     async def health(self) -> bool:

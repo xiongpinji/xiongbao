@@ -21,6 +21,7 @@ export default function EditorPage() {
   const [timelines, setTimelines] = useState<EditorTimeline[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [renderUrl, setRenderUrl] = useState<string | null>(null);
   // 添加片段表单
   const [clipType, setClipType] = useState("video");
   const [clipUrl, setClipUrl] = useState("");
@@ -78,7 +79,12 @@ export default function EditorPage() {
     setMsg("渲染中...");
     try {
       const result = await renderTimeline(timeline.id);
-      setMsg(result.ok ? `渲染完成：${result.output_path || "成功"}` : `渲染：${result.error}`);
+      if (result.ok) {
+        setRenderUrl(result.output_url || result.output_path || null);
+        setMsg("渲染完成");
+      } else {
+        setMsg(`渲染：${result.error}`);
+      }
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : String(e));
     } finally {
@@ -119,6 +125,21 @@ export default function EditorPage() {
       </div>
 
       {msg && <div className="text-sm text-slate-600 mb-3">{msg}</div>}
+
+      {/* 渲染结果视频预览 */}
+      {renderUrl && (
+        <div className="mb-4 bg-white border rounded-md p-3">
+          <div className="text-xs text-slate-500 mb-2">渲染结果预览</div>
+          <video
+            src={renderUrl.startsWith("local://") ? undefined : renderUrl}
+            controls
+            className="max-h-64 rounded"
+            style={{ width: "100%" }}
+          >
+            您的浏览器不支持视频播放。渲染文件：{renderUrl}
+          </video>
+        </div>
+      )}
 
       {timelines.length > 0 && (
         <div className="mb-3 flex gap-2 flex-wrap">

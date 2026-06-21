@@ -91,12 +91,39 @@ class VideoEditor:
                     tc = tc.with_start(clip.timeline_start)
                     text_clips.append(tc)
 
-            # 拼接视频片段
+            # 拼接视频片段（带转场效果）
             if video_clips:
+                # 转场映射：clip_id -> transition
+                trans_map = {t.clip_id: t for t in timeline.transitions}
+                # 给有转场的片段加 crossfadein 效果
+                processed = []
+                for i, vc in enumerate(video_clips):
+                    # 查找该片段对应的转场（通过 timeline clips 顺序匹配）
+                    video_timeline_clips = [
+                        c for c in timeline.clips
+                        if c.track_type == TrackType.video and c.source_url
+                    ]
+                    if i < len(video_timeline_clips):
+                        clip_id = video_timeline_clips[i].id
+                        tr = trans_map.get(clip_id)
+                        if tr and i > 0:
+                            dur = min(tr.duration, vc.duration / 2)
+                            from moviepy import vfx
+
+                            if tr.type.value == "fade":
+                                vc = vc.with_effects([vfx.CrossFadeIn(dur)])
+                            elif tr.type.value == "dissolve":
+                                vc = vc.with_effects([vfx.CrossFadeIn(dur)])
+                            elif tr.type.value == "slide":
+                                vc = vc.with_effects([vfx.SlideIn(dur, "left")])
+                            elif tr.type.value == "zoom":
+                                vc = vc.with_effects([vfx.CrossFadeIn(dur)])
+                    processed.append(vc)
+
                 base = (
-                    concatenate_videoclips(video_clips)
-                    if len(video_clips) > 1
-                    else video_clips[0]
+                    concatenate_videoclips(processed, method="compose")
+                    if len(processed) > 1
+                    else processed[0]
                 )
             else:
                 # 纯文本/无视频 -> 创建黑色底
