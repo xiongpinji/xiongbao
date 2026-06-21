@@ -29,7 +29,7 @@ dependencies = [
     # ---- LLM 网关（开源底座）----
     "litellm>=1.50",
     # ---- 可观测 ----
-    "langfuse>=2.50",
+    "langfuse>=2.50,<3",      # pin v2：与单机 Langfuse v2 服务端匹配(v3 需 ClickHouse)
     "opentelemetry-api>=1.27",
     "opentelemetry-sdk>=1.27",
     "prometheus-client>=0.21",
