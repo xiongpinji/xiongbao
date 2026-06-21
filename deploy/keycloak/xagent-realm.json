@@ -1,0 +1,47 @@
+{
+  "realm": "xagent",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "X-Agent 管理员" },
+      { "name": "member", "description": "普通成员" },
+      { "name": "viewer", "description": "只读用户" }
+    ]
+  },
+  "groups": [
+    { "name": "xagent-users" }
+  ],
+  "clients": [
+    {
+      "clientId": "xagent-api",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "set-in-env-XAGENT_KEYCLOAK_CLIENT_SECRET",
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:8000/*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:8000"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": ["admin"],
+      "credentials": [
+        { "type": "password", "value": "change-me", "temporary": false }
+      ]
+    }
+  ]
+}

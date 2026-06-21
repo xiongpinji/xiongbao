@@ -1,0 +1,50 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ---- Node / Web ----
+node_modules/
+apps/web/dist/
+apps/desktop/dist/
+*.local
+
+# ---- Tauri / Rust ----
+target/
+
+# ---- Env & secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Editor / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Windows reserved names ----
+nul
+NUL
+
+# ---- Data / runtime ----
+*.sqlite
+*.sqlite-*
+*.db
+.xagent_runtime/
+data/
+logs/

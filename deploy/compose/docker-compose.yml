@@ -1,0 +1,151 @@
+# X-Agent 单机 full 模式依赖编排。
+#
+# 用法：
+#   cp .env.example .env   # 按需填 LLM key
+#   docker compose up -d    # 起依赖服务
+#   # 后端可在宿主机 `xagent serve`，或解开下方 api 服务用容器跑
+#
+# Phase 0 只起「依赖服务」；api/web 容器化在 Phase 5 完善。
+
+name: xagent
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-xagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xagent}
+      POSTGRES_DB: ${POSTGRES_DB:-xagent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # HTTP
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # LiteLLM Proxy：统一 LLM 网关。模型/key 配在 litellm-config.yaml
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml:ro
+    environment:
+      - OPENAI_API_KEY=${XAGENT_LLM__OPENAI_API_KEY:-}
+      - DEEPSEEK_API_KEY=${XAGENT_LLM__DEEPSEEK_API_KEY:-}
+
+  # Langfuse：运行时追踪 + prompt 管理 + evals（OTel 原生）
+  langfuse:
+    image: langfuse/langfuse:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/langfuse
+      - NEXTAUTH_SECRET=change-me
+      - SALT=change-me
+      - NEXTAUTH_URL=http://localhost:3001
+      - TELEMETRY_ENABLED=false
+
+  # X-Agent 后端 API
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - XAGENT_MODE=full
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent
+      - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
+      - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+      # LLM：默认走本地 Ollama（host.docker.internal 访问宿主机）；有 proxy key 时走 LiteLLM
+      - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
+      - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
+      - XAGENT_OBSERVABILITY__LANGFUSE_HOST=http://langfuse:3000
+      - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
+      - XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY:-}
+      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
+      - XAGENT_CORS_ORIGINS=["http://localhost:3000","http://localhost"]
+    command: >
+      sh -c "python -m alembic upgrade head &&
+             uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
+
+  # X-Agent Celery worker（后台长任务）
+  worker:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+      - redis
+    environment:
+      - XAGENT_MODE=full
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent
+      - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
+      - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+      - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen2.5:1.5b}
+      - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
+      - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
+      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
+    command: ["celery", "-A", "xagent.worker.celery_app", "worker", "--loglevel=info"]
+
+  # X-Agent 前端（nginx 托管 + 反代 api）
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:
+  redisdata:
+  qdrantdata:

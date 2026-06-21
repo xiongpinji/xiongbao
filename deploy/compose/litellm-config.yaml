@@ -1,0 +1,33 @@
+# LiteLLM Proxy 配置：统一 LLM 网关。
+# X-Agent 后端只认 proxy 端点 + 虚拟 key，provider key 在此集中管理。
+# 文档：https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/text-embedding-3-small
+      api_key: os.environ/OPENAI_API_KEY
+
+litellm_settings:
+  # 全局降级顺序（成本/可用性）
+  num_retries: 2
+  request_timeout: 60
+  drop_params: true
+
+general_settings:
+  master_key: sk-xagent-local   # 与 XAGENT_LLM__PROXY_API_KEY 对应

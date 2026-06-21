@@ -1,0 +1,86 @@
+{
+  "title": "X-Agent 监控仪表板",
+  "schemaVersion": 38,
+  "timezone": "browser",
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP 请求速率 (req/s)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(xagent_http_requests_total[1m])",
+          "legendFormat": "{{method}} {{path}} {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP 状态码分布",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (status) (xagent_http_requests_total)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Agent 运行速率 (runs/min)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(xagent_agent_runs_total[1m]) * 60",
+          "legendFormat": "{{role}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Agent 运行耗时 P95 (秒)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(xagent_agent_run_seconds_bucket[5m]))",
+          "legendFormat": "{{role}} p95"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "429 限流计数",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "xagent_http_requests_total{status=\"429\"}",
+          "legendFormat": "429"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "402 配额超限计数",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "xagent_http_requests_total{status=\"402\"}",
+          "legendFormat": "402"
+        }
+      ]
+    }
+  ]
+}

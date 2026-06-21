@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check xagent tests
+
+      - name: Type check (mypy)
+        run: mypy xagent || true   # Phase 0 容忍，后续收紧
+
+      - name: Test (pytest)
+        run: pytest -q
+
+  license-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install runtime deps
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: License gate (拦截 AGPL/GPL/ELv2/SSPL)
+        run: python scripts/license_check.py
