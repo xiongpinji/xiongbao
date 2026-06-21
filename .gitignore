@@ -48,3 +48,7 @@ NUL
 .xagent_runtime/
 data/
 logs/
+
+# E2E 测试产物
+tests/e2e/test-results/
+tests/e2e/playwright-report/
