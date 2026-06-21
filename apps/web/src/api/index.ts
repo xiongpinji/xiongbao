@@ -131,6 +131,7 @@ export interface ProductionResult {
   quality_passed: boolean;
   quality_gates: { name: string; passed: boolean; detail: string }[];
   shots: ShotProduct[];
+  timeline_id?: string;
 }
 
 export const produce = (body: {

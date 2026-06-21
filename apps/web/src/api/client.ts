@@ -36,3 +36,18 @@ export function getToken(): string | null {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
+
+export async function login(username: string, password: string): Promise<{
+  access_token: string;
+  user_id: string;
+  tenant_id: string;
+  roles: string[];
+}> {
+  const resp = await api.post("/auth/login", { username, password });
+  setToken(resp.data.access_token);
+  return resp.data;
+}
+
+export function isLoggedIn(): boolean {
+  return !!getToken();
+}

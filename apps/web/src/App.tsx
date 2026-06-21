@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { NavLink, Route, Routes, Navigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import {
   Bot,
   Workflow,
@@ -18,6 +17,7 @@ import CreativeStudioPage from "./pages/CreativeStudioPage";
 import EditorPage from "./pages/EditorPage";
 import OpenSourcePage from "./pages/OpenSourcePage";
 import MemoryPage from "./pages/MemoryPage";
+import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 
 const nav = [
@@ -32,10 +32,18 @@ const nav = [
 ];
 
 export default function App() {
-  // lite 模式后端允许匿名；full 模式需登录。此处仅做 token 存在性提示。
-  useEffect(() => {
-    if (!getToken()) console.info("[xagent] 未检测到 token，lite 模式可匿名使用");
-  }, []);
+  // lite 模式后端允许匿名；full 模式需登录。
+  const loggedIn = !!getToken();
+
+  // 未登录时只显示登录页（lite 模式后端允许匿名，用户也可跳过）
+  if (!loggedIn) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="flex h-screen">

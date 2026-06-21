@@ -127,6 +127,11 @@ export default function CreativeStudioPage() {
             </span>
             <span className="text-xs text-slate-500">{production.shots.length} 镜头</span>
             {production.quality_passed && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">质量门通过</span>}
+            {production.timeline_id && (
+              <a href="/editor" className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-200">
+                → 打开剪辑工作台
+              </a>
+            )}
           </div>
           <div className="space-y-3">
             {production.shots.map((shot, i) => (
