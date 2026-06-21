@@ -148,3 +148,106 @@ class JimengProvider(GenericVideoProvider):
                       [GenerationMode.text_to_video, GenerationMode.image_to_video],
                       self.name, "字节即梦视频生成", max_duration_seconds=12),
         ]
+
+
+@dataclass
+class VolcanoArkVideoProvider:
+    """火山方舟 Seedance 视频生成（已验证真实可用）。
+
+    API: POST /api/v3/contents/generations/tasks（提交）
+         GET  /api/v3/contents/generations/tasks/{task_id}（轮询）
+    返回 content.video_url。
+    """
+
+    name: str = "volcano_ark"
+    api_key: str = ""
+    base_url: str = "https://ark.cn-beijing.volces.com"
+    default_model: str = "doubao-seedance-1-5-pro-251215"
+    supported_kinds: set = field(default_factory=lambda: {MediaKind.video})
+    supported_modes: set = field(
+        default_factory=lambda: {GenerationMode.text_to_video, GenerationMode.image_to_video}
+    )
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+    async def submit(self, req: GenerationRequest) -> GenerationTask:
+        import httpx
+
+        content = [{"type": "text", "text": req.prompt}]
+        # 图生视频：加图片输入
+        if req.mode == GenerationMode.image_to_video and req.reference_images:
+            content.append({"type": "image_url", "image_url": {"url": req.reference_images[0]}})
+
+        payload = {
+            "model": req.model_id or self.default_model,
+            "content": content,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    f"{self.base_url}/api/v3/contents/generations/tasks",
+                    json=payload, headers=self._headers(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            task_id = data.get("id", "")
+            return GenerationTask(
+                task_id=task_id, provider=self.name,
+                status="queued", raw=data,
+            )
+        except Exception as exc:
+            return GenerationTask(
+                task_id="volcano-err", provider=self.name,
+                status="failed", error=str(exc),
+            )
+
+    async def poll(self, task_id: str) -> GenerationTask:
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(
+                    f"{self.base_url}/api/v3/contents/generations/tasks/{task_id}",
+                    headers=self._headers(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            status = data.get("status", "running")
+            # 火山方舟状态: queued/running/succeeded/failed
+            outputs = []
+            content = data.get("content") or {}
+            if content.get("video_url"):
+                outputs.append(content["video_url"])
+            elif content.get("image_url"):
+                outputs.append(content["image_url"])
+            return GenerationTask(
+                task_id=task_id, provider=self.name, status=status,
+                outputs=outputs, error=data.get("error"), raw=data,
+            )
+        except Exception as exc:
+            return GenerationTask(
+                task_id=task_id, provider=self.name,
+                status="failed", error=str(exc),
+            )
+
+    def list_models(self, kind: MediaKind | None = None) -> list[ModelCard]:
+        if kind not in (None, MediaKind.video):
+            return []
+        return [
+            ModelCard(
+                "doubao-seedance-1-5-pro-251215", "豆包 Seedance 1.5 Pro",
+                MediaKind.video,
+                [GenerationMode.text_to_video, GenerationMode.image_to_video],
+                self.name, "火山方舟视频生成（已验证）", max_duration_seconds=10,
+            ),
+            ModelCard(
+                "doubao-seedance-2-0-260128", "豆包 Seedance 2.0",
+                MediaKind.video,
+                [GenerationMode.text_to_video, GenerationMode.image_to_video],
+                self.name, "火山方舟最新视频生成", max_duration_seconds=10,
+            ),
+        ]

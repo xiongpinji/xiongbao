@@ -38,7 +38,7 @@ class OpenAIImageProvider:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         size = req.resolution or "1024x1024"
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=300) as client:
                 if req.mode == GenerationMode.image_to_image and req.reference_images:
                     # 图生图：images/edits（需上传参考图，这里传 URL/base64 由调用方准备）
                     resp = await client.post(

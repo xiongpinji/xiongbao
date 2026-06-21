@@ -91,6 +91,11 @@ class MediaSettings(BaseModel):
     openai_image_base_url: str = "https://api.openai.com/v1"
     openai_image_model: str = "gpt-image-2"
 
+    # 视频（火山方舟 Seedance）
+    volcano_ark_api_key: str = ""
+    volcano_ark_base_url: str = "https://ark.cn-beijing.volces.com"
+    volcano_ark_model: str = "doubao-seedance-1-5-pro-251215"
+
     # 视频（可灵）
     kling_api_key: str = ""
     kling_submit_url: str = ""

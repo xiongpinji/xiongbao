@@ -89,10 +89,17 @@ def _build_registry() -> MediaProviderRegistry:
         GenericVideoProvider,
         JimengProvider,
         KlingProvider,
+        VolcanoArkVideoProvider,
     )
 
     vp = cfg.default_video_provider
-    if vp == "kling" and cfg.kling_api_key:
+    if vp == "volcano_ark" and cfg.volcano_ark_api_key:
+        registry.register(MediaKind.video, VolcanoArkVideoProvider(
+            api_key=cfg.volcano_ark_api_key,
+            base_url=cfg.volcano_ark_base_url,
+            default_model=cfg.volcano_ark_model,
+        ))
+    elif vp == "kling" and cfg.kling_api_key:
         registry.register(MediaKind.video, KlingProvider(
             api_key=cfg.kling_api_key, submit_url=cfg.kling_submit_url,
             poll_url=cfg.kling_poll_url))
