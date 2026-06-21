@@ -1,13 +1,58 @@
 """编排：agent 状态机循环（observe → reason → act → reflect）。
 
-Phase 1 提供**内置**循环（离线可跑、可测试）：通过提示工程让 LLM 在需要时
-输出 JSON 动作 {"tool","args"}，编排执行工具并回灌结果，直至产出 final。
-
-LangGraph 为目标后端：当安装 langgraph 时可切换为图执行（保留同样的 step 事件
-语义），接口与内置一致，调用方无感。本模块对外只暴露 ``run_agent``。
+LangGraph 已安装时走 LangGraph 状态图（生产推荐）；
+未安装时回退内置循环（离线/lite/CI 可用）。
+对外只暴露 ``run_agent``，调用方无感。
 """
 
-from xagent.core.orchestration.loop import run_agent
+from __future__ import annotations
+
+from typing import Any
+
 from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent
+from xagent.enterprise.auth.principal import Principal
+
+
+def _has_langgraph() -> bool:
+    try:
+        from langgraph.graph import StateGraph  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+async def run_agent(
+    goal: str,
+    *,
+    principal: Principal,
+    role_name: str | None = None,
+    capabilities: set[str] | None = None,
+    model: str | None = None,
+    on_event: Any = None,
+) -> AgentRun:
+    """运行一次 agent 任务。LangGraph 可用走图执行，否则内置循环。"""
+    if _has_langgraph():
+        from xagent.core.orchestration.langgraph_loop import run_agent_langgraph
+
+        return await run_agent_langgraph(
+            goal,
+            principal=principal,
+            role_name=role_name,
+            capabilities=capabilities,
+            model=model,
+            on_event=on_event,
+        )
+    from xagent.core.orchestration.loop import run_agent as run_agent_builtin
+
+    return await run_agent_builtin(
+        goal,
+        principal=principal,
+        role_name=role_name,
+        capabilities=capabilities,
+        model=model,
+        on_event=on_event,
+    )
+
 
 __all__ = ["AgentRun", "AgentState", "StepEvent", "run_agent"]
