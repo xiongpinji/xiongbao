@@ -12,6 +12,7 @@ from xagent.domains.creative_studio.media import (
     MediaKind,
     get_media_registry,
 )
+from xagent.domains.creative_studio.pipeline import produce_short_drama
 from xagent.domains.creative_studio.producer import generate_storyboard
 from xagent.domains.creative_studio.quality import run_gates
 from xagent.domains.creative_studio.storyboard import Storyboard
@@ -23,6 +24,8 @@ router = APIRouter(prefix="/creative-studio", tags=["creative-studio"])
 
 # 进程内草稿存储（Phase 5 落库）；按租户隔离
 _drafts: dict[str, dict] = {}
+# 进程内成片产物存储；按租户隔离
+_productions: dict[str, dict] = {}
 
 
 class BriefIn(BaseModel):
@@ -195,3 +198,60 @@ async def media_generate(
         "outputs": task.outputs,
         "error": task.error,
     }
+
+
+class ProduceIn(BaseModel):
+    brief: str = Field(..., min_length=1)
+    genre: str = "逆袭"
+    platform: str = "抖音"
+    target_duration_seconds: float = 60.0
+    with_video: bool = True
+
+
+@router.post("/produce", summary="短剧全链路产出(故事板→关键帧→视频→质量门)")
+async def produce(
+    body: ProduceIn,
+    principal: Principal = Depends(require_permission("creative", "execute")),
+) -> dict:
+    result = await produce_short_drama(
+        body.brief,
+        genre=body.genre,
+        platform=body.platform,
+        target_duration_seconds=body.target_duration_seconds,
+        with_video=body.with_video,
+    )
+    doc = result.to_dict()
+    doc["tenant_id"] = principal.tenant_id
+    doc["owner"] = principal.user_id
+    _productions[result.storyboard_id] = doc
+    get_audit_log().record(
+        tenant_id=principal.tenant_id,
+        actor=principal.user_id,
+        action="creative.produce",
+        resource="creative",
+        detail={
+            "storyboard_id": result.storyboard_id,
+            "shots": len(result.shots),
+            "status": result.status,
+        },
+    )
+    return doc
+
+
+@router.get("/productions", summary="列出当前租户成片产物")
+async def list_productions(
+    principal: Principal = Depends(require_permission("creative", "read")),
+) -> dict:
+    items = [p for p in _productions.values() if p.get("tenant_id") == principal.tenant_id]
+    return {"productions": items}
+
+
+@router.get("/productions/{storyboard_id}", summary="查看成片产物详情")
+async def get_production(
+    storyboard_id: str,
+    principal: Principal = Depends(require_permission("creative", "read")),
+) -> dict:
+    doc = _productions.get(storyboard_id)
+    if doc is None or doc.get("tenant_id") != principal.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "产物不存在或无权访问")
+    return doc

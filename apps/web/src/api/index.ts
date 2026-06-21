@@ -109,6 +109,55 @@ export const reviewDraft = (id: string, approved: boolean, comment = "") =>
 export const listDrafts = () =>
   api.get<{ drafts: WorkflowDraft[] }>("/creative-studio/workflow-drafts").then((r) => r.data.drafts);
 
+// 短剧全链路产出
+export interface ShotProduct {
+  shot_id: string;
+  scene: string;
+  image_prompt: string;
+  video_prompt: string;
+  image_outputs: string[];
+  video_outputs: string[];
+  image_error: string | null;
+  video_error: string | null;
+}
+
+export interface ProductionResult {
+  storyboard_id: string;
+  title: string;
+  brief: string;
+  genre: string;
+  platform: string;
+  status: string;
+  quality_passed: boolean;
+  quality_gates: { name: string; passed: boolean; detail: string }[];
+  shots: ShotProduct[];
+}
+
+export const produce = (body: {
+  brief: string;
+  genre?: string;
+  platform?: string;
+  with_video?: boolean;
+}) => api.post<ProductionResult>("/creative-studio/produce", body).then((r) => r.data);
+
+export const listProductions = () =>
+  api.get<{ productions: ProductionResult[] }>("/creative-studio/productions").then((r) => r.data.productions);
+
+// 媒体模型列表
+export interface MediaModel {
+  model_id: string;
+  name: string;
+  kind: string;
+  provider: string;
+  modes: string[];
+  description: string;
+}
+
+export const listMediaModels = (kind?: string) =>
+  api
+    .get<{ models: MediaModel[] }>("/creative-studio/media/models", { params: kind ? { kind } : {} })
+    .then((r) => r.data.models);
+
 export const discoverOpenSource = (query: string, limit = 10) =>
   api
     .post<{ results: ScoredCandidateDTO[] }>("/open-source/discover", { query, limit })

@@ -119,6 +119,8 @@ def _from_llm_dict(
             dialogue=sh.get("dialogue", ""),
             action=sh.get("action", ""),
             subtitle=sh.get("subtitle", ""),
+            image_prompt=sh.get("image_prompt", ""),
+            video_prompt=sh.get("video_prompt", ""),
             continuity=ShotContinuity(),
         )
         for sh in data.get("shots", [])

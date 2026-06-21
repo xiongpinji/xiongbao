@@ -11,6 +11,10 @@
   workflow_draft   —— 一句话→待审核工作流草稿（节点链）
 """
 
+from xagent.domains.creative_studio.pipeline import (
+    ProductionResult,
+    produce_short_drama,
+)
 from xagent.domains.creative_studio.storyboard import (
     AspectRatio,
     CameraSpec,
@@ -43,4 +47,6 @@ __all__ = [
     "WorkflowDraft",
     "WorkflowDraftNode",
     "build_draft_from_brief",
+    "ProductionResult",
+    "produce_short_drama",
 ]

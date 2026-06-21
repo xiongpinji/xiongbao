@@ -67,6 +67,7 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
     from xagent.api.v1 import creative_studio as _cs
 
     _cs._drafts.clear()
+    _cs._productions.clear()
     # 清空 task 租户映射
     from xagent.api.v1 import tasks as _tasks
 
