@@ -68,6 +68,11 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     _cs._drafts.clear()
     _cs._productions.clear()
+    # 清空画布
+    from xagent.api.v1 import canvas as _cv
+
+    _cv._canvases.clear()
+    _cv._canvas_tenants.clear()
     # 清空编辑器时间线
     from xagent.api.v1 import editor as _ed
 

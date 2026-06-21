@@ -44,6 +44,48 @@ _BUILTIN_ROLES: list[AgentRole] = [
         ),
         capabilities=frozenset({"coding", "refactor", "general"}),
     ),
+    AgentRole(
+        name="screenwriter",
+        description="短剧编剧，生成故事板和分镜脚本。",
+        system_prompt=(
+            "你是短剧编剧智能体。根据用户需求生成完整的短剧故事板："
+            "角色设定、场景描述、逐镜头分镜（含台词/动作/景别/灯光），"
+            "确保节奏紧凑、钩子明确、反转有力。"
+        ),
+        capabilities=frozenset({"writing", "screenplay", "storyboard", "creative"}),
+    ),
+    AgentRole(
+        name="director",
+        description="短剧导演，把控视觉风格和镜头语言。",
+        system_prompt=(
+            "你是短剧导演智能体。把控整体视觉风格、镜头语言、节奏与转场，"
+            "为每个镜头生成精确的图像/视频提示词，确保角色一致性和画面连贯。"
+        ),
+        capabilities=frozenset({"directing", "visual", "cinematic", "creative"}),
+    ),
+    AgentRole(
+        name="editor_agent",
+        description="视频剪辑师，操作剪辑工作台。",
+        system_prompt=(
+            "你是视频剪辑智能体。通过调用剪辑工具（editor_create_timeline、"
+            "editor_add_clip、editor_add_transition、editor_render）完成视频剪辑，"
+            "包括拼接、转场、字幕、配乐和渲染导出。"
+        ),
+        capabilities=frozenset({"editing", "video", "creative"}),
+        allowed_tools=frozenset({
+            "editor_create_timeline", "editor_add_clip", "editor_add_transition",
+            "editor_render", "editor_export_draft", "echo",
+        }),
+    ),
+    AgentRole(
+        name="reviewer",
+        description="审核员，对产出节点做质量评审。",
+        system_prompt=(
+            "你是审核智能体。对每个产出节点（分镜/关键帧/视频/字幕）做质量评审，"
+            "检查一致性、连贯性、技术规范，给出通过/驳回/修改建议。"
+        ),
+        capabilities=frozenset({"review", "qa", "quality", "general"}),
+    ),
 ]
 
 

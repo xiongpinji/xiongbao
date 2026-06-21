@@ -1,19 +1,14 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import {
-  Bot,
-  Workflow,
-  Film,
-  Search,
-  Brain,
-  Settings,
-  MessageSquare,
-  Scissors,
+  Bot, Workflow, Film, Search, Brain, Settings,
+  MessageSquare, Scissors, Layout,
 } from "lucide-react";
 import { getToken } from "./api/client";
 import ChatPage from "./pages/ChatPage";
 import AgentsPage from "./pages/AgentsPage";
 import WorkflowsPage from "./pages/WorkflowsPage";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
+import CanvasPage from "./pages/CanvasPage";
 import EditorPage from "./pages/EditorPage";
 import OpenSourcePage from "./pages/OpenSourcePage";
 import MemoryPage from "./pages/MemoryPage";
@@ -24,6 +19,7 @@ const nav = [
   { to: "/chat", label: "对话", icon: MessageSquare },
   { to: "/agents", label: "智能体", icon: Bot },
   { to: "/workflows", label: "工作流", icon: Workflow },
+  { to: "/canvas", label: "制作画布", icon: Layout },
   { to: "/creative", label: "短剧工厂", icon: Film },
   { to: "/editor", label: "视频剪辑", icon: Scissors },
   { to: "/open-source", label: "开源发现", icon: Search },
@@ -74,6 +70,7 @@ export default function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/workflows" element={<WorkflowsPage />} />
+          <Route path="/canvas" element={<CanvasPage />} />
           <Route path="/creative" element={<CreativeStudioPage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/open-source" element={<OpenSourcePage />} />
