@@ -6,6 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from xagent.domains.creative_studio import build_draft_from_brief
+from xagent.domains.creative_studio.media import (
+    GenerationMode,
+    GenerationRequest,
+    MediaKind,
+    get_media_registry,
+)
 from xagent.domains.creative_studio.producer import generate_storyboard
 from xagent.domains.creative_studio.quality import run_gates
 from xagent.domains.creative_studio.storyboard import Storyboard
@@ -122,4 +128,70 @@ async def gen_storyboard(
             "all_passed": all(g.passed for g in gates),
             "gates": [g.model_dump() for g in gates],
         },
+    }
+
+
+class MediaGenIn(BaseModel):
+    kind: str = "image"  # image | video
+    prompt: str = Field(..., min_length=1)
+    mode: str = "text_to_image"  # text_to_image|image_to_image|text_to_video|image_to_video
+    model_id: str | None = None
+    reference_images: list[str] = Field(default_factory=list)
+    duration_seconds: float | None = None
+    resolution: str | None = None
+    wait: bool = False  # True 则轮询直到完成
+
+
+@router.get("/media/models", summary="列出可用媒体生成模型(图像/视频)")
+async def media_models(
+    kind: str | None = None,
+    principal: Principal = Depends(require_permission("creative", "read")),
+) -> dict:
+    mk = MediaKind(kind) if kind else None
+    cards = get_media_registry().list_models(mk)
+    return {
+        "models": [
+            {
+                "model_id": c.model_id,
+                "name": c.name,
+                "kind": c.kind.value,
+                "provider": c.provider,
+                "modes": [m.value for m in c.modes],
+                "description": c.description,
+                "max_duration_seconds": c.max_duration_seconds,
+                "resolutions": c.resolutions,
+            }
+            for c in cards
+        ]
+    }
+
+
+@router.post("/media/generate", summary="媒体生成(文生图/图生图/文生视频/图生视频)")
+async def media_generate(
+    body: MediaGenIn,
+    principal: Principal = Depends(require_permission("creative", "execute")),
+) -> dict:
+    req = GenerationRequest(
+        kind=MediaKind(body.kind),
+        prompt=body.prompt,
+        mode=GenerationMode(body.mode),
+        model_id=body.model_id,
+        reference_images=body.reference_images,
+        duration_seconds=body.duration_seconds,
+        resolution=body.resolution,
+    )
+    task = await get_media_registry().generate(req, wait=body.wait)
+    get_audit_log().record(
+        tenant_id=principal.tenant_id,
+        actor=principal.user_id,
+        action="creative.media_generate",
+        resource="creative",
+        detail={"kind": body.kind, "mode": body.mode, "provider": task.provider},
+    )
+    return {
+        "task_id": task.task_id,
+        "provider": task.provider,
+        "status": task.status,
+        "outputs": task.outputs,
+        "error": task.error,
     }

@@ -74,6 +74,43 @@ class MemorySettings(BaseModel):
     backend: str = "qdrant"              # qdrant | mem0 (Phase1)
 
 
+class MediaSettings(BaseModel):
+    """媒体生成（短剧工厂）多模型 provider 配置。
+
+    图像：OpenAI 兼容（gpt-image-2 / DALL·E）。
+    视频：可灵 Kling / 即梦 Jimeng / 通用任务式 HTTP。
+    全部为空时用 NullProvider（占位产物，流程不中断）。
+    """
+
+    # 默认 provider 选择（image/video）
+    default_image_provider: str = "null"   # null | openai
+    default_video_provider: str = "null"   # null | kling | jimeng | generic
+
+    # 图像（OpenAI 兼容）
+    openai_image_api_key: str = ""
+    openai_image_base_url: str = "https://api.openai.com/v1"
+    openai_image_model: str = "gpt-image-2"
+
+    # 视频（可灵）
+    kling_api_key: str = ""
+    kling_submit_url: str = ""
+    kling_poll_url: str = ""               # 含 {task_id}
+
+    # 视频（即梦）
+    jimeng_api_key: str = ""
+    jimeng_submit_url: str = ""
+    jimeng_poll_url: str = ""
+
+    # 视频（通用任务式）
+    generic_video_api_key: str = ""
+    generic_video_submit_url: str = ""
+    generic_video_poll_url: str = ""
+    generic_video_model: str = ""
+
+    poll_interval_seconds: int = 3
+    task_timeout_seconds: int = 600
+
+
 class ObservabilitySettings(BaseModel):
     """Langfuse + OpenTelemetry。key 为空时 trace 转为本地 no-op。"""
 
@@ -122,6 +159,7 @@ class Settings(BaseSettings):
     cache: CacheSettings = Field(default_factory=CacheSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     memory: MemorySettings = Field(default_factory=MemorySettings)
+    media: MediaSettings = Field(default_factory=MediaSettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
 

@@ -1,82 +1,97 @@
-# 短剧工厂 · 媒体生成设计（参考 LibLib / LibTV）
+# 短剧工厂 · 媒体生成设计（多模型可插拔）
 
-> 决策：媒体（图像 / 视频 / 音频）生成**不自托管 ComfyUI**，改为参考 **LibLib（liblib.art）/ LibTV（liblib.tv）** 的云端 AI 创作平台模式，通过**可插拔的云生成 API provider** 实现。这样既消除 GPL-3.0 许可风险，又对齐国内主流 AI 视频/绘画平台的产品形态。
+> 决策：媒体（图像 / 视频）生成采用**多模型可插拔 provider 架构**，不绑定单一平台 key。
+> 预留通用接口对接：图像 = gpt-image-2 / DALL·E（OpenAI 兼容）；视频 = 可灵 Kling / 即梦 Jimeng / 通用任务式 HTTP。
+> 未配 key 时 NullProvider 占位，流程不中断（lite/CI 零配置可跑）。
 
-## 一、LibLib / LibTV 模式要点（对标参考）
+## 一、能力矩阵
 
-| 维度 | 平台做法 | X-Agent 借鉴 |
+| 能力 | 模式（GenerationMode） | provider |
 |---|---|---|
-| 生成形态 | 云端在线生成，不需本地 GPU | provider 走 HTTP API，提交任务 + 轮询/回调取结果 |
-| 模型选择 | Checkpoint + LoRA 组合，模型市场按 versionUuid 引用 | provider 支持 `model_id` / `lora` 参数，内置模型目录 |
-| 能力类型 | 文生图 / 图生图 / 文生视频 / 图生视频 / 在线工作流 | 抽象为 `image` / `video` / `audio` 能力，统一任务接口 |
-| 视频模型 | 接入 Seedance 等视频大模型 | provider 可声明支持的 `media_kind` 与时长/分辨率上限 |
-| 异步性 | 生成任务排队，需轮询状态 | 统一 `submit() -> task_id` + `poll(task_id) -> status/result` |
-| 开发者接入 | 开放平台 API（鉴权 + 签名） | provider 持有自己的 key/签名逻辑，配置在 settings |
+| 文生图 | text_to_image | OpenAI(gpt-image-2/dall-e-3)、Null |
+| 图生图 | image_to_image | OpenAI(images/edits)、Null |
+| 文生视频 | text_to_video | Kling、Jimeng、Generic、Null |
+| 图生视频 | image_to_video | Kling、Jimeng、Generic、Null |
 
-## 二、抽象接口（`domains/creative_studio/media/base.py`，Phase 3 落地）
-
-沿用旧仓 `MediaProviderRegistry` 的依赖注入思路，但 provider 协议改为「云任务」语义：
+## 二、抽象接口（`media/base.py`）
 
 ```python
-class MediaKind(str, Enum):
-    image = "image"
-    video = "video"
-    audio = "audio"
+class MediaKind(Enum): image / video / audio
+class GenerationMode(Enum): text_to_image / image_to_image / text_to_video / image_to_video / text_to_speech
 
 @dataclass
 class GenerationRequest:
-    kind: MediaKind
-    prompt: str
-    model_id: str | None = None          # 选用的模型（checkpoint / 视频模型）
-    loras: list[str] = field(default_factory=list)
-    reference_images: list[str] = field(default_factory=list)  # 图生图/角色一致性
-    params: dict[str, Any] = field(default_factory=dict)        # 尺寸/时长/帧率/种子...
+    kind, prompt, mode, model_id, negative_prompt,
+    loras, reference_images,           # 图生图/图生视频输入
+    duration_seconds, fps, resolution, seed, params
 
 @dataclass
 class GenerationTask:
-    task_id: str
-    status: str              # queued | running | succeeded | failed
-    outputs: list[str] = field(default_factory=list)  # 产物 URL / 路径
-    error: str | None = None
+    task_id, provider, status, outputs, error, raw
 
 class MediaProvider(Protocol):
-    name: str
-    supported_kinds: set[MediaKind]
-    async def submit(self, req: GenerationRequest) -> GenerationTask: ...
-    async def poll(self, task_id: str) -> GenerationTask: ...
-    def list_models(self, kind: MediaKind) -> list[ModelCard]: ...
+    async def submit(req) -> GenerationTask      # 提交任务
+    async def poll(task_id) -> GenerationTask    # 轮询状态
+    def list_models(kind) -> list[ModelCard]     # 可用模型
 ```
 
-## 三、Provider 实现（可插拔）
+## 三、provider 实现
 
-| Provider | 能力 | 说明 |
-|---|---|---|
-| `LiblibProvider` | image / video | 对接 LibLib 开放平台 API（文生图 / 图生图 / 视频），按 versionUuid 选模型 + LoRA |
-| `GenericVideoProvider` | video | 通用视频生成 API 适配（Seedance / 可灵 / 即梦等，按需配置 endpoint） |
-| `OpenAIImageProvider` | image | DALL·E / gpt-image 等（海外场景） |
-| `LocalTTSProvider` | audio | faster-whisper(STT) + Piper(TTS)，本地，无版权风险 |
-| `NullProvider` | all | lite / 测试：返回占位产物，保证流程不中断（沿用旧仓「确定性回退」思想） |
+| Provider | 文件 | 能力 | 说明 |
+|---|---|---|---|
+| `OpenAIImageProvider` | image_providers.py | 文生图/图生图 | gpt-image-2 / dall-e-3，OpenAI 兼容端点（可指向官方或代理），同步返回 |
+| `KlingProvider` | video_providers.py | 文/图生视频 | 可灵 Kling（预留，任务式 submit+poll） |
+| `JimengProvider` | video_providers.py | 文/图生视频 | 即梦 Jimeng（预留） |
+| `GenericVideoProvider` | video_providers.py | 文/图生视频 | 通用任务式，配 submit_url/poll_url 即可对接任意视频 API（Runway/Pika 等） |
+| `NullProvider` | base.py | 全部 | 占位降级，无需 key |
 
-Provider 由 `MediaProviderRegistry` 据 settings 注册；短剧工厂 `producer` 通过注入的 registry 调度，不感知具体平台。
+## 四、配置（settings `MediaSettings`，环境变量前缀 `XAGENT_MEDIA__`）
 
-## 四、与短剧工厂工作流的衔接
+```bash
+# provider 选择
+XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER=openai     # null | openai
+XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=kling      # null | kling | jimeng | generic
 
-旧仓节点链保留：需求解析 → 钩子结构 → 分镜 → 角色一致性 → 关键帧(image provider) → 视频(video provider) → 人工审核导出。
+# 图像（OpenAI 兼容：gpt-image-2 / dall-e-3）
+XAGENT_MEDIA__OPENAI_IMAGE_API_KEY=...
+XAGENT_MEDIA__OPENAI_IMAGE_BASE_URL=https://api.openai.com/v1
+XAGENT_MEDIA__OPENAI_IMAGE_MODEL=gpt-image-2
 
-- 关键帧节点调用 `MediaProvider(kind=image)`；视频节点调用 `MediaProvider(kind=video)`。
-- 角色一致性通过 `reference_images` + 固定 `loras` / seed 传递。
-- 异步任务进度回写到工作流 timeline（与 Temporal 事件桥接，Phase 2/3 衔接）。
+# 视频（可灵）
+XAGENT_MEDIA__KLING_API_KEY=...
+XAGENT_MEDIA__KLING_SUBMIT_URL=...
+XAGENT_MEDIA__KLING_POLL_URL=.../{task_id}
 
-## 五、配置（settings 草案，Phase 3 补全）
+# 视频（即梦）
+XAGENT_MEDIA__JIMENG_API_KEY=...
+XAGENT_MEDIA__JIMENG_SUBMIT_URL=...
+XAGENT_MEDIA__JIMENG_POLL_URL=.../{task_id}
 
-```
-XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER=liblib
-XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=liblib
-XAGENT_MEDIA__LIBLIB_BASE_URL=...
-XAGENT_MEDIA__LIBLIB_ACCESS_KEY=...
-XAGENT_MEDIA__LIBLIB_SECRET_KEY=...
+# 视频（通用任务式，对接任意 API）
+XAGENT_MEDIA__GENERIC_VIDEO_SUBMIT_URL=...
+XAGENT_MEDIA__GENERIC_VIDEO_POLL_URL=.../{task_id}
+XAGENT_MEDIA__GENERIC_VIDEO_API_KEY=...
+XAGENT_MEDIA__GENERIC_VIDEO_MODEL=...
+
 XAGENT_MEDIA__POLL_INTERVAL_SECONDS=3
 XAGENT_MEDIA__TASK_TIMEOUT_SECONDS=600
 ```
 
-> lite 模式默认 `NullProvider`，无需任何外部 key 即可走完短剧工作流草稿（仅产物为占位），与 README 单机演示一致。
+## 五、API 端点
+
+| 端点 | 说明 |
+|---|---|
+| `GET /api/v1/creative-studio/media/models?kind=image\|video` | 列出可用媒体模型 |
+| `POST /api/v1/creative-studio/media/generate` | 媒体生成（kind/prompt/mode/model_id/reference_images/wait） |
+
+强鉴权 + RBAC（read 列模型 / execute 生成）+ 审计。
+
+## 六、与短剧工作流衔接
+
+节点链：需求解析 → 钩子结构 → 分镜 → 角色一致性 → 关键帧(image provider) → 视频(video provider) → 人工审核导出。
+
+- 关键帧节点：`MediaKind.image` + `text_to_image` / `image_to_image`（角色一致性用 reference_images + 固定 seed）
+- 视频节点：`MediaKind.video` + `text_to_video` / `image_to_video`（关键帧图驱动）
+- 异步任务进度回写 workflow timeline（Temporal 事件桥接）
+
+> lite 默认 NullProvider，无需任何 key 即可走完短剧工作流草稿（产物为占位）。

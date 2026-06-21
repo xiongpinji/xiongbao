@@ -1,48 +1,116 @@
-"""provider 注册表 + 工厂。lite 默认 NullProvider；配置 key 后启用云 provider。"""
+"""provider 注册表 + 工厂。
+
+据 settings 注册图像/视频 provider；image/video 各有默认 provider。
+未配 key 时回退 NullProvider（占位产物，流程不中断）。
+对外暴露 get(kind)、list_models()、generate()（submit+轮询封装）。
+"""
 
 from __future__ import annotations
 
+import asyncio
 import os
 from functools import lru_cache
 
 from xagent.domains.creative_studio.media.base import (
+    GenerationRequest,
+    GenerationTask,
     MediaKind,
     MediaProvider,
+    ModelCard,
     NullProvider,
 )
+from xagent.infra.settings import get_settings
 
 
 class MediaProviderRegistry:
     def __init__(self) -> None:
         self._providers: dict[MediaKind, MediaProvider] = {}
-        self._default = NullProvider()
+        self._null = NullProvider()
+        self._all: list[MediaProvider] = [self._null]
 
     def register(self, kind: MediaKind, provider: MediaProvider) -> None:
         self._providers[kind] = provider
+        if provider not in self._all:
+            self._all.append(provider)
 
     def get(self, kind: MediaKind) -> MediaProvider:
-        return self._providers.get(kind, self._default)
+        return self._providers.get(kind, self._null)
 
     @property
-    def default(self) -> MediaProvider:
-        return self._default
+    def null(self) -> MediaProvider:
+        return self._null
+
+    def list_models(self, kind: MediaKind | None = None) -> list[ModelCard]:
+        cards: list[ModelCard] = []
+        for p in self._all:
+            cards.extend(p.list_models(kind))
+        return cards
+
+    async def generate(self, req: GenerationRequest, *, wait: bool = True) -> GenerationTask:
+        """提交生成任务；wait=True 时轮询直到完成或超时。"""
+        provider = self.get(req.kind)
+        task = await provider.submit(req)
+        if not wait or task.status in ("succeeded", "failed"):
+            return task
+        cfg = get_settings().media
+        elapsed = 0
+        while elapsed < cfg.task_timeout_seconds:
+            await asyncio.sleep(cfg.poll_interval_seconds)
+            elapsed += cfg.poll_interval_seconds
+            task = await provider.poll(task.task_id)
+            if task.status in ("succeeded", "failed"):
+                return task
+        task.status = "failed"
+        task.error = "生成超时"
+        return task
+
+
+def _build_registry() -> MediaProviderRegistry:
+    registry = MediaProviderRegistry()
+    cfg = get_settings().media
+
+    # 图像 provider
+    if cfg.default_image_provider == "openai" and (
+        cfg.openai_image_api_key or os.environ.get("OPENAI_API_KEY")
+    ):
+        from xagent.domains.creative_studio.media.image_providers import OpenAIImageProvider
+
+        registry.register(
+            MediaKind.image,
+            OpenAIImageProvider(
+                api_key=cfg.openai_image_api_key or os.environ.get("OPENAI_API_KEY", ""),
+                base_url=cfg.openai_image_base_url,
+                default_model=cfg.openai_image_model,
+            ),
+        )
+
+    # 视频 provider
+    from xagent.domains.creative_studio.media.video_providers import (
+        GenericVideoProvider,
+        JimengProvider,
+        KlingProvider,
+    )
+
+    vp = cfg.default_video_provider
+    if vp == "kling" and cfg.kling_api_key:
+        registry.register(MediaKind.video, KlingProvider(
+            api_key=cfg.kling_api_key, submit_url=cfg.kling_submit_url,
+            poll_url=cfg.kling_poll_url))
+    elif vp == "jimeng" and cfg.jimeng_api_key:
+        registry.register(MediaKind.video, JimengProvider(
+            api_key=cfg.jimeng_api_key, submit_url=cfg.jimeng_submit_url,
+            poll_url=cfg.jimeng_poll_url))
+    elif vp == "generic" and cfg.generic_video_submit_url:
+        registry.register(MediaKind.video, GenericVideoProvider(
+            api_key=cfg.generic_video_api_key, submit_url=cfg.generic_video_submit_url,
+            poll_url=cfg.generic_video_poll_url, default_model=cfg.generic_video_model))
+
+    return registry
 
 
 @lru_cache
 def get_media_registry() -> MediaProviderRegistry:
-    registry = MediaProviderRegistry()
-    # 配置了 LibLib key 则注册云 provider（Phase 3 后段接入真实 API）
-    if os.environ.get("XAGENT_MEDIA__LIBLIB_ACCESS_KEY"):
-        from xagent.domains.creative_studio.media.liblib_provider import LiblibProvider
-
-        lib = LiblibProvider(
-            base_url=os.environ.get("XAGENT_MEDIA__LIBLIB_BASE_URL", ""),
-            access_key=os.environ["XAGENT_MEDIA__LIBLIB_ACCESS_KEY"],
-            secret_key=os.environ.get("XAGENT_MEDIA__LIBLIB_SECRET_KEY", ""),
-        )
-        registry.register(MediaKind.image, lib)
-        registry.register(MediaKind.video, lib)
-    return registry
+    return _build_registry()
 
 
 def reset_media_registry() -> None:
