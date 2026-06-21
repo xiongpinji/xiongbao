@@ -50,3 +50,17 @@ jobs:
 
       - name: License gate (拦截 AGPL/GPL/ELv2/SSPL)
         run: python scripts/license_check.py
+
+  promptfoo-eval:
+    runs-on: ubuntu-latest
+    needs: [backend, license-gate]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install promptfoo
+        run: npm install -g promptfoo
+      - name: Run eval
+        run: promptfoo eval -c .promptfoo/config.yaml --no-cache
+      - name: Assert threshold
+        run: promptfoo assert -c .promptfoo/config.yaml --threshold 0.8

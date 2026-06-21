@@ -71,6 +71,13 @@ def get_tool_registry() -> ToolRegistry:
         registry.register_many(editor_tools())
     except Exception:  # noqa: S110  剪辑工具注册失败不影响启动
         pass
+    # 注册 Composio 工具（1000+ SaaS，需先 composio add <app> 授权）
+    try:
+        from xagent.adapters.tools.composio_provider import get_composio_tools
+
+        registry.register_many(get_composio_tools())
+    except Exception:  # noqa: S110  Composio 未授权时不注册
+        pass
     return registry
 
 

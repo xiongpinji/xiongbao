@@ -84,6 +84,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "B", "ASYNC221", "ASYNC240"]
 "xagent/adapters/audio/base.py" = ["ASYNC221", "ASYNC240", "S603", "S607", "S110"]
+"xagent/core/orchestration/langgraph_loop.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -53,6 +53,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # IBM ContextForge MCP 网关（生产级联邦 MCP 网关）
+  contextforge:
+    image: ghcr.io/ibm/mcp-context-forge:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"    # HTTP API
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/contextforge
+      - REDIS_URL=redis://redis:6379/0
+      - AUTH_ENABLED=false
+      - LOG_LEVEL=info
+
+  # OpenFGA 细粒度授权（Google Zanzibar 模型）
+  openfga:
+    image: openfga/openfga:latest
+    ports:
+      - "8081:8081"    # HTTP API
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/openfga
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # LiteLLM Proxy：统一 LLM 网关。模型/key 配在 litellm-config.yaml
   litellm:
     image: ghcr.io/berriai/litellm:main-latest

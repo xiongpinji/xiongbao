@@ -27,8 +27,18 @@ from xagent.core.workflow.models import (
 )
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.logging import get_logger
+from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.workflow")
+
+
+def _hatchet_available() -> bool:
+    try:
+        from xagent.adapters.workflow import get_hatchet_backend
+        backend = get_hatchet_backend()
+        return backend._has_hatchet and get_settings().is_production
+    except Exception:
+        return False
 
 
 def _topo_order(steps: list[WorkflowStep]) -> list[WorkflowStep]:
