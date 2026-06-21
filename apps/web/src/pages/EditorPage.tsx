@@ -3,6 +3,7 @@ import { Film, Plus, Scissors, Download, Play } from "lucide-react";
 import {
   createTimeline,
   addClip,
+  removeClip,
   renderTimeline,
   exportDraft,
   getTimeline,
@@ -89,6 +90,17 @@ export default function EditorPage() {
       setMsg(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRemoveClip(clipId: string) {
+    if (!timeline) return;
+    try {
+      const tl = await removeClip(timeline.id, clipId);
+      setTimeline(tl);
+      setMsg("已删除片段");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -216,9 +228,10 @@ export default function EditorPage() {
                       const width = (clip.duration / maxEnd) * 100;
                       return (
                         <div key={clip.id}
-                          className={`absolute h-7 ${TRACK_COLORS[trackType]} opacity-80 rounded text-white text-xs flex items-center px-1 overflow-hidden`}
+                          className={`absolute h-7 ${TRACK_COLORS[trackType]} opacity-80 rounded text-white text-xs flex items-center px-1 overflow-hidden cursor-pointer hover:opacity-100 hover:ring-2 hover:ring-red-400`}
                           style={{ left: `${left}%`, width: `${Math.max(width, 3)}%` }}
-                          title={clip.text || clip.source_url || clip.id}>
+                          title={`${clip.text || clip.source_url?.split("/").pop() || "片段"} — 点击删除`}
+                          onClick={() => handleRemoveClip(clip.id)}>
                           {clip.text || clip.source_url?.split("/").pop() || "片段"}
                         </div>
                       );

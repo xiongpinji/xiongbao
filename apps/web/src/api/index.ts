@@ -192,6 +192,9 @@ export const getTimeline = (id: string) =>
 export const addClip = (tlId: string, body: Record<string, unknown>) =>
   api.post<EditorTimeline>(`/creative-studio/editor/timelines/${tlId}/clips`, body).then((r) => r.data);
 
+export const removeClip = (tlId: string, clipId: string) =>
+  api.delete<EditorTimeline>(`/creative-studio/editor/timelines/${tlId}/clips/${clipId}`).then((r) => r.data);
+
 export const addTransition = (tlId: string, body: { clip_id: string; type: string; duration: number }) =>
   api.post<EditorTimeline>(`/creative-studio/editor/timelines/${tlId}/transitions`, body).then((r) => r.data);
 
