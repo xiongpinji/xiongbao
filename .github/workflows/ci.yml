@@ -28,7 +28,7 @@ jobs:
         run: ruff check xagent tests
 
       - name: Type check (mypy)
-        run: mypy xagent || true   # Phase 0 容忍，后续收紧
+        run: mypy xagent --ignore-missing-imports || true  # 逐步收紧
 
       - name: Test (pytest)
         run: pytest -q

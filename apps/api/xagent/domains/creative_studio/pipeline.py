@@ -53,6 +53,7 @@ class ProductionResult:
     shots: list[ShotProduct] = field(default_factory=list)
     quality_passed: bool = False
     quality_gates: list[dict] = field(default_factory=list)
+    timeline_id: str | None = None  # 自动创建的剪辑时间线 ID
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -64,6 +65,7 @@ class ProductionResult:
             "status": self.status,
             "quality_passed": self.quality_passed,
             "quality_gates": self.quality_gates,
+            "timeline_id": self.timeline_id,
             "shots": [
                 {
                     "shot_id": s.shot_id,
@@ -170,9 +172,13 @@ async def produce_short_drama(
     if not shots:
         status = "failed"
 
+    # 自动创建剪辑时间线（把产出视频导入剪辑工作台）
+    timeline_id = _create_timeline_from_shots(shots, sb, genre, platform)
+
     logger.info(
         "short_drama_produced",
         storyboard_id=sb.storyboard_id, shots=len(shots), status=status,
+        timeline_id=timeline_id,
     )
     return ProductionResult(
         storyboard_id=sb.storyboard_id,
@@ -182,4 +188,54 @@ async def produce_short_drama(
         shots=shots,
         quality_passed=all(g.passed for g in gates),
         quality_gates=[g.model_dump() for g in gates],
+        timeline_id=timeline_id,
     )
+
+
+def _create_timeline_from_shots(
+    shots: list[ShotProduct], sb: Storyboard, genre: str, platform: str
+) -> str | None:
+    """把产出视频自动创建为剪辑时间线，导入剪辑工作台。"""
+    try:
+        from xagent.domains.creative_studio.editor.models import (
+            Clip,
+            Timeline,
+            TrackType,
+        )
+        from xagent.domains.creative_studio.editor.tools import _timelines
+
+        tl = Timeline(
+            name=f"短剧-{sb.title or genre}",
+            width=1080,
+            height=1920 if platform in ("抖音", "快手") else 1920,
+            fps=30,
+        )
+        cursor = 0.0
+        for i, shot in enumerate(shots):
+            # 视频片段
+            if shot.video_outputs:
+                dur = sb.shots[i].duration_seconds if i < len(sb.shots) else 4.0
+                tl.add_clip(Clip(
+                    track_type=TrackType.video,
+                    source_url=shot.video_outputs[0],
+                    timeline_start=cursor,
+                    timeline_end=cursor + dur,
+                ))
+                cursor += dur
+            # 字幕片段
+            if i < len(sb.shots) and sb.shots[i].dialogue:
+                dur = sb.shots[i].duration_seconds if i < len(sb.shots) else 4.0
+                tl.add_clip(Clip(
+                    track_type=TrackType.text,
+                    text=sb.shots[i].dialogue,
+                    timeline_start=cursor - dur if shot.video_outputs else cursor,
+                    timeline_end=cursor if shot.video_outputs else cursor + dur,
+                    font_size=56,
+                    position="bottom",
+                ))
+        _timelines[tl.id] = tl
+        logger.info("timeline_auto_created", timeline_id=tl.id, clips=len(tl.clips))
+        return tl.id
+    except Exception as exc:
+        logger.warning("timeline_create_failed", error=str(exc))
+        return None

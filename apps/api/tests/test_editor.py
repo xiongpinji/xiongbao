@@ -123,13 +123,13 @@ async def test_export_draft(client: AsyncClient) -> None:
         "/api/v1/creative-studio/editor/timelines", json={}, headers=_h(token)
     )
     tl_id = r.json()["id"]
-    # 加片段
+    # 只加文本片段（不涉及视频素材文件，pyJianYingDraft 不会读文件）
     await client.post(
         f"/api/v1/creative-studio/editor/timelines/{tl_id}/clips",
-        json={"track_type": "video", "source_url": "v.mp4"},
+        json={"track_type": "text", "text": "测试字幕", "timeline_start": 0, "timeline_end": 3},
         headers=_h(token),
     )
-    # 导出草稿（未装 pyJianYingDraft -> 降级 JSON）
+    # 导出草稿（装了 pyJianYingDraft 走真实路径，未装降级 JSON）
     r = await client.post(
         f"/api/v1/creative-studio/editor/timelines/{tl_id}/export-draft",
         headers=_h(token),

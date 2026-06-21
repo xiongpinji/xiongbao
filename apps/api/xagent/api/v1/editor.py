@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from xagent.domains.creative_studio.editor.models import (
     Clip,
@@ -180,3 +180,50 @@ async def export_draft(
         detail={"timeline_id": timeline_id},
     )
     return result
+
+
+class AgentClipIn(BaseModel):
+    """智能体自主剪辑指令：一句话描述剪辑需求，agent 自动完成。"""
+
+    instruction: str = Field(
+        ..., min_length=1,
+        description="剪辑指令，如：把这段视频剪成3段并加字幕",
+    )
+    timeline_id: str | None = None  # 不传则新建
+
+
+@router.post("/agent-clip", summary="智能体自主剪辑(一句话→自动剪辑→渲染)")
+async def agent_clip(
+    body: AgentClipIn,
+    principal: Principal = Depends(require_permission("creative", "execute")),
+) -> dict:
+    """智能体通过 function-calling 自主完成完整剪辑流程。"""
+    from xagent.core.orchestration import run_agent
+
+    # 如果指定了已有时间线，在指令中告知 agent
+    instruction = body.instruction
+    if body.timeline_id:
+        tl = _check_tenant(body.timeline_id, principal)
+        instruction = (
+            f"已有时间线 {body.timeline_id}（{len(tl.clips)}个片段，"
+            f"总时长{tl.total_duration}s）。{instruction}"
+        )
+    else:
+        instruction = (
+            f"{instruction}\n请先调用 editor_create_timeline 创建时间线，"
+            f"再用 editor_add_clip 添加片段，最后用 editor_render 渲染导出。"
+        )
+
+    result = await run_agent(
+        instruction,
+        principal=principal,
+        role_name="general",
+    )
+    get_audit_log().record(
+        tenant_id=principal.tenant_id,
+        actor=principal.user_id,
+        action="creative.agent_clip",
+        resource="creative",
+        detail={"instruction": body.instruction[:100], "steps": result.steps},
+    )
+    return result.to_dict()

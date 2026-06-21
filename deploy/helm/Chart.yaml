@@ -1,0 +1,16 @@
+apiVersion: v2
+name: xagent
+description: X-Agent — 面向企业的自主智能体框架（开源重构版）
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai-agent
+  - llm
+  - video-editing
+  - short-drama
+home: https://github.com/xiongpinji/xiongbao
+sources:
+  - https://github.com/xiongpinji/xiongbao
+maintainers:
+  - name: X-Agent Contributors

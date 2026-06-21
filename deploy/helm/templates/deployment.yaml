@@ -1,0 +1,99 @@
+{{- if .Values.api.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: { app: xagent-api }
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: xagent-api }
+  template:
+    metadata:
+      labels: { app: xagent-api }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports: [{ containerPort: {{ .Values.api.port }} }]
+          env:
+            - { name: XAGENT_MODE, value: "enterprise" }
+            - { name: XAGENT_DB__URL, value: "{{ .Values.postgres.url }}" }
+            - { name: XAGENT_CACHE__REDIS_URL, value: "{{ .Values.redis.url }}" }
+            - { name: XAGENT_MEMORY__QDRANT_URL, value: "{{ .Values.qdrant.url }}" }
+            - { name: XAGENT_LLM__OLLAMA_BASE_URL, value: "{{ .Values.llm.ollamaBaseUrl }}" }
+            - { name: XAGENT_LLM__OLLAMA_MODEL, value: "{{ .Values.llm.ollamaModel }}" }
+            - { name: XAGENT_SECURITY__JWT_SECRET, value: "{{ .Values.security.jwtSecret }}" }
+            - { name: XAGENT_SECURITY__REQUIRE_AUTH, value: "{{ .Values.security.requireAuth }}" }
+          command: ["sh", "-c"]
+          args:
+            - "python -m alembic upgrade head && uvicorn xagent.main:app --host 0.0.0.0 --port {{ .Values.api.port }} --workers {{ .Values.api.workers }}"
+          resources: {{ toYaml .Values.api.resources | nindent 12 }}
+          livenessProbe:
+            httpGet: { path: /health, port: {{ .Values.api.port }} }
+          readinessProbe:
+            httpGet: { path: /ready, port: {{ .Values.api.port }} }
+{{- end }}
+---
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  selector: { app: xagent-api }
+  ports: [{ port: {{ .Values.api.port }}, targetPort: {{ .Values.api.port }} }]
+{{- end }}
+---
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-api
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }} }
+{{- end }}
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  annotations:
+    {{- if .Values.ingress.tls }}
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: {{ .Release.Name }}-web, port: { number: {{ .Values.web.port }} } }
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: {{ .Release.Name }}-api, port: { number: {{ .Values.api.port }} } }
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts: [{{ .Values.ingress.host }}]
+      secretName: {{ .Release.Name }}-tls
+  {{- end }}
+{{- end }}

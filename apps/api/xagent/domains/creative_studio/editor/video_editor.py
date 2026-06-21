@@ -152,7 +152,13 @@ class VideoEditor:
 
         import pyJianYingDraft as draft
 
-        script = draft.ScriptFile(timeline.width, timeline.height)
+        # ScriptFile 签名随版本变化，用 try 兼容
+        try:
+            script = draft.ScriptFile(
+                timeline.width, timeline.height, timeline.fps, True
+            )
+        except TypeError:
+            script = draft.ScriptFile(timeline.width, timeline.height)
 
         # 添加轨道
         script.add_track(draft.TrackType.video, "main")
