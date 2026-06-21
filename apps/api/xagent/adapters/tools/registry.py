@@ -64,6 +64,13 @@ def get_tool_registry() -> ToolRegistry:
         from xagent.infra.logging import get_logger
 
         get_logger("xagent.tools").warning("browser_tools_register_failed", error=str(exc))
+    # 注册剪辑工具（智能体可操作视频剪辑）
+    try:
+        from xagent.domains.creative_studio.editor.tools import editor_tools
+
+        registry.register_many(editor_tools())
+    except Exception:  # noqa: S110  剪辑工具注册失败不影响启动
+        pass
     return registry
 
 

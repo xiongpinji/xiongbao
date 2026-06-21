@@ -158,6 +158,49 @@ export const listMediaModels = (kind?: string) =>
     .get<{ models: MediaModel[] }>("/creative-studio/media/models", { params: kind ? { kind } : {} })
     .then((r) => r.data.models);
 
+// 视频剪辑
+export interface EditorClip {
+  id: string;
+  track_type: string;
+  source_url: string;
+  timeline_start: number;
+  timeline_end: number;
+  text: string;
+  duration: number;
+}
+
+export interface EditorTimeline {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  fps: number;
+  total_duration: number;
+  clips: EditorClip[];
+  transitions: { id: string; clip_id: string; type: string; duration: number }[];
+}
+
+export const createTimeline = (body: { name?: string; width?: number; height?: number }) =>
+  api.post<EditorTimeline>("/creative-studio/editor/timelines", body).then((r) => r.data);
+
+export const listTimelines = () =>
+  api.get<{ timelines: EditorTimeline[] }>("/creative-studio/editor/timelines").then((r) => r.data.timelines);
+
+export const getTimeline = (id: string) =>
+  api.get<EditorTimeline>(`/creative-studio/editor/timelines/${id}`).then((r) => r.data);
+
+export const addClip = (tlId: string, body: Record<string, unknown>) =>
+  api.post<EditorTimeline>(`/creative-studio/editor/timelines/${tlId}/clips`, body).then((r) => r.data);
+
+export const addTransition = (tlId: string, body: { clip_id: string; type: string; duration: number }) =>
+  api.post<EditorTimeline>(`/creative-studio/editor/timelines/${tlId}/transitions`, body).then((r) => r.data);
+
+export const renderTimeline = (tlId: string) =>
+  api.post(`/creative-studio/editor/timelines/${tlId}/render`, {}).then((r) => r.data);
+
+export const exportDraft = (tlId: string) =>
+  api.post(`/creative-studio/editor/timelines/${tlId}/export-draft`, {}).then((r) => r.data);
+
 export const discoverOpenSource = (query: string, limit = 10) =>
   api
     .post<{ results: ScoredCandidateDTO[] }>("/open-source/discover", { query, limit })

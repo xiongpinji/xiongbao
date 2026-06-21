@@ -8,12 +8,14 @@ import {
   Brain,
   Settings,
   MessageSquare,
+  Scissors,
 } from "lucide-react";
 import { getToken } from "./api/client";
 import ChatPage from "./pages/ChatPage";
 import AgentsPage from "./pages/AgentsPage";
 import WorkflowsPage from "./pages/WorkflowsPage";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
+import EditorPage from "./pages/EditorPage";
 import OpenSourcePage from "./pages/OpenSourcePage";
 import MemoryPage from "./pages/MemoryPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -23,6 +25,7 @@ const nav = [
   { to: "/agents", label: "智能体", icon: Bot },
   { to: "/workflows", label: "工作流", icon: Workflow },
   { to: "/creative", label: "短剧工厂", icon: Film },
+  { to: "/editor", label: "视频剪辑", icon: Scissors },
   { to: "/open-source", label: "开源发现", icon: Search },
   { to: "/memory", label: "知识库", icon: Brain },
   { to: "/settings", label: "设置", icon: Settings },
@@ -64,6 +67,7 @@ export default function App() {
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/workflows" element={<WorkflowsPage />} />
           <Route path="/creative" element={<CreativeStudioPage />} />
+          <Route path="/editor" element={<EditorPage />} />
           <Route path="/open-source" element={<OpenSourcePage />} />
           <Route path="/memory" element={<MemoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />

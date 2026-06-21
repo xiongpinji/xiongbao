@@ -8,6 +8,7 @@ from xagent.api.v1 import (
     auth,
     billing,
     creative_studio,
+    editor,
     memory,
     open_source,
     stream,
@@ -23,6 +24,7 @@ api_v1.include_router(tasks.router)
 api_v1.include_router(memory.router)
 api_v1.include_router(workflows.router)
 api_v1.include_router(creative_studio.router)
+api_v1.include_router(editor.router)
 api_v1.include_router(open_source.router)
 api_v1.include_router(billing.router)
 api_v1.include_router(audit.router)

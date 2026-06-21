@@ -68,6 +68,14 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     _cs._drafts.clear()
     _cs._productions.clear()
+    # 清空编辑器时间线
+    from xagent.api.v1 import editor as _ed
+
+    _ed._timelines.clear()
+    _ed._timeline_tenants.clear()
+    from xagent.domains.creative_studio.editor import tools as _et
+
+    _et._timelines.clear()
     # 清空 task 租户映射
     from xagent.api.v1 import tasks as _tasks
 
