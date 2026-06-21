@@ -1,22 +1,34 @@
 """编排：agent 状态机循环（observe → reason → act → reflect）。
 
-LangGraph 已安装时走 LangGraph 状态图（生产推荐）；
-未安装时回退内置循环（离线/lite/CI 可用）。
+优先级（按环境变量控制）：
+  XAGENT_USE_DEERFLOW=true → DeerFlow 2.0（超级智能体框架，需完整运行时）
+  XAGENT_USE_LANGGRAPH=true → LangGraph 状态图
+  默认 → 内置循环（离线/lite/CI 可用）
 对外只暴露 ``run_agent``，调用方无感。
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent
 from xagent.enterprise.auth.principal import Principal
 
 
+def _has_deerflow() -> bool:
+    if os.environ.get("XAGENT_USE_DEERFLOW", "").lower() != "true":
+        return False
+    try:
+        from deerflow.client import DeerFlowClient  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def _has_langgraph() -> bool:
     try:
         from langgraph.graph import StateGraph  # noqa: F401
-
         return True
     except ImportError:
         return False
@@ -31,27 +43,23 @@ async def run_agent(
     model: str | None = None,
     on_event: Any = None,
 ) -> AgentRun:
-    """运行一次 agent 任务。LangGraph 可用走图执行，否则内置循环。"""
+    """运行一次 agent 任务。DeerFlow(opt-in) > LangGraph > 内置循环。"""
+    if _has_deerflow():
+        from xagent.core.orchestration.deerflow_loop import run_agent_deerflow
+        return await run_agent_deerflow(
+            goal, principal=principal, role_name=role_name,
+            capabilities=capabilities, model=model, on_event=on_event,
+        )
     if _has_langgraph():
         from xagent.core.orchestration.langgraph_loop import run_agent_langgraph
-
         return await run_agent_langgraph(
-            goal,
-            principal=principal,
-            role_name=role_name,
-            capabilities=capabilities,
-            model=model,
-            on_event=on_event,
+            goal, principal=principal, role_name=role_name,
+            capabilities=capabilities, model=model, on_event=on_event,
         )
     from xagent.core.orchestration.loop import run_agent as run_agent_builtin
-
     return await run_agent_builtin(
-        goal,
-        principal=principal,
-        role_name=role_name,
-        capabilities=capabilities,
-        model=model,
-        on_event=on_event,
+        goal, principal=principal, role_name=role_name,
+        capabilities=capabilities, model=model, on_event=on_event,
     )
 
 

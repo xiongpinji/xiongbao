@@ -1,0 +1,6 @@
+# DeerFlow 配置（最小化，测试用）
+models:
+  - name: mock
+    provider: mock
+    model: mock
+default_model: mock
