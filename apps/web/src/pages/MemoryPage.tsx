@@ -1,77 +1,20 @@
-import { useState } from "react";
-import { writeMemory, searchMemory } from "../api";
+import { Link } from "react-router-dom";
 
 export default function MemoryPage() {
-  const [id, setId] = useState("");
-  const [text, setText] = useState("");
-  const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<{ id: string; text: string; score: number }[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  async function write() {
-    if (!id.trim() || !text.trim()) return;
-    await writeMemory([{ id, text }]);
-    setMsg(`已写入 ${id}`);
-    setId("");
-    setText("");
-  }
-
-  async function search() {
-    if (!query.trim()) return;
-    const r = await searchMemory(query);
-    setHits(r);
-  }
-
   return (
-    <div className="p-6 max-w-3xl space-y-6">
-      <h1 className="text-xl font-semibold">知识库（记忆）</h1>
-      <div className="bg-white border rounded-md p-4 space-y-2">
-        <div className="text-sm font-medium">写入</div>
-        <input
-          className="w-full border rounded px-2 py-1 text-sm"
-          placeholder="id"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
-        <textarea
-          className="w-full border rounded px-2 py-1 text-sm"
-          rows={2}
-          placeholder="文本"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button
-          className="px-3 py-1 bg-brand-600 text-white rounded text-sm"
-          onClick={write}
+    <div className="flex min-h-full items-center justify-center bg-neutral-950 p-8 text-neutral-100">
+      <div className="max-w-xl rounded-3xl border border-neutral-800 bg-neutral-900 p-8 shadow-2xl shadow-black/20">
+        <div className="text-sm font-medium text-neutral-500">入口已迁移</div>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">知识库已移入索引库</h1>
+        <p className="mt-3 text-sm leading-6 text-neutral-400">
+          知识库和记忆检索现在统一放在设置页的索引库中管理，便于和开源发现、文档索引一起配置。
+        </p>
+        <Link
+          to="/settings?section=index&tab=knowledge"
+          className="mt-6 inline-flex rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-white active:scale-[0.98]"
         >
-          写入
-        </button>
-        {msg && <div className="text-xs text-green-600">{msg}</div>}
-      </div>
-
-      <div className="bg-white border rounded-md p-4 space-y-2">
-        <div className="text-sm font-medium">语义检索</div>
-        <input
-          className="w-full border rounded px-2 py-1 text-sm"
-          placeholder="query"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search()}
-        />
-        <button
-          className="px-3 py-1 bg-brand-600 text-white rounded text-sm"
-          onClick={search}
-        >
-          检索
-        </button>
-        <div className="space-y-1">
-          {hits.map((h) => (
-            <div key={h.id} className="text-sm border-t pt-1">
-              <span className="text-xs text-slate-500 mr-2">{h.score.toFixed(3)}</span>
-              {h.text}
-            </div>
-          ))}
-        </div>
+          打开设置中的知识库
+        </Link>
       </div>
     </div>
   );

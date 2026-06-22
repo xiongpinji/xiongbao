@@ -26,6 +26,8 @@ router = APIRouter(prefix="/creative-studio", tags=["creative-studio"])
 _drafts: dict[str, dict] = {}
 # 进程内成片产物存储；按租户隔离
 _productions: dict[str, dict] = {}
+# 媒体任务租户映射（用于按租户拉取 task 状态）
+_media_task_tenants: dict[str, str] = {}
 
 
 class BriefIn(BaseModel):
@@ -142,6 +144,10 @@ class MediaGenIn(BaseModel):
     reference_images: list[str] = Field(default_factory=list)
     duration_seconds: float | None = None
     resolution: str | None = None
+    negative_prompt: str = ""
+    seed: int | None = None
+    # 节点 settings 透传：sampler/scheduler/steps/cfg/batch/strategy 等
+    mode_settings: dict = Field(default_factory=dict)
     wait: bool = False  # True 则轮询直到完成
 
 
@@ -182,8 +188,13 @@ async def media_generate(
         reference_images=body.reference_images,
         duration_seconds=body.duration_seconds,
         resolution=body.resolution,
+        negative_prompt=body.negative_prompt,
+        seed=body.seed,
+        params=dict(body.mode_settings or {}),
     )
     task = await get_media_registry().generate(req, wait=body.wait)
+    if task.task_id:
+        _media_task_tenants[task.task_id] = principal.tenant_id
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -193,6 +204,27 @@ async def media_generate(
     )
     return {
         "task_id": task.task_id,
+        "provider": task.provider,
+        "status": task.status,
+        "outputs": task.outputs,
+        "error": task.error,
+    }
+
+
+@router.get("/media/tasks/{task_id}", summary="查询媒体生成任务状态")
+async def media_task(
+    task_id: str,
+    principal: Principal = Depends(require_permission("creative", "read")),
+) -> dict:
+    owner = _media_task_tenants.get(task_id)
+    if owner is None or owner != principal.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "媒体任务不存在或无权访问")
+    task = await get_media_registry().poll_task(task_id)
+    if task is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "媒体任务不存在")
+    return {
+        "task_id": task.task_id,
+        "kind": (get_media_registry().kind_of(task_id) or MediaKind.image).value,
         "provider": task.provider,
         "status": task.status,
         "outputs": task.outputs,

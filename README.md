@@ -74,7 +74,22 @@ cp .env.example .env          # 按需填 LLM 配置
 docker compose up -d
 ```
 
+## 前端工作台（2026-06-22 起 ZCode 风格重构）
+
+前端已重构为 **ZCode 风格暗色折叠 AI 工作台**：
+
+- 主导航默认折叠，仅保留：新建任务 / 搜索 / 技能 / 对话 / 智能体 / 短剧工厂 / 工作流 / 设置。
+- 知识库、开源发现迁入 **设置 → 索引库**；视频剪辑合并进短剧工厂的 **剪辑节点 / 导出节点**。
+- 短剧工厂升级为 **自由拖拽画布工作流系统**：右键添加 11 类短剧节点，节点连线即工作流 `depends_on`，「运行画布」触发真实 `WorkflowEngine`，关键帧 / 视频走 `media task` 轮询，剪辑 / 导出走真实 timeline API；`/editor` 保留为 `?timeline_id=` 高级模式。
+
+详见：
+
+- `docs/frontend-zcode-workbench-refactor.md`（设计文档）
+- `docs/coordination/`（多会话协作总控、handoff、report）
+- `docs/coordination/reports/delivery-report.md`（本轮交付报告）
+
 ## 开发阶段
+
 
 - **Phase 0**（当前）：脚手架 + 单机可启动 + LLM/trace/向量 三链路打通
 - Phase 1：编排(LangGraph) + 记忆(Mem0) + MCP + 鉴权/租户隔离

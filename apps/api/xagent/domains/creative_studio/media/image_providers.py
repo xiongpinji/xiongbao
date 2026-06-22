@@ -31,38 +31,83 @@ class OpenAIImageProvider:
     )
     _results: dict = field(default_factory=dict)
 
+    def _endpoint(self, path: str) -> str:
+        """拼接 base_url + path，自动去末尾斜杠避免双斜杠。"""
+        return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
+
+    def _build_payload(self, req: GenerationRequest, *, size: str) -> dict:
+        """构造请求 payload，把节点 settings 透传的 params 挑 OpenAI 兼容字段塞进去。
+
+        OpenAI images/generations 支持: model/prompt/n/size/quality/style/response_format/seed
+        节点 settings 透传过来的 params 里可能含: sampler/scheduler/steps/cfg/batch/strategy 等，
+        只挑 OpenAI 兼容字段，其余忽略。
+        """
+        params = dict(req.params or {})
+        payload: dict = {
+            "model": req.model_id or self.default_model,
+            "prompt": req.prompt,
+            "size": size,
+        }
+        # n: 批量（来自 settings.batch 透传）
+        batch = params.get("batch")
+        if batch is not None:
+            try:
+                n = int(batch)
+                if n > 0:
+                    payload["n"] = n
+            except (TypeError, ValueError):
+                pass
+        # quality: gpt-image-2 支持 "low"|"medium"|"high"|"auto"
+        quality = params.get("quality")
+        if quality:
+            payload["quality"] = str(quality)
+        # style: dall-e-3 支持 "vivid"|"natural"
+        style = params.get("style")
+        if style:
+            payload["style"] = str(style)
+        # response_format: "url"|"b64_json"
+        response_format = params.get("response_format")
+        if response_format:
+            payload["response_format"] = str(response_format)
+        # seed: 部分中转站支持
+        if req.seed is not None:
+            payload["seed"] = int(req.seed)
+        return payload
+
     async def submit(self, req: GenerationRequest) -> GenerationTask:
         import httpx
 
-        model = req.model_id or self.default_model
-        headers = {"Authorization": f"Bearer {self.api_key}"}
         size = req.resolution or "1024x1024"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             async with httpx.AsyncClient(timeout=300) as client:
                 if req.mode == GenerationMode.image_to_image and req.reference_images:
                     # 图生图：images/edits（需上传参考图，这里传 URL/base64 由调用方准备）
+                    payload = self._build_payload(req, size=size)
+                    payload["image"] = req.reference_images[0]
                     resp = await client.post(
-                        f"{self.base_url}/images/edits",
+                        self._endpoint("/images/edits"),
                         headers=headers,
-                        json={
-                            "model": model,
-                            "prompt": req.prompt,
-                            "image": req.reference_images[0],
-                            "size": size,
-                        },
+                        json=payload,
                     )
                 else:
+                    payload = self._build_payload(req, size=size)
+                    if "n" not in payload:
+                        payload["n"] = 1
                     resp = await client.post(
-                        f"{self.base_url}/images/generations",
+                        self._endpoint("/images/generations"),
                         headers=headers,
-                        json={"model": model, "prompt": req.prompt, "size": size, "n": 1},
+                        json=payload,
                     )
                 resp.raise_for_status()
                 data = resp.json()
-            outputs = [
-                item.get("url") or f"data:image/png;base64,{item.get('b64_json', '')}"
-                for item in data.get("data", [])
-            ]
+            outputs = []
+            for item in data.get("data", []):
+                url = item.get("url")
+                if url:
+                    outputs.append(url)
+                elif item.get("b64_json"):
+                    outputs.append(f"data:image/png;base64,{item['b64_json']}")
             task = GenerationTask(
                 task_id=f"openai-img-{abs(hash(req.prompt)) % 100000}",
                 provider=self.name, status="succeeded", outputs=outputs, raw=data,

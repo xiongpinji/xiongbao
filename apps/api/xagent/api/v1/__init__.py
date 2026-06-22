@@ -13,6 +13,7 @@ from xagent.api.v1 import (
     memory,
     open_source,
     stream,
+    system,
     tasks,
     workflows,
 )
@@ -30,5 +31,6 @@ api_v1.include_router(editor.router)
 api_v1.include_router(open_source.router)
 api_v1.include_router(billing.router)
 api_v1.include_router(audit.router)
+api_v1.include_router(system.router)
 
 __all__ = ["api_v1"]

@@ -6,6 +6,7 @@ __pycache__/
 build/
 dist/
 .venv/
+.venv*/
 venv/
 env/
 .pytest_cache/
@@ -18,6 +19,8 @@ htmlcov/
 # ---- Node / Web ----
 node_modules/
 apps/web/dist/
+apps/web/tsconfig.tsbuildinfo
+apps/web/vite.config.ts.timestamp-*.mjs
 apps/desktop/dist/
 *.local
 
@@ -52,3 +55,7 @@ logs/
 # E2E 测试产物
 tests/e2e/test-results/
 tests/e2e/playwright-report/
+tests/e2e/specs/debug_login.spec.ts
+
+# ---- Local automation ----
+.claude/

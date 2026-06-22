@@ -162,7 +162,7 @@ class VolcanoArkVideoProvider:
     name: str = "volcano_ark"
     api_key: str = ""
     base_url: str = "https://ark.cn-beijing.volces.com"
-    default_model: str = "doubao-seedance-1-5-pro-251215"
+    default_model: str = "doubao-seedance-2-0-260128"
     supported_kinds: set = field(default_factory=lambda: {MediaKind.video})
     supported_modes: set = field(
         default_factory=lambda: {GenerationMode.text_to_video, GenerationMode.image_to_video}
@@ -174,6 +174,42 @@ class VolcanoArkVideoProvider:
             "Content-Type": "application/json",
         }
 
+    def _build_parameters(self, req: GenerationRequest) -> dict:
+        """从 GenerationRequest + params 构造火山方舟 parameters 字段。
+
+        火山方舟 Seedance 2.0 支持的 parameters:
+        - resolution: "720p" | "1080p" | "4K"（也接受 "1280x720" 等会被透传）
+        - duration: int 秒数（5/10）
+        - fps: int
+        - seed: int
+        - watermark: bool
+        - camera: dict（镜头运动）
+        节点 settings 透传过来的 params 里可能含: sampler/scheduler/steps/cfg/strategy/shotType 等，
+        只挑火山方舟认识的字段，其余忽略。
+        """
+        params = dict(req.params or {})
+        parameters: dict = {}
+        # resolution: 优先用 req.resolution，其次 params.resolution
+        resolution = req.resolution or params.get("resolution")
+        if resolution:
+            parameters["resolution"] = resolution
+        # duration: 优先 req.duration_seconds，其次 params.duration
+        duration = req.duration_seconds or params.get("duration")
+        if duration is not None:
+            try:
+                parameters["duration"] = int(float(duration))
+            except (TypeError, ValueError):
+                pass
+        if req.fps:
+            parameters["fps"] = req.fps
+        if req.seed is not None:
+            parameters["seed"] = int(req.seed)
+        # 火山方舟额外的 camera 参数（来自节点 settings.shotType 透传）
+        shot_type = params.get("shot_type") or params.get("shotType")
+        if shot_type:
+            parameters["camera"] = {"type": str(shot_type)}
+        return parameters
+
     async def submit(self, req: GenerationRequest) -> GenerationTask:
         import httpx
 
@@ -182,10 +218,13 @@ class VolcanoArkVideoProvider:
         if req.mode == GenerationMode.image_to_video and req.reference_images:
             content.append({"type": "image_url", "image_url": {"url": req.reference_images[0]}})
 
-        payload = {
+        payload: dict = {
             "model": req.model_id or self.default_model,
             "content": content,
         }
+        parameters = self._build_parameters(req)
+        if parameters:
+            payload["parameters"] = parameters
         try:
             async with httpx.AsyncClient(timeout=60) as client:
                 resp = await client.post(
@@ -239,15 +278,15 @@ class VolcanoArkVideoProvider:
             return []
         return [
             ModelCard(
+                "doubao-seedance-2-0-260128", "豆包 Seedance 2.0",
+                MediaKind.video,
+                [GenerationMode.text_to_video, GenerationMode.image_to_video],
+                self.name, "火山方舟最新视频生成（默认）", max_duration_seconds=10,
+            ),
+            ModelCard(
                 "doubao-seedance-1-5-pro-251215", "豆包 Seedance 1.5 Pro",
                 MediaKind.video,
                 [GenerationMode.text_to_video, GenerationMode.image_to_video],
                 self.name, "火山方舟视频生成（已验证）", max_duration_seconds=10,
-            ),
-            ModelCard(
-                "doubao-seedance-2-0-260128", "豆包 Seedance 2.0",
-                MediaKind.video,
-                [GenerationMode.text_to_video, GenerationMode.image_to_video],
-                self.name, "火山方舟最新视频生成", max_duration_seconds=10,
             ),
         ]

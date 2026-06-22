@@ -31,6 +31,7 @@ class NodeType(str, Enum):
 
 class NodeStatus(str, Enum):
     pending = "pending"
+    review_required = "review_required"
     approved = "approved"
     rejected = "rejected"
     modified = "modified"
@@ -47,6 +48,9 @@ class ProductionNode:
     human_note: str = ""         # 人工修改意见
     position: dict = field(default_factory=lambda: {"x": 0, "y": 0})
     dependencies: list[str] = field(default_factory=list)
+    # 节点级生成参数（prompt/model/sampler/...）
+    settings: dict[str, Any] = field(default_factory=dict)
+    locked: bool = False         # 锁定后不参与 run / review / auto-fix
 
     def to_dict(self) -> dict:
         return {
@@ -59,7 +63,19 @@ class ProductionNode:
             "human_note": self.human_note,
             "position": self.position,
             "dependencies": self.dependencies,
+            "settings": self.settings,
+            "locked": self.locked,
         }
+
+    def merge_settings(self, patch: dict[str, Any]) -> None:
+        """浅合并 settings；None 值视为删除该键。"""
+        if not isinstance(patch, dict):
+            return
+        for key, value in patch.items():
+            if value is None and key in self.settings:
+                self.settings.pop(key, None)
+            else:
+                self.settings[key] = value
 
 
 @dataclass
@@ -68,6 +84,7 @@ class ProductionCanvas:
     title: str = "未命名"
     brief: str = ""
     nodes: list[ProductionNode] = field(default_factory=list)
+    workflow_run_id: str | None = None
 
     def add_node(self, node: ProductionNode) -> ProductionNode:
         self.nodes.append(node)
@@ -88,10 +105,44 @@ class ProductionCanvas:
                 setattr(node, k, v)
         return node
 
+    def apply_layout(
+        self,
+        positions: list[dict[str, Any]],
+        edges: list[dict[str, str]],
+    ) -> None:
+        """保存节点位置，并把 edges 折算为目标节点 dependencies。"""
+        by_id = {n.node_id: n for n in self.nodes}
+        for entry in positions:
+            node = by_id.get(str(entry.get("node_id", "")))
+            if node is None:
+                continue
+            position = entry.get("position") or {}
+            node.position = {
+                "x": float(position.get("x", node.position.get("x", 0)) or 0),
+                "y": float(position.get("y", node.position.get("y", 0)) or 0),
+            }
+        deps: dict[str, list[str]] = {n.node_id: [] for n in self.nodes}
+        for edge in edges:
+            source = str(edge.get("source", ""))
+            target = str(edge.get("target", ""))
+            if not source or not target or source == target:
+                continue
+            if target not in deps or source not in by_id:
+                continue
+            if source not in deps[target]:
+                deps[target].append(source)
+        for node_id, dep_list in deps.items():
+            node = by_id.get(node_id)
+            if node is not None:
+                node.dependencies = dep_list
+
     def to_dict(self) -> dict:
-        return {
+        data: dict[str, Any] = {
             "canvas_id": self.canvas_id,
             "title": self.title,
             "brief": self.brief,
             "nodes": [n.to_dict() for n in self.nodes],
         }
+        if self.workflow_run_id:
+            data["workflow_run_id"] = self.workflow_run_id
+        return data

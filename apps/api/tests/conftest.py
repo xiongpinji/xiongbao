@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import os
+import tempfile
+import uuid
+from pathlib import Path
 
 import pytest
 
@@ -68,11 +71,15 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     _cs._drafts.clear()
     _cs._productions.clear()
+    _cs._media_task_tenants.clear()
     # 清空画布
     from xagent.api.v1 import canvas as _cv
 
     _cv._canvases.clear()
     _cv._canvas_tenants.clear()
+    # 把画布快照路径指向临时位置，避免测试残留
+    snapshot_path = Path(tempfile.gettempdir()) / f"canvas_{uuid.uuid4().hex}.json"
+    monkeypatch.setattr(_cv, "_CANVAS_SNAPSHOT_PATH", snapshot_path)
     # 清空编辑器时间线
     from xagent.api.v1 import editor as _ed
 

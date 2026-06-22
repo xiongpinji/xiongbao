@@ -21,10 +21,18 @@ class LiteLLMClient(LLMClient):
 
     @property
     def effective_model(self) -> str:
-        """实际使用的模型名（ollama 模型加 ollama/ 前缀供 LiteLLM 路由）。"""
+        """实际使用的模型名（带 litellm provider 前缀供路由）。
+
+        - ollama: 加 ollama/ 前缀
+        - deepseek 直连（无 proxy/ollama）: 加 deepseek/ 前缀
+        - 其他: 原样返回（openai 兼容）
+        """
         if self._cfg.ollama_base_url:
             model = self._cfg.ollama_model or self._cfg.default_model
             return model if model.startswith("ollama/") else f"ollama/{model}"
+        if not self._cfg.proxy_url and self._cfg.deepseek_api_key:
+            model = self._cfg.default_model
+            return model if model.startswith("deepseek/") else f"deepseek/{model}"
         return self._cfg.default_model
 
     def _call_kwargs(self, model: str | None = None) -> dict[str, Any]:
@@ -41,10 +49,14 @@ class LiteLLMClient(LLMClient):
         elif self._cfg.ollama_base_url:
             # 走本地 Ollama：LiteLLM 用 ollama/ 前缀 + api_base 路由
             kwargs["api_base"] = self._cfg.ollama_base_url
-        else:
-            # 直连：把可用的 provider key 透传给 litellm
-            if self._cfg.openai_api_key:
-                kwargs["api_key"] = self._cfg.openai_api_key
+        elif self._cfg.deepseek_api_key and target.startswith("deepseek/"):
+            # 直连 DeepSeek：litellm 靠 deepseek/ 前缀 + api_key 路由
+            kwargs["api_key"] = self._cfg.deepseek_api_key
+        elif self._cfg.openai_api_key:
+            # 直连 OpenAI 兼容
+            kwargs["api_key"] = self._cfg.openai_api_key
+        elif self._cfg.anthropic_api_key and target.startswith("anthropic/"):
+            kwargs["api_key"] = self._cfg.anthropic_api_key
         return kwargs
 
     async def complete(
@@ -127,9 +139,11 @@ class LiteLLMClient(LLMClient):
         )
 
     async def health(self) -> bool:
-        # proxy / ollama / 直连 key 任一可用
+        # proxy / ollama / 任意直连 key 任一可用
         return bool(
             self._cfg.proxy_url
             or self._cfg.ollama_base_url
             or self._cfg.openai_api_key
+            or self._cfg.deepseek_api_key
+            or self._cfg.anthropic_api_key
         )

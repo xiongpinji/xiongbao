@@ -1,41 +1,34 @@
-import { useState } from "react";
-import { setToken, clearToken, getToken } from "../api/client";
+import { useMemo, useState } from "react";
+import CodePreviewSettings from "../components/settings/CodePreviewSettings";
+import CommandsSettings from "../components/settings/CommandsSettings";
+import GeneralSettings from "../components/settings/GeneralSettings";
+import IndexSettings, { type IndexTab } from "../components/settings/IndexSettings";
+import McpServersSettings from "../components/settings/McpServersSettings";
+import ModelSettings from "../components/settings/ModelSettings";
+import OnboardingSettings from "../components/settings/OnboardingSettings";
+import PluginSettings from "../components/settings/PluginSettings";
+import SettingsLayout, { type SettingsSection } from "../components/settings/SettingsLayout";
+import SkillsSettings from "../components/settings/SkillsSettings";
+import UsageStatsSettings from "../components/settings/UsageStatsSettings";
 
 export default function SettingsPage() {
-  const [token, setTok] = useState(getToken() ?? "");
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialSection = (params.get("section") as SettingsSection | null) ?? "general";
+  const initialTab = ((params.get("tab") as IndexTab | null) ?? "knowledge") as IndexTab;
+  const [section, setSection] = useState<SettingsSection>(initialSection);
 
   return (
-    <div className="p-6 max-w-xl space-y-4">
-      <h1 className="text-xl font-semibold">设置</h1>
-      <div className="bg-white border rounded-md p-4 space-y-2">
-        <div className="text-sm font-medium">访问 Token（lite 模式可留空）</div>
-        <input
-          className="w-full border rounded px-2 py-1 text-sm font-mono"
-          value={token}
-          onChange={(e) => setTok(e.target.value)}
-          placeholder="Bearer token"
-        />
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-1 bg-brand-600 text-white rounded text-sm"
-            onClick={() => {
-              setToken(token);
-              alert("已保存");
-            }}
-          >
-            保存
-          </button>
-          <button
-            className="px-3 py-1 border rounded text-sm"
-            onClick={() => {
-              clearToken();
-              setTok("");
-            }}
-          >
-            清除
-          </button>
-        </div>
-      </div>
-    </div>
+    <SettingsLayout activeSection={section} onSectionChange={setSection}>
+      {section === "general" && <GeneralSettings />}
+      {section === "code-preview" && <CodePreviewSettings />}
+      {section === "models" && <ModelSettings />}
+      {section === "skills" && <SkillsSettings />}
+      {section === "mcp" && <McpServersSettings />}
+      {section === "plugins" && <PluginSettings />}
+      {section === "commands" && <CommandsSettings />}
+      {section === "index" && <IndexSettings initialTab={initialTab} />}
+      {section === "usage" && <UsageStatsSettings />}
+      {section === "onboarding" && <OnboardingSettings />}
+    </SettingsLayout>
   );
 }

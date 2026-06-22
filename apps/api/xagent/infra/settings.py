@@ -94,7 +94,7 @@ class MediaSettings(BaseModel):
     # 视频（火山方舟 Seedance）
     volcano_ark_api_key: str = ""
     volcano_ark_base_url: str = "https://ark.cn-beijing.volces.com"
-    volcano_ark_model: str = "doubao-seedance-1-5-pro-251215"
+    volcano_ark_model: str = "doubao-seedance-2-0-260128"
 
     # 视频（可灵）
     kling_api_key: str = ""

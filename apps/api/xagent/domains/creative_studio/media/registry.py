@@ -27,6 +27,8 @@ class MediaProviderRegistry:
         self._providers: dict[MediaKind, MediaProvider] = {}
         self._null = NullProvider()
         self._all: list[MediaProvider] = [self._null]
+        # task_id -> (kind, provider name) 用于轮询时反查
+        self._task_kinds: dict[str, MediaKind] = {}
 
     def register(self, kind: MediaKind, provider: MediaProvider) -> None:
         self._providers[kind] = provider
@@ -46,10 +48,25 @@ class MediaProviderRegistry:
             cards.extend(p.list_models(kind))
         return cards
 
+    def remember_task(self, task: GenerationTask, kind: MediaKind) -> None:
+        if task.task_id:
+            self._task_kinds[task.task_id] = kind
+
+    def kind_of(self, task_id: str) -> MediaKind | None:
+        return self._task_kinds.get(task_id)
+
+    async def poll_task(self, task_id: str) -> GenerationTask | None:
+        kind = self._task_kinds.get(task_id)
+        if kind is None:
+            return None
+        provider = self.get(kind)
+        return await provider.poll(task_id)
+
     async def generate(self, req: GenerationRequest, *, wait: bool = True) -> GenerationTask:
         """提交生成任务；wait=True 时轮询直到完成或超时。"""
         provider = self.get(req.kind)
         task = await provider.submit(req)
+        self.remember_task(task, req.kind)
         if not wait or task.status in ("succeeded", "failed"):
             return task
         cfg = get_settings().media
@@ -59,9 +76,11 @@ class MediaProviderRegistry:
             elapsed += cfg.poll_interval_seconds
             task = await provider.poll(task.task_id)
             if task.status in ("succeeded", "failed"):
+                self.remember_task(task, req.kind)
                 return task
         task.status = "failed"
         task.error = "生成超时"
+        self.remember_task(task, req.kind)
         return task
 
 

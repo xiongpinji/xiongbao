@@ -2,7 +2,7 @@
 
 执行模型（saga 风格）：
 1. 拓扑排序步骤（按 depends_on）。
-2. 逐步执行：通过 run_agent(role, goal) 跑每步；成功则下一步。
+2. 同层无依赖且无审批门的步骤并行执行（asyncio.gather）。
 3. 遇审批门：暂停为 awaiting_approval，等 approve()/deny() 信号。
 4. 步骤失败且有补偿：回滚已成功的步骤（逆序执行 compensation），最终 rolled_back。
 5. 步骤失败无补偿：failed，不回滚（人工介入）。
@@ -13,6 +13,7 @@ lite：进程内执行；full 目标 Temporal（同接口，活动 = step）。
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
@@ -92,40 +93,82 @@ class WorkflowEngine:
         run.status = WorkflowStatus.running
         run.started_at = run.started_at or datetime.now(UTC)
 
-        for step in _topo_order(run.steps):
-            if step.status in (StepStatus.succeeded, StepStatus.skipped):
-                continue
-            # 审批门：首次到达 -> 暂停；审批通过(approve 已把状态置 running)则放行执行
-            if step.approval and step.status == StepStatus.pending:
-                step.status = StepStatus.awaiting_approval
-                run.status = WorkflowStatus.awaiting_approval
-                run.add_event(step.id, "approval_requested", step.approval.message)
-                return run  # 暂停，等信号
+        ordered = _topo_order(run.steps)
+        completed: set[str] = {
+            s.id for s in run.steps if s.status in (StepStatus.succeeded, StepStatus.skipped)
+        }
 
-            # 执行步骤
-            step.status = StepStatus.running
-            step.started_at = datetime.now(UTC)
-            run.add_event(step.id, "started")
-            try:
-                result = await run_agent(
-                    step.goal, principal=principal, role_name=step.role
-                )
-                step.result = result.to_dict()
-                step.status = StepStatus.succeeded
-                step.finished_at = datetime.now(UTC)
-                run.add_event(step.id, "succeeded", result.final_answer[:200])
-            except Exception as exc:
-                step.error = str(exc)
-                step.status = StepStatus.failed
-                step.finished_at = datetime.now(UTC)
-                run.add_event(step.id, "failed", step.error)
-                await self._compensate(run, step, principal)
+        idx = 0
+        while idx < len(ordered):
+            # 收集本批次可并行的 step：依赖已完成、无审批门、尚未成功
+            batch: list[WorkflowStep] = []
+            scan = idx
+            while scan < len(ordered):
+                step = ordered[scan]
+                if step.status in (StepStatus.succeeded, StepStatus.skipped):
+                    completed.add(step.id)
+                    scan += 1
+                    continue
+                deps_ok = all(d in completed for d in step.depends_on)
+                if not deps_ok:
+                    break  # 后续依赖未满足，停止本批
+                if step.approval and step.status == StepStatus.pending:
+                    if batch:
+                        break  # 先把当前批跑完
+                    # 审批门：单独处理
+                    step.status = StepStatus.awaiting_approval
+                    run.status = WorkflowStatus.awaiting_approval
+                    run.add_event(step.id, "approval_requested", step.approval.message)
+                    return run
+                batch.append(step)
+                scan += 1
+
+            if not batch:
+                # 没有可执行 step（被审批门挡住或异常），退出循环
+                break
+
+            # 标记并发起
+            for step in batch:
+                step.status = StepStatus.running
+                step.started_at = datetime.now(UTC)
+                run.add_event(step.id, "started")
+
+            results = await asyncio.gather(
+                *[
+                    run_agent(step.goal, principal=principal, role_name=step.role)
+                    for step in batch
+                ],
+                return_exceptions=True,
+            )
+
+            failed_step: WorkflowStep | None = None
+            for step, result in zip(batch, results, strict=True):
+                if isinstance(result, Exception):
+                    step.error = str(result)
+                    step.status = StepStatus.failed
+                    step.finished_at = datetime.now(UTC)
+                    run.add_event(step.id, "failed", step.error)
+                    if failed_step is None:
+                        failed_step = step
+                else:
+                    step.result = result.to_dict()
+                    step.status = StepStatus.succeeded
+                    step.finished_at = datetime.now(UTC)
+                    run.add_event(step.id, "succeeded", result.final_answer[:200])
+                    completed.add(step.id)
+
+            if failed_step is not None:
+                await self._compensate(run, failed_step, principal)
                 run.finished_at = datetime.now(UTC)
                 return run
 
-        run.status = WorkflowStatus.completed
-        run.finished_at = datetime.now(UTC)
-        run.add_event("__root__", "completed")
+            idx = scan
+
+        # 全部完成
+        if all(s.status in (StepStatus.succeeded, StepStatus.skipped) for s in run.steps):
+            run.status = WorkflowStatus.completed
+            run.finished_at = datetime.now(UTC)
+            run.add_event("__root__", "completed")
         return run
 
     async def approve(self, run_id: str, step_id: str, principal: Principal) -> WorkflowRun:

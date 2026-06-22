@@ -57,7 +57,7 @@ function NodeReviewPanel({ node, onReview, onClose, onGenerate }: {
         <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
       </div>
       <div className="text-xs text-slate-500">{node.title}</div>
-      {node.agent_note && <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">🤖 {node.agent_note}</div>}
+      {node.agent_note && <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">AI {node.agent_note}</div>}
       <textarea className="w-full border rounded text-xs p-2 h-16" placeholder="内容" value={content}
         onChange={e => setContent(e.target.value)} />
       <textarea className="w-full border rounded text-xs p-2 h-16" placeholder="修改意见" value={note}
@@ -114,9 +114,9 @@ function CanvasNodeWidget({ data }: { data: any }) {
         )}
       </div>
       <div className="text-sm font-medium truncate">{data.title}</div>
-      {data.human_note && <div className="text-xs text-amber-600 mt-1 line-clamp-2">📝 {data.human_note}</div>}
+      {data.human_note && <div className="text-xs text-amber-600 mt-1 line-clamp-2">备注 {data.human_note}</div>}
       {data.agent_note && !data.human_note && (
-        <div className="text-xs text-blue-500 mt-1 line-clamp-2">🤖 {data.agent_note}</div>
+        <div className="text-xs text-blue-500 mt-1 line-clamp-2">AI {data.agent_note}</div>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Film, Plus, Scissors, Download, Play } from "lucide-react";
 import {
   createTimeline,
@@ -29,6 +29,21 @@ export default function EditorPage() {
   const [clipText, setClipText] = useState("");
   const [clipStart, setClipStart] = useState(0);
   const [clipEnd, setClipEnd] = useState(4);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const timelineId = params.get("timeline_id");
+    if (!timelineId) return;
+    (async () => {
+      try {
+        const tl = await getTimeline(timelineId);
+        setTimeline(tl);
+        setMsg(`已加载短剧工厂时间线：${tl.id.slice(0, 8)}`);
+      } catch (e: unknown) {
+        setMsg(e instanceof Error ? e.message : String(e));
+      }
+    })();
+  }, []);
 
   async function handleCreate() {
     setLoading(true);
