@@ -33,6 +33,8 @@ export interface CreateWorkspaceInput {
   pinned?: boolean;
   surface?: WorkspaceSurface | null;
   timestamp?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface CustomAgentPersona {
@@ -91,14 +93,16 @@ export function createWorkspaceSurface(surface: ShellRouteSnapshot): WorkspaceSu
 
 export function createWorkspace(input: CreateWorkspaceInput): WorkspaceRecord {
   const timestamp = input.timestamp ?? Date.now();
+  const createdAt = input.createdAt ?? timestamp;
+  const updatedAt = input.updatedAt ?? timestamp;
   return {
     id: input.id,
     kind: input.kind,
     name: normalizeLabel(input.name, FALLBACK_WORKSPACE_NAMES[input.kind]),
     description: normalizeDescription(input.description),
     pinned: input.pinned ?? input.surface?.pinned ?? false,
-    createdAt: timestamp,
-    updatedAt: timestamp,
+    createdAt,
+    updatedAt,
     surface: input.surface ?? null,
   };
 }

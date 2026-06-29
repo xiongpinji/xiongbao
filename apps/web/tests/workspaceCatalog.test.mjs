@@ -6,7 +6,12 @@ import {
   sortWorkspaces,
   createCustomAgentProfile,
 } from "../src/shell/workspaceModels.ts";
-import { createDefaultSnapshot, hydrateWorkspaceState } from "../src/shell/workspaceStorage.ts";
+import {
+  createDefaultSnapshot,
+  hydrateWorkspaceState,
+  readPersistedShellSnapshot,
+  writePersistedShellSnapshot,
+} from "../src/shell/workspaceStorage.ts";
 
 function makeSurface(overrides = {}) {
   return {
@@ -121,5 +126,61 @@ test("hydrateWorkspaceState merges missing primary surfaces into a non-empty sna
   assert.deepEqual(
     [...hydrated.workspaces.map((workspace) => workspace.id)].sort(),
     ["primary:chat", "primary:workflows"],
+  );
+});
+
+test("workspace snapshot round-trip preserves createdAt and stable ordering after rename", () => {
+  const primarySurfaces = [];
+  const alpha = createWorkspace({
+    id: "alpha",
+    kind: "project",
+    name: "Alpha",
+    pinned: false,
+    timestamp: 100,
+  });
+  const beta = createWorkspace({
+    id: "beta",
+    kind: "project",
+    name: "Beta",
+    pinned: true,
+    timestamp: 50,
+  });
+  const renamedAlpha = renameWorkspace(alpha, "Alpha Prime", 300);
+
+  const storage = new Map();
+  globalThis.localStorage = {
+    getItem(key) {
+      return storage.has(key) ? storage.get(key) : null;
+    },
+    setItem(key, value) {
+      storage.set(key, String(value));
+    },
+    removeItem(key) {
+      storage.delete(key);
+    },
+    clear() {
+      storage.clear();
+    },
+    key(index) {
+      return [...storage.keys()][index] ?? null;
+    },
+    get length() {
+      return storage.size;
+    },
+  };
+
+  writePersistedShellSnapshot({
+    workspaces: sortWorkspaces([renamedAlpha, beta]),
+    customAgents: [],
+    userDock: { name: "当前用户", title: "本地工作台", description: "说明", avatarSeed: "dock" },
+  });
+
+  const hydrated = readPersistedShellSnapshot(primarySurfaces);
+
+  assert.equal(hydrated.workspaces.find((workspace) => workspace.id === "alpha")?.createdAt, 100);
+  assert.equal(hydrated.workspaces.find((workspace) => workspace.id === "alpha")?.updatedAt, 300);
+  assert.deepEqual(
+    hydrated.workspaces.map((workspace) => workspace.id),
+    ["beta", "alpha"],
   );
 });

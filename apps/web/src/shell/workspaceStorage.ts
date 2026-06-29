@@ -121,7 +121,8 @@ function normalizeWorkspaces(value: unknown, primarySurfaces: ShellRouteSnapshot
         description: typeof entry.description === "string" ? entry.description : undefined,
         pinned: typeof entry.pinned === "boolean" ? entry.pinned : undefined,
         surface,
-        timestamp: typeof entry.updatedAt === "number" ? entry.updatedAt : undefined,
+        createdAt: typeof entry.createdAt === "number" ? entry.createdAt : undefined,
+        updatedAt: typeof entry.updatedAt === "number" ? entry.updatedAt : undefined,
       }),
     ];
   });
