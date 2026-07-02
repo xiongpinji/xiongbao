@@ -4,10 +4,13 @@
 targets:
   - id: http
     config:
-      url: http://localhost:8000/api/v1/chat/completions
+      url: http://localhost:8000/api/v1/agents/run
       method: POST
       headers:
         Content-Type: application/json
+      body:
+        goal: "{{prompt}}"
+      transformResponse: json.final_answer
 
 prompts:
   - "请回答以下问题：{{query}}"
