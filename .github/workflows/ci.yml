@@ -55,9 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, license-gate]
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.XAGENT_LLM__OPENAI_API_KEY }}
-      XAGENT_LLM__OPENAI_API_KEY: ${{ secrets.XAGENT_LLM__OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
-      XAGENT_LLM__DEFAULT_MODEL: gpt-4o-mini
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "false"
       XAGENT_DB__URL: sqlite+aiosqlite:///./xagent-ci.db
