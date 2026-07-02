@@ -123,6 +123,8 @@ export interface ShotProduct {
 
 export interface ProductionResult {
   storyboard_id: string;
+  run_id?: string;
+  task_id?: string;
   title: string;
   brief: string;
   genre: string;

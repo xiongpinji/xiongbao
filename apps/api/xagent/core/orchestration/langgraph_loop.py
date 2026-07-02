@@ -139,6 +139,8 @@ async def run_agent_langgraph(
     capabilities: set[str] | None = None,
     model: str | None = None,
     on_event: Any = None,
+    session: Any = None,
+    run_id: str | None = None,
 ) -> AgentRun:
     """用 LangGraph 状态图跑 agent（与 loop.run_agent 相同签名）。"""
     registry = get_role_registry()
@@ -150,8 +152,9 @@ async def run_agent_langgraph(
         role = registry.match({"general"})
 
     tools = get_tool_registry()
+    resolved_run_id = run_id or uuid.uuid4().hex
     specs = [s for s in tools.specs() if role.can_use(s["function"]["name"])]
-    ctx = ToolContext(principal=principal)
+    ctx = ToolContext(principal=principal, session=session, run_id=resolved_run_id)
     llm = get_llm_client()
     tracer = get_tracer()
     target_model = model or role.preferred_model
@@ -208,7 +211,7 @@ async def run_agent_langgraph(
         final_answer = final_state["messages"][-1].get("content", "")
 
     return AgentRun(
-        run_id=uuid.uuid4().hex,
+        run_id=resolved_run_id,
         goal=goal,
         role_name=role.name,
         tenant_id=principal.tenant_id,

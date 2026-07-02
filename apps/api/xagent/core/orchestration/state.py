@@ -8,6 +8,46 @@ from typing import Any
 
 from xagent.adapters.llm import Message
 
+RUN_STATUS_PENDING = "pending"
+RUN_STATUS_RUNNING = "running"
+RUN_STATUS_AWAITING_APPROVAL = "awaiting_approval"
+RUN_STATUS_SUCCEEDED = "succeeded"
+RUN_STATUS_FAILED = "failed"
+RUN_STATUS_CANCELLED = "cancelled"
+RUN_STATUS_ROLLED_BACK = "rolled_back"
+
+RUN_STATUS_VALUES = frozenset(
+    {
+        RUN_STATUS_PENDING,
+        RUN_STATUS_RUNNING,
+        RUN_STATUS_AWAITING_APPROVAL,
+        RUN_STATUS_SUCCEEDED,
+        RUN_STATUS_FAILED,
+        RUN_STATUS_CANCELLED,
+        RUN_STATUS_ROLLED_BACK,
+    }
+)
+
+_LEGACY_RUN_STATUS_MAP = {
+    "completed": RUN_STATUS_SUCCEEDED,
+    "queued": RUN_STATUS_PENDING,
+    "started": RUN_STATUS_RUNNING,
+    "success": RUN_STATUS_SUCCEEDED,
+    "failure": RUN_STATUS_FAILED,
+    "produced": RUN_STATUS_SUCCEEDED,
+    "partial": RUN_STATUS_FAILED,
+}
+
+
+def normalize_run_status(status: str | None, *, default: str = RUN_STATUS_PENDING) -> str:
+    normalized_default = (default or RUN_STATUS_PENDING).strip().lower()
+    normalized_default = _LEGACY_RUN_STATUS_MAP.get(normalized_default, normalized_default)
+    if normalized_default not in RUN_STATUS_VALUES:
+        normalized_default = RUN_STATUS_PENDING
+    normalized = (status or normalized_default).strip().lower()
+    normalized = _LEGACY_RUN_STATUS_MAP.get(normalized, normalized)
+    return normalized if normalized in RUN_STATUS_VALUES else normalized_default
+
 
 class StepKind(str, Enum):  # noqa: UP042  (兼容 py3.11)
     reason = "reason"      # LLM 推理

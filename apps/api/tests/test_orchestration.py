@@ -31,6 +31,12 @@ async def test_run_agent_records_run_id() -> None:
     assert run.run_id
 
 
+async def test_run_agent_reuses_external_run_id() -> None:
+    p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+    run = await run_agent("任务", principal=p, run_id="external-run-id")
+    assert run.run_id == "external-run-id"
+
+
 def test_audit_chain_integrity() -> None:
     log = get_audit_log()
     log.record(tenant_id="t1", actor="u", action="a1", resource="agent")

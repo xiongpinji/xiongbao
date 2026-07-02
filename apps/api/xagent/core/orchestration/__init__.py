@@ -42,6 +42,8 @@ async def run_agent(
     capabilities: set[str] | None = None,
     model: str | None = None,
     on_event: Any = None,
+    session: Any = None,
+    run_id: str | None = None,
 ) -> AgentRun:
     """运行一次 agent 任务。DeerFlow(opt-in) > LangGraph > 内置循环。"""
     if _has_deerflow():
@@ -49,17 +51,20 @@ async def run_agent(
         return await run_agent_deerflow(
             goal, principal=principal, role_name=role_name,
             capabilities=capabilities, model=model, on_event=on_event,
+            session=session, run_id=run_id,
         )
     if _has_langgraph():
         from xagent.core.orchestration.langgraph_loop import run_agent_langgraph
         return await run_agent_langgraph(
             goal, principal=principal, role_name=role_name,
             capabilities=capabilities, model=model, on_event=on_event,
+            session=session, run_id=run_id,
         )
     from xagent.core.orchestration.loop import run_agent as run_agent_builtin
     return await run_agent_builtin(
         goal, principal=principal, role_name=role_name,
         capabilities=capabilities, model=model, on_event=on_event,
+        session=session, run_id=run_id,
     )
 
 

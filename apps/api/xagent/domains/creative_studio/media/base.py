@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
+from uuid import uuid4
 
 
 class MediaKind(str, Enum):  # noqa: UP042
@@ -88,7 +89,7 @@ class NullProvider:
     async def submit(self, req: GenerationRequest) -> GenerationTask:
         h = abs(hash(req.prompt)) % 100000
         return GenerationTask(
-            task_id=f"null-{req.kind.value}-{h}",
+            task_id=f"null-{req.kind.value}-{h}-{uuid4().hex[:8]}",
             provider=self.name,
             status="succeeded",
             outputs=[f"placeholder://{req.kind.value}/{req.mode.value}/{h}"],

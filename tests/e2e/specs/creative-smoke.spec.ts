@@ -79,3 +79,24 @@ test("Canvas batch media task can be polled", async ({ page }) => {
   const task = await pollResponse.json();
   expect(task.status).toBe("succeeded");
 });
+
+test("Creative Run Console exposes runtime recovery panel", async ({ page }) => {
+  await login(page);
+  const token = await page.evaluate(() => localStorage.getItem("xagent_token"));
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const response = await page.request.post("/api/v1/creative-studio/produce", {
+    data: { brief: "Run Console Creative Smoke", with_video: false },
+    headers,
+  });
+  expect(response.ok()).toBeTruthy();
+  const result = await response.json();
+  const runId = result.run_id ?? result.task_id ?? result.storyboard_id;
+  expect(runId).toBeTruthy();
+
+  await page.goto(`/runs/${encodeURIComponent(runId)}`, { waitUntil: "networkidle" });
+
+  await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
+  await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
+  await expect(page.getByText("Replay", { exact: true })).toBeVisible();
+});

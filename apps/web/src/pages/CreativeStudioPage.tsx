@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Edge, Node } from "reactflow";
 import {
   addClip,
@@ -35,6 +36,7 @@ import FlowCanvas from "../components/canvas/FlowCanvas";
 import NodeInspector from "../components/canvas/NodeInspector";
 import NodePalette from "../components/canvas/NodePalette";
 import CanvasRunTimeline from "../components/canvas/CanvasRunTimeline";
+import { useShellActions } from "../shell/useShellStore";
 import type {
   CanvasGlobalAction,
   CanvasNodeAction,
@@ -67,6 +69,8 @@ function starterEdges(nodes: Node<DramaCanvasNodeData>[]): Edge[] {
 }
 
 export default function CreativeStudioPage() {
+  const navigate = useNavigate();
+  const { syncRunTask } = useShellActions();
   const initial = useMemo(() => starterNodes(), []);
   const [brief, setBrief] = useState("");
   const [genre, setGenre] = useState("逆袭");
@@ -157,6 +161,9 @@ export default function CreativeStudioPage() {
       const result = await produce({ brief, genre, platform, with_video: true });
       setProduction(result);
       appendProductionArtifacts(result);
+      const runId = result.run_id ?? result.task_id ?? result.storyboard_id;
+      syncRunTask(runId, { source: "creative" });
+      navigate(`/runs/${encodeURIComponent(runId)}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1147,6 +1154,8 @@ export default function CreativeStudioPage() {
       applyWorkflowView(result.workflow);
       applyCanvasFromBackend(result.canvas);
       setTimelineOpen(true);
+      syncRunTask(result.workflow.run_id, { source: "creative" });
+      navigate(`/runs/${encodeURIComponent(result.workflow.run_id)}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

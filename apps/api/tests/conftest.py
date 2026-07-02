@@ -72,6 +72,8 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
     _cs._drafts.clear()
     _cs._productions.clear()
     _cs._media_task_tenants.clear()
+    _cs._media_runtime_tasks.clear()
+    _cs._production_runtime_runs.clear()
     # 清空画布
     from xagent.api.v1 import canvas as _cv
 
@@ -92,5 +94,6 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
     from xagent.api.v1 import tasks as _tasks
 
     _tasks._task_tenants.clear()
+    _tasks._task_metadata.clear()
     yield
     get_settings.cache_clear()

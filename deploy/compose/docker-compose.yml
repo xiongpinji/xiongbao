@@ -1,11 +1,14 @@
-# X-Agent 单机 full 模式依赖编排。
+# X-Agent 单机 full 模式编排（含 unified runtime 主链）。
 #
 # 用法：
-#   cp .env.example .env   # 按需填 LLM key
-#   docker compose up -d    # 起依赖服务
-#   # 后端可在宿主机 `xagent serve`，或解开下方 api 服务用容器跑
+#   cp .env.example .env                     # 按需填 LLM / JWT 配置
+#   cd ../../apps/web && npm install && npm run build
+#   cd ../../deploy/compose && docker compose up -d --build
 #
-# Phase 0 只起「依赖服务」；api/web 容器化在 Phase 5 完善。
+# 说明：
+# - 此 compose 会同时启动 postgres / redis / qdrant / litellm / langfuse / api / worker / web。
+# - web 镜像直接复制 apps/web/dist，因此 private deployment 首次启动前需要先本地构建前端。
+# - api / worker 默认通过 host.docker.internal 访问宿主机 Ollama；如改走 LiteLLM Proxy，可在 .env 中设置 XAGENT_LLM__PROXY_URL。
 
 name: xagent
 
@@ -129,6 +132,8 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
       - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent
@@ -144,7 +149,7 @@ services:
       - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
-      - XAGENT_CORS_ORIGINS=["http://localhost:3000","http://localhost"]
+      - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://localhost:3000"]}
     command: >
       sh -c "python -m alembic upgrade head &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
@@ -157,6 +162,8 @@ services:
     depends_on:
       - api
       - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
       - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent

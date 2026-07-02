@@ -4,8 +4,10 @@ lite 模式仍走内存；full/enterprise 走 DB。Repository 接受 AsyncSessio
 路由通过 get_session 依赖注入。失败不阻断主流程（持久化是增强，非强约束）。
 """
 
+from xagent.infra.repos.artifact import upsert_artifact_record
 from xagent.infra.repos.audit import load_audit_events, persist_audit_event
 from xagent.infra.repos.billing import persist_billing_record
+from xagent.infra.repos.evidence import load_evidence_records, persist_evidence_record
 from xagent.infra.repos.workflow import load_workflow_runs, persist_workflow_run
 
 __all__ = [
@@ -14,4 +16,7 @@ __all__ = [
     "persist_billing_record",
     "persist_audit_event",
     "load_audit_events",
+    "persist_evidence_record",
+    "load_evidence_records",
+    "upsert_artifact_record",
 ]

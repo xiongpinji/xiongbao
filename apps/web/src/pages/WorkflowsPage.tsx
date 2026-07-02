@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactFlow, {
   Background, Controls, MiniMap, ReactFlowProvider,
   useNodesState, useEdgesState, addEdge,
@@ -7,10 +8,13 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Plus, Play, Trash2 } from "lucide-react";
 import { runWorkflow, type WorkflowView } from "../api";
+import { useShellActions } from "../shell/useShellStore";
 
 interface Step { id: string; name: string; role?: string; goal: string; }
 
 export default function WorkflowsPage() {
+  const navigate = useNavigate();
+  const { syncRunTask } = useShellActions();
   const [name, setName] = useState("demo");
   const [view, setView] = useState<WorkflowView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +50,10 @@ export default function WorkflowsPage() {
     try {
       const valid = steps.filter(s => s.goal.trim());
       if (!valid.length) { setError("至少需要一个有目标的步骤"); return; }
-      setView(await runWorkflow({ name, steps: valid }));
+      const nextView = await runWorkflow({ name, steps: valid });
+      setView(nextView);
+      syncRunTask(nextView.run_id, { source: "workflow" });
+      navigate(`/runs/${encodeURIComponent(nextView.run_id)}`);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
   }
