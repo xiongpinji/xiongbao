@@ -11,6 +11,7 @@ import OpenSourcePage from "./pages/OpenSourcePage";
 import MemoryPage from "./pages/MemoryPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
+import RunPage from "./pages/RunPage";
 
 export default function App() {
   // lite 模式后端允许匿名；full 模式需登录。
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/creative" element={<CreativeStudioPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/runs/:runId" element={<RunPage />} />
 
         {/* 兼容旧入口：不再显示在主导航中。 */}
         <Route path="/canvas" element={<CanvasPage />} />

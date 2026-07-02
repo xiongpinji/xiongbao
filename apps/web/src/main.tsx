@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { I18nProvider } from "./i18n";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ShellStoreProvider } from "./shell/useShellStore";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -16,9 +17,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <ShellStoreProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </ShellStoreProvider>
         </QueryClientProvider>
       </I18nProvider>
     </ErrorBoundary>

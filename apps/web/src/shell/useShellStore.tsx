@@ -20,6 +20,7 @@ import {
   type PersistedUserDockProfile,
 } from "./workspaceStorage.ts";
 import {
+  createRunShellRoute,
   PRIMARY_SHELL_SURFACES,
   type ShellRouteSnapshot,
   type ShellTaskKind,
@@ -110,6 +111,15 @@ interface ShellState {
   toggleThreadPanel: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   syncRoute: (snapshot: ShellRouteSnapshot) => void;
+  syncRunTask: (
+    runId: string,
+    options?: {
+      source?: "chat" | "workflow" | "creative" | "run";
+      title?: string;
+      subtitle?: string;
+      status?: ShellTaskStatus;
+    },
+  ) => void;
   setCurrentContext: (context: Omit<ShellTaskSummary, "updatedAt">) => void;
   appendActivity: (entry: Omit<ShellActivityItem, "id" | "timestamp"> & { timestamp?: number }) => void;
   createWorkspaceRecord: (input: CreateWorkspaceInput) => WorkspaceRecord;
@@ -305,6 +315,30 @@ export function createShellStore() {
     setThreadPanelOpen: (open) => set({ threadPanelOpen: open }),
     toggleThreadPanel: () => set((state) => ({ threadPanelOpen: !state.threadPanelOpen })),
     setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+    syncRunTask: (runId, options) => {
+      set((state) => {
+        const snapshot = createRunShellRoute(runId, options);
+        const now = Date.now();
+        const nextTask: ShellTaskSummary = {
+          id: snapshot.taskId,
+          kind: snapshot.kind,
+          title: snapshot.title,
+          subtitle: snapshot.subtitle,
+          route: snapshot.route,
+          status: snapshot.status,
+          badge: snapshot.badge,
+          pinned: snapshot.pinned,
+          isPrimary: snapshot.isPrimary,
+          updatedAt: now,
+        };
+        const existingTasks = state.tasks.filter((task) => task.id !== snapshot.taskId);
+
+        return {
+          tasks: sortTasks([nextTask, ...existingTasks]),
+          currentContext: nextTask,
+        };
+      });
+    },
     syncRoute: (snapshot) => {
       set((state) => {
         const now = Date.now();
@@ -454,6 +488,7 @@ export function useShellActions() {
     toggleThreadPanel: state.toggleThreadPanel,
     setCommandPaletteOpen: state.setCommandPaletteOpen,
     syncRoute: state.syncRoute,
+    syncRunTask: state.syncRunTask,
     setCurrentContext: state.setCurrentContext,
     appendActivity: state.appendActivity,
     createWorkspaceRecord: state.createWorkspaceRecord,

@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
 import { getToken } from "../api/client";
+import { useShellActions } from "../shell/useShellStore";
 
 export default function ChatPage() {
+  const navigate = useNavigate();
+  const { syncRunTask } = useShellActions();
   const [goal, setGoal] = useState("");
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState<AgentRun | null>(null);
@@ -21,7 +25,10 @@ export default function ChatPage() {
       await runSSE();
     } catch {
       try {
-        setRun(await runAgent({ goal }));
+        const nextRun = await runAgent({ goal });
+        setRun(nextRun);
+        syncRunTask(nextRun.run_id, { source: "chat" });
+        navigate(`/runs/${encodeURIComponent(nextRun.run_id)}`);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -52,11 +59,18 @@ export default function ChatPage() {
       const events = buffer.split("\n\n");
       buffer = events.pop() || "";
       for (const evt of events) {
+        const eventLine = evt.split("\n").find((l) => l.startsWith("event:"));
         const line = evt.split("\n").find((l) => l.startsWith("data:"));
         if (!line) continue;
+        const eventName = eventLine?.slice(6).trim() ?? "message";
         const data = JSON.parse(line.slice(5).trim());
         if (data.final_answer) setStreamText(data.final_answer);
         else if (data.error) setError(data.error);
+        if (eventName === "done" && typeof data.run_id === "string" && data.run_id) {
+          syncRunTask(data.run_id, { source: "chat" });
+          navigate(`/runs/${encodeURIComponent(data.run_id)}`);
+          return;
+        }
       }
     }
   }
