@@ -11,12 +11,14 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from functools import lru_cache
 from typing import Any
 
+from xagent.core.orchestration.task_view import build_task_view
 from xagent.infra.logging import get_logger
 
 logger = get_logger("xagent.worker")
@@ -34,13 +36,36 @@ class TaskRecord:
     task_id: str
     kind: str
     tenant_id: str
+    owner_id: str = ""
+    input_payload: dict[str, Any] = field(default_factory=dict)
     status: TaskStatus = TaskStatus.pending
     result: Any = None
     error: str | None = None
     created_at: str = field(
         default_factory=lambda: datetime.now(UTC).isoformat()
     )
+    started_at: str | None = None
     finished_at: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result_payload = self.result if isinstance(self.result, dict) else ({"value": self.result} if self.result is not None else {})
+        return build_task_view(
+            task_id=self.task_id,
+            run_id=None,
+            tenant_id=self.tenant_id,
+            owner_id=self.owner_id,
+            kind=self.kind,
+            backend="inproc",
+            status=self.status.value,
+            input_payload=deepcopy(self.input_payload),
+            result=deepcopy(result_payload),
+            error=self.error,
+            created_at=self.created_at,
+            started_at=self.started_at,
+            finished_at=self.finished_at,
+            source="task",
+            route_source="fallback",
+        )
 
 
 class TaskRunner:
@@ -55,15 +80,24 @@ class TaskRunner:
         *,
         kind: str,
         tenant_id: str,
+        owner_id: str = "",
+        input_payload: dict[str, Any] | None = None,
     ) -> str:
         task_id = uuid.uuid4().hex
-        rec = TaskRecord(task_id=task_id, kind=kind, tenant_id=tenant_id)
+        rec = TaskRecord(
+            task_id=task_id,
+            kind=kind,
+            tenant_id=tenant_id,
+            owner_id=owner_id,
+            input_payload=deepcopy(input_payload or {}),
+        )
         self._tasks[task_id] = rec
         asyncio.create_task(self._run(task_id, coro_factory, rec))
         return task_id
 
     async def _run(self, task_id, coro_factory, rec: TaskRecord) -> None:
         rec.status = TaskStatus.running
+        rec.started_at = datetime.now(UTC).isoformat()
         try:
             rec.result = await coro_factory()
             rec.status = TaskStatus.succeeded

@@ -37,12 +37,15 @@ async def run_agent_deerflow(
     capabilities: set[str] | None = None,
     model: str | None = None,
     on_event: Any = None,
+    session: Any = None,
+    run_id: str | None = None,
 ) -> AgentRun:
     """用 DeerFlow 2.0 跑 agent（与 run_agent 相同签名）。"""
     from deerflow.client import DeerFlowClient
 
     client = DeerFlowClient()
-    thread_id = f"xagent-{principal.tenant_id}-{uuid.uuid4().hex[:8]}"
+    resolved_run_id = run_id or uuid.uuid4().hex
+    thread_id = f"xagent-{principal.tenant_id}-{resolved_run_id[:8]}"
 
     events: list[StepEvent] = []
     final_answer = ""
@@ -107,7 +110,7 @@ async def run_agent_deerflow(
             ))
 
     return AgentRun(
-        run_id=uuid.uuid4().hex,
+        run_id=resolved_run_id,
         goal=goal,
         role_name=role_name or "deerflow",
         tenant_id=principal.tenant_id,

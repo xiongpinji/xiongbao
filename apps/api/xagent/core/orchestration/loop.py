@@ -108,6 +108,8 @@ async def run_agent(
     capabilities: set[str] | None = None,
     model: str | None = None,
     on_event: Any = None,
+    session: Any = None,
+    run_id: str | None = None,
 ) -> AgentRun:
     """运行一次 agent 任务，返回含事件序列的结果。
 
@@ -123,6 +125,7 @@ async def run_agent(
         role = registry.match({"general"})
 
     tools = get_tool_registry()
+    resolved_run_id = run_id or uuid.uuid4().hex
     # 仅暴露该角色允许的工具
     specs = [s for s in tools.specs() if role.can_use(s["function"]["name"])]
 
@@ -144,7 +147,7 @@ async def run_agent(
 
     llm = get_llm_client()
     tracer = get_tracer()
-    ctx = ToolContext(principal=principal)
+    ctx = ToolContext(principal=principal, session=session, run_id=resolved_run_id)
     target_model = model or role.preferred_model
 
     # 选择执行路径：支持原生 function-calling 走工具路径，否则提示工程降级
@@ -244,7 +247,7 @@ async def run_agent(
             pass
 
     return AgentRun(
-        run_id=uuid.uuid4().hex,
+        run_id=resolved_run_id,
         goal=goal,
         role_name=role.name,
         tenant_id=principal.tenant_id,

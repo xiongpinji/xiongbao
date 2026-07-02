@@ -30,6 +30,8 @@ class ToolResult:
 @dataclass
 class ToolContext:
     principal: Principal
+    session: Any | None = None
+    run_id: str | None = None
 
 
 @runtime_checkable
