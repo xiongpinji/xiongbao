@@ -56,6 +56,7 @@ async def test_workflow_roundtrip(migrated_db) -> None:
     sessionmaker = get_sessionmaker()
     async with sessionmaker() as session:  # type: AsyncSession
         await persist_workflow_run(session, view)
+        await session.commit()
     async with sessionmaker() as session:
         runs = await load_workflow_runs(session, "t1")
     assert runs

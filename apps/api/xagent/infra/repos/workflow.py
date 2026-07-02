@@ -14,28 +14,24 @@ logger = get_logger("xagent.repos.workflow")
 
 
 async def persist_workflow_run(session: AsyncSession, view: dict) -> None:
-    """upsert 工作流运行视图。失败仅记日志，不阻断。"""
-    try:
-        run_id = view["run_id"]
-        existing = await session.get(WorkflowRunORM, run_id)
-        if existing:
-            existing.status = view.get("status", existing.status)
-            existing.spec_name = view.get("spec_name", existing.spec_name)
-            existing.view = json.dumps(view, ensure_ascii=False)
-        else:
-            session.add(
-                WorkflowRunORM(
-                    run_id=run_id,
-                    tenant_id=view["tenant_id"],
-                    spec_name=view.get("spec_name", ""),
-                    status=view.get("status", "pending"),
-                    view=json.dumps(view, ensure_ascii=False),
-                )
-            )
-        await session.commit()
-    except Exception as exc:  # 持久化失败不阻断业务
-        await session.rollback()
-        logger.warning("persist_workflow_failed", run_id=view.get("run_id"), error=str(exc))
+    """upsert 工作流运行视图；由调用方决定事务边界。"""
+    run_id = view["run_id"]
+    existing = await session.get(WorkflowRunORM, run_id)
+    if existing:
+        existing.status = view.get("status", existing.status)
+        existing.spec_name = view.get("spec_name", existing.spec_name)
+        existing.view = json.dumps(view, ensure_ascii=False)
+        return
+
+    session.add(
+        WorkflowRunORM(
+            run_id=run_id,
+            tenant_id=view["tenant_id"],
+            spec_name=view.get("spec_name", ""),
+            status=view.get("status", "pending"),
+            view=json.dumps(view, ensure_ascii=False),
+        )
+    )
 
 
 async def load_workflow_runs(session: AsyncSession, tenant_id: str, limit: int = 50) -> list[dict]:
