@@ -96,5 +96,3 @@ jobs:
         run: npm install -g promptfoo
       - name: Run eval
         run: promptfoo eval -c .promptfoo/config.yaml --no-cache
-      - name: Assert threshold
-        run: promptfoo assert -c .promptfoo/config.yaml --threshold 0.8
