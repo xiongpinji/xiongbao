@@ -47,6 +47,10 @@ xagent/
 ### 方式 A：本地模型（零 API 费用，推荐）
 
 ```bash
+# 0. 从 apps/api 目录启动（或显式补 PYTHONPATH）
+# PowerShell: $env:PYTHONPATH = (Get-Location).Path
+# Bash:       export PYTHONPATH="$PWD"
+
 # 1. 安装 Ollama + 拉取模型
 ollama pull qwen3:4b          # 或 qwen2.5:1.5b（更小更快）
 
@@ -66,13 +70,40 @@ xagent smoke                  # 三链路真实模型冒烟
 curl localhost:8000/health
 ```
 
-### 方式 B：Docker Compose（full 模式）
+### 方式 B：Docker Compose（full 模式 / private deployment）
 
 ```bash
-cd deploy/compose
-cp .env.example .env          # 按需填 LLM 配置
-docker compose up -d
+# 1. 先构建前端静态产物（compose 中 web 镜像直接复制 dist/）
+cd apps/web
+npm install
+npm run build
+
+# 2. 启动完整 unified runtime 主链
+cd ../../deploy/compose
+cp .env.example .env          # 按需填 LLM / JWT 配置
+docker compose up -d --build
+
+# 3. 验证核心入口
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+# 浏览器打开 http://localhost:3000，提交任务后应跳转到 /runs/:runId
 ```
+
+说明：
+
+- compose 现在同时启动 `api`、`worker`、`web` 与所有依赖服务。
+- `deploy/compose/postgres-init.sh` 会补建 `langfuse`、`contextforge`、`openfga` 数据库；如果你之前已经起过旧版 Postgres volume，需要先清理 volume 或手动补库。
+- compose 中的 `XAGENT_CORS_ORIGINS` 现在直接复用 `.env` / `.env.example` 里的环境变量值；修改 `.env` 后重新 `docker compose up` 即可生效，不再被 compose 固定值覆盖。
+- 当前 compose / LiteLLM 配置中已接通的 provider 路径以 OpenAI、DeepSeek 和宿主机 Ollama 为准；README / Runbook 不再宣称 compose 已直接打通 Anthropic provider。
+- `worker` 负责 full 模式后台长任务；`/api/v1/runs/:run_id` 会把 task / workflow / creative 的统一读模型聚合到 Run Console。
+- full / Celery 路径下，后台任务会先把最小元数据落到 `agent_tasks`，任务完成后再回写最终状态与结果，尽量保证重启后仍可续查；`GET /api/v1/tasks` 列表也会优先回查持久化状态，而不是长期显示 `pending`。
+- compose 内默认通过 `host.docker.internal:11434` 访问宿主机 Ollama，并已为 `api` / `worker` 配置 `extra_hosts: ["host.docker.internal:host-gateway"]`，以兼容 Linux Docker 环境。
+- 若后台任务仍在执行，Run Console 会通过 `delivery.resume` 暴露最小续航指针；审批型工作流会暴露审批续跑指针。
+- 并行 worktree 开发时，可通过 `XAGENT_DEV_API_TARGET` 指向独立后端端口，再配合 `E2E_BASE_URL` 指向对应前端端口完成独立验收；例如前端 `4173` / 后端 `8100`。
+- `apps/web/vite.config.ts` 默认读取 `XAGENT_DEV_API_TARGET`，未设置时回退到 `http://localhost:8000`。
+- Playwright 使用 `E2E_BASE_URL` 指定前端地址，默认回退到 `http://localhost:3000`；full 模式验收账号可通过 `E2E_USERNAME` / `E2E_PASSWORD` 覆盖，未设置时默认回退到 `admin/admin`。
+- 后端测试建议从 `apps/api` 目录运行，或先设置 `PYTHONPATH=apps/api`，避免在仓库根直接执行时出现 `ModuleNotFoundError: xagent`。
+- 详细部署与排障请看 [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md)。
 
 ## 前端工作台（2026-06-22 起 ZCode 风格重构）
 

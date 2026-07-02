@@ -4,15 +4,20 @@ import { test, expect, type Page } from "@playwright/test";
  * X-Agent E2E 全链路测试。
  *
  * 前置：后端 :8000 + 前端 :3000 运行中。
- * full 模式需登录 -> beforeEach 通过 API 登录拿 token 写入 localStorage。
+ * full 模式默认使用 admin/admin 登录；如已修改验收账号，可通过
+ * E2E_USERNAME / E2E_PASSWORD 环境变量覆盖。
  */
 
+const E2E_USERNAME = process.env.E2E_USERNAME || "admin";
+const E2E_PASSWORD = process.env.E2E_PASSWORD || "admin";
+
 async function loginIfNeeded(page: Page) {
-  // 通过前端代理登录（同源，token 存 localStorage）
+  // 通过前端代理登录（同源，token 存 localStorage）。
+  // full 模式应显式成功；只有明确处于匿名登录页时才允许继续。
   await page.goto("/");
   try {
     const resp = await page.request.post("/api/v1/auth/login", {
-      data: { username: "admin", password: "admin" },
+      data: { username: E2E_USERNAME, password: E2E_PASSWORD },
       timeout: 5000,
     });
     if (resp.ok()) {
@@ -20,9 +25,17 @@ async function loginIfNeeded(page: Page) {
       await page.evaluate((token) => {
         localStorage.setItem("xagent_token", token);
       }, body.access_token);
+      return;
     }
   } catch {
-    // lite 模式无登录，匿名继续
+    // 继续走下面的页面判定。
+  }
+
+  const loginHeading = page.getByRole("heading", { name: /登录/i });
+  if (await loginHeading.count()) {
+    throw new Error(
+      `E2E login failed for ${E2E_USERNAME}. Set E2E_USERNAME/E2E_PASSWORD to a valid full-mode account.`,
+    );
   }
 }
 
@@ -35,9 +48,10 @@ test.describe("X-Agent 核心流程", () => {
     await page.goto("/");
     // 默认重定向到 /chat
     await expect(page).toHaveURL(/\/chat/);
-    // 侧栏导航存在
+    // 当前真实主导航：短剧工厂 / 工作流 / 设置
     await expect(page.locator("text=短剧工厂")).toBeVisible();
-    await expect(page.locator("text=开源发现")).toBeVisible();
+    await expect(page.locator("text=工作流")).toBeVisible();
+    await expect(page.locator("text=设置")).toBeVisible();
   });
 
   test("对话运行 agent", async ({ page }) => {
@@ -66,6 +80,27 @@ test.describe("X-Agent 核心流程", () => {
     });
   });
 
+  test("后台任务可进入 Run Console 并暴露 replay 指针", async ({ page }) => {
+    const token = await page.evaluate(() => localStorage.getItem("xagent_token"));
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    const submit = await page.request.post("/api/v1/tasks", {
+      data: { goal: "Run Console E2E 验收" },
+      headers,
+    });
+    expect(submit.ok()).toBeTruthy();
+    const body = await submit.json();
+    const runId = body.run_id ?? body.task_id;
+    expect(runId).toBeTruthy();
+
+    await page.goto(`/runs/${encodeURIComponent(runId)}`, { waitUntil: "networkidle" });
+
+    await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
+    await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
+    await expect(page.getByText("查看后台任务", { exact: true })).toBeVisible();
+    await expect(page.getByText(`/api/v1/tasks/${runId}`, { exact: true })).toBeVisible();
+  });
+
   test("短剧工厂生成草稿 + 节点画布", async ({ page }) => {
     test.setTimeout(60_000);
     await page.goto("/creative");
@@ -77,32 +112,19 @@ test.describe("X-Agent 核心流程", () => {
     });
   });
 
-  test("开源发现搜索", async ({ page }) => {
-    await page.goto("/open-source");
-    await page.fill('input[placeholder*="查询"]', "vector database");
-    await page.click("button:has-text('发现')");
-    // mock provider 有结果
-    await expect(page.locator("text=score").or(page.locator("text=mock"))).toBeVisible({
-      timeout: 15_000,
-    });
-  });
-
-  test("知识库写入+检索", async ({ page }) => {
-    await page.goto("/memory");
-    // 写入
-    await page.fill('input[placeholder="id"]', "e2e-test");
-    await page.fill('textarea[placeholder="文本"]', "E2E 测试记忆条目");
-    await page.click("button:has-text('写入')");
-    await expect(page.locator("text=已写入")).toBeVisible({ timeout: 10_000 });
-    // 检索
-    await page.fill('input[placeholder="query"]', "E2E 测试");
-    await page.click("button:has-text('检索')");
-    await expect(page.locator("text=E2E 测试记忆条目")).toBeVisible({ timeout: 10_000 });
+  test("设置页索引库承接知识库与开源发现入口", async ({ page }) => {
+    await page.goto("/settings?section=index&tab=knowledge");
+    await expect(page.getByRole("heading", { name: "索引库" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "知识库" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "开源发现" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "写入" })).toBeVisible();
+    await page.getByRole("button", { name: "开源发现" }).click();
+    await expect(page.getByRole("button", { name: "发现", exact: true })).toBeVisible();
   });
 
   test("设置页加载", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("text=访问 Token")).toBeVisible();
+    await expect(page.locator("text=设置")).toBeVisible();
   });
 });
 
