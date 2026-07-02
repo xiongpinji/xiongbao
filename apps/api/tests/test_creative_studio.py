@@ -50,7 +50,9 @@ async def test_null_media_provider_returns_placeholder() -> None:
 
 def test_quality_gates_pass_on_valid_storyboard() -> None:
     sb = Storyboard(
-        title="t", brief="b", target_duration_seconds=12.0,
+        title="t",
+        brief="b",
+        target_duration_seconds=12.0,
         shots=[
             Shot(duration_seconds=4, plot_purpose="引入", dialogue="你好", subtitle="你好"),
             Shot(duration_seconds=4, plot_purpose="冲突", dialogue="不行", subtitle="不行"),
@@ -155,7 +157,9 @@ async def test_creative_draft_api(client: AsyncClient) -> None:
     assert r2.json()["status"] == "approved"
 
 
-async def test_creative_media_generate_same_prompt_allocates_distinct_task_ids(client: AsyncClient) -> None:
+async def test_creative_media_generate_same_prompt_allocates_distinct_task_ids(
+    client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="u-same", tenant_id="tenant-1", roles=["member"])
     first = await client.post(
         "/api/v1/creative-studio/media/generate",
@@ -197,7 +201,9 @@ async def test_creative_media_poll_without_runtime_cache_still_persists_final_st
     registry = creative_api.get_media_registry()
     monkeypatch.setattr(registry, "generate", _fake_generate)
     monkeypatch.setattr(registry, "poll_task", _fake_poll)
-    monkeypatch.setattr(registry, "kind_of", lambda task_id: MediaKind.image if task_id == queued_task_id else None)
+    monkeypatch.setattr(
+        registry, "kind_of", lambda task_id: MediaKind.image if task_id == queued_task_id else None
+    )
 
     generate_resp = await db_client.post(
         "/api/v1/creative-studio/media/generate",
@@ -232,7 +238,9 @@ async def test_creative_media_poll_without_runtime_cache_still_persists_final_st
     assert runtime_resp.status_code == 200, runtime_resp.text
     body = runtime_resp.json()
     assert body["task"]["status"] == "succeeded"
-    assert body["task"]["result"] == {"outputs": ["https://cdn.example.com/final-image-no-cache.png"]}
+    assert body["task"]["result"] == {
+        "outputs": ["https://cdn.example.com/final-image-no-cache.png"]
+    }
     evidence_kinds = [item["kind"] for item in body["evidence"]]
     assert evidence_kinds[0] == "request.input"
     assert "media.poll_result" in evidence_kinds
@@ -304,7 +312,11 @@ async def test_creative_media_poll_persists_final_state_to_db_after_memory_clear
 
     monkeypatch.setattr(creative_api.get_media_registry(), "generate", _fake_generate)
     monkeypatch.setattr(creative_api.get_media_registry(), "poll_task", _fake_poll)
-    monkeypatch.setattr(creative_api.get_media_registry(), "kind_of", lambda task_id: MediaKind.image if task_id == queued_task_id else None)
+    monkeypatch.setattr(
+        creative_api.get_media_registry(),
+        "kind_of",
+        lambda task_id: MediaKind.image if task_id == queued_task_id else None,
+    )
 
     generate_resp = await db_client.post(
         "/api/v1/creative-studio/media/generate",
@@ -415,7 +427,9 @@ async def test_creative_media_poll_persists_final_state_to_db_after_memory_clear
     ]
 
 
-async def test_creative_media_runtime_persists_to_db_after_memory_clear(db_client: AsyncClient) -> None:
+async def test_creative_media_runtime_persists_to_db_after_memory_clear(
+    db_client: AsyncClient,
+) -> None:
     import xagent.api.v1.creative_studio as creative_api
 
     token = create_access_token(user_id="u-db-media", tenant_id="tenant-1", roles=["member"])
@@ -522,7 +536,9 @@ async def test_creative_produce_non_schema_programming_error_is_not_silently_swa
     from sqlalchemy.exc import ProgrammingError
 
     async def _boom(*args, **kwargs):
-        raise ProgrammingError("INSERT INTO agent_tasks VALUES (...)" , {}, Exception("constraint failed"))
+        raise ProgrammingError(
+            "INSERT INTO agent_tasks VALUES (...)", {}, Exception("constraint failed")
+        )
 
     monkeypatch.setattr(creative_api, "_persist_creative_runtime_state", _boom)
     token = create_access_token(user_id="u-produce-boom", tenant_id="tenant-1", roles=["member"])
@@ -535,7 +551,9 @@ async def test_creative_produce_non_schema_programming_error_is_not_silently_swa
         )
 
 
-async def test_creative_production_runtime_persists_to_db_after_memory_clear(db_client: AsyncClient) -> None:
+async def test_creative_production_runtime_persists_to_db_after_memory_clear(
+    db_client: AsyncClient,
+) -> None:
     import xagent.api.v1.creative_studio as creative_api
 
     token = create_access_token(user_id="u-db-produce", tenant_id="tenant-1", roles=["member"])
@@ -587,7 +605,9 @@ async def test_creative_production_runtime_persists_to_db_after_memory_clear(db_
     assert artifact_rows
 
 
-async def test_creative_media_task_exposes_delivery_summary_via_runs(db_client: AsyncClient) -> None:
+async def test_creative_media_task_exposes_delivery_summary_via_runs(
+    db_client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="u-media", tenant_id="tenant-1", roles=["member"])
     generate_resp = await db_client.post(
         "/api/v1/creative-studio/media/generate",
@@ -680,7 +700,9 @@ async def test_creative_media_task_exposes_delivery_summary_via_runs(db_client: 
     ]
 
 
-async def test_creative_production_exposes_delivery_summary_via_runs(db_client: AsyncClient) -> None:
+async def test_creative_production_exposes_delivery_summary_via_runs(
+    db_client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="u-produce", tenant_id="tenant-1", roles=["member"])
     produce_resp = await db_client.post(
         "/api/v1/creative-studio/produce",
@@ -697,7 +719,10 @@ async def test_creative_production_exposes_delivery_summary_via_runs(db_client: 
 
     assert runtime_resp.status_code == 200, runtime_resp.text
     body = runtime_resp.json()
-    output_count = sum(len(shot["image_outputs"]) + len(shot["video_outputs"]) for shot in body["task"]["result"]["shots"])
+    output_count = sum(
+        len(shot["image_outputs"]) + len(shot["video_outputs"])
+        for shot in body["task"]["result"]["shots"]
+    )
     assert body["task"]["kind"] == "creative.produce"
     evidence_kinds = [item["kind"] for item in body["evidence"]]
     assert evidence_kinds == ["request.input", "production.result", "delivery.generated"]
@@ -705,7 +730,10 @@ async def test_creative_production_exposes_delivery_summary_via_runs(db_client: 
         "status": "ready",
         "channel": "creative_production",
         "kind": "creative.production",
-        "summary": f"短剧已生成，{body['task']['result']['shots_count']} 个镜头，共 {output_count} 个媒体产物。",
+        "summary": (
+            f"短剧已生成，{body['task']['result']['shots_count']} 个镜头，"
+            f"共 {output_count} 个媒体产物。"
+        ),
         "storyboard_id": storyboard_id,
         "title": body["task"]["result"]["title"],
         "timeline_id": body["task"]["result"]["timeline_id"],

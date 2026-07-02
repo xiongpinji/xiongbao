@@ -5,8 +5,11 @@ from __future__ import annotations
 import os
 from logging.config import fileConfig
 
+import xagent.infra.models  # noqa: F401  注册所有模型到 metadata
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from xagent.infra.db import Base
+
 
 # 把 alembic 的 DB URL 转成同步驱动（asyncpg->psycopg / aiosqlite->sqlite）
 def _sync_url(url: str) -> str:
@@ -14,10 +17,6 @@ def _sync_url(url: str) -> str:
         url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
         .replace("sqlite+aiosqlite://", "sqlite://")
     )
-
-
-from xagent.infra.db import Base
-import xagent.infra.models  # noqa: F401  注册所有模型到 metadata
 
 config = context.config
 if config.config_file_name is not None:

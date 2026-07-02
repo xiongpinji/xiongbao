@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends
@@ -221,7 +220,9 @@ def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
                 "payload": {
                     "status": run_view.get("status"),
                     "completed_steps": sum(
-                        1 for step in run_view.get("steps") or [] if step.get("status") == "succeeded"
+                        1
+                        for step in run_view.get("steps") or []
+                        if step.get("status") == "succeeded"
                     ),
                     "step_count": len(run_view.get("steps") or []),
                 },
@@ -339,7 +340,9 @@ async def _upsert_runtime_task_record(
     tenant_id: str,
 ) -> None:
     if not await _table_exists(session, "agent_tasks"):
-        logger.warning("runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error="table_missing")
+        logger.warning(
+            "runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error="table_missing"
+        )
         return
 
     task_record = _build_workflow_task_record(
@@ -368,13 +371,17 @@ async def _upsert_runtime_task_record(
     except ProgrammingError as exc:
         await session.rollback()
         if _is_schema_mismatch(exc, "agent_tasks"):
-            logger.warning("runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error=str(exc))
+            logger.warning(
+                "runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error=str(exc)
+            )
             return
         raise
     except Exception as exc:
         if _is_schema_mismatch(exc, "agent_tasks"):
             await session.rollback()
-            logger.warning("runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error=str(exc))
+            logger.warning(
+                "runtime_task_upsert_skipped", run_id=run_view.get("run_id"), error=str(exc)
+            )
             return
         raise
 
@@ -386,7 +393,9 @@ async def _persist_workflow_view(session: AsyncSession, view: dict) -> None:
     except Exception as exc:
         await session.rollback()
         if _is_schema_mismatch(exc, "workflow_runs"):
-            logger.warning("workflow_view_persist_skipped", run_id=view.get("run_id"), error=str(exc))
+            logger.warning(
+                "workflow_view_persist_skipped", run_id=view.get("run_id"), error=str(exc)
+            )
             return
         raise
 
@@ -474,7 +483,9 @@ async def approve(
 ) -> dict:
     engine = get_engine()
     existing = await _safe_get_runtime_task(session, run_id)
-    owner_id = existing.owner_id if existing is not None and existing.owner_id else principal.user_id
+    owner_id = (
+        existing.owner_id if existing is not None and existing.owner_id else principal.user_id
+    )
     run = await engine.approve(run_id, step_id, principal)
     view = run.to_view()
     await _persist_workflow_runtime_and_view(
@@ -502,7 +513,9 @@ async def deny(
 ) -> dict:
     engine = get_engine()
     existing = await _safe_get_runtime_task(session, run_id)
-    owner_id = existing.owner_id if existing is not None and existing.owner_id else principal.user_id
+    owner_id = (
+        existing.owner_id if existing is not None and existing.owner_id else principal.user_id
+    )
     run = await engine.deny(run_id, step_id, principal)
     view = run.to_view()
     await _persist_workflow_runtime_and_view(

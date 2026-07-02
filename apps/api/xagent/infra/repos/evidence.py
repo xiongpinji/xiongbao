@@ -16,10 +16,12 @@ from xagent.infra.models.evidence import EvidenceORM
 logger = get_logger("xagent.repos.evidence")
 
 
-def build_evidence_id(*, tenant_id: str, run_id: str, task_id: str, kind: str, payload: dict[str, Any] | None = None) -> str:
+def build_evidence_id(
+    *, tenant_id: str, run_id: str, task_id: str, kind: str, payload: dict[str, Any] | None = None
+) -> str:
     normalized_payload = json.dumps(payload or {}, ensure_ascii=False, sort_keys=True)
-    digest = hashlib.sha1(
-        f"{tenant_id}|{run_id}|{task_id}|{kind}|{normalized_payload}".encode("utf-8")
+    digest = hashlib.sha1(  # noqa: S324 - deterministic evidence ID, not a security boundary
+        f"{tenant_id}|{run_id}|{task_id}|{kind}|{normalized_payload}".encode()
     ).hexdigest()
     return digest[:40]
 

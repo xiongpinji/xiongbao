@@ -76,7 +76,11 @@ def _build_task_delivery_fallback(task_view: dict[str, Any] | None) -> dict[str,
         }
 
     return {
-        "status": "ready" if status == "succeeded" else "blocked" if status == "failed" else "pending",
+        "status": "ready"
+        if status == "succeeded"
+        else "blocked"
+        if status == "failed"
+        else "pending",
         "channel": "task_runtime",
         "kind": kind,
         "summary": summary,
@@ -134,7 +138,11 @@ def _merge_delivery_bundle(
     task_view: dict[str, Any] | None,
 ) -> dict[str, Any]:
     merged = _ensure_delivery_contract(delivery)
-    fallback = _build_workflow_delivery_fallback(workflow_view) if workflow_view is not None else _build_task_delivery_fallback(task_view)
+    fallback = (
+        _build_workflow_delivery_fallback(workflow_view)
+        if workflow_view is not None
+        else _build_task_delivery_fallback(task_view)
+    )
     if "summary" not in merged or not str(merged.get("summary") or "").strip():
         merged["summary"] = str(fallback.get("summary") or "").strip()
     if "kind" not in merged or not str(merged.get("kind") or "").strip():
@@ -364,7 +372,9 @@ async def _load_related_tasks(
 
     related_rows: list[AgentTaskORM] = []
     related_rows.extend(
-        row for row in sibling_tasks if row.task_id != primary_task.task_id and row.task_id not in referenced_task_ids
+        row
+        for row in sibling_tasks
+        if row.task_id != primary_task.task_id and row.task_id not in referenced_task_ids
     )
     related_rows.extend(
         row
@@ -398,7 +408,9 @@ async def get_runtime_run_detail(
         return None
 
     evidence = await load_evidence_records(session, tenant_id, run_id=run_id)
-    artifacts, artifacts_available = await _load_artifacts(session, run_id=run_id, tenant_id=tenant_id)
+    artifacts, artifacts_available = await _load_artifacts(
+        session, run_id=run_id, tenant_id=tenant_id
+    )
 
     task = None
     if db_task is not None:
@@ -449,11 +461,7 @@ async def get_runtime_run_detail(
         "task": task,
         "workflow": workflow_view or deepcopy((creative_view or {}).get("workflow")),
         "evidence": evidence or deepcopy((creative_view or {}).get("evidence") or []),
-        "artifacts": (
-            artifacts
-            if artifacts_available or creative_view is None
-            else []
-        ),
+        "artifacts": (artifacts if artifacts_available or creative_view is None else []),
         "validation": validation,
         "delivery": delivery,
         "related_tasks": related_tasks,

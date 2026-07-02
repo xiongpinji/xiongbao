@@ -20,6 +20,7 @@ from xagent.core.orchestration.task_view import build_task_view
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
+from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.worker import get_task_runner
 from xagent.worker.celery_app import (
@@ -29,6 +30,7 @@ from xagent.worker.celery_app import (
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+logger = get_logger("xagent.tasks")
 
 # 过渡期索引：仅用于 inproc / Celery 读路径之间的短时桥接。
 # 局限：它依赖 API 进程内存，进程重启后会丢失，因此不能作为 full / Celery
@@ -117,16 +119,18 @@ async def _load_persisted_task_views(tenant_id: str) -> dict[str, dict[str, Any]
     try:
         async with get_sessionmaker()() as session:
             rows = (
-                await session.execute(
-                    select(AgentTaskORM)
-                    .where(AgentTaskORM.tenant_id == tenant_id)
-                    .order_by(AgentTaskORM.created_at.asc(), AgentTaskORM.task_id.asc())
+                (
+                    await session.execute(
+                        select(AgentTaskORM)
+                        .where(AgentTaskORM.tenant_id == tenant_id)
+                        .order_by(AgentTaskORM.created_at.asc(), AgentTaskORM.task_id.asc())
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
     except Exception as exc:
-        from xagent.infra.logging import get_logger
-
-        get_logger("xagent.tasks").warning(
+        logger.warning(
             "load_persisted_task_views_failed",
             tenant_id=tenant_id,
             error=str(exc),
@@ -155,7 +159,13 @@ async def _load_persisted_task_views(tenant_id: str) -> dict[str, dict[str, Any]
                 intent_type=row.intent_type,
                 route_source=row.route_source,
             )
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "build_persisted_task_view_failed",
+                task_id=row.task_id,
+                tenant_id=tenant_id,
+                error=str(exc),
+            )
             continue
     return task_views
 
@@ -319,7 +329,6 @@ async def get_task(
     return task_view
 
 
-
 @router.get("", summary="列出当前租户任务")
 async def list_tasks(
     principal: Principal = Depends(require_permission("agent", "read")),
@@ -336,7 +345,9 @@ async def list_tasks(
         if metadata.get("tenant_id") != principal.tenant_id or task_id in tasks_by_id:
             continue
         fallback_view = await get_task_runtime_view(task_id, principal.tenant_id)
-        tasks_by_id[task_id] = fallback_view or _build_metadata_view(metadata, status_value="pending")
+        tasks_by_id[task_id] = fallback_view or _build_metadata_view(
+            metadata, status_value="pending"
+        )
 
     tasks = sorted(
         tasks_by_id.values(),

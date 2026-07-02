@@ -168,12 +168,13 @@ async def test_workflow_api_run_degrades_when_workflow_view_table_missing(
     db_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import xagent.api.v1.workflows as workflow_api
     from sqlalchemy.exc import OperationalError
 
-    import xagent.api.v1.workflows as workflow_api
-
     async def _missing_workflow_runs(*args, **kwargs):
-        raise OperationalError("SELECT ... FROM workflow_runs", {}, Exception("no such table: workflow_runs"))
+        raise OperationalError(
+            "SELECT ... FROM workflow_runs", {}, Exception("no such table: workflow_runs")
+        )
 
     monkeypatch.setattr(workflow_api, "persist_workflow_run", _missing_workflow_runs)
     token = create_access_token(user_id="u-view-missing", tenant_id="tenant-1", roles=["member"])
@@ -290,7 +291,10 @@ async def test_workflow_non_schema_runtime_failure_is_not_silently_swallowed(
     with pytest.raises(RuntimeError, match="db write exploded"):
         await db_client.post(
             "/api/v1/workflows",
-            json={"name": "wf-runtime-boom", "steps": [{"id": "s1", "name": "执行", "goal": "执行"}]},
+            json={
+                "name": "wf-runtime-boom",
+                "steps": [{"id": "s1", "name": "执行", "goal": "执行"}],
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -362,7 +366,9 @@ async def test_workflow_delivery_summary_is_visible_when_runtime_schema_degrades
     }
 
 
-async def test_workflow_delivery_summary_is_visible_when_runtime_persistence_succeeds(db_client: AsyncClient) -> None:
+async def test_workflow_delivery_summary_is_visible_when_runtime_persistence_succeeds(
+    db_client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="u", tenant_id="tenant-1", roles=["member"])
     resp = await db_client.post(
         "/api/v1/workflows",
@@ -414,7 +420,9 @@ async def test_workflow_delivery_summary_is_visible_when_runtime_persistence_suc
     }
 
 
-async def test_workflow_api_persists_delivery_summary_for_runtime_run(db_client: AsyncClient) -> None:
+async def test_workflow_api_persists_delivery_summary_for_runtime_run(
+    db_client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="u", tenant_id="tenant-1", roles=["member"])
     resp = await db_client.post(
         "/api/v1/workflows",

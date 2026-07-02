@@ -54,7 +54,9 @@ def _enrich_delivery(detail: dict) -> dict:
     if not isinstance(workflow, dict):
         return merged
     if "replay" not in merged:
-        merged["replay"] = build_workflow_replay_pointer(str(detail.get("run_id") or workflow.get("run_id") or ""))
+        merged["replay"] = build_workflow_replay_pointer(
+            str(detail.get("run_id") or workflow.get("run_id") or "")
+        )
     if "resume" not in merged:
         merged["resume"] = build_workflow_resume_pointer(workflow)
     return merged

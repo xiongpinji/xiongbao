@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
-
 from xagent.infra.db import dispose_engine, get_sessionmaker
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM

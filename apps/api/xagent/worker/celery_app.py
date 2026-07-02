@@ -113,7 +113,9 @@ async def _upsert_agent_task(
         row.lineage_summary = json.dumps(lineage_summary or {}, ensure_ascii=False)
         row.preview_summary = json.dumps(preview_summary or {}, ensure_ascii=False)
 
-        terminal_locked = current_status in _TERMINAL_STATUSES and next_status not in _TERMINAL_STATUSES
+        terminal_locked = (
+            current_status in _TERMINAL_STATUSES and next_status not in _TERMINAL_STATUSES
+        )
         if not terminal_locked:
             row.status = status
             row.result_payload = json.dumps(result_payload or {}, ensure_ascii=False)
@@ -330,9 +332,7 @@ def run_agent_task(
     from xagent.core.orchestration import run_agent
     from xagent.enterprise.auth.principal import Principal
 
-    principal = Principal(
-        user_id=user_id, tenant_id=tenant_id, roles=frozenset({"member"})
-    )
+    principal = Principal(user_id=user_id, tenant_id=tenant_id, roles=frozenset({"member"}))
     task_id = ""
     try:
         from celery import current_task
@@ -370,7 +370,8 @@ def run_agent_task(
                 run_id=task_id or None,
             )
         ).to_dict()
-    except Exception as exc:
+    except Exception as run_exc:
+        run_error = str(run_exc)
         if task_id:
             from xagent.infra.db import get_sessionmaker
 
@@ -388,7 +389,7 @@ def run_agent_task(
                             status="failed",
                             input_payload=input_payload,
                             result_payload={},
-                            error=str(exc),
+                            error=run_error,
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
                         )

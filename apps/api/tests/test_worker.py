@@ -59,9 +59,7 @@ def _h(token: str) -> dict:
 
 async def test_submit_and_poll_task(client: AsyncClient) -> None:
     token = create_access_token(user_id="u", tenant_id="t1", roles=["member"])
-    resp = await client.post(
-        "/api/v1/tasks", json={"goal": "你好"}, headers=_h(token)
-    )
+    resp = await client.post("/api/v1/tasks", json={"goal": "你好"}, headers=_h(token))
     assert resp.status_code == 200
     task_id = resp.json()["task_id"]
 
@@ -84,9 +82,7 @@ async def test_submit_and_poll_task(client: AsyncClient) -> None:
 
 async def test_task_detail_uses_task_id_as_compat_run_id(client: AsyncClient) -> None:
     token = create_access_token(user_id="u", tenant_id="t1", roles=["member"])
-    resp = await client.post(
-        "/api/v1/tasks", json={"goal": "兼容 run id"}, headers=_h(token)
-    )
+    resp = await client.post("/api/v1/tasks", json={"goal": "兼容 run id"}, headers=_h(token))
     task_id = resp.json()["task_id"]
 
     detail = await client.get(f"/api/v1/tasks/{task_id}", headers=_h(token))
@@ -150,7 +146,6 @@ async def test_submit_task_returns_error_when_initial_celery_persist_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from fastapi import HTTPException
-
     from xagent.api.v1.tasks import submit_task
     from xagent.enterprise.auth.principal import Principal
 
@@ -185,7 +180,9 @@ async def test_task_submit_reuses_shared_celery_app(
     from xagent.api.v1.tasks import submit_task
     from xagent.enterprise.auth.principal import Principal
 
-    principal = Principal(user_id="u-shared", tenant_id="tenant-shared", roles=frozenset({"member"}))
+    principal = Principal(
+        user_id="u-shared", tenant_id="tenant-shared", roles=frozenset({"member"})
+    )
 
     class _AsyncResultStub:
         id = "shared-celery-task"
@@ -220,7 +217,9 @@ async def test_task_list_refreshes_celery_terminal_status_from_backend(
     from xagent.infra.db import get_sessionmaker
     from xagent.infra.models.agent_task import AgentTaskORM
 
-    principal = Principal(user_id="u-list-live", tenant_id="tenant-list-live", roles=frozenset({"member"}))
+    principal = Principal(
+        user_id="u-list-live", tenant_id="tenant-list-live", roles=frozenset({"member"})
+    )
 
     async with get_sessionmaker()() as session:
         session.add(
@@ -362,7 +361,9 @@ def test_celery_worker_uses_task_id_as_run_id(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr("celery.current_task", _CurrentTask())
     monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
     monkeypatch.setattr("xagent.worker.celery_app.persist_submitted_agent_task", AsyncMock())
-    monkeypatch.setattr("xagent.worker.celery_app.persist_agent_task_record_in_session", AsyncMock())
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.persist_agent_task_record_in_session", AsyncMock()
+    )
 
     result = run_agent_task(
         goal="Celery run id",
@@ -489,13 +490,20 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
     monkeypatch: pytest.MonkeyPatch,
     migrated_db,
 ) -> None:
-    from xagent.api.v1.tasks import _task_metadata, _task_tenants, get_task_runtime_view, submit_task
+    from xagent.api.v1.tasks import (
+        _task_metadata,
+        _task_tenants,
+        get_task_runtime_view,
+        submit_task,
+    )
     from xagent.enterprise.auth.principal import Principal
     from xagent.infra.db import get_sessionmaker
     from xagent.infra.models.agent_task import AgentTaskORM
     from xagent.infra.settings import get_settings
 
-    principal = Principal(user_id="u-celery", tenant_id="tenant-celery", roles=frozenset({"member"}))
+    principal = Principal(
+        user_id="u-celery", tenant_id="tenant-celery", roles=frozenset({"member"})
+    )
 
     class _AsyncResultStub:
         id = "celery-task-1"
@@ -511,7 +519,9 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
     get_settings.cache_clear()
     monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
 
-    body = type("Body", (), {"goal": "持久化 Celery 元数据", "role": "planner", "capabilities": ["search"]})()
+    body = type(
+        "Body", (), {"goal": "持久化 Celery 元数据", "role": "planner", "capabilities": ["search"]}
+    )()
     created = await submit_task(body=body, principal=principal)
 
     assert created["task_id"] == "celery-task-1"
@@ -547,7 +557,9 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
     }
 
 
-def test_celery_worker_updates_persisted_task_result(monkeypatch: pytest.MonkeyPatch, migrated_db) -> None:
+def test_celery_worker_updates_persisted_task_result(
+    monkeypatch: pytest.MonkeyPatch, migrated_db
+) -> None:
     import asyncio
 
     from xagent.infra.db import get_sessionmaker
@@ -571,7 +583,11 @@ def test_celery_worker_updates_persisted_task_result(monkeypatch: pytest.MonkeyP
             owner_id="u-celery",
             kind="agent.run",
             backend="celery",
-            input_payload={"goal": "执行 Celery 任务", "role": "planner", "capabilities": ["search"]},
+            input_payload={
+                "goal": "执行 Celery 任务",
+                "role": "planner",
+                "capabilities": ["search"],
+            },
             status="pending",
         )
     )

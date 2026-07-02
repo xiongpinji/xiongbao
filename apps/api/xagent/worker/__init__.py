@@ -41,14 +41,16 @@ class TaskRecord:
     status: TaskStatus = TaskStatus.pending
     result: Any = None
     error: str | None = None
-    created_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     started_at: str | None = None
     finished_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result_payload = self.result if isinstance(self.result, dict) else ({"value": self.result} if self.result is not None else {})
+        result_payload = (
+            self.result
+            if isinstance(self.result, dict)
+            else ({"value": self.result} if self.result is not None else {})
+        )
         return build_task_view(
             task_id=self.task_id,
             run_id=None,

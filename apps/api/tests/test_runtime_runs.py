@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-
 from xagent.core.orchestration.state import normalize_run_status
 from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.core.runtime.policies import normalize_runtime_policy
@@ -177,7 +176,9 @@ async def test_runs_api_aggregates_live_task_contract(client: AsyncClient) -> No
     assert body["delivery"]["risks"] == []
 
 
-async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(client: AsyncClient) -> None:
+async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(
+    client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="chat-user", tenant_id="tenant-1", roles=["member"])
     submit = await client.post(
         "/api/v1/agents/run",
@@ -225,7 +226,9 @@ async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(client: 
     assert body["delivery"]["resume"] is None
 
 
-async def test_runs_api_reads_stream_agent_run_persisted_to_agent_tasks(client: AsyncClient) -> None:
+async def test_runs_api_reads_stream_agent_run_persisted_to_agent_tasks(
+    client: AsyncClient,
+) -> None:
     token = create_access_token(user_id="stream-user", tenant_id="tenant-1", roles=["member"])
     stream_resp = await client.post(
         "/api/v1/stream/agents/run",
@@ -361,8 +364,8 @@ async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
     _, kwargs = mocked_run_agent.await_args
     run_id = kwargs["run_id"]
     assert f'"run_id": "{run_id}"' in stream_resp.text
-    assert 'event: error' in stream_resp.text
-    assert 'stream exploded' in stream_resp.text
+    assert "event: error" in stream_resp.text
+    assert "stream exploded" in stream_resp.text
 
     run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
 
@@ -392,6 +395,42 @@ async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
     assert body["evidence"][1]["payload"] == {"error": "stream exploded", "run_id": run_id}
 
 
+async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_done_path(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="stream-user-early", tenant_id="tenant-1", roles=["member"])
+    mocked_run_agent = AsyncMock(side_effect=RuntimeError("no such table: evidence"))
+    monkeypatch.setattr("xagent.api.v1.stream.run_agent", mocked_run_agent)
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "在 result 生成前触发 schema 类错误"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert mocked_run_agent.await_count == 1
+    _, kwargs = mocked_run_agent.await_args
+    run_id = kwargs["run_id"]
+    assert "event: error" in stream_resp.text
+    assert "event: done" not in stream_resp.text
+    assert f'"run_id": "{run_id}"' in stream_resp.text
+
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+
+    assert run_resp.status_code == 200, run_resp.text
+    body = run_resp.json()
+    assert body["task"]["status"] == "failed"
+    assert body["task"]["result"]["error"] == "no such table: evidence"
+    assert body["delivery"]["status"] == "blocked"
+    assert [item["kind"] for item in body["evidence"]] == [
+        "request.input",
+        "failure.evidence",
+        "delivery.generated",
+    ]
+
+
 async def test_direct_agent_success_survives_runtime_schema_mismatch(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -419,7 +458,9 @@ async def test_stream_agent_success_survives_runtime_schema_mismatch(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    token = create_access_token(user_id="schema-stream-user", tenant_id="tenant-1", roles=["member"])
+    token = create_access_token(
+        user_id="schema-stream-user", tenant_id="tenant-1", roles=["member"]
+    )
 
     async def _boom(*args, **kwargs):  # noqa: ARG001
         raise RuntimeError("no such table: evidence")
@@ -433,7 +474,7 @@ async def test_stream_agent_success_survives_runtime_schema_mismatch(
     )
 
     assert stream_resp.status_code == 200, stream_resp.text
-    assert 'event: done' in stream_resp.text
+    assert "event: done" in stream_resp.text
 
 
 async def test_runs_api_aggregates_workflow_persistence_and_summaries(client: AsyncClient) -> None:
@@ -446,8 +487,16 @@ async def test_runs_api_aggregates_workflow_persistence_and_summaries(client: As
         "steps": [{"id": "plan", "status": "succeeded"}],
         "timeline": [{"kind": "succeeded", "step_id": "plan"}],
     }
-    validation_summary = {"status": "passed", "checks": 3, "risks": ["validation: requires legal review"]}
-    delivery_summary = {"status": "ready", "channel": "download", "risks": ["delivery: manual publish window"]}
+    validation_summary = {
+        "status": "passed",
+        "checks": 3,
+        "risks": ["validation: requires legal review"],
+    }
+    delivery_summary = {
+        "status": "ready",
+        "channel": "download",
+        "risks": ["delivery: manual publish window"],
+    }
     lineage_summary = {"parent_task_id": "task-0", "artifact_ids": ["art-parent"]}
     preview_summary = {"title": "delivery-report.pdf"}
 
@@ -604,7 +653,10 @@ async def test_runs_api_aggregates_workflow_persistence_and_summaries(client: As
             "preview_summary": preview_summary,
         }
     ]
-    assert body["delivery"]["risks"] == ["delivery: manual publish window", "validation: requires legal review"]
+    assert body["delivery"]["risks"] == [
+        "delivery: manual publish window",
+        "validation: requires legal review",
+    ]
     assert body["validation"]["risks"] == ["validation: requires legal review"]
     assert body["delivery"]["replay"] == {
         "mode": "workflow_replay",
@@ -643,7 +695,9 @@ async def test_runs_api_aggregates_workflow_route_run_without_agent_read(
         "workflow_reader": {"workflow": {"read"}},
     }
     monkeypatch.setattr(rbac, "get_enforcer", lambda: rbac.BuiltinEnforcer(policy))
-    token = create_access_token(user_id="wf-reader", tenant_id="tenant-1", roles=["workflow_reader"])
+    token = create_access_token(
+        user_id="wf-reader", tenant_id="tenant-1", roles=["workflow_reader"]
+    )
 
     resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
 
@@ -655,7 +709,9 @@ async def test_runs_api_aggregates_workflow_route_run_without_agent_read(
     assert body["task"] is not None
 
 
-async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(client: AsyncClient) -> None:
+async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
+    client: AsyncClient,
+) -> None:
     owner_token = create_access_token(user_id="owner-user", tenant_id="tenant-1", roles=["member"])
 
     create_resp = await client.post(
@@ -713,9 +769,10 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(cl
         "console_path": f"/runs/{run_id}",
     }
 
-
     owner_token = create_access_token(user_id="owner-user", tenant_id="tenant-1", roles=["member"])
-    reviewer_token = create_access_token(user_id="reviewer-user", tenant_id="tenant-1", roles=["admin"])
+    reviewer_token = create_access_token(
+        user_id="reviewer-user", tenant_id="tenant-1", roles=["admin"]
+    )
 
     create_resp = await client.post(
         "/api/v1/workflows",
@@ -824,7 +881,10 @@ async def test_runs_api_denies_workflow_content_without_workflow_read(
     owner_token = create_access_token(user_id="wf-owner-2", tenant_id="tenant-1", roles=["member"])
     create_resp = await client.post(
         "/api/v1/workflows",
-        json={"name": "api-runtime-wf-deny", "steps": [{"id": "s1", "name": "执行", "goal": "执行"}]},
+        json={
+            "name": "api-runtime-wf-deny",
+            "steps": [{"id": "s1", "name": "执行", "goal": "执行"}],
+        },
         headers=_auth(owner_token),
     )
     assert create_resp.status_code == 200, create_resp.text

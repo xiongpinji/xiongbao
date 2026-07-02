@@ -9,7 +9,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect
-from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.core.orchestration.task_view import build_task_view
@@ -299,9 +298,7 @@ def _attach_delivery_bundle(
     bundled["resume"] = deepcopy(resume)
     risks = [str(item).strip() for item in (bundled.get("risks") or []) if str(item).strip()]
     validation_risks = [
-        str(item).strip()
-        for item in ((validation or {}).get("risks") or [])
-        if str(item).strip()
+        str(item).strip() for item in ((validation or {}).get("risks") or []) if str(item).strip()
     ]
     extra = [str(item).strip() for item in (extra_risks or []) if str(item).strip()]
     merged_risks: list[str] = []
@@ -323,7 +320,9 @@ def _build_media_task_state(
     input_payload: dict[str, Any],
     outputs: list[str],
     error: str,
-) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[
+    dict[str, Any], list[dict[str, Any]], dict[str, Any], dict[str, Any], list[dict[str, Any]]
+]:
     runtime_task = _build_creative_task_view(
         task_id=task_id,
         tenant_id=tenant_id,
@@ -596,7 +595,12 @@ async def _persist_creative_runtime_state(
     evidence: list[dict[str, Any]],
 ) -> None:
     if not await _table_exists(session, "agent_tasks"):
-        logger.warning("creative_runtime_persist_skipped", task_id=task_view.get("task_id"), table="agent_tasks", error="table_missing")
+        logger.warning(
+            "creative_runtime_persist_skipped",
+            task_id=task_view.get("task_id"),
+            table="agent_tasks",
+            error="table_missing",
+        )
         return
 
     try:
@@ -618,12 +622,22 @@ async def _persist_creative_runtime_state(
     except Exception as exc:
         await session.rollback()
         if _is_missing_runtime_table_error(exc, "agent_tasks"):
-            logger.warning("creative_runtime_persist_skipped", task_id=task_view.get("task_id"), table="agent_tasks", error=str(exc))
+            logger.warning(
+                "creative_runtime_persist_skipped",
+                task_id=task_view.get("task_id"),
+                table="agent_tasks",
+                error=str(exc),
+            )
             return
         raise
 
     if artifacts and not await _table_exists(session, "artifacts"):
-        logger.warning("creative_runtime_persist_skipped", task_id=task_view.get("task_id"), table="artifacts", error="table_missing")
+        logger.warning(
+            "creative_runtime_persist_skipped",
+            task_id=task_view.get("task_id"),
+            table="artifacts",
+            error="table_missing",
+        )
         return
 
     if not artifacts:
@@ -635,7 +649,12 @@ async def _persist_creative_runtime_state(
     except Exception as exc:
         await session.rollback()
         if _is_missing_runtime_table_error(exc, "artifacts"):
-            logger.warning("creative_runtime_persist_skipped", task_id=task_view.get("task_id"), table="artifacts", error=str(exc))
+            logger.warning(
+                "creative_runtime_persist_skipped",
+                task_id=task_view.get("task_id"),
+                table="artifacts",
+                error=str(exc),
+            )
             return
         raise
 
@@ -683,7 +702,9 @@ def _build_production_validation_summary(result: dict[str, Any]) -> dict[str, An
     risks = [
         str(gate.get("detail") or "").strip()
         for gate in quality_gates
-        if isinstance(gate, dict) and not gate.get("passed") and str(gate.get("detail") or "").strip()
+        if isinstance(gate, dict)
+        and not gate.get("passed")
+        and str(gate.get("detail") or "").strip()
     ]
     return {
         "all_passed": bool(result.get("quality_passed")),
@@ -901,16 +922,18 @@ async def media_task(
             )
         _media_runtime_tasks[task_id] = runtime_view
 
-    updated_task, updated_artifacts, updated_delivery, preview_summary, evidence = _build_media_task_state(
-        task_id=task.task_id,
-        tenant_id=principal.tenant_id,
-        owner_id=owner_id,
-        kind=kind,
-        provider=task.provider,
-        status=task.status,
-        input_payload=input_payload,
-        outputs=list(task.outputs),
-        error=task.error or "",
+    updated_task, updated_artifacts, updated_delivery, preview_summary, evidence = (
+        _build_media_task_state(
+            task_id=task.task_id,
+            tenant_id=principal.tenant_id,
+            owner_id=owner_id,
+            kind=kind,
+            provider=task.provider,
+            status=task.status,
+            input_payload=input_payload,
+            outputs=list(task.outputs),
+            error=task.error or "",
+        )
     )
     runtime_view["task"] = updated_task
     runtime_view["artifacts"] = updated_artifacts

@@ -20,6 +20,7 @@ from xagent.core.orchestration import run_agent
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
+from xagent.infra.logging import get_logger
 from xagent.infra.repos.evidence import persist_evidence_bundle
 from xagent.worker.celery_app import persist_agent_task_record_in_session
 
@@ -31,6 +32,7 @@ from .agents import (
 )
 
 router = APIRouter(prefix="/stream", tags=["stream"])
+logger = get_logger("xagent.api.stream")
 
 
 class StreamRunIn(BaseModel):
@@ -112,6 +114,7 @@ async def _event_stream(
         )
 
     async def _run():
+        result = None
         try:
             async with get_sessionmaker()() as session:
                 result = await run_agent(
@@ -127,7 +130,10 @@ async def _event_stream(
                 delivery_summary = _build_stream_delivery_summary(result_payload)
                 evidence_records = [
                     {"kind": "request.input", "payload": input_payload},
-                    {"kind": "result.final", "payload": _build_stream_result_summary(result_payload)},
+                    {
+                        "kind": "result.final",
+                        "payload": _build_stream_result_summary(result_payload),
+                    },
                     {"kind": "delivery.generated", "payload": delivery_summary},
                 ]
                 commit_evidence = _build_commit_evidence(result_payload)
@@ -180,7 +186,9 @@ async def _event_stream(
                             validation_summary={"risks": []},
                             preview_summary={
                                 "final_answer": str(result_payload.get("final_answer") or "")[:160],
-                                "steps_count": _build_stream_result_summary(result_payload)["steps_count"],
+                                "steps_count": _build_stream_result_summary(result_payload)[
+                                    "steps_count"
+                                ],
                             },
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
@@ -188,11 +196,9 @@ async def _event_stream(
                         await session.commit()
                     else:
                         raise
-                await queue.put(
-                    _sse("done", {"steps": result.steps, "run_id": result.run_id})
-                )
+                await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
         except Exception as exc:
-            if _is_runtime_persistence_schema_mismatch(exc):
+            if result is not None and _is_runtime_persistence_schema_mismatch(exc):
                 await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
             else:
                 failure_error = str(exc)
@@ -232,13 +238,20 @@ async def _event_stream(
                             task_id=run_id,
                             records=[
                                 {"kind": "request.input", "payload": input_payload},
-                                {"kind": "failure.evidence", "payload": {"error": failure_error, "run_id": run_id}},
+                                {
+                                    "kind": "failure.evidence",
+                                    "payload": {"error": failure_error, "run_id": run_id},
+                                },
                                 {"kind": "delivery.generated", "payload": failed_delivery},
                             ],
                         )
                         await session.commit()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning(
+                        "stream_failure_persist_skipped",
+                        run_id=run_id,
+                        error=str(exc),
+                    )
                 await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         finally:
             await queue.put(done)
