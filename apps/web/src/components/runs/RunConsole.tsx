@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RunDetail } from "../../api/runtime.ts";
+import type { RunDetail, RuntimeDeliveryFailure } from "../../api/runtime.ts";
 import CollapsiblePanel from "../layout/CollapsiblePanel.tsx";
 import RunValidationPanel from "./RunValidationPanel.tsx";
 import RunArtifactsPanel from "./RunArtifactsPanel.tsx";
@@ -33,6 +33,72 @@ function prettyJson(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+function readStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : String(item).trim()))
+    .filter((item) => item.length > 0);
+}
+
+function readFailure(detail: RunDetail): RuntimeDeliveryFailure | null {
+  const value = detail.delivery.failure;
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value
+    : null;
+}
+
+function renderFailureSummary(detail: RunDetail) {
+  const failure = readFailure(detail);
+  if (!failure) {
+    return null;
+  }
+
+  const suggestedActions = readStringList(failure.suggested_repair_actions);
+  const escalationPath = typeof failure.escalation_path === "string" ? failure.escalation_path : "";
+
+  return (
+    <section className="rounded-3xl border border-amber-500/40 bg-amber-500/10 p-6 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-[0.24em] text-amber-200">Failure Delivery</div>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight text-amber-50">{String(failure.message || "交付已阻塞")}</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-100/80">
+            当前运行已经进入失败态，请先处理阻塞原因，再继续 replay 或重试。
+          </p>
+        </div>
+        <div className="rounded-2xl border border-amber-400/30 bg-neutral-950/70 px-4 py-3 text-sm text-amber-100">
+          <div className="text-xs text-amber-200/80">升级路径</div>
+          <div className="mt-1 font-mono text-[11px] text-amber-50">{escalationPath || "—"}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        <section className="rounded-2xl border border-amber-500/20 bg-neutral-950/70 p-4">
+          <div className="text-sm font-medium text-amber-50">建议动作</div>
+          {suggestedActions.length ? (
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-100/90">
+              {suggestedActions.map((action, index) => (
+                <li key={`${action}-${index}`} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-3 py-2">
+                  {action}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-3 text-sm text-amber-100/70">暂无建议动作。</div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-amber-500/20 bg-neutral-950/70 p-4">
+          <div className="text-sm font-medium text-amber-50">Failure JSON</div>
+          <pre className="mt-3 overflow-auto rounded-2xl border border-neutral-800 bg-neutral-950 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
+            {prettyJson(failure)}
+          </pre>
+        </section>
+      </div>
+    </section>
+  );
 }
 
 export default function RunConsole({ detail }: { detail: RunDetail }) {
@@ -69,6 +135,8 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
           </div>
         </div>
       </section>
+
+      {renderFailureSummary(detail)}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div className="space-y-4">

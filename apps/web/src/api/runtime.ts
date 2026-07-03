@@ -83,10 +83,21 @@ export interface RuntimeArtifactRecord {
   preview_summary?: Record<string, unknown>;
 }
 
+export interface RuntimeDeliveryFailure {
+  source: string;
+  code: string;
+  message: string;
+  blocking_step?: string | null;
+  reasons?: string[];
+  suggested_repair_actions?: string[];
+  escalation_path?: string | null;
+}
+
 export interface RuntimeDeliverySummary extends Record<string, unknown> {
   risks?: string[];
   replay?: Record<string, unknown> | null;
   resume?: Record<string, unknown> | null;
+  failure?: RuntimeDeliveryFailure | null;
 }
 
 export interface RuntimeRelatedTask {
