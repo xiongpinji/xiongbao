@@ -103,6 +103,84 @@ def build_workflow_resume_pointer(run_view: dict) -> dict | None:
     return None
 
 
+def _workflow_failure_reasons(run_view: dict) -> tuple[str | None, list[str], str | None]:
+    reasons: list[str] = []
+    blocking_step: str | None = None
+    denied_actor: str | None = None
+    for event in run_view.get("timeline") or []:
+        kind = str(event.get("kind") or "").strip().lower()
+        step_id = str(event.get("step_id") or "").strip() or None
+        detail = str(event.get("detail") or "").strip()
+        if kind == "denied":
+            blocking_step = step_id or blocking_step
+            denied_actor = detail or denied_actor
+            reasons.append(
+                f"步骤 {step_id} 已被 {detail} 拒绝" if step_id and detail else "审批已被拒绝"
+            )
+        elif kind == "failed" and detail:
+            blocking_step = step_id or blocking_step
+            reasons.append(
+                f"步骤 {step_id} 执行失败：{detail}" if step_id else f"工作流执行失败：{detail}"
+            )
+        elif kind == "compensation_failed" and detail:
+            blocking_step = step_id or blocking_step
+            reasons.append(
+                f"步骤 {step_id} 补偿失败：{detail}"
+                if step_id
+                else f"工作流补偿失败：{detail}"
+            )
+
+    for step in run_view.get("steps") or []:
+        step_id = str(step.get("id") or "").strip() or None
+        step_status = str(step.get("status") or "").strip()
+        error = str(step.get("error") or "").strip()
+        if not error:
+            continue
+        if step_status == "skipped" and error == "审批被拒绝":
+            continue
+        blocking_step = blocking_step or step_id
+        message = f"步骤 {step_id} 错误：{error}" if step_id else error
+        if message not in reasons:
+            reasons.append(message)
+
+    unique_reasons: list[str] = []
+    for reason in reasons:
+        if reason and reason not in unique_reasons:
+            unique_reasons.append(reason)
+    return blocking_step, unique_reasons, denied_actor
+
+
+def _build_workflow_failure_summary(run_view: dict, summary: str) -> dict | None:
+    status = str(run_view.get("status") or "pending")
+    if status not in {"failed", "rolled_back", "cancelled"}:
+        return None
+
+    blocking_step, reasons, denied_actor = _workflow_failure_reasons(run_view)
+    if status == "cancelled":
+        code = "workflow_cancelled"
+        actions = ["调整工作流输入后重新发起运行"]
+        if denied_actor:
+            actions.append(f"联系 {denied_actor} 确认拒绝原因")
+        else:
+            actions.append("联系审批人确认拒绝原因")
+    elif status == "rolled_back":
+        code = "workflow_rolled_back"
+        actions = ["检查失败步骤后重新发起工作流", "确认补偿步骤是否覆盖所有副作用"]
+    else:
+        code = "workflow_failed"
+        actions = ["检查失败步骤的错误信息后重新运行", "确认依赖系统是否已恢复"]
+
+    return {
+        "source": "workflow",
+        "code": code,
+        "message": summary,
+        "blocking_step": blocking_step,
+        "reasons": reasons,
+        "suggested_repair_actions": actions,
+        "escalation_path": "workflow_admin",
+    }
+
+
 def build_workflow_delivery_summary(run_view: dict) -> dict:
     timeline = run_view.get("timeline") or []
     steps = run_view.get("steps") or []
@@ -137,6 +215,7 @@ def build_workflow_delivery_summary(run_view: dict) -> dict:
     else:
         delivery_status = "pending"
         summary = f"工作流 {spec_name} 进行中，当前已完成 {completed_steps}/{step_count} 个步骤。"
+    failure = _build_workflow_failure_summary(run_view, summary)
     return {
         "status": delivery_status,
         "channel": "workflow_view",
@@ -145,6 +224,7 @@ def build_workflow_delivery_summary(run_view: dict) -> dict:
         "workflow": workflow,
         "replay": replay,
         "resume": resume,
+        "failure": failure,
     }
 
 
@@ -366,6 +446,7 @@ async def _upsert_runtime_task_record(
         existing.route_source = task_record.route_source
         existing.input_payload = task_record.input_payload
         existing.result_payload = task_record.result_payload
+        existing.validation_summary = task_record.validation_summary
         existing.delivery_summary = task_record.delivery_summary
         existing.preview_summary = task_record.preview_summary
     except ProgrammingError as exc:

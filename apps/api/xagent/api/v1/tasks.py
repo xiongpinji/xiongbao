@@ -17,11 +17,14 @@ from sqlalchemy import select
 
 from xagent.core.orchestration import run_agent
 from xagent.core.orchestration.task_view import build_task_view
+from xagent.domains.billing import get_billing_service
+from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
+from xagent.infra.repos.billing import persist_billing_record
 from xagent.worker import get_task_runner
 from xagent.worker.celery_app import (
     get_celery_app,
@@ -177,9 +180,21 @@ async def submit_task(
 ) -> dict:
     runner = get_task_runner()
     input_payload = _build_input_payload(body)
+    billing = get_billing_service()
+    try:
+        billing.check_and_consume(
+            principal.tenant_id,
+            actor=principal.user_id,
+            action="agent.run",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=str(exc),
+        ) from exc
 
     async def _run():
-        return (
+        result = (
             await run_agent(
                 body.goal,
                 principal=principal,
@@ -187,6 +202,29 @@ async def submit_task(
                 capabilities=set(body.capabilities) or None,
             )
         ).to_dict()
+        async with get_sessionmaker()() as session:
+            await persist_billing_record(
+                session,
+                tenant_id=principal.tenant_id,
+                actor=principal.user_id,
+                action="agent.run",
+                cost=0.0,
+                tokens=int(result.get("steps") or 0),
+                detail={"run_id": result.get("run_id"), "role": result.get("role_name")},
+            )
+        get_audit_log().record(
+            tenant_id=principal.tenant_id,
+            actor=principal.user_id,
+            action="agent.run",
+            resource="agent",
+            detail={
+                "run_id": result.get("run_id"),
+                "role": result.get("role_name"),
+                "steps": result.get("steps"),
+                "entrypoint": "tasks",
+            },
+        )
+        return result
 
     # full 模式 + Celery 可用 -> 走 Celery；否则进程内
     try:

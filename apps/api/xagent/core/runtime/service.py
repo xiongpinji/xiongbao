@@ -13,7 +13,7 @@ from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.repos.evidence import load_evidence_records
-from xagent.infra.repos.workflow import load_workflow_runs
+from xagent.infra.repos.workflow import load_workflow_run
 
 
 def _is_schema_mismatch(exc: Exception, table_name: str) -> bool:
@@ -106,15 +106,88 @@ def _build_delivery_artifact_projection(artifacts: list[dict[str, Any]]) -> list
     return projected
 
 
-def _normalize_risks(value: Any) -> list[str]:
+def _normalize_string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
-    risks: list[str] = []
+    normalized: list[str] = []
     for item in value:
         text = str(item).strip()
         if text:
-            risks.append(text)
-    return risks
+            normalized.append(text)
+    return normalized
+
+
+def _normalize_risks(value: Any) -> list[str]:
+    return _normalize_string_list(value)
+
+
+def _ensure_failure_contract(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    merged = deepcopy(value)
+    source = str(merged.get("source") or "").strip()
+    code = str(merged.get("code") or "").strip()
+    message = str(merged.get("message") or "").strip()
+    blocking_step = str(merged.get("blocking_step") or "").strip() or None
+    reasons = _normalize_string_list(merged.get("reasons"))
+    actions = _normalize_string_list(merged.get("suggested_repair_actions"))
+    escalation_path = str(merged.get("escalation_path") or "").strip() or None
+    if not any((source, code, message, blocking_step, reasons, actions, escalation_path)):
+        return None
+    return {
+        "source": source or "runtime",
+        "code": code or "delivery_failed",
+        "message": message or "交付已阻塞，请检查运行详情。",
+        "blocking_step": blocking_step,
+        "reasons": reasons,
+        "suggested_repair_actions": actions,
+        "escalation_path": escalation_path,
+    }
+
+
+def _extract_task_failure_reasons(task_view: dict[str, Any], delivery: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    task_error = str(task_view.get("error") or "").strip()
+    if task_error:
+        reasons.append(task_error)
+    task_result = task_view.get("result") or {}
+    if isinstance(task_result, dict):
+        result_error = str(task_result.get("error") or "").strip()
+        if result_error and result_error not in reasons:
+            reasons.append(result_error)
+    for risk in _normalize_risks(delivery.get("risks")):
+        if risk not in reasons:
+            reasons.append(risk)
+    return reasons
+
+
+def _build_task_failure_fallback(
+    task_view: dict[str, Any] | None,
+    delivery: dict[str, Any],
+) -> dict[str, Any] | None:
+    if task_view is None:
+        return None
+
+    task_status = str(task_view.get("status") or delivery.get("status") or "pending").strip().lower()
+    delivery_status = str(delivery.get("status") or "pending").strip().lower()
+    if task_status not in {"failed", "cancelled", "rolled_back"} and delivery_status != "blocked":
+        return None
+
+    kind = str(task_view.get("kind") or delivery.get("kind") or "runtime.task").strip()
+    summary = str(delivery.get("summary") or "").strip() or f"后台任务 {kind} 当前状态为 {task_status or delivery_status}。"
+    actions = _normalize_string_list(delivery.get("suggested_repair_actions")) or [
+        "检查错误信息并重试该任务"
+    ]
+    return {
+        "source": "task",
+        "code": str(delivery.get("failure_code") or "task_failed").strip() or "task_failed",
+        "message": summary,
+        "blocking_step": str(delivery.get("blocking_step") or kind).strip() or None,
+        "reasons": _extract_task_failure_reasons(task_view, delivery),
+        "suggested_repair_actions": actions,
+        "escalation_path": str(delivery.get("escalation_path") or "runtime_operator").strip()
+        or None,
+    }
 
 
 def _ensure_validation_contract(validation: dict[str, Any] | None) -> dict[str, Any]:
@@ -126,6 +199,7 @@ def _ensure_validation_contract(validation: dict[str, Any] | None) -> dict[str, 
 def _ensure_delivery_contract(delivery: dict[str, Any] | None) -> dict[str, Any]:
     merged = deepcopy(delivery) if isinstance(delivery, dict) else {}
     merged["risks"] = _normalize_risks(merged.get("risks"))
+    merged["failure"] = _ensure_failure_contract(merged.get("failure"))
     return merged
 
 
@@ -143,6 +217,7 @@ def _merge_delivery_bundle(
         if workflow_view is not None
         else _build_task_delivery_fallback(task_view)
     )
+    fallback_failure = _ensure_failure_contract((fallback or {}).get("failure"))
     if "summary" not in merged or not str(merged.get("summary") or "").strip():
         merged["summary"] = str(fallback.get("summary") or "").strip()
     if "kind" not in merged or not str(merged.get("kind") or "").strip():
@@ -163,6 +238,12 @@ def _merge_delivery_bundle(
         if item and item not in combined_risks:
             combined_risks.append(item)
     merged["risks"] = combined_risks
+    failure = _ensure_failure_contract(merged.get("failure"))
+    if failure is None and fallback_failure is not None:
+        failure = fallback_failure
+    if failure is None and workflow_view is None:
+        failure = _build_task_failure_fallback(task_view, merged)
+    merged["failure"] = failure
     return merged
 
 
@@ -265,11 +346,7 @@ async def _load_workflow_view(
     run_id: str,
     tenant_id: str,
 ) -> dict[str, Any] | None:
-    runs = await load_workflow_runs(session, tenant_id, limit=200)
-    for view in runs:
-        if view.get("run_id") == run_id:
-            return view
-    return None
+    return await load_workflow_run(session, tenant_id, run_id)
 
 
 async def _load_artifacts(
@@ -461,7 +538,13 @@ async def get_runtime_run_detail(
         "task": task,
         "workflow": workflow_view or deepcopy((creative_view or {}).get("workflow")),
         "evidence": evidence or deepcopy((creative_view or {}).get("evidence") or []),
-        "artifacts": (artifacts if artifacts_available or creative_view is None else []),
+        "artifacts": (
+            artifacts
+            if artifacts
+            else deepcopy((creative_view or {}).get("artifacts") or [])
+            if creative_view is not None
+            else []
+        ),
         "validation": validation,
         "delivery": delivery,
         "related_tasks": related_tasks,

@@ -9,6 +9,8 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+import xagent.worker.celery_app
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,8 +23,7 @@ from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_session
 from xagent.infra.repos.billing import persist_billing_record
-from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.worker.celery_app import persist_agent_task_record_in_session
+from xagent.worker.celery_app import persist_runtime_task_bundle_in_session
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -236,61 +237,33 @@ async def run(
         if commit_evidence is not None:
             evidence_records.append(commit_evidence)
 
-        await persist_agent_task_record_in_session(
-            session,
-            task_id=result.run_id,
-            run_id=result.run_id,
-            tenant_id=principal.tenant_id,
-            owner_id=principal.user_id,
-            kind="agent.run",
-            backend="agent",
-            status="succeeded",
-            input_payload=input_payload,
-            result_payload=result_payload,
-            delivery_summary=delivery_summary,
-            validation_summary=validation_summary,
-            preview_summary=preview_summary,
-            started_at=started_at,
-            finished_at=datetime.now(UTC),
-        )
         try:
-            await persist_evidence_bundle(
+            await persist_runtime_task_bundle_in_session(
                 session,
-                tenant_id=principal.tenant_id,
-                run_id=result.run_id,
                 task_id=result.run_id,
-                records=evidence_records,
+                run_id=result.run_id,
+                tenant_id=principal.tenant_id,
+                owner_id=principal.user_id,
+                kind="agent.run",
+                backend="agent",
+                status="succeeded",
+                input_payload=input_payload,
+                result_payload=result_payload,
+                delivery_summary=delivery_summary,
+                validation_summary=validation_summary,
+                preview_summary=preview_summary,
+                started_at=started_at,
+                finished_at=datetime.now(UTC),
+                evidence_records=evidence_records,
             )
             await session.commit()
-        except Exception as evidence_exc:
+        except Exception:
             await session.rollback()
-            if _is_runtime_persistence_schema_mismatch(evidence_exc):
-                await persist_agent_task_record_in_session(
-                    session,
-                    task_id=result.run_id,
-                    run_id=result.run_id,
-                    tenant_id=principal.tenant_id,
-                    owner_id=principal.user_id,
-                    kind="agent.run",
-                    backend="agent",
-                    status="succeeded",
-                    input_payload=input_payload,
-                    result_payload=result_payload,
-                    delivery_summary=delivery_summary,
-                    validation_summary=validation_summary,
-                    preview_summary=preview_summary,
-                    started_at=started_at,
-                    finished_at=datetime.now(UTC),
-                )
-                await session.commit()
-            else:
-                raise
+            raise
     except Exception as exc:
         await session.rollback()
-        if _is_runtime_persistence_schema_mismatch(exc):
-            result_payload = result.to_dict()
-        else:
-            failure_error = str(exc)
+        failure_error = str(exc)
+        if "result" not in locals():
             failed_result = _build_failure_result_summary(
                 run_id=run_id,
                 error=failure_error,
@@ -300,13 +273,8 @@ async def run(
                 run_id=run_id,
                 result_summary=failed_result,
             )
-            failure_evidence = [
-                {"kind": "request.input", "payload": input_payload},
-                {"kind": "failure.evidence", "payload": {"error": failure_error, "run_id": run_id}},
-                {"kind": "delivery.generated", "payload": failed_delivery},
-            ]
             try:
-                await persist_agent_task_record_in_session(
+                await persist_runtime_task_bundle_in_session(
                     session,
                     task_id=run_id,
                     run_id=run_id,
@@ -323,21 +291,22 @@ async def run(
                     preview_summary={"error": failure_error[:160], "steps_count": 0},
                     started_at=started_at,
                     finished_at=datetime.now(UTC),
-                )
-                await persist_evidence_bundle(
-                    session,
-                    tenant_id=principal.tenant_id,
-                    run_id=run_id,
-                    task_id=run_id,
-                    records=failure_evidence,
+                    evidence_records=[
+                        {"kind": "request.input", "payload": input_payload},
+                        {
+                            "kind": "failure.evidence",
+                            "payload": {"error": failure_error, "run_id": run_id},
+                        },
+                        {"kind": "delivery.generated", "payload": failed_delivery},
+                    ],
                 )
                 await session.commit()
             except Exception:
                 await session.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=failure_error,
-            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=failure_error,
+        ) from exc
     # 账单落库（best-effort）
     await persist_billing_record(
         session,

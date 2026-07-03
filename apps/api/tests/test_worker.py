@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from xagent.domains.billing import get_billing_service, reset_billing_service
+from xagent.enterprise.audit import get_audit_log, reset_audit_log
 from xagent.enterprise.auth import create_access_token
 from xagent.main import create_app
 from xagent.worker import get_task_runner
@@ -47,6 +49,8 @@ async def migrated_db(monkeypatch: pytest.MonkeyPatch, tmp_path):
 
 @pytest.fixture
 async def client():
+    reset_billing_service()
+    reset_audit_log()
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -55,6 +59,52 @@ async def client():
 
 def _h(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+async def test_submit_task_applies_billing_and_audit_side_effects(client: AsyncClient) -> None:
+    token = create_access_token(user_id="u-billing", tenant_id="t-billing", roles=["member"])
+
+    resp = await client.post(
+        "/api/v1/tasks",
+        json={"goal": "验证 task 计费和审计", "role": "planner", "capabilities": []},
+        headers=_h(token),
+    )
+
+    assert resp.status_code == 200, resp.text
+    billing = get_billing_service()
+    summary = billing.summary("t-billing")
+    assert summary["usage"]["agent_runs"] == 1
+
+    for _ in range(20):
+        detail = await client.get(f"/api/v1/tasks/{resp.json()['task_id']}", headers=_h(token))
+        assert detail.status_code == 200
+        if detail.json()["status"] in ("succeeded", "failed"):
+            break
+        await asyncio.sleep(0.1)
+
+    audit_events = get_audit_log().list("t-billing")
+    assert any(
+        event.action == "agent.run"
+        and event.resource == "agent"
+        and event.actor == "u-billing"
+        and event.detail.get("entrypoint") == "tasks"
+        for event in audit_events
+    )
+
+
+async def test_submit_task_rejects_when_billing_quota_exceeded(client: AsyncClient) -> None:
+    token = create_access_token(user_id="u-over", tenant_id="t-over", roles=["member"])
+    billing = get_billing_service()
+    for _ in range(billing.quota("t-over").max_agent_runs):
+        billing.check_and_consume("t-over", actor="seed", action="agent.run")
+
+    resp = await client.post(
+        "/api/v1/tasks",
+        json={"goal": "超额 task 运行", "role": None, "capabilities": []},
+        headers=_h(token),
+    )
+
+    assert resp.status_code == 402, resp.text
 
 
 async def test_submit_and_poll_task(client: AsyncClient) -> None:
@@ -362,7 +412,7 @@ def test_celery_worker_uses_task_id_as_run_id(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
     monkeypatch.setattr("xagent.worker.celery_app.persist_submitted_agent_task", AsyncMock())
     monkeypatch.setattr(
-        "xagent.worker.celery_app.persist_agent_task_record_in_session", AsyncMock()
+        "xagent.worker.celery_app.persist_runtime_task_bundle_in_session", AsyncMock()
     )
 
     result = run_agent_task(
@@ -557,11 +607,182 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
     }
 
 
-def test_celery_worker_updates_persisted_task_result(
+def test_celery_worker_failure_persistence_error_rolls_back_failed_bundle(
+    monkeypatch: pytest.MonkeyPatch, migrated_db
+) -> None:
+    from xagent.infra.db import get_sessionmaker
+    from xagent.infra.models.agent_task import AgentTaskORM
+    from xagent.worker.celery_app import run_agent_task
+
+    class _CurrentTaskStub:
+        request = type("Request", (), {"id": "celery-task-persist-failure"})()
+
+    async def _explode(goal, principal, role_name=None, capabilities=None, run_id=None):  # noqa: ARG001
+        raise RuntimeError("worker exploded")
+
+    async def _persist_fail(session, **kwargs):  # noqa: ARG001
+        raise RuntimeError("no such table: evidence")
+
+    monkeypatch.setattr("celery.current_task", _CurrentTaskStub)
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _explode)
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.persist_evidence_bundle",
+        _persist_fail,
+    )
+
+    with pytest.raises(RuntimeError, match="worker exploded"):
+        run_agent_task(
+            goal="Celery 失败持久化退化",
+            role="planner",
+            capabilities=["search"],
+            tenant_id="tenant-celery",
+            user_id="u-celery",
+        )
+
+    async def _assert_row() -> None:
+        async with get_sessionmaker()() as session:
+            row = await session.get(AgentTaskORM, "celery-task-persist-failure")
+            assert row is None
+
+    asyncio.run(_assert_row())
+
+
+def test_celery_worker_failure_persists_failed_task_and_runtime_bundle(
+    monkeypatch: pytest.MonkeyPatch, migrated_db
+) -> None:
+    from xagent.core.runtime.service import get_runtime_run_detail
+    from xagent.infra.db import get_sessionmaker
+    from xagent.worker.celery_app import run_agent_task
+
+    class _CurrentTaskStub:
+        request = type("Request", (), {"id": "celery-task-failed"})()
+
+    async def _explode(goal, principal, role_name=None, capabilities=None, run_id=None):  # noqa: ARG001
+        raise RuntimeError("worker exploded")
+
+    monkeypatch.setattr("celery.current_task", _CurrentTaskStub)
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _explode)
+
+    with pytest.raises(RuntimeError, match="worker exploded"):
+        run_agent_task(
+            goal="执行失败的 Celery 任务",
+            role="planner",
+            capabilities=["search"],
+            tenant_id="tenant-celery",
+            user_id="u-celery",
+        )
+
+    async def _assert_runtime_bundle() -> None:
+        async with get_sessionmaker()() as session:
+            detail = await get_runtime_run_detail(
+                session,
+                run_id="celery-task-failed",
+                tenant_id="tenant-celery",
+            )
+            assert detail is not None
+            assert detail["task"]["status"] == "failed"
+            assert detail["task"]["task_id"] == "celery-task-failed"
+            assert detail["task"]["result"]["status"] == "failed"
+            assert detail["task"]["result"]["error"] == "worker exploded"
+            assert detail["delivery"]["status"] == "blocked"
+            assert detail["delivery"]["blocking_step"] == "agent.run"
+            assert detail["delivery"]["resume"] == {
+                "mode": "task_follow",
+                "label": "继续查看后台任务",
+                "run_id": "celery-task-failed",
+                "task_id": "celery-task-failed",
+                "status": "failed",
+                "api_path": "/api/v1/tasks/celery-task-failed",
+                "console_path": "/runs/celery-task-failed",
+            }
+            assert [item["kind"] for item in detail["evidence"]] == [
+                "request.input",
+                "failure.evidence",
+                "delivery.generated",
+            ]
+            assert detail["evidence"][1]["payload"] == {
+                "error": "worker exploded",
+                "run_id": "celery-task-failed",
+            }
+
+    asyncio.run(_assert_runtime_bundle())
+
+
+def test_celery_worker_success_persistence_error_rolls_back_runtime_bundle(
+    monkeypatch: pytest.MonkeyPatch, migrated_db
+) -> None:
+    from xagent.core.runtime.service import get_runtime_run_detail
+    from xagent.infra.db import get_sessionmaker
+    from xagent.infra.models.agent_task import AgentTaskORM
+    from xagent.worker.celery_app import persist_submitted_agent_task, run_agent_task
+
+    class _CurrentTaskStub:
+        request = type("Request", (), {"id": "celery-task-success-persist-fail"})()
+
+    class _AgentResult:
+        def to_dict(self) -> dict:
+            return {
+                "run_id": "celery-task-success-persist-fail",
+                "final_answer": "done",
+                "timeline": [{"kind": "finished"}],
+                "events": [],
+            }
+
+    async def _fake_run_agent(goal, principal, role_name=None, capabilities=None, run_id=None):  # noqa: ARG001
+        return _AgentResult()
+
+    async def _persist_fail(session, **kwargs):  # noqa: ARG001
+        raise RuntimeError("no such table: evidence")
+
+    asyncio.run(
+        persist_submitted_agent_task(
+            task_id="celery-task-success-persist-fail",
+            tenant_id="tenant-celery",
+            owner_id="u-celery",
+            kind="agent.run",
+            backend="celery",
+            input_payload={
+                "goal": "执行 Celery 任务但 evidence 落库失败",
+                "role": "planner",
+                "capabilities": ["search"],
+            },
+            status="pending",
+        )
+    )
+
+    monkeypatch.setattr("celery.current_task", _CurrentTaskStub)
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.worker.celery_app.persist_evidence_bundle", _persist_fail)
+
+    with pytest.raises(RuntimeError, match="no such table: evidence"):
+        run_agent_task(
+            goal="执行 Celery 任务但 evidence 落库失败",
+            role="planner",
+            capabilities=["search"],
+            tenant_id="tenant-celery",
+            user_id="u-celery",
+        )
+
+    async def _assert_runtime_bundle() -> None:
+        async with get_sessionmaker()() as session:
+            row = await session.get(AgentTaskORM, "celery-task-success-persist-fail")
+            assert row is None
+            detail = await get_runtime_run_detail(
+                session,
+                run_id="celery-task-success-persist-fail",
+                tenant_id="tenant-celery",
+            )
+            assert detail is None
+
+    asyncio.run(_assert_runtime_bundle())
+
+
+def test_celery_worker_updates_persisted_task_result_and_runtime_bundle(
     monkeypatch: pytest.MonkeyPatch, migrated_db
 ) -> None:
     import asyncio
 
+    from xagent.core.runtime.service import get_runtime_run_detail
     from xagent.infra.db import get_sessionmaker
     from xagent.infra.models.agent_task import AgentTaskORM
     from xagent.worker.celery_app import persist_submitted_agent_task, run_agent_task
@@ -571,7 +792,12 @@ def test_celery_worker_updates_persisted_task_result(
 
     class _AgentResult:
         def to_dict(self) -> dict:
-            return {"final_answer": "done", "timeline": [{"kind": "finished"}]}
+            return {
+                "run_id": "celery-task-final",
+                "final_answer": "done",
+                "timeline": [{"kind": "finished"}],
+                "events": [],
+            }
 
     async def _fake_run_agent(goal, principal, role_name=None, capabilities=None, run_id=None):  # noqa: ARG001
         return _AgentResult()
@@ -614,5 +840,31 @@ def test_celery_worker_updates_persisted_task_result(
             assert row.finished_at is not None
             assert row.error == ""
             assert json.loads(row.result_payload)["final_answer"] == "done"
+
+            detail = await get_runtime_run_detail(
+                session,
+                run_id="celery-task-final",
+                tenant_id="tenant-celery",
+            )
+            assert detail is not None
+            assert detail["task"]["status"] == "succeeded"
+            assert detail["task"]["result"]["final_answer"] == "done"
+            assert detail["delivery"]["status"] == "ready"
+            assert detail["delivery"]["channel"] == "task_runtime"
+            assert detail["delivery"]["resume"] is None
+            assert [item["kind"] for item in detail["evidence"]] == [
+                "request.input",
+                "result.final",
+                "delivery.generated",
+            ]
+            assert detail["evidence"][0]["payload"] == {
+                "goal": "执行 Celery 任务",
+                "role": "planner",
+                "capabilities": ["search"],
+            }
+            assert detail["evidence"][1]["payload"]["status"] == "succeeded"
+            assert detail["evidence"][1]["payload"]["run_id"] == "celery-task-final"
+            assert detail["evidence"][2]["payload"]["status"] == "ready"
+            assert detail["evidence"][2]["payload"]["kind"] == "agent.run"
 
     asyncio.run(_assert_row())

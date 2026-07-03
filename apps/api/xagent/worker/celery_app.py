@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.infra.logging import get_logger
+from xagent.infra.repos.evidence import persist_evidence_bundle
 from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.celery")
@@ -43,10 +44,6 @@ def _is_schema_mismatch(exc: Exception, table_name: str) -> bool:
             "has no column named",
         )
     )
-
-
-def _utcnow_iso() -> str:
-    return datetime.now(UTC).isoformat()
 
 
 async def _upsert_agent_task(
@@ -195,6 +192,69 @@ async def persist_agent_task_record_in_session(
     )
 
 
+async def _delete_agent_task_record(
+    session: AsyncSession,
+    *,
+    task_id: str,
+) -> None:
+    from xagent.infra.models.agent_task import AgentTaskORM
+
+    row = await session.get(AgentTaskORM, task_id)
+    if row is not None:
+        await session.delete(row)
+
+
+async def persist_runtime_task_bundle_in_session(
+    session: AsyncSession,
+    *,
+    task_id: str,
+    run_id: str | None = None,
+    tenant_id: str,
+    owner_id: str,
+    kind: str,
+    backend: str,
+    status: str,
+    input_payload: dict[str, Any],
+    result_payload: dict[str, Any] | None = None,
+    error: str = "",
+    started_at: datetime | None = None,
+    finished_at: datetime | None = None,
+    validation_summary: dict[str, Any] | None = None,
+    delivery_summary: dict[str, Any] | None = None,
+    lineage_summary: dict[str, Any] | None = None,
+    preview_summary: dict[str, Any] | None = None,
+    evidence_records: list[dict[str, Any]] | None = None,
+) -> None:
+    await persist_agent_task_record_in_session(
+        session,
+        task_id=task_id,
+        run_id=run_id,
+        tenant_id=tenant_id,
+        owner_id=owner_id,
+        kind=kind,
+        backend=backend,
+        status=status,
+        input_payload=input_payload,
+        result_payload=result_payload,
+        error=error,
+        started_at=started_at,
+        finished_at=finished_at,
+        validation_summary=validation_summary,
+        delivery_summary=delivery_summary,
+        lineage_summary=lineage_summary,
+        preview_summary=preview_summary,
+    )
+    if evidence_records:
+        resolved_run_id = (run_id or task_id).strip() or task_id
+        await persist_evidence_bundle(
+            session,
+            tenant_id=tenant_id,
+            run_id=resolved_run_id,
+            task_id=task_id,
+            records=evidence_records,
+        )
+
+
 async def persist_agent_task_record(
     *,
     task_id: str,
@@ -292,6 +352,114 @@ async def load_persisted_agent_task(
         return None
 
 
+def _build_worker_result_summary(result: dict[str, Any]) -> dict[str, Any]:
+    steps_value = result.get("steps")
+    steps_count = steps_value if isinstance(steps_value, int) else len(steps_value or [])
+    return {
+        "status": "succeeded",
+        "run_id": str(result.get("run_id") or ""),
+        "role": str(result.get("role") or result.get("role_name") or ""),
+        "steps_count": steps_count,
+        "final_answer": str(result.get("final_answer") or "")[:400],
+    }
+
+
+def _build_worker_delivery_summary(*, run_id: str, result: dict[str, Any]) -> dict[str, Any]:
+    result_summary = _build_worker_result_summary(result)
+    return {
+        "status": "ready",
+        "channel": "task_runtime",
+        "kind": "agent.run",
+        "summary": (
+            f"Agent 已完成 {result_summary['steps_count']} 个步骤，产出最终答复。"
+            if result_summary["steps_count"]
+            else "Agent 已完成运行并产出最终答复。"
+        ),
+        "result": result_summary,
+        "replay": {
+            "mode": "task_detail",
+            "label": "查看后台任务",
+            "run_id": run_id,
+            "task_id": run_id,
+            "api_path": f"/api/v1/tasks/{run_id}",
+            "console_path": f"/runs/{run_id}",
+        },
+        "resume": None,
+        "artifacts": [],
+        "validation": {"risks": []},
+        "risks": [],
+    }
+
+
+def _build_worker_success_evidence(
+    *, input_payload: dict[str, Any], result: dict[str, Any], delivery_summary: dict[str, Any]
+) -> list[dict[str, Any]]:
+    return [
+        {"kind": "request.input", "payload": input_payload},
+        {"kind": "result.final", "payload": _build_worker_result_summary(result)},
+        {"kind": "delivery.generated", "payload": delivery_summary},
+    ]
+
+
+def _build_worker_failure_result_summary(*, run_id: str, error: str, role: str | None) -> dict[str, Any]:
+    return {
+        "status": "failed",
+        "run_id": run_id,
+        "role": str(role or ""),
+        "steps_count": 0,
+        "final_answer": "",
+        "error": error,
+    }
+
+
+def _build_worker_failure_delivery_summary(*, run_id: str, result_summary: dict[str, Any]) -> dict[str, Any]:
+    error_text = str(result_summary.get("error") or "").strip()
+    return {
+        "status": "blocked",
+        "channel": "task_runtime",
+        "kind": "agent.run",
+        "summary": f"Agent 运行失败，当前交付已阻塞：{error_text}",
+        "result": result_summary,
+        "blocking_step": "agent.run",
+        "suggested_repair_actions": ["检查错误信息并重试该任务"],
+        "escalation_path": "agent_support",
+        "replay": {
+            "mode": "task_detail",
+            "label": "查看后台任务",
+            "run_id": run_id,
+            "task_id": run_id,
+            "api_path": f"/api/v1/tasks/{run_id}",
+            "console_path": f"/runs/{run_id}",
+        },
+        "resume": {
+            "mode": "task_follow",
+            "label": "继续查看后台任务",
+            "run_id": run_id,
+            "task_id": run_id,
+            "status": "failed",
+            "api_path": f"/api/v1/tasks/{run_id}",
+            "console_path": f"/runs/{run_id}",
+        },
+        "artifacts": [],
+        "validation": {"risks": []},
+        "risks": [error_text] if error_text else [],
+    }
+
+
+def _build_worker_failure_evidence(
+    *,
+    run_id: str,
+    error: str,
+    input_payload: dict[str, Any],
+    delivery_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    return [
+        {"kind": "request.input", "payload": input_payload},
+        {"kind": "failure.evidence", "payload": {"error": error, "run_id": run_id}},
+        {"kind": "delivery.generated", "payload": delivery_summary},
+    ]
+
+
 def get_celery_app():
     """惰性创建 Celery app（未配置 broker 返回 None）。"""
     global _celery_app
@@ -375,10 +543,20 @@ def run_agent_task(
         if task_id:
             from xagent.infra.db import get_sessionmaker
 
+            failed_result = _build_worker_failure_result_summary(
+                run_id=task_id,
+                error=run_error,
+                role=role,
+            )
+            failed_delivery = _build_worker_failure_delivery_summary(
+                run_id=task_id,
+                result_summary=failed_result,
+            )
+
             async def _mark_failed() -> None:
-                try:
-                    async with get_sessionmaker()() as session:
-                        await persist_agent_task_record_in_session(
+                async with get_sessionmaker()() as session:
+                    try:
+                        await persist_runtime_task_bundle_in_session(
                             session,
                             task_id=task_id,
                             run_id=task_id,
@@ -388,16 +566,31 @@ def run_agent_task(
                             backend="celery",
                             status="failed",
                             input_payload=input_payload,
-                            result_payload={},
+                            result_payload=failed_result,
                             error=run_error,
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
+                            delivery_summary=failed_delivery,
+                            validation_summary={"risks": []},
+                            preview_summary={"error": run_error[:160], "steps_count": 0},
+                            evidence_records=_build_worker_failure_evidence(
+                                run_id=task_id,
+                                error=run_error,
+                                input_payload=input_payload,
+                                delivery_summary=failed_delivery,
+                            ),
                         )
                         await session.commit()
-                except Exception as persist_exc:
-                    if _is_schema_mismatch(persist_exc, "agent_tasks"):
-                        return
-                    raise
+                    except Exception as persist_exc:
+                        await session.rollback()
+                        await _delete_agent_task_record(session, task_id=task_id)
+                        await session.commit()
+                        logger.warning(
+                            "celery_failure_persist_skipped",
+                            task_id=task_id,
+                            tenant_id=tenant_id,
+                            error=str(persist_exc),
+                        )
 
             asyncio.run(_mark_failed())
         raise
@@ -405,10 +598,16 @@ def run_agent_task(
     if task_id:
         from xagent.infra.db import get_sessionmaker
 
+        success_result = result if isinstance(result, dict) else {"value": result}
+        delivery_summary = _build_worker_delivery_summary(
+            run_id=task_id,
+            result=success_result,
+        )
+
         async def _mark_succeeded() -> None:
-            try:
-                async with get_sessionmaker()() as session:
-                    await persist_agent_task_record_in_session(
+            async with get_sessionmaker()() as session:
+                try:
+                    await persist_runtime_task_bundle_in_session(
                         session,
                         task_id=task_id,
                         run_id=task_id,
@@ -418,16 +617,30 @@ def run_agent_task(
                         backend="celery",
                         status="succeeded",
                         input_payload=input_payload,
-                        result_payload=result if isinstance(result, dict) else {"value": result},
+                        result_payload=success_result,
                         error="",
                         started_at=started_at,
                         finished_at=datetime.now(UTC),
+                        delivery_summary=delivery_summary,
+                        validation_summary={"risks": []},
+                        preview_summary={
+                            "final_answer": str(success_result.get("final_answer") or "")[:160],
+                            "steps_count": _build_worker_result_summary(success_result)[
+                                "steps_count"
+                            ],
+                        },
+                        evidence_records=_build_worker_success_evidence(
+                            input_payload=input_payload,
+                            result=success_result,
+                            delivery_summary=delivery_summary,
+                        ),
                     )
                     await session.commit()
-            except Exception as persist_exc:
-                if _is_schema_mismatch(persist_exc, "agent_tasks"):
-                    return
-                raise
+                except Exception:
+                    await session.rollback()
+                    await _delete_agent_task_record(session, task_id=task_id)
+                    await session.commit()
+                    raise
 
         asyncio.run(_mark_succeeded())
     return result

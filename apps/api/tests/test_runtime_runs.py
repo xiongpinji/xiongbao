@@ -14,6 +14,8 @@ from httpx import ASGITransport, AsyncClient
 from xagent.core.orchestration.state import normalize_run_status
 from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.core.runtime.policies import normalize_runtime_policy
+from xagent.domains.billing import get_billing_service, reset_billing_service
+from xagent.enterprise.audit import get_audit_log, reset_audit_log
 from xagent.enterprise.auth import create_access_token
 from xagent.infra.db import dispose_engine, get_sessionmaker
 from xagent.infra.models.agent_task import AgentTaskORM
@@ -51,6 +53,8 @@ async def migrated_db(monkeypatch: pytest.MonkeyPatch, tmp_path):
 
 @pytest.fixture
 async def client(migrated_db):
+    reset_billing_service()
+    reset_audit_log()
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -174,6 +178,48 @@ async def test_runs_api_aggregates_live_task_contract(client: AsyncClient) -> No
     else:
         assert body["delivery"]["resume"] is None
     assert body["delivery"]["risks"] == []
+
+
+async def test_stream_agent_run_applies_billing_and_audit_side_effects(
+    client: AsyncClient,
+) -> None:
+    token = create_access_token(user_id="stream-user", tenant_id="tenant-billing", roles=["member"])
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "验证 stream 计费和审计", "role": "planner", "capabilities": []},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert "event: done" in stream_resp.text
+    billing = get_billing_service()
+    summary = billing.summary("tenant-billing")
+    assert summary["usage"]["agent_runs"] == 1
+    audit_events = get_audit_log().list("tenant-billing")
+    assert any(
+        event.action == "agent.run"
+        and event.resource == "agent"
+        and event.actor == "stream-user"
+        for event in audit_events
+    )
+
+
+async def test_stream_agent_run_rejects_when_billing_quota_exceeded(
+    client: AsyncClient,
+) -> None:
+    token = create_access_token(user_id="stream-user", tenant_id="tenant-over-quota", roles=["member"])
+    billing = get_billing_service()
+    for _ in range(billing.quota("tenant-over-quota").max_agent_runs):
+        billing.check_and_consume("tenant-over-quota", actor="seed", action="agent.run")
+
+    resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "超额 stream 运行", "role": None, "capabilities": []},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert resp.status_code == 402, resp.text
 
 
 async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(
@@ -337,12 +383,50 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
     }
     assert body["delivery"]["blocking_step"] == "agent.run"
     assert body["delivery"]["risks"] == ["direct exploded"]
+    assert body["delivery"]["failure"] == {
+        "source": "task",
+        "code": "task_failed",
+        "message": "Agent 运行失败，当前交付已阻塞：direct exploded",
+        "blocking_step": "agent.run",
+        "reasons": ["direct exploded"],
+        "suggested_repair_actions": ["检查错误信息并重试该任务"],
+        "escalation_path": "agent_support",
+    }
     assert [item["kind"] for item in body["evidence"]] == [
         "request.input",
         "failure.evidence",
         "delivery.generated",
     ]
     assert body["evidence"][1]["payload"] == {"error": "direct exploded", "run_id": run_id}
+
+
+async def test_direct_agent_failure_evidence_persist_error_rolls_back_failed_bundle(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="chat-user", tenant_id="tenant-1", roles=["member"])
+    mocked_run_agent = AsyncMock(side_effect=RuntimeError("direct exploded"))
+    monkeypatch.setattr("xagent.api.v1.agents.run_agent", mocked_run_agent)
+
+    async def _boom(*args, **kwargs):  # noqa: ARG001
+        raise RuntimeError("no such table: evidence")
+
+    monkeypatch.setattr("xagent.worker.celery_app.persist_evidence_bundle", _boom)
+
+    resp = await client.post(
+        "/api/v1/agents/run",
+        json={"goal": "触发 direct 失败且 evidence 落库失败"},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 500, resp.text
+    assert resp.json() == {"detail": "direct exploded"}
+    _, kwargs = mocked_run_agent.await_args
+    run_id = kwargs["run_id"]
+
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+
+    assert run_resp.status_code == 404, run_resp.text
 
 
 async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
@@ -395,6 +479,35 @@ async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
     assert body["evidence"][1]["payload"] == {"error": "stream exploded", "run_id": run_id}
 
 
+async def test_stream_agent_failure_evidence_persist_error_rolls_back_failed_bundle(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="stream-user", tenant_id="tenant-1", roles=["member"])
+    mocked_run_agent = AsyncMock(side_effect=RuntimeError("stream exploded"))
+    monkeypatch.setattr("xagent.api.v1.stream.run_agent", mocked_run_agent)
+
+    async def _boom(*args, **kwargs):  # noqa: ARG001
+        raise RuntimeError("no such table: evidence")
+
+    monkeypatch.setattr("xagent.worker.celery_app.persist_evidence_bundle", _boom)
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "触发 stream 失败且 evidence 落库失败"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert "event: error" in stream_resp.text
+    _, kwargs = mocked_run_agent.await_args
+    run_id = kwargs["run_id"]
+
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+
+    assert run_resp.status_code == 404, run_resp.text
+
+
 async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_done_path(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -431,16 +544,20 @@ async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_
     ]
 
 
-async def test_direct_agent_success_survives_runtime_schema_mismatch(
+async def test_direct_agent_success_persistence_error_rolls_back_runtime_bundle(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = create_access_token(user_id="schema-user", tenant_id="tenant-1", roles=["member"])
 
+    class _FixedUuid:
+        hex = "direct-persist-failure-run"
+
     async def _boom(*args, **kwargs):  # noqa: ARG001
         raise RuntimeError("no such table: evidence")
 
-    monkeypatch.setattr("xagent.api.v1.agents.persist_evidence_bundle", _boom)
+    monkeypatch.setattr("xagent.api.v1.agents.uuid.uuid4", lambda: _FixedUuid())
+    monkeypatch.setattr("xagent.worker.celery_app.persist_evidence_bundle", _boom)
 
     resp = await client.post(
         "/api/v1/agents/run",
@@ -448,13 +565,18 @@ async def test_direct_agent_success_survives_runtime_schema_mismatch(
         headers=_auth(token),
     )
 
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["run_id"]
-    assert body["final_answer"]
+    assert resp.status_code == 500, resp.text
+    assert resp.json() == {"detail": "no such table: evidence"}
+
+    run_resp = await client.get(
+        "/api/v1/runs/direct-persist-failure-run",
+        headers=_auth(token),
+    )
+
+    assert run_resp.status_code == 404, run_resp.text
 
 
-async def test_stream_agent_success_survives_runtime_schema_mismatch(
+async def test_stream_agent_success_persistence_error_rolls_back_runtime_bundle(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -462,10 +584,14 @@ async def test_stream_agent_success_survives_runtime_schema_mismatch(
         user_id="schema-stream-user", tenant_id="tenant-1", roles=["member"]
     )
 
+    class _FixedUuid:
+        hex = "stream-persist-failure-run"
+
     async def _boom(*args, **kwargs):  # noqa: ARG001
         raise RuntimeError("no such table: evidence")
 
-    monkeypatch.setattr("xagent.api.v1.stream.persist_evidence_bundle", _boom)
+    monkeypatch.setattr("xagent.api.v1.stream.uuid.uuid4", lambda: _FixedUuid())
+    monkeypatch.setattr("xagent.worker.celery_app.persist_evidence_bundle", _boom)
 
     stream_resp = await client.post(
         "/api/v1/stream/agents/run",
@@ -474,7 +600,57 @@ async def test_stream_agent_success_survives_runtime_schema_mismatch(
     )
 
     assert stream_resp.status_code == 200, stream_resp.text
-    assert "event: done" in stream_resp.text
+    assert "event: error" in stream_resp.text
+    assert "event: done" not in stream_resp.text
+    assert '"run_id": "stream-persist-failure-run"' in stream_resp.text
+    assert "no such table: evidence" in stream_resp.text
+
+    run_resp = await client.get(
+        "/api/v1/runs/stream-persist-failure-run",
+        headers=_auth(token),
+    )
+
+    assert run_resp.status_code == 404, run_resp.text
+
+
+async def test_runs_api_reads_workflow_run_older_than_recent_200(client: AsyncClient) -> None:
+    sessionmaker = get_sessionmaker()
+    target_run_id = "wf-run-historical-target"
+    async with sessionmaker() as session:
+        await persist_workflow_run(
+            session,
+            {
+                "run_id": target_run_id,
+                "tenant_id": "tenant-1",
+                "spec_name": "historical-flow",
+                "status": "completed",
+                "steps": [],
+                "timeline": [],
+            },
+        )
+        for index in range(205):
+            await persist_workflow_run(
+                session,
+                {
+                    "run_id": f"wf-run-recent-{index:03d}",
+                    "tenant_id": "tenant-1",
+                    "spec_name": "recent-flow",
+                    "status": "completed",
+                    "steps": [],
+                    "timeline": [],
+                },
+            )
+        await session.commit()
+
+    token = create_access_token(user_id="u-historical", tenant_id="tenant-1", roles=["member"])
+    resp = await client.get(f"/api/v1/runs/{target_run_id}", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["run_id"] == target_run_id
+    assert body["task"] is None
+    assert body["workflow"]["run_id"] == target_run_id
+    assert body["workflow"]["spec_name"] == "historical-flow"
 
 
 async def test_runs_api_aggregates_workflow_persistence_and_summaries(client: AsyncClient) -> None:
@@ -676,6 +852,47 @@ async def test_runs_api_aggregates_workflow_persistence_and_summaries(client: As
     assert sibling_task["result"]["final_answer"] == "sibling done"
 
 
+async def test_workflow_runtime_upsert_refreshes_validation_summary(migrated_db) -> None:
+    from xagent.api.v1.workflows import _build_workflow_task_record, _upsert_runtime_task_record
+
+    sessionmaker = get_sessionmaker()
+    initial_view = {
+        "run_id": "wf-run-validation-refresh",
+        "tenant_id": "tenant-1",
+        "spec_name": "refresh-flow",
+        "status": "completed",
+        "steps": [{"id": "plan", "name": "计划", "status": "succeeded"}],
+        "timeline": [],
+    }
+    updated_view = {
+        **initial_view,
+        "timeline": [{"kind": "approval_requested", "step_id": "plan", "detail": "need review"}],
+    }
+
+    async with sessionmaker() as session:
+        initial_record = _build_workflow_task_record(
+            run_view=initial_view,
+            owner_id="user-1",
+            tenant_id="tenant-1",
+        )
+        initial_record.validation_summary = json.dumps({"risks": ["legacy risk"]}, ensure_ascii=False)
+        session.add(initial_record)
+        await session.commit()
+
+        await _upsert_runtime_task_record(
+            session,
+            run_view=updated_view,
+            owner_id="user-1",
+            tenant_id="tenant-1",
+        )
+        await session.commit()
+
+        row = await session.get(AgentTaskORM, "wf-run-validation-refresh")
+
+    assert row is not None
+    assert json.loads(row.validation_summary or "{}") == {"risks": []}
+
+
 async def test_runs_api_aggregates_workflow_route_run_without_agent_read(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -751,6 +968,7 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
     assert body["delivery"]["validation"] == {"risks": []}
     assert body["delivery"]["status"] == "pending"
     assert body["delivery"]["risks"] == []
+    assert body["delivery"]["failure"] is None
     assert body["delivery"]["replay"] == {
         "mode": "workflow_replay",
         "label": "回放工作流",
@@ -830,7 +1048,18 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
 
     run_resp_2 = await client.get(f"/api/v1/runs/{run_id_2}", headers=_auth(owner_token))
     assert run_resp_2.status_code == 200, run_resp_2.text
-    assert run_resp_2.json()["task"]["owner_id"] == "owner-user"
+    denied_body = run_resp_2.json()
+    assert denied_body["task"]["owner_id"] == "owner-user"
+    assert denied_body["delivery"]["status"] == "blocked"
+    assert denied_body["delivery"]["failure"] == {
+        "source": "workflow",
+        "code": "workflow_cancelled",
+        "message": "工作流 wf-deny-owner 未完成，当前状态为 cancelled。",
+        "blocking_step": "s1",
+        "reasons": ["步骤 s1 已被 reviewer-user 拒绝"],
+        "suggested_repair_actions": ["调整工作流输入后重新发起运行", "联系 reviewer-user 确认拒绝原因"],
+        "escalation_path": "workflow_admin",
+    }
 
 
 async def test_runs_api_returns_empty_related_tasks_without_lineage(client: AsyncClient) -> None:
