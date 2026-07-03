@@ -42,11 +42,19 @@ function readStringList(value: unknown): string[] {
     .filter((item) => item.length > 0);
 }
 
+function isRuntimeDeliveryFailure(value: unknown): value is RuntimeDeliveryFailure {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const failure = value as Record<string, unknown>;
+  return typeof failure.source === "string"
+    && typeof failure.code === "string"
+    && typeof failure.message === "string";
+}
+
 function readFailure(detail: RunDetail): RuntimeDeliveryFailure | null {
   const value = detail.delivery.failure;
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value
-    : null;
+  return isRuntimeDeliveryFailure(value) ? value : null;
 }
 
 function renderFailureSummary(detail: RunDetail) {

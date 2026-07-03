@@ -90,6 +90,8 @@ test("run console exposes validation risk and recovery panel contracts", async (
   assert.match(consoleSource, /<RunValidationPanel detail=\{detail\} \/>/);
 
   assert.match(consoleSource, /failure/i);
+  assert.match(consoleSource, /function isRuntimeDeliveryFailure\(value: unknown\): value is RuntimeDeliveryFailure/);
+  assert.match(consoleSource, /return isRuntimeDeliveryFailure\(value\) \? value : null;/);
   assert.match(consoleSource, /suggested_repair_actions/);
   assert.match(consoleSource, /escalation_path/);
   assert.match(consoleSource, /建议动作/);
