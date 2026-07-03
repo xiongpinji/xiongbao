@@ -12,23 +12,26 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+import xagent.worker.celery_app
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from xagent.core.orchestration import run_agent
+from xagent.domains.billing import get_billing_service
+from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
 from xagent.infra.logging import get_logger
-from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.worker.celery_app import persist_agent_task_record_in_session
+from xagent.infra.repos.billing import persist_billing_record
+from xagent.worker.celery_app import persist_agent_task_record_in_session, persist_runtime_task_bundle_in_session
 
 from .agents import (
     _build_commit_evidence,
     _build_failure_delivery_summary,
     _build_failure_result_summary,
-    _is_runtime_persistence_schema_mismatch,
 )
 
 router = APIRouter(prefix="/stream", tags=["stream"])
@@ -93,11 +96,12 @@ async def _event_stream(
 ) -> AsyncGenerator[bytes, None]:
     """跑 agent 并把事件逐条以 SSE 实时推送（step 级流式）。"""
     run_id = uuid.uuid4().hex
+    input_payload = _build_input_payload(goal, role, caps)
+
     yield _sse("started", {"goal": goal, "run_id": run_id})
 
     queue: asyncio.Queue = asyncio.Queue()
     done = object()
-    input_payload = _build_input_payload(goal, role, caps)
     started_at = datetime.now(UTC)
 
     async def on_event(ev) -> None:
@@ -139,69 +143,52 @@ async def _event_stream(
                 commit_evidence = _build_commit_evidence(result_payload)
                 if commit_evidence is not None:
                     evidence_records.append(commit_evidence)
-                await persist_agent_task_record_in_session(
-                    session,
-                    task_id=result.run_id,
-                    run_id=result.run_id,
-                    tenant_id=principal.tenant_id,
-                    owner_id=principal.user_id,
-                    kind="agent.run",
-                    backend="stream",
-                    status="succeeded",
-                    input_payload=input_payload,
-                    result_payload=result_payload,
-                    delivery_summary=delivery_summary,
-                    validation_summary={"risks": []},
-                    preview_summary={
-                        "final_answer": str(result_payload.get("final_answer") or "")[:160],
-                        "steps_count": _build_stream_result_summary(result_payload)["steps_count"],
-                    },
-                    started_at=started_at,
-                    finished_at=datetime.now(UTC),
-                )
                 try:
-                    await persist_evidence_bundle(
+                    await persist_runtime_task_bundle_in_session(
                         session,
-                        tenant_id=principal.tenant_id,
-                        run_id=result.run_id,
                         task_id=result.run_id,
-                        records=evidence_records,
+                        run_id=result.run_id,
+                        tenant_id=principal.tenant_id,
+                        owner_id=principal.user_id,
+                        kind="agent.run",
+                        backend="stream",
+                        status="succeeded",
+                        input_payload=input_payload,
+                        result_payload=result_payload,
+                        delivery_summary=delivery_summary,
+                        validation_summary={"risks": []},
+                        preview_summary={
+                            "final_answer": str(result_payload.get("final_answer") or "")[:160],
+                            "steps_count": _build_stream_result_summary(result_payload)["steps_count"],
+                        },
+                        started_at=started_at,
+                        finished_at=datetime.now(UTC),
+                        evidence_records=evidence_records,
                     )
                     await session.commit()
-                except Exception as evidence_exc:
+                except Exception:
                     await session.rollback()
-                    if _is_runtime_persistence_schema_mismatch(evidence_exc):
-                        await persist_agent_task_record_in_session(
-                            session,
-                            task_id=result.run_id,
-                            run_id=result.run_id,
-                            tenant_id=principal.tenant_id,
-                            owner_id=principal.user_id,
-                            kind="agent.run",
-                            backend="stream",
-                            status="succeeded",
-                            input_payload=input_payload,
-                            result_payload=result_payload,
-                            delivery_summary=delivery_summary,
-                            validation_summary={"risks": []},
-                            preview_summary={
-                                "final_answer": str(result_payload.get("final_answer") or "")[:160],
-                                "steps_count": _build_stream_result_summary(result_payload)[
-                                    "steps_count"
-                                ],
-                            },
-                            started_at=started_at,
-                            finished_at=datetime.now(UTC),
-                        )
-                        await session.commit()
-                    else:
-                        raise
+                    raise
+                await persist_billing_record(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    actor=principal.user_id,
+                    action="agent.run",
+                    cost=0.0,
+                    tokens=result.steps,
+                    detail={"run_id": result.run_id, "role": result.role_name},
+                )
+                get_audit_log().record(
+                    tenant_id=principal.tenant_id,
+                    actor=principal.user_id,
+                    action="agent.run",
+                    resource="agent",
+                    detail={"run_id": result.run_id, "role": result.role_name, "steps": result.steps},
+                )
                 await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
         except Exception as exc:
-            if result is not None and _is_runtime_persistence_schema_mismatch(exc):
-                await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
-            else:
-                failure_error = str(exc)
+            failure_error = str(exc)
+            if result is None:
                 try:
                     async with get_sessionmaker()() as session:
                         failed_result = _build_failure_result_summary(
@@ -213,7 +200,7 @@ async def _event_stream(
                             run_id=run_id,
                             result_summary=failed_result,
                         )
-                        await persist_agent_task_record_in_session(
+                        await persist_runtime_task_bundle_in_session(
                             session,
                             task_id=run_id,
                             run_id=run_id,
@@ -230,13 +217,7 @@ async def _event_stream(
                             preview_summary={"error": failure_error[:160], "steps_count": 0},
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
-                        )
-                        await persist_evidence_bundle(
-                            session,
-                            tenant_id=principal.tenant_id,
-                            run_id=run_id,
-                            task_id=run_id,
-                            records=[
+                            evidence_records=[
                                 {"kind": "request.input", "payload": input_payload},
                                 {
                                     "kind": "failure.evidence",
@@ -246,13 +227,14 @@ async def _event_stream(
                             ],
                         )
                         await session.commit()
-                except Exception as exc:
+                except Exception as persist_exc:
+                    await session.rollback()
                     logger.warning(
                         "stream_failure_persist_skipped",
                         run_id=run_id,
-                        error=str(exc),
+                        error=str(persist_exc),
                     )
-                await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
+            await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         finally:
             await queue.put(done)
 
@@ -278,6 +260,18 @@ async def stream_run(
     body: StreamRunIn,
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> StreamingResponse:
+    billing = get_billing_service()
+    try:
+        billing.check_and_consume(
+            principal.tenant_id,
+            actor=principal.user_id,
+            action="agent.run",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=str(exc),
+        ) from exc
     return StreamingResponse(
         _event_stream(body.goal, principal, body.role, body.capabilities),
         media_type="text/event-stream",

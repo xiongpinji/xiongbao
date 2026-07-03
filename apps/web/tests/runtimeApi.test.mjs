@@ -179,6 +179,48 @@ test("getRunDetail preserves task.input from backend payloads", async () => {
   }
 });
 
+test("normalizeRunDetail preserves structured delivery failure payloads", () => {
+  const detail = normalizeRunDetail({
+    run_id: "run-failure",
+    tenant_id: "tenant-1",
+    task: {
+      task_id: "task-failure",
+      run_id: "run-failure",
+      kind: "creative.produce",
+      status: "failed",
+      result: {},
+    },
+    workflow: null,
+    evidence: [],
+    artifacts: [],
+    validation: { risks: ["镜头不足"] },
+    delivery: {
+      status: "blocked",
+      summary: "短剧产出部分完成，1 个镜头，共 1 个媒体产物。",
+      failure: {
+        source: "creative",
+        code: "creative_production_partial",
+        message: "短剧产出部分完成，1 个镜头，共 1 个媒体产物。",
+        blocking_step: "shot-1",
+        reasons: ["镜头不足", "shot-1 视频生成失败：生成失败"],
+        suggested_repair_actions: ["补齐失败镜头后重新生成短剧"],
+        escalation_path: "creative_ops",
+      },
+    },
+    related_tasks: [],
+  });
+
+  assert.deepEqual(detail.delivery.failure, {
+    source: "creative",
+    code: "creative_production_partial",
+    message: "短剧产出部分完成，1 个镜头，共 1 个媒体产物。",
+    blocking_step: "shot-1",
+    reasons: ["镜头不足", "shot-1 视频生成失败：生成失败"],
+    suggested_repair_actions: ["补齐失败镜头后重新生成短剧"],
+    escalation_path: "creative_ops",
+  });
+});
+
 test("getRunDetail requests an encoded run path and returns normalized detail", async () => {
   const originalGet = api.get;
   const calls = [];

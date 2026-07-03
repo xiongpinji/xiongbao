@@ -89,6 +89,14 @@ test("run console exposes validation risk and recovery panel contracts", async (
   assert.match(consoleSource, /import RunValidationPanel from "\.\/RunValidationPanel\.tsx";/);
   assert.match(consoleSource, /<RunValidationPanel detail=\{detail\} \/>/);
 
+  assert.match(consoleSource, /failure/i);
+  assert.match(consoleSource, /function isRuntimeDeliveryFailure\(value: unknown\): value is RuntimeDeliveryFailure/);
+  assert.match(consoleSource, /return isRuntimeDeliveryFailure\(value\) \? value : null;/);
+  assert.match(consoleSource, /suggested_repair_actions/);
+  assert.match(consoleSource, /escalation_path/);
+  assert.match(consoleSource, /建议动作/);
+  assert.match(consoleSource, /升级路径/);
+
   assert.match(panelSource, /验证 · 风险 · 恢复/);
   assert.match(panelSource, /function pointerLabel\(/);
   assert.match(panelSource, /function renderPointerCard\(/);

@@ -236,23 +236,103 @@ def _build_media_artifacts(
     return artifacts
 
 
+def _build_creative_failure_summary(
+    *,
+    source: str,
+    code: str,
+    message: str,
+    blocking_step: str | None,
+    reasons: list[str],
+    suggested_repair_actions: list[str],
+    escalation_path: str,
+    state: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    deduped_reasons: list[str] = []
+    for reason_item in reasons:
+        text = str(reason_item).strip()
+        if text and text not in deduped_reasons:
+            deduped_reasons.append(text)
+    deduped_actions: list[str] = []
+    for action in suggested_repair_actions:
+        text = str(action).strip()
+        if text and text not in deduped_actions:
+            deduped_actions.append(text)
+    payload = {
+        "source": source,
+        "code": code,
+        "message": message,
+        "blocking_step": blocking_step,
+        "reasons": deduped_reasons,
+        "suggested_repair_actions": deduped_actions,
+        "escalation_path": escalation_path,
+    }
+    if state is not None:
+        payload["state"] = str(state).strip() or "blocked"
+    if reason is not None:
+        payload["reason"] = str(reason).strip() or (deduped_reasons[0] if deduped_reasons else message)
+    return payload
+
+
+def _build_media_failure_summary(
+    *,
+    kind: str,
+    status: str,
+    outputs: list[str],
+    error: str,
+) -> dict[str, Any] | None:
+    if status not in {"failed", "cancelled"}:
+        return None
+    media_kind = kind.split(".")[-1] if kind else "asset"
+    reasons = [error] if error else []
+    if not reasons and not outputs:
+        reasons = [f"{media_kind} 产物尚未生成"]
+    return _build_creative_failure_summary(
+        source="creative",
+        code=f"creative_media_{status}",
+        message=(
+            f"{media_kind} 产物生成失败，当前交付已阻塞。"
+            if status == "failed"
+            else f"{media_kind} 产物生成已取消，当前交付已阻塞。"
+        ),
+        blocking_step=kind,
+        reasons=reasons,
+        suggested_repair_actions=["检查媒体生成参数后重新提交任务", "确认对应媒体 provider 是否可用"],
+        escalation_path="creative_ops",
+        state=status,
+        reason=error or (reasons[0] if reasons else ""),
+    )
+
+
 def _build_media_delivery_summary(
     *,
     kind: str,
     provider: str,
     outputs: list[str],
+    status: str = "pending",
+    error: str = "",
 ) -> dict[str, Any]:
     media_kind = kind.split(".")[-1] if kind else "asset"
     has_outputs = bool(outputs)
+    normalized_status = str(status or ("succeeded" if has_outputs else "pending")).strip().lower()
+    if normalized_status == "succeeded" and has_outputs:
+        delivery_status = "ready"
+        summary = f"已生成 {len(outputs)} 个{media_kind} 产物，可直接用于交付。"
+    elif normalized_status in {"failed", "cancelled"}:
+        delivery_status = "blocked"
+        summary = (
+            f"{media_kind} 产物生成失败，当前交付已阻塞。"
+            if normalized_status == "failed"
+            else f"{media_kind} 产物生成已取消，当前交付已阻塞。"
+        )
+    else:
+        delivery_status = "pending"
+        summary = f"{media_kind} 产物尚未生成，等待媒体任务完成。"
     return {
-        "status": "ready" if has_outputs else "pending",
+        "status": delivery_status,
         "channel": "media_outputs",
         "kind": "creative.media",
-        "summary": (
-            f"已生成 {len(outputs)} 个{media_kind} 产物，可直接用于交付。"
-            if has_outputs
-            else f"{media_kind} 产物尚未生成，等待媒体任务完成。"
-        ),
+        "summary": summary,
         "outputs": [
             {
                 "label": f"{media_kind}-{idx}",
@@ -262,6 +342,12 @@ def _build_media_delivery_summary(
             for idx, uri in enumerate(outputs, start=1)
         ],
         "provider": provider,
+        "failure": _build_media_failure_summary(
+            kind=kind,
+            status=normalized_status,
+            outputs=outputs,
+            error=error,
+        ),
     }
 
 
@@ -349,6 +435,8 @@ def _build_media_task_state(
             kind=kind,
             provider=provider,
             outputs=list(outputs),
+            status=status,
+            error=error,
         ),
         artifacts=artifacts,
         validation=validation,
@@ -382,6 +470,7 @@ def _restore_media_runtime_view(
     kind: str,
     input_payload: dict[str, Any],
 ) -> dict[str, Any]:
+    summary = f"媒体任务 {task_id} 已提交，等待轮询结果。"
     return {
         "run_id": task_id,
         "tenant_id": tenant_id,
@@ -414,7 +503,7 @@ def _restore_media_runtime_view(
             "status": "pending",
             "channel": "media_outputs",
             "kind": "creative.media",
-            "summary": "媒体任务已提交，等待轮询结果。",
+            "summary": summary,
             "outputs": [],
             "provider": "",
             "artifacts": [],
@@ -422,6 +511,7 @@ def _restore_media_runtime_view(
             "replay": None,
             "resume": None,
             "risks": [],
+            "failure": None,
         },
         "related_tasks": [],
     }
@@ -713,6 +803,61 @@ def _build_production_validation_summary(result: dict[str, Any]) -> dict[str, An
     }
 
 
+def _build_production_failure_summary(result: dict[str, Any], summary: str) -> dict[str, Any] | None:
+    production_status = str(result.get("status") or "pending")
+    if production_status not in {"partial", "failed"}:
+        return None
+
+    reasons: list[str] = [
+        str(gate.get("detail") or "").strip()
+        for gate in result.get("quality_gates") or []
+        if isinstance(gate, dict)
+        and not gate.get("passed")
+        and str(gate.get("detail") or "").strip()
+    ]
+    blocking_step: str | None = None
+    for shot in result.get("shots") or []:
+        if not isinstance(shot, dict):
+            continue
+        shot_id = str(shot.get("shot_id") or "").strip() or None
+        image_error = str(shot.get("image_error") or "").strip()
+        video_error = str(shot.get("video_error") or "").strip()
+        if image_error:
+            blocking_step = blocking_step or shot_id
+            reasons.append(
+                f"{shot_id} 关键帧生成失败：{image_error}" if shot_id else f"关键帧生成失败：{image_error}"
+            )
+        if video_error:
+            blocking_step = blocking_step or shot_id
+            reasons.append(
+                f"{shot_id} 视频生成失败：{video_error}" if shot_id else f"视频生成失败：{video_error}"
+            )
+
+    if production_status == "partial":
+        return _build_creative_failure_summary(
+            source="creative",
+            code="creative_production_partial",
+            message=summary,
+            blocking_step=blocking_step,
+            reasons=reasons,
+            suggested_repair_actions=["补齐失败镜头后重新生成短剧", "检查对应镜头的媒体生成配置"],
+            escalation_path="creative_ops",
+            state="failed",
+            reason=reasons[0] if reasons else summary,
+        )
+    return _build_creative_failure_summary(
+        source="creative",
+        code="creative_production_failed",
+        message=summary,
+        blocking_step=blocking_step,
+        reasons=reasons or ["短剧产出失败"],
+        suggested_repair_actions=["检查短剧编排日志后重新生成", "联系 creative_ops 排查媒体链路"],
+        escalation_path="creative_ops",
+        state="failed",
+        reason=(reasons or ["短剧产出失败"])[0],
+    )
+
+
 def _build_production_delivery_summary(
     *,
     result: dict[str, Any],
@@ -743,6 +888,7 @@ def _build_production_delivery_summary(
         "timeline_id": result.get("timeline_id"),
         "quality_passed": bool(result.get("quality_passed")),
         "output_count": output_count,
+        "failure": _build_production_failure_summary(result, summary),
     }
 
 

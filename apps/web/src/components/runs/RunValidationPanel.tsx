@@ -101,11 +101,82 @@ function renderPointerCard(
   );
 }
 
+function readFailure(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function renderStringList(items: string[], emptyText: string) {
+  if (!items.length) {
+    return <div className="text-sm text-neutral-500">{emptyText}</div>;
+  }
+  return (
+    <ul className="space-y-2 text-sm leading-6 text-neutral-300">
+      {items.map((item, index) => (
+        <li key={`${item}-${index}`} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-3 py-2">
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function renderFailureCard(failure: Record<string, unknown> | null) {
+  if (!failure) {
+    return null;
+  }
+
+  const reasons = readRisks(failure.reasons);
+  const suggestedActions = readRisks(failure.suggested_repair_actions);
+
+  return (
+    <section className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-amber-100">失败态交付</div>
+          <p className="mt-1 text-sm leading-6 text-amber-50">{readString(failure.message)}</p>
+        </div>
+        <div className="rounded-full border border-amber-400/30 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-amber-200">
+          {readString(failure.code)}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="rounded-2xl border border-amber-500/20 bg-neutral-950/70 p-4">
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-amber-200">失败原因</div>
+          <div className="mt-3">{renderStringList(reasons, "暂无失败原因。")}</div>
+        </div>
+        <div className="rounded-2xl border border-amber-500/20 bg-neutral-950/70 p-4">
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-amber-200">建议动作</div>
+          <div className="mt-3">{renderStringList(suggestedActions, "暂无建议动作。")}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-xs text-amber-100/80 sm:grid-cols-3">
+        <div>
+          <div className="text-amber-200/80">来源</div>
+          <div className="mt-1 font-mono text-[11px] text-amber-50">{readString(failure.source)}</div>
+        </div>
+        <div>
+          <div className="text-amber-200/80">阻塞步骤</div>
+          <div className="mt-1 font-mono text-[11px] text-amber-50">{readString(failure.blocking_step)}</div>
+        </div>
+        <div>
+          <div className="text-amber-200/80">升级路径</div>
+          <div className="mt-1 font-mono text-[11px] text-amber-50">{readString(failure.escalation_path)}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function RunValidationPanelContent({ detail }: { detail: RunDetail }) {
   const workflowSteps = Array.isArray(detail.workflow?.steps) ? detail.workflow.steps : [];
   const approvalSteps = workflowSteps.filter((step) => step.has_approval);
   const deliveryRisks = readRisks(detail.delivery.risks);
   const validationRisks = readRisks(detail.validation.risks);
+  const failure = readFailure(detail.delivery.failure);
 
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
@@ -120,6 +191,8 @@ function RunValidationPanelContent({ detail }: { detail: RunDetail }) {
           {detail.workflow?.status ?? detail.task?.status ?? "unknown"}
         </div>
       </div>
+
+      {renderFailureCard(failure)}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">

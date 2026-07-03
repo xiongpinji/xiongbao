@@ -131,6 +131,7 @@ def test_media_delivery_summary_pending_message_is_not_success_like() -> None:
         "summary": "image 产物尚未生成，等待媒体任务完成。",
         "outputs": [],
         "provider": "stub",
+        "failure": None,
     }
 
 
@@ -402,6 +403,7 @@ async def test_creative_media_poll_persists_final_state_to_db_after_memory_clear
         },
         "resume": None,
         "risks": [],
+        "failure": None,
     }
     assert body["artifacts"] == [
         {
@@ -525,7 +527,89 @@ async def test_creative_media_artifact_schema_mismatch_still_keeps_task_and_deli
     body = runtime_resp.json()
     assert body["task"]["task_id"] == task_id
     assert body["delivery"]["kind"] == "creative.media"
-    assert body["artifacts"] == []
+    assert body["artifacts"] == creative_api._media_runtime_tasks[task_id]["artifacts"]
+
+
+async def test_creative_media_runtime_falls_back_to_memory_artifacts_when_db_artifacts_unavailable(
+    db_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import xagent.api.v1.creative_studio as creative_api
+    import xagent.core.runtime.service as runtime_service
+
+    token = create_access_token(user_id="u-art-fallback", tenant_id="tenant-1", roles=["member"])
+    generate_resp = await db_client.post(
+        "/api/v1/creative-studio/media/generate",
+        json={
+            "kind": "image",
+            "prompt": "memory artifact fallback",
+            "mode": "text_to_image",
+            "wait": False,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert generate_resp.status_code == 200, generate_resp.text
+    task_id = generate_resp.json()["task_id"]
+
+    original_load_artifacts = runtime_service._load_artifacts
+
+    async def _fake_load_artifacts(session, *, run_id: str, tenant_id: str):  # noqa: ARG001
+        if run_id == task_id and tenant_id == "tenant-1":
+            return [], False
+        return await original_load_artifacts(session, run_id=run_id, tenant_id=tenant_id)
+
+    monkeypatch.setattr(runtime_service, "_load_artifacts", _fake_load_artifacts)
+
+    runtime_resp = await db_client.get(
+        f"/api/v1/runs/{task_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert runtime_resp.status_code == 200, runtime_resp.text
+    body = runtime_resp.json()
+    assert body["artifacts"] == creative_api._media_runtime_tasks[task_id]["artifacts"]
+
+
+async def test_creative_media_failed_runtime_exposes_structured_failure(db_client: AsyncClient) -> None:
+    import xagent.api.v1.creative_studio as creative_api
+
+    failed_task_id = "failed-image-task"
+    token = create_access_token(user_id="u-media-failed", tenant_id="tenant-1", roles=["member"])
+
+    creative_api._media_task_tenants[failed_task_id] = "tenant-1"
+    creative_api._media_runtime_tasks.pop(failed_task_id, None)
+
+    runtime_view = creative_api._restore_media_runtime_view(
+        task_id=failed_task_id,
+        tenant_id="tenant-1",
+        owner_id="u-media-failed",
+        kind="creative.media.image",
+        input_payload={"prompt": "失败媒体任务", "mode": "text_to_image"},
+    )
+    runtime_view["task"]["status"] = "failed"
+    runtime_view["task"]["error"] = "provider offline"
+    runtime_view["delivery"] = creative_api._attach_delivery_bundle(
+        delivery=creative_api._build_media_delivery_summary(
+            kind="creative.media.image",
+            provider="stub",
+            outputs=[],
+            status="failed",
+            error="provider offline",
+        ),
+        artifacts=[],
+        validation={"risks": []},
+    )
+    creative_api._media_runtime_tasks[failed_task_id] = runtime_view
+
+    runtime_resp = await db_client.get(
+        f"/api/v1/runs/{failed_task_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert runtime_resp.status_code == 200, runtime_resp.text
+    body = runtime_resp.json()
+    failure = body["delivery"]["failure"]
+    assert failure["source"] == "creative"
+    assert failure["reasons"][0] == "provider offline"
+    assert failure["message"] == "image 产物生成失败，当前交付已阻塞。"
 
 
 async def test_creative_produce_non_schema_programming_error_is_not_silently_swallowed(
@@ -675,6 +759,7 @@ async def test_creative_media_task_exposes_delivery_summary_via_runs(
         },
         "resume": None,
         "risks": [],
+        "failure": None,
     }
     assert body["artifacts"] == [
         {
@@ -751,6 +836,7 @@ async def test_creative_production_exposes_delivery_summary_via_runs(
         },
         "resume": None,
         "risks": body["validation"]["risks"],
+        "failure": None,
     }
     assert len(body["artifacts"]) == output_count
 
@@ -832,6 +918,15 @@ async def test_creative_partial_production_maps_delivery_to_blocked(
         },
         "resume": None,
         "risks": ["镜头不足"],
+        "failure": {
+            "source": "creative",
+            "code": "creative_production_partial",
+            "message": "短剧产出部分完成，1 个镜头，共 1 个媒体产物。",
+            "blocking_step": "shot-1",
+            "reasons": ["镜头不足", "shot-1 视频生成失败：生成失败"],
+            "suggested_repair_actions": ["补齐失败镜头后重新生成短剧", "检查对应镜头的媒体生成配置"],
+            "escalation_path": "creative_ops",
+        },
     }
     assert len(body["artifacts"]) == 1
 
