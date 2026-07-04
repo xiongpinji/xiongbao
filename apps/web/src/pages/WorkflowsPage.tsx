@@ -10,6 +10,9 @@ import { Plus, Play, Trash2 } from "lucide-react";
 import { runWorkflow, type WorkflowView } from "../api";
 import { useShellActions } from "../shell/useShellStore";
 
+const previewMessage = "预览态：这里会先生成页面内步骤草案；正式执行仍以“创建并执行”按钮触发的后端工作流为准。";
+const initialAssistantMessage = "先在页面内生成步骤草案，确认后再通过“创建并执行”提交后端工作流。";
+
 interface Step { id: string; name: string; role?: string; goal: string; }
 
 export default function WorkflowsPage() {
@@ -72,6 +75,11 @@ export default function WorkflowsPage() {
             className="px-4 py-1.5 bg-brand-600 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
             <Play size={14} /> {loading ? "执行中..." : "创建并执行"}
           </button>
+        </div>
+        <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200/80">工作流编排助手</div>
+          <p className="mt-3">{previewMessage}</p>
+          <p className="mt-2 text-amber-50/90">{initialAssistantMessage}</p>
         </div>
         <div className="mb-3 space-y-2 max-h-40 overflow-auto">
           {steps.map(s => (

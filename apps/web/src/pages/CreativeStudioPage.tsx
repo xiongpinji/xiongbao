@@ -47,6 +47,9 @@ import type {
 } from "../components/canvas/canvasTypes";
 import { createDramaNodeData } from "../components/canvas/canvasTypes";
 
+const previewMessage = "当前输入会优先生成创作草案与页面节点意图；正式生产链路仍以明确的执行按钮和后端返回结果为准。";
+const executionBoundaryMessage = "“创建画布”用于生成草案；“执行 / 生产”才会进入真实后端链路。";
+
 function starterNodes(): Node<DramaCanvasNodeData>[] {
   return ["需求分析", "梗概", "角色设定", "分镜"].map((type, index) => {
     const data = createDramaNodeData(type as DramaNodeType, index + 1);
@@ -1290,16 +1293,24 @@ export default function CreativeStudioPage() {
           <option>快手</option>
           <option>小红书</option>
         </select>
-        <button className="primary-button whitespace-nowrap" onClick={createCanvasFromBrief} disabled={loading || !brief.trim()}>{loading ? "生成中" : "生成画布"}</button>
+        <button className="primary-button whitespace-nowrap" onClick={createCanvasFromBrief} disabled={loading || !brief.trim()}>{loading ? "生成中" : "创建画布"}</button>
         <button
           className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200 transition hover:bg-blue-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={runCanvasWorkflow}
           disabled={runLoading || !canvasId}
         >
-          {runLoading ? "运行中" : "运行画布"}
+          {runLoading ? "执行中" : "执行画布"}
         </button>
-        <button className="whitespace-nowrap rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "产出中" : "全链路产出"}</button>
+        <button className="whitespace-nowrap rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "生产中" : "生产内容"}</button>
       </header>
+
+      <div className="border-b border-neutral-800 bg-neutral-950/80 px-4 py-3">
+        <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-3 text-sm leading-6 text-fuchsia-100">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-fuchsia-200/80">创作草案 / 生产执行边界</div>
+          <p className="mt-3">{previewMessage}</p>
+          <p className="mt-2 text-fuchsia-50/90">{executionBoundaryMessage}</p>
+        </div>
+      </div>
 
       {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-300">{error}</div>}
 
