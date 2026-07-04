@@ -87,6 +87,8 @@ test("run console exposes validation risk and recovery panel contracts", async (
 
   assert.match(pageSource, /RunConsole/);
   assert.match(consoleSource, /import RunValidationPanel from "\.\/RunValidationPanel\.tsx";/);
+  assert.match(consoleSource, /当前分析助手优先基于已加载的运行详情做本地总结，帮助快速查看 Timeline、Evidence 和 Artifacts。/);
+  assert.match(consoleSource, /请基于当前已加载的运行详情回答，优先总结 Timeline、Evidence 与 Artifacts 中已经出现的信息。/);
   assert.match(consoleSource, /<RunValidationPanel detail=\{detail\} \/>/);
 
   assert.match(panelSource, /验证 · 风险 · 恢复/);
