@@ -38,6 +38,9 @@ const sections: { id: SettingsSection; label: string; icon: typeof Settings2 }[]
   { id: "onboarding", label: "引导", icon: Rocket },
 ];
 
+const previewMessage = "辅助模式：配置助手当前只生成检查清单与调整建议，不会直接修改本地或远端配置。";
+const assistantMessage = "不会直接写入本地文件、环境变量或远端配置。";
+
 export default function SettingsLayout({
   activeSection,
   onSectionChange,
@@ -56,6 +59,10 @@ export default function SettingsLayout({
         <div className="mb-4 px-2">
           <h1 className="text-lg font-semibold text-white">设置</h1>
           <p className="mt-1 text-xs leading-5 text-neutral-500">模型、技能、索引库与工作台偏好</p>
+        </div>
+        <div className="mb-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-3 text-sm leading-6 text-cyan-100">
+          <div>{previewMessage}</div>
+          <div className="mt-2 text-cyan-50/90">{assistantMessage}</div>
         </div>
         <nav className="space-y-1">
           {sections.map((section) => {
