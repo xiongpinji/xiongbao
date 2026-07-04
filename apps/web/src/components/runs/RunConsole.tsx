@@ -6,6 +6,9 @@ import RunArtifactsPanel from "./RunArtifactsPanel.tsx";
 import RunEvidencePanel from "./RunEvidencePanel.tsx";
 import RunTimelinePanel from "./RunTimelinePanel.tsx";
 
+const previewMessage = "当前分析助手优先基于已加载的运行详情做本地总结，帮助快速查看 Timeline、Evidence 和 Artifacts。";
+const initialAssistantMessage = "请基于当前已加载的运行详情回答，优先总结 Timeline、Evidence 与 Artifacts 中已经出现的信息。";
+
 function formatTaskLabel(detail: RunDetail): string {
   const kind = detail.task?.kind || detail.delivery.kind || "runtime.run";
   const status = detail.task?.status || detail.workflow?.status || detail.delivery.status || "unknown";
@@ -97,6 +100,12 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
         </div>
 
         <aside className="space-y-4">
+          <section className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200/80">运行分析助手</div>
+            <p className="mt-3">{previewMessage}</p>
+            <p className="mt-2 text-cyan-50/90">{initialAssistantMessage}</p>
+          </section>
+
           <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
             <div className="text-sm font-medium text-white">Delivery</div>
             <pre className="mt-3 overflow-auto rounded-2xl border border-neutral-800 bg-neutral-950 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   createWorkspace,
   renameWorkspace,
@@ -26,6 +27,10 @@ function makeSurface(overrides = {}) {
     status: "ready",
     ...overrides,
   };
+}
+
+async function read(relativePath) {
+  return readFile(new URL(relativePath, import.meta.url), "utf8");
 }
 
 test("createWorkspace uses Chinese fallback names for task, project, and agent", () => {
@@ -184,3 +189,105 @@ test("workspace snapshot round-trip preserves createdAt and stable ordering afte
     ["beta", "alpha"],
   );
 });
+
+test("frontend preview boundary copy explains demo-only behavior across auxiliary pages", async () => {
+  const [
+    agentsSource,
+    memorySource,
+    openSourceSource,
+    settingsLayoutSource,
+    shellContextPanelSource,
+  ] = await Promise.all([
+    read("../src/pages/AgentsPage.tsx"),
+    read("../src/pages/MemoryPage.tsx"),
+    read("../src/pages/OpenSourcePage.tsx"),
+    read("../src/components/settings/SettingsLayout.tsx"),
+    read("../src/components/layout/ShellContextPanel.tsx"),
+  ]);
+
+  assert.match(
+    agentsSource,
+    /预览态：当前‘角色调度’优先生成任务拆解建议，不直接触发真实智能体执行。/,
+  );
+  assert.match(
+    agentsSource,
+    /后端角色接口暂不可用，当前展示的是本地演示角色，仅用于 UI 预览，不代表真实可调度角色集合。/,
+  );
+  assert.match(
+    agentsSource,
+    /真实执行时的角色集合、能力边界与可用性以后端返回为准。/,
+  );
+
+  assert.match(
+    memorySource,
+    /辅助模式：当前入口主要用于整理检索意图与跳转索引配置，不直接展示真实知识库命中结果。/,
+  );
+  assert.match(
+    memorySource,
+    /真实结果仍需进入索引库或后端检索链路查看。/,
+  );
+
+  assert.match(
+    openSourceSource,
+    /预览态：当前入口优先整理开源比选目标与接入策略，不直接返回实时仓库搜索结果。/,
+  );
+  assert.match(
+    openSourceSource,
+    /真实候选仓库仍需进入开源发现链路进一步检索。/,
+  );
+
+  assert.match(
+    settingsLayoutSource,
+    /辅助模式：配置助手当前只生成检查清单与调整建议，不会直接修改本地或远端配置。/,
+  );
+  assert.match(
+    settingsLayoutSource,
+    /不会直接写入本地文件、环境变量或远端配置。/,
+  );
+
+  assert.match(
+    shellContextPanelSource,
+    /辅助模式：当前为上下文助手，优先提供总结、建议与跳转，不直接执行后台任务。/,
+  );
+  assert.match(
+    shellContextPanelSource,
+    /必要时再引导进入真实执行页面。/,
+  );
+});
+
+test("frontend execution boundary copy explains preview-vs-run behavior on target pages", async () => {
+  const [runConsoleSource, workflowsSource, creativeStudioSource] = await Promise.all([
+    read("../src/components/runs/RunConsole.tsx"),
+    read("../src/pages/WorkflowsPage.tsx"),
+    read("../src/pages/CreativeStudioPage.tsx"),
+  ]);
+
+  assert.match(
+    runConsoleSource,
+    /当前分析助手优先基于已加载的运行详情做本地总结，帮助快速查看 Timeline、Evidence 和 Artifacts。/,
+  );
+  assert.match(
+    runConsoleSource,
+    /请基于当前已加载的运行详情回答，优先总结 Timeline、Evidence 与 Artifacts 中已经出现的信息。/,
+  );
+
+  assert.match(
+    workflowsSource,
+    /预览态：这里会先生成页面内步骤草案；正式执行仍以“创建并执行”按钮触发的后端工作流为准。/,
+  );
+  assert.match(
+    workflowsSource,
+    /先在页面内生成步骤草案，确认后再通过“创建并执行”提交后端工作流。/,
+  );
+
+  assert.match(
+    creativeStudioSource,
+    /当前输入会优先生成创作草案与页面节点意图；正式生产链路仍以明确的执行按钮和后端返回结果为准。/,
+  );
+  assert.match(
+    creativeStudioSource,
+    /“创建画布”用于生成草案；“执行 \/ 生产”才会进入真实后端链路。/,
+  );
+});
+
+

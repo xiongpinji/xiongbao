@@ -59,3 +59,4 @@ tests/e2e/specs/debug_login.spec.ts
 
 # ---- Local automation ----
 .claude/
+.worktrees/
