@@ -106,8 +106,8 @@ services:
       - "3001:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/langfuse
-      - NEXTAUTH_SECRET=change-me-to-random-secret
-      - SALT=change-me-to-random-salt
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:?set LANGFUSE_NEXTAUTH_SECRET in deploy/compose/.env}
+      - SALT=${LANGFUSE_SALT:?set LANGFUSE_SALT in deploy/compose/.env}
       - NEXTAUTH_URL=http://localhost:3001
       - TELEMETRY_ENABLED=false
       - LANGFUSE_INIT_ORG_ID=xagent
@@ -115,7 +115,7 @@ services:
       - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-xagent-local
       - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-xagent-local
       - LANGFUSE_INIT_USER_EMAIL=admin@xagent.local
-      - LANGFUSE_INIT_USER_PASSWORD=admin12345
+      - LANGFUSE_INIT_USER_PASSWORD=${LANGFUSE_INIT_USER_PASSWORD:?set LANGFUSE_INIT_USER_PASSWORD in deploy/compose/.env}
       - LANGFUSE_INIT_USER_NAME=admin
 
   # X-Agent 后端 API
@@ -148,7 +148,7 @@ services:
       - XAGENT_OBSERVABILITY__LANGFUSE_HOST=http://langfuse:3000
       - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY:-}
-      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
+      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
       - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://localhost:3000"]}
     command: >
       sh -c "python -m alembic upgrade head &&
@@ -174,7 +174,7 @@ services:
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
-      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:-change-me-to-random}
+      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
     command: ["celery", "-A", "xagent.worker.celery_app", "worker", "--loglevel=info"]
 
   # X-Agent 前端（nginx 托管 + 反代 api）

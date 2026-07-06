@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from xagent.adapters.llm.base import LLMClient, LLMResponse, Message
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
+from xagent.core.orchestration.loop import run_agent as run_agent_builtin
 from xagent.core.orchestration.state import StepKind
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
@@ -35,6 +37,52 @@ async def test_run_agent_reuses_external_run_id() -> None:
     p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
     run = await run_agent("任务", principal=p, run_id="external-run-id")
     assert run.run_id == "external-run-id"
+
+
+class _ToolJsonLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(self, messages: list[Message], **kw) -> LLMResponse:  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            return LLMResponse(
+                content='{"action":"tool","tool":"echo","args":{"text":"pong"}}',
+                model="test",
+            )
+        assert any("工具 echo 结果" in m.content and "pong" in m.content for m in messages)
+        return LLMResponse(
+            content='{"action":"final","answer":"done"}',
+            model="test",
+        )
+
+    async def complete_with_tools(self, messages, tools, **kw):  # noqa: ARG002
+        raise NotImplementedError
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_run_agent_prompt_tool_action_awaits_tool_result(monkeypatch) -> None:
+    llm = _ToolJsonLLM()
+    p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+
+    run = await run_agent_builtin("调用工具", principal=p, role_name="general")
+
+    assert llm.calls == 2
+    assert run.final_answer == "done"
+    assert [event.kind for event in run.events] == [
+        StepKind.reason,
+        StepKind.tool_call,
+        StepKind.tool_result,
+        StepKind.reason,
+        StepKind.final,
+    ]
+    assert run.events[1].tool == "echo"
+    assert run.events[2].content == '"pong"'
 
 
 def test_audit_chain_integrity() -> None:

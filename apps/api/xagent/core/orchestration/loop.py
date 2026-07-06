@@ -224,7 +224,7 @@ async def run_agent(
 
             # 提示工程路径的 tool 动作（mock/不支持原生工具时）
             if action.get("action") == "tool":
-                _handle_prompt_tool_action(action, role, tools, ctx, state, events)
+                await _handle_prompt_tool_action(action, role, tools, ctx, state, events)
                 continue
 
             state.final_answer = resp.content
