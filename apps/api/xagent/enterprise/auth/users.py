@@ -1,7 +1,7 @@
-"""内置用户存储 + 密码哈希（lite/full 内置模式）。
+"""内置用户存储 + 密码哈希。
 
 Keycloak（OIDC）为 full/enterprise 目标；未配置时用内置用户表。
-Phase 5：进程内存储 + 启动默认 admin；生产应接 Keycloak/DB。
+Phase 5：lite 启动默认 admin；生产应接 Keycloak/DB 或显式初始化用户。
 本模块同时支持注册/改密（内存 + 可选 DB 持久化）。
 """
 
@@ -14,6 +14,7 @@ from passlib.context import CryptContext
 
 from xagent.enterprise.auth.principal import ANONYMOUS_TENANT
 from xagent.infra.logging import get_logger
+from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.users")
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -71,9 +72,13 @@ class UserStore:
 @lru_cache
 def get_user_store() -> UserStore:
     store = UserStore()
-    # 默认 admin/admin（仅 lite/演示；生产强制改密 + 接 Keycloak）
-    store._users["admin"] = User("admin", ANONYMOUS_TENANT, ["admin"], _pwd.hash("admin"))
-    logger.info("user_store_init", default_admin=True)
+    if get_settings().is_lite:
+        store._users["admin"] = User(
+            "admin", ANONYMOUS_TENANT, ["admin"], _pwd.hash("admin")
+        )
+        logger.info("user_store_init", default_admin=True)
+    else:
+        logger.info("user_store_init", default_admin=False)
     return store
 
 

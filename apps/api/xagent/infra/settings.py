@@ -15,6 +15,16 @@ from functools import lru_cache
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_INSECURE_JWT_SECRETS = {
+    "",
+    "dev-insecure-lite-jwt-secret-for-local-only",
+    "dev-insecure-change-me",
+    "change-me",
+    "change-me-to-random",
+    "change-me-to-a-long-random-secret",
+}
+_MIN_PRODUCTION_JWT_SECRET_LENGTH = 32
+
 
 class RunMode(str, Enum):  # noqa: UP042  (兼容 py3.11，不用 StrEnum)
     """运行模式。"""
@@ -130,7 +140,7 @@ class ObservabilitySettings(BaseModel):
 class SecuritySettings(BaseModel):
     """鉴权与安全。"""
 
-    jwt_secret: str = "dev-insecure-change-me"  # noqa: S105  生产必须覆盖，否则启动报错
+    jwt_secret: str = "dev-insecure-lite-jwt-secret-for-local-only"  # noqa: S105
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 60
     # Keycloak（full/enterprise），lite 用内置 JWT
@@ -189,8 +199,14 @@ class Settings(BaseSettings):
         if self.is_production:
             if "*" in self.cors_origins:
                 problems.append("生产模式禁止 CORS 通配符 '*'")
-            if self.security.jwt_secret == "dev-insecure-change-me":  # noqa: S105
-                problems.append("生产模式必须设置 XAGENT_SECURITY__JWT_SECRET")
+            jwt_secret = self.security.jwt_secret.strip()
+            if (
+                jwt_secret in _INSECURE_JWT_SECRETS
+                or len(jwt_secret) < _MIN_PRODUCTION_JWT_SECRET_LENGTH
+            ):
+                problems.append(
+                    "生产模式必须设置至少 32 字符的 XAGENT_SECURITY__JWT_SECRET"
+                )
             if self.security.require_auth is False:
                 problems.append("生产模式不允许关闭鉴权 (require_auth=False)")
         return problems

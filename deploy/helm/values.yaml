@@ -46,7 +46,8 @@ llm:
 
 # 安全
 security:
-  jwtSecret: "change-me"
+  # 必填：每个部署环境提供独立的 32+ 字符随机值；模板会在缺失时 fail fast。
+  jwtSecret: ""
   requireAuth: true
 
 # 可观测
