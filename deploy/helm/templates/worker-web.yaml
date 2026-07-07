@@ -20,10 +20,19 @@ spec:
             - { name: XAGENT_DB__URL, value: "{{ .Values.postgres.url }}" }
             - { name: XAGENT_CACHE__REDIS_URL, value: "{{ .Values.redis.url }}" }
             - { name: XAGENT_MEMORY__QDRANT_URL, value: "{{ .Values.qdrant.url }}" }
+            - { name: XAGENT_LLM__OLLAMA_BASE_URL, value: "{{ .Values.llm.ollamaBaseUrl }}" }
             - { name: XAGENT_LLM__OLLAMA_MODEL, value: "{{ .Values.llm.ollamaModel }}" }
+            - { name: XAGENT_LLM__REQUEST_TIMEOUT_SECONDS, value: {{ .Values.llm.requestTimeoutSeconds | quote }} }
+            - { name: XAGENT_LLM__WARMUP_ENABLED, value: {{ .Values.llm.warmupEnabled | quote }} }
+            - { name: XAGENT_LLM__WARMUP_PROMPT, value: {{ .Values.llm.warmupPrompt | quote }} }
+            - { name: XAGENT_LLM__WARMUP_MAX_TOKENS, value: {{ .Values.llm.warmupMaxTokens | quote }} }
+            - { name: XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS, value: {{ .Values.llm.warmupWaitTimeoutSeconds | quote }} }
+            - { name: XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS, value: {{ .Values.llm.warmupPollIntervalSeconds | quote }} }
             - name: XAGENT_SECURITY__JWT_SECRET
               value: {{ required "security.jwtSecret is required and must be a 32+ character random value" .Values.security.jwtSecret | quote }}
-          command: ["celery", "-A", "xagent.worker.celery_app", "worker", "--loglevel=info", "--concurrency", "{{ .Values.worker.concurrency }}"]
+          command: ["sh", "-c"]
+          args:
+            - "(python -m xagent.cli warmup || true) && exec celery -A xagent.worker.celery_app worker --loglevel=info --concurrency {{ .Values.worker.concurrency }}"
           resources:
             requests: { cpu: "250m", memory: "512Mi" }
             limits: { cpu: "1000m", memory: "2Gi" }
