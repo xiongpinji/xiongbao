@@ -45,6 +45,16 @@ def _cmd_smoke(_: argparse.Namespace) -> int:
     return asyncio.run(run_smoke())
 
 
+def _cmd_warmup(_: argparse.Namespace) -> int:
+    import asyncio
+
+    from xagent.infra.settings import get_settings
+    from xagent.scripts.ollama_warmup import warmup_ollama_model
+
+    result = asyncio.run(warmup_ollama_model(get_settings().llm))
+    return 0 if result.ok or result.skipped else 1
+
+
 def _cmd_migrate(args: argparse.Namespace) -> int:
     """运行 Alembic 迁移到 head。"""
     import os
@@ -76,6 +86,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_smoke = sub.add_parser("smoke", help="三链路冒烟测试")
     p_smoke.set_defaults(func=_cmd_smoke)
+
+    p_warmup = sub.add_parser("warmup", help="预热当前配置的 Ollama 模型")
+    p_warmup.set_defaults(func=_cmd_warmup)
 
     p_migrate = sub.add_parser("migrate", help="运行数据库迁移到最新版本")
     p_migrate.set_defaults(func=_cmd_migrate)
