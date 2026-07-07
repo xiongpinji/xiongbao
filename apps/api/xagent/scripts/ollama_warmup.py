@@ -28,23 +28,28 @@ def _raw_ollama_model_name(cfg: LLMSettings) -> str:
 
 def _target_model(cfg: LLMSettings) -> str:
     if cfg.proxy_url:
-        return LiteLLMClient(cfg).effective_model
+        return cfg.default_model
     return _raw_ollama_model_name(cfg)
 
 
-async def _warmup_via_proxy(cfg: LLMSettings) -> None:
+async def _warmup_via_proxy(cfg: LLMSettings, *, timeout_seconds: float | None = None) -> None:
     client = LiteLLMClient(cfg)
+    call_kwargs: dict[str, float] = {}
+    if timeout_seconds is not None:
+        call_kwargs["timeout"] = timeout_seconds
     await client.complete(
         [Message(role="user", content=cfg.warmup_prompt)],
         temperature=0,
         max_tokens=cfg.warmup_max_tokens,
+        **call_kwargs,
     )
 
 
-async def _warmup_via_ollama(cfg: LLMSettings) -> None:
+async def _warmup_via_ollama(cfg: LLMSettings, *, timeout_seconds: float | None = None) -> None:
     base_url = cfg.ollama_base_url.rstrip("/")
     model = _raw_ollama_model_name(cfg)
-    timeout = httpx.Timeout(cfg.request_timeout_seconds)
+    effective_timeout = cfg.request_timeout_seconds if timeout_seconds is None else timeout_seconds
+    timeout = httpx.Timeout(effective_timeout)
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         tags = await client.get(f"{base_url}/api/tags")
@@ -74,11 +79,13 @@ async def warmup_ollama_model(cfg: LLMSettings) -> WarmupResult:
     last_error: Exception | None = None
 
     while True:
+        remaining = max(deadline - time.monotonic(), 0)
+        attempt_timeout = min(cfg.request_timeout_seconds, remaining)
         try:
             if cfg.proxy_url:
-                await _warmup_via_proxy(cfg)
+                await _warmup_via_proxy(cfg, timeout_seconds=attempt_timeout)
             else:
-                await _warmup_via_ollama(cfg)
+                await _warmup_via_ollama(cfg, timeout_seconds=attempt_timeout)
             elapsed = round(time.perf_counter() - started, 2)
             logger.info(
                 "ollama_warmup_succeeded",

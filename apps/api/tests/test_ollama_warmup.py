@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import itertools
+import sys
+import types
+
 import pytest
 from xagent.infra.settings import LLMSettings
 from xagent.scripts.ollama_warmup import WarmupResult, warmup_ollama_model
@@ -107,7 +111,43 @@ async def test_warmup_ollama_model_prefers_proxy_route(
     assert seen["model"] is None
     assert seen["temperature"] == 0
     assert seen["max_tokens"] == 8
-    assert seen["kwargs"] == {}
+    assert seen["kwargs"] == {"timeout": 30}
+
+
+@pytest.mark.asyncio
+async def test_warmup_ollama_model_uses_proxy_model_even_when_ollama_base_url_is_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict = {}
+
+    async def _fake_acompletion(*, messages, **kwargs):
+        seen["messages"] = messages
+        seen["kwargs"] = kwargs
+        return {
+            "choices": [{"message": {"content": "好", "tool_calls": []}}],
+            "usage": {},
+        }
+
+    monkeypatch.setitem(sys.modules, "litellm", types.SimpleNamespace(acompletion=_fake_acompletion))
+    cfg = LLMSettings(
+        proxy_url="http://localhost:4000",
+        proxy_api_key="sk-proxy",
+        default_model="proxy-default",
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen3:4b",
+        warmup_enabled=True,
+        warmup_prompt="回复一个字：好",
+        warmup_max_tokens=8,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result == WarmupResult(ok=True, skipped=False, detail="ok")
+    assert seen["kwargs"]["model"] == "proxy-default"
+    assert seen["kwargs"]["api_base"] == "http://localhost:4000"
+    assert seen["kwargs"]["api_key"] == "sk-proxy"
+    assert seen["kwargs"]["max_tokens"] == 8
+    assert seen["kwargs"]["temperature"] == 0
 
 
 @pytest.mark.asyncio
@@ -192,6 +232,56 @@ async def test_warmup_ollama_model_retries_within_wait_budget(
     assert result == WarmupResult(ok=True, skipped=False, detail="ok")
     assert attempts["count"] == 2
     assert sleeps == [0.25]
+
+
+@pytest.mark.asyncio
+async def test_warmup_ollama_model_caps_attempt_timeout_to_remaining_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timeouts: list[float] = []
+
+    class _TimeoutAsyncClient:
+        def __init__(self, *, timeout):
+            timeouts.append(timeout.connect)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str):
+            raise RuntimeError("ollama still starting")
+
+    monotonic_values = itertools.chain([100.0, 100.0, 103.0], itertools.repeat(103.0))
+
+    async def _fake_sleep(seconds: float) -> None:
+        raise AssertionError("sleep should not run after budget is exhausted")
+
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **kwargs: _TimeoutAsyncClient(**kwargs),
+    )
+    monkeypatch.setattr("xagent.scripts.ollama_warmup.asyncio.sleep", _fake_sleep)
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen3:4b",
+        warmup_enabled=True,
+        request_timeout_seconds=60,
+        warmup_wait_timeout_seconds=3,
+        warmup_poll_interval_seconds=1,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result.ok is False
+    assert result.skipped is False
+    assert "ollama still starting" in result.detail
+    assert timeouts == [3]
 
 
 @pytest.mark.asyncio
