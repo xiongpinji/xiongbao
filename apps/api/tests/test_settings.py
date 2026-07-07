@@ -66,3 +66,23 @@ def test_nested_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.llm.default_model == "claude-3-5-sonnet"
     assert s.db.echo is True
+
+
+def test_llm_timeout_and_warmup_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XAGENT_LLM__REQUEST_TIMEOUT_SECONDS", "150")
+    monkeypatch.setenv("XAGENT_LLM__WARMUP_ENABLED", "true")
+    monkeypatch.setenv("XAGENT_LLM__WARMUP_PROMPT", "回复一个字：好")
+    monkeypatch.setenv("XAGENT_LLM__WARMUP_MAX_TOKENS", "8")
+    s = Settings()
+    assert s.llm.request_timeout_seconds == 150
+    assert s.llm.warmup_enabled is True
+    assert s.llm.warmup_prompt == "回复一个字：好"
+    assert s.llm.warmup_max_tokens == 8
+
+
+def test_llm_warmup_defaults() -> None:
+    s = Settings()
+    assert s.llm.warmup_enabled is False
+    assert s.llm.warmup_prompt == "回复一个字：好"
+    assert s.llm.warmup_max_tokens == 8
+    assert s.llm.warmup_wait_timeout_seconds == 30
