@@ -66,7 +66,7 @@ docker compose up -d --build
 - `XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`：给首次拉起大模型留足时间。`qwen2.5vl:7b` 这类模型在宿主机冷启动时，可能同时发生模型装载、显存分配、KV cache 初始化；若仍使用较短默认超时，首个真实请求很容易在模型可用前就超时。
 - `XAGENT_LLM__WARMUP_ENABLED=true`：在服务正式接流量前，先用最小 prompt 触发一次模型装载。
 - `XAGENT_LLM__WARMUP_PROMPT=回复一个字：好` + `XAGENT_LLM__WARMUP_MAX_TOKENS=8`：把 warmup 成本压到最低，只验证链路可达与模型可响应。
-- `XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=30` + `XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`：在启动阶段最多给 Ollama 可达性 30 秒窗口，避免无休止等待。
+- `XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=120` + `XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`：对 `qwen2.5vl:7b` 这类冷启动明显慢于 30 秒的本地模型，给启动阶段更现实的 120 秒窗口，让 warmup 更有机会在首个真实请求前完成，而不是过早失败后把冷启动成本转嫁给用户请求。
 
 为什么 `api` 和 `worker` 都要 warm up：
 
