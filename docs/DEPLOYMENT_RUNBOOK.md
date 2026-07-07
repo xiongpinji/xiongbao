@@ -11,12 +11,12 @@
 - Python 3.11（仅在需要宿主机调试 API / 跑后端测试时使用）
 - Node.js 20+（用于构建 `apps/web/dist`）
 - 至少一个当前已接通的 LLM 路径：OpenAI / DeepSeek provider key，或宿主机可访问的 Ollama
-- 端口：8000（后端）3300（前端）4000（LiteLLM）6333（Qdrant）5432（Postgres）6379（Redis）3001（Langfuse）
+- 端口：8000（后端）3000（前端）4000（LiteLLM）6333（Qdrant）5432（Postgres）6379（Redis）3001（Langfuse）
 
 环境与验收约定：
 
 - `XAGENT_DEV_API_TARGET`：前端 dev server 代理到哪个后端，默认 `http://localhost:8000`。
-- `E2E_BASE_URL`：Playwright 对哪个前端地址做验收；当前 Compose 基线应使用 `http://localhost:3300`。若改走前端 dev server，再显式切到 `http://localhost:3000` 或其他 worktree 端口。
+- `E2E_BASE_URL`：Playwright 对哪个前端地址做验收；当前 Compose 基线应使用 `http://localhost:3000`。若改走前端 dev server，再显式切到 `http://localhost:3000` 或其他 worktree 端口。
 - `E2E_USERNAME` / `E2E_PASSWORD`：full 模式 Playwright 验收账号；必须显式设置，不提供默认账号回退。
 - 并行 worktree 开发时，可以把前端 / 后端分别切到独立端口，例如 `E2E_BASE_URL=http://127.0.0.1:4173`、`XAGENT_DEV_API_TARGET=http://127.0.0.1:8100`。
 - 后端测试建议从 `apps/api` 目录运行；如果必须从仓库根运行，请先设置 `PYTHONPATH=apps/api`，避免 `ModuleNotFoundError: xagent`。
@@ -36,8 +36,8 @@ cp .env.example .env
 #   - 生产必填 LANGFUSE_NEXTAUTH_SECRET / LANGFUSE_SALT / LANGFUSE_INIT_USER_PASSWORD
 #   - 若使用 LiteLLM，填写 XAGENT_LLM__PROXY_URL / XAGENT_LLM__PROXY_API_KEY
 #   - 若使用宿主机 Ollama，保持默认 host.docker.internal 配置即可
-#   - 当前 Compose 基线前端对外暴露在 3300，请把 XAGENT_CORS_ORIGINS 对齐到实际浏览器来源，示例：
-#       XAGENT_CORS_ORIGINS=["http://localhost:3300"]
+#   - 当前 Compose 基线前端对外暴露在 3000，请把 XAGENT_CORS_ORIGINS 对齐到实际浏览器来源，示例：
+#       XAGENT_CORS_ORIGINS=["http://localhost:3000"]
 #   - 并行 worktree 验收时，可配合前端 / 后端独立端口：
 #       XAGENT_DEV_API_TARGET=http://127.0.0.1:8100
 #       E2E_BASE_URL=http://127.0.0.1:4173
@@ -55,8 +55,8 @@ docker compose up -d --build
 - `worker` 负责 full 模式后台长任务；当 Redis / Celery 可用时，后台任务可跨实例续跑。
 - compose 默认通过 `host.docker.internal:11434` 访问宿主机 Ollama，并为 `api` / `worker` 配置了 `extra_hosts: ["host.docker.internal:host-gateway"]`，以兼容 Linux Docker。
 - `deploy/compose/.env.example` 与 `.env.rehearsal` 已包含冷启动加固相关参数：`XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`、`XAGENT_LLM__WARMUP_ENABLED=true`、`XAGENT_LLM__WARMUP_PROMPT=回复一个字：好`、`XAGENT_LLM__WARMUP_MAX_TOKENS=8`、`XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=30`、`XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`。复制到 `.env` 后应保留这组基线。
-- compose 中的 `XAGENT_CORS_ORIGINS` 会直接读取 `.env` 的值；当前 Compose 基线前端对外端口是 `3300`，因此浏览器来源通常应写成 `http://localhost:3300`，不要沿用旧的 `3000` 示例。
-- `web` 提供统一 Run Console，容器内直接反代 `api:8000`，对外入口是 `http://localhost:3300`。
+- compose 中的 `XAGENT_CORS_ORIGINS` 会直接读取 `.env` 的值；当前 Compose 基线前端对外端口是 `3000`，因此浏览器来源通常应写成 `http://localhost:3000`，不要沿用旧的 `3000` 示例。
+- `web` 提供统一 Run Console，容器内直接反代 `api:8000`，对外入口是 `http://localhost:3000`。
 - `apps/web/dist` 不会在镜像内自动构建，因此 `docker compose up` 前必须先执行 `npm run build`。
 
 ## 2.1 Ollama 冷启动加固
@@ -98,7 +98,7 @@ warmup 实际行为：
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/ready
-curl http://localhost:3300
+curl http://localhost:3000
 ```
 
 期望：
@@ -107,7 +107,7 @@ curl http://localhost:3300
 - `/ready` 返回 `{"ready":true,...}`
 - 前端可打开登录页 / 工作台，并能跳转到 `/runs/:runId`
 
-如果你在并行 worktree 中使用独立端口，请把上面的 `3300/8000` 替换为当前 worktree 的实际前后端端口，并同步设置：
+如果你在并行 worktree 中使用独立端口，请把上面的 `3000/8000` 替换为当前 worktree 的实际前后端端口，并同步设置：
 
 - `XAGENT_DEV_API_TARGET=http://127.0.0.1:<api-port>`
 - `E2E_BASE_URL=http://127.0.0.1:<web-port>`
@@ -150,7 +150,7 @@ docker compose logs api worker --since=10m | grep -E "ollama_warmup_(succeeded|f
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/ready
-curl http://localhost:3300
+curl http://localhost:3000
 ```
 
 6. 做鉴权引导。full 模式不会内置 `admin/admin`；演练环境可以先自助注册一个用户，已有用户则直接登录：
@@ -184,7 +184,7 @@ curl -X POST http://localhost:8000/api/v1/agents/run \
 
 - 返回 200，且响应里包含 `run_id` / `final_answer` / `steps` 等结果字段。
 - 若这一步是重启后的首个真实 LLM 请求，整体耗时仍可能明显高于热机请求；但在 150 秒超时基线内应能完成，而不是过早超时。
-- 成功后可在浏览器打开 `http://localhost:3300`，登录同一账号，确认 Run Console 能查看对应运行记录。
+- 成功后可在浏览器打开 `http://localhost:3000`，登录同一账号，确认 Run Console 能查看对应运行记录。
 
 ## 4. unified runtime 验证路径
 
@@ -224,7 +224,7 @@ XAGENT_MODE=full xagent serve
 - [ ] `XAGENT_SECURITY__JWT_SECRET` 已改为长随机串
 - [ ] Langfuse 的 `NEXTAUTH_SECRET` / `SALT` 已改为生产随机值
 - [ ] Langfuse 初始管理员密码已通过 `LANGFUSE_INIT_USER_PASSWORD` 显式设置为强密码
-- [ ] `XAGENT_CORS_ORIGINS` 已对齐当前前端实际来源（当前 Compose 基线通常为 `http://localhost:3300`），且不含 `*`
+- [ ] `XAGENT_CORS_ORIGINS` 已对齐当前前端实际来源（当前 Compose 基线通常为 `http://localhost:3000`），且不含 `*`
 - [ ] `require_auth` 未被显式关闭
 - [ ] full / enterprise 管理员来自显式用户源（Keycloak / DB / 初始化流程），不存在默认 admin / admin
 - [ ] `python scripts/license_check.py` 通过（无 AGPL / GPL / ELv2）
