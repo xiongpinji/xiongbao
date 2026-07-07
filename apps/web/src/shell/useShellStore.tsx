@@ -175,7 +175,7 @@ export function createShellWorkflowStep(index: number): ShellWorkflowStepDraft {
     id: createWorkflowStepId(),
     name: `步骤${index + 1}`,
     role: "general",
-    goal: index === 0 ? "你好" : "",
+    goal: "",
     approverRole: "",
     approvalMessage: "",
   };
@@ -198,7 +198,7 @@ function makeDefaultChatTaskState(): ShellChatTaskState {
 function makeDefaultWorkflowTaskState(): ShellWorkflowTaskState {
   const steps = makeDefaultWorkflowSteps();
   return {
-    name: "demo",
+    name: "新工作流",
     view: null,
     error: null,
     loading: false,
@@ -253,7 +253,7 @@ function createSessionState(): ShellSessionState {
   const startedAt = Date.now();
   return {
     id: `shell-${startedAt}`,
-    label: `本地会话 ${new Date(startedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`,
+    label: `当前会话 ${new Date(startedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`,
     startedAt,
     currentProject: "xiong bao / xagent / apps/web",
   };
@@ -296,7 +296,7 @@ export function createShellStore() {
         id: "boot",
         taskId: "chat",
         title: "Shell 已就绪",
-        detail: "本地会话状态正在驱动工作台，不依赖后端 control plane。",
+        detail: "当前工作台状态已就绪，可继续进入正式页面执行任务。",
         tone: "info",
         timestamp: Date.now(),
       },

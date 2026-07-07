@@ -336,7 +336,7 @@ async def run(
                 await session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=failure_error,
+                detail={"run_id": run_id, "error": failure_error},
             ) from exc
     # 账单落库（best-effort）
     await persist_billing_record(

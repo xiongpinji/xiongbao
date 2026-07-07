@@ -64,7 +64,8 @@ XAGENT_MEDIA__GENERIC_VIDEO_MODEL=your-model
 ```bash
 # compose 已含 langfuse，Keycloak 需单独起
 docker run -d --name keycloak -p 8080:8080 \
-  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}" \
   quay.io/keycloak/keycloak:latest start-dev
 ```
 
@@ -78,7 +79,7 @@ docker run -d --name keycloak -p 8080:8080 \
 realm 预设了：
 - 角色：admin / member / viewer
 - 客户端：xagent-api（OIDC）
-- 用户：admin/change-me
+- 用户：不再预设默认管理员；请在 Keycloak 中显式创建管理员并分配 admin 角色
 
 ### 配置后端
 
@@ -145,7 +146,7 @@ XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=pk-lf-xagent-local
 XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=sk-lf-xagent-local
 ```
 
-UI: http://localhost:3001（admin@xagent.local / admin12345）
+UI: http://localhost:3001（账号和密码来自 `LANGFUSE_INIT_USER_EMAIL` / `LANGFUSE_INIT_USER_PASSWORD`）
 
 ---
 

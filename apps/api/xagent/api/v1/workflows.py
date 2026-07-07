@@ -103,6 +103,77 @@ def build_workflow_resume_pointer(run_view: dict) -> dict | None:
     return None
 
 
+def build_workflow_failure_bundle(run_view: dict) -> dict | None:
+    timeline = run_view.get("timeline") or []
+    steps = run_view.get("steps") or []
+    status = str(run_view.get("status") or "pending")
+    if status not in {"failed", "rolled_back", "cancelled"}:
+        return None
+
+    blocked_step = next(
+        (
+            step
+            for step in steps
+            if str(step.get("status") or "") in {"failed", "rolled_back", "cancelled", "skipped"}
+        ),
+        None,
+    )
+    denied_event = next(
+        (event for event in reversed(timeline) if str(event.get("kind") or "") == "denied"),
+        None,
+    )
+    blocking_step = str(
+        (blocked_step or {}).get("id")
+        or (denied_event or {}).get("step_id")
+        or "workflow"
+    ).strip()
+    step_name = str((blocked_step or {}).get("name") or "").strip() or None
+    if status == "cancelled":
+        message = (
+            f"审批步骤 {blocking_step} 被拒绝，工作流已取消。"
+            if blocking_step != "workflow"
+            else "工作流已取消。"
+        )
+    elif status == "rolled_back":
+        message = (
+            f"步骤 {blocking_step} 执行失败，已触发补偿回滚。"
+            if blocking_step != "workflow"
+            else "工作流执行失败，已触发补偿回滚。"
+        )
+    else:
+        message = (
+            f"步骤 {blocking_step} 执行失败，工作流已阻塞。"
+            if blocking_step != "workflow"
+            else "工作流执行失败，当前已阻塞。"
+        )
+
+    detail_message = str((blocked_step or {}).get("error") or "").strip()
+    details: dict[str, object] = {
+        "workflow_status": status,
+        "completed_steps": sum(1 for step in steps if step.get("status") == "succeeded"),
+        "step_count": len(steps),
+    }
+    if detail_message:
+        details["error"] = detail_message
+    if denied_event is not None:
+        details["denied_by"] = denied_event.get("detail")
+
+    return {
+        "code": status,
+        "source": "workflow",
+        "message": message,
+        "blocking_step": blocking_step,
+        "step_name": step_name,
+        "retryable": status == "failed",
+        "recommended_action": (
+            "检查失败步骤后重新运行工作流"
+            if status in {"failed", "rolled_back"}
+            else "请确认审批结论后重新提交工作流"
+        ),
+        "details": details,
+    }
+
+
 def build_workflow_delivery_summary(run_view: dict) -> dict:
     timeline = run_view.get("timeline") or []
     steps = run_view.get("steps") or []
@@ -125,6 +196,7 @@ def build_workflow_delivery_summary(run_view: dict) -> dict:
     }
     replay = build_workflow_replay_pointer(str(run_view.get("run_id") or ""))
     resume = build_workflow_resume_pointer(run_view)
+    failure = build_workflow_failure_bundle(run_view)
     if status == "completed":
         delivery_status = "ready"
         summary = f"工作流 {spec_name} 已完成，{completed_steps}/{step_count} 个步骤成功。"
@@ -145,6 +217,7 @@ def build_workflow_delivery_summary(run_view: dict) -> dict:
         "workflow": workflow,
         "replay": replay,
         "resume": resume,
+        "failure": failure,
     }
 
 

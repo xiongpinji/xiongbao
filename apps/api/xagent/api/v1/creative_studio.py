@@ -713,10 +713,76 @@ def _build_production_validation_summary(result: dict[str, Any]) -> dict[str, An
     }
 
 
+def _build_production_failure_bundle(
+    *,
+    result: dict[str, Any],
+    validation: dict[str, Any],
+) -> dict[str, Any] | None:
+    production_status = str(result.get("status") or "pending")
+    if production_status not in {"partial", "failed"}:
+        return None
+
+    failed_shot = next(
+        (
+            shot
+            for shot in result.get("shots") or []
+            if str(shot.get("image_error") or "").strip()
+            or str(shot.get("video_error") or "").strip()
+        ),
+        None,
+    )
+    blocking_step = str((failed_shot or {}).get("shot_id") or "creative_production").strip()
+    step_name = str((failed_shot or {}).get("scene") or "").strip() or None
+    shot_error = str(
+        (failed_shot or {}).get("video_error") or (failed_shot or {}).get("image_error") or ""
+    ).strip()
+    validation_risks = [
+        str(item).strip() for item in (validation.get("risks") or []) if str(item).strip()
+    ]
+    gate_failures = [
+        {
+            "name": str(gate.get("name") or "").strip(),
+            "detail": str(gate.get("detail") or "").strip(),
+        }
+        for gate in result.get("quality_gates") or []
+        if isinstance(gate, dict) and not gate.get("passed")
+    ]
+    reason = shot_error or validation_risks[0] if validation_risks else shot_error
+    if not reason:
+        reason = "部分镜头生成失败，请检查质量门与镜头产出。"
+    message = (
+        f"镜头 {blocking_step} 生成失败，当前短剧产出部分阻塞。"
+        if production_status == "partial"
+        else f"镜头 {blocking_step} 生成失败，当前短剧产出失败。"
+    )
+
+    details: dict[str, Any] = {
+        "workflow_status": production_status,
+        "quality_gate_failures": gate_failures,
+    }
+    if shot_error:
+        details["shot_error"] = shot_error
+    if validation_risks:
+        details["validation_risks"] = validation_risks
+
+    return {
+        "code": production_status,
+        "source": "creative",
+        "message": message,
+        "blocking_step": blocking_step,
+        "step_name": step_name,
+        "retryable": True,
+        "recommended_action": "检查失败镜头与质量门后重新生成短剧产物",
+        "details": details,
+        "reason": reason,
+    }
+
+
 def _build_production_delivery_summary(
     *,
     result: dict[str, Any],
     artifacts: list[dict[str, Any]],
+    validation: dict[str, Any],
 ) -> dict[str, Any]:
     shot_count = len(result.get("shots") or [])
     output_count = len(artifacts)
@@ -743,6 +809,7 @@ def _build_production_delivery_summary(
         "timeline_id": result.get("timeline_id"),
         "quality_passed": bool(result.get("quality_passed")),
         "output_count": output_count,
+        "failure": _build_production_failure_bundle(result=result, validation=validation),
     }
 
 
@@ -991,7 +1058,11 @@ async def produce(
     )
     validation = _build_production_validation_summary(doc)
     delivery = _attach_delivery_bundle(
-        delivery=_build_production_delivery_summary(result=doc, artifacts=artifacts),
+        delivery=_build_production_delivery_summary(
+            result=doc,
+            artifacts=artifacts,
+            validation=validation,
+        ),
         artifacts=artifacts,
         validation=validation,
     )

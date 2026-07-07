@@ -360,6 +360,7 @@ async def test_workflow_delivery_summary_is_visible_when_runtime_schema_degrades
             "console_path": f"/runs/{run_id}",
         },
         "resume": None,
+        "failure": None,
         "artifacts": [],
         "validation": {"risks": []},
         "risks": [],
@@ -414,10 +415,80 @@ async def test_workflow_delivery_summary_is_visible_when_runtime_persistence_suc
             "console_path": f"/runs/{run_id}",
         },
         "resume": None,
+        "failure": None,
         "artifacts": [],
         "validation": {"risks": []},
         "risks": [],
     }
+
+
+async def test_workflow_delivery_summary_exposes_structured_failure_bundle_for_cancelled_run(
+    client: AsyncClient,
+) -> None:
+    owner_token = create_access_token(
+        user_id="owner-user-failure", tenant_id="tenant-1", roles=["member"]
+    )
+    reviewer_token = create_access_token(
+        user_id="reviewer-user-failure", tenant_id="tenant-1", roles=["admin"]
+    )
+
+    create_resp = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": "wf-deny-failure-bundle",
+            "steps": [
+                {
+                    "id": "review-check",
+                    "name": "人工复核",
+                    "goal": "等待审核",
+                    "approver_role": "admin",
+                    "approval_message": "请审批",
+                }
+            ],
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    run_id = create_resp.json()["run_id"]
+
+    deny_resp = await client.post(
+        f"/api/v1/workflows/{run_id}/deny/review-check",
+        headers={"Authorization": f"Bearer {reviewer_token}"},
+    )
+    assert deny_resp.status_code == 200, deny_resp.text
+
+    run_resp = await client.get(
+        f"/api/v1/runs/{run_id}",
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert run_resp.status_code == 200, run_resp.text
+    body = run_resp.json()
+    assert body["workflow"]["status"] == "cancelled"
+    assert body["delivery"]["status"] == "blocked"
+    assert body["delivery"]["failure"] == {
+        "code": "cancelled",
+        "source": "workflow",
+        "message": "审批步骤 review-check 被拒绝，工作流已取消。",
+        "blocking_step": "review-check",
+        "step_name": "人工复核",
+        "retryable": False,
+        "recommended_action": "请确认审批结论后重新提交工作流",
+        "details": {
+            "workflow_status": "cancelled",
+            "completed_steps": 0,
+            "step_count": 1,
+            "error": "审批被拒绝",
+            "denied_by": "reviewer-user-failure",
+        },
+    }
+    assert body["delivery"]["replay"] == {
+        "mode": "workflow_replay",
+        "label": "回放工作流",
+        "run_id": run_id,
+        "api_path": f"/api/v1/workflows/{run_id}",
+        "console_path": f"/runs/{run_id}",
+    }
+    assert body["delivery"]["resume"] is None
 
 
 async def test_workflow_api_persists_delivery_summary_for_runtime_run(
@@ -468,6 +539,7 @@ async def test_workflow_api_persists_delivery_summary_for_runtime_run(
             "console_path": f"/runs/{run_id}",
         },
         "resume": None,
+        "failure": None,
         "artifacts": [],
         "validation": {"risks": []},
         "risks": [],

@@ -83,10 +83,23 @@ export interface RuntimeArtifactRecord {
   preview_summary?: Record<string, unknown>;
 }
 
+export interface RuntimeFailureSummary {
+  code?: string;
+  source?: string;
+  message?: string;
+  reason?: string;
+  blocking_step?: string;
+  step_name?: string | null;
+  retryable?: boolean;
+  recommended_action?: string | null;
+  details?: Record<string, unknown> | unknown[] | null;
+}
+
 export interface RuntimeDeliverySummary extends Record<string, unknown> {
   risks?: string[];
   replay?: Record<string, unknown> | null;
   resume?: Record<string, unknown> | null;
+  failure?: RuntimeFailureSummary | null;
 }
 
 export interface RuntimeRelatedTask {
@@ -214,7 +227,31 @@ function normalizeTask(task: RuntimeTaskView | null | undefined): RuntimeTaskVie
   };
 }
 
+function normalizeFailure(value: unknown): RuntimeFailureSummary | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    code: typeof value.code === "string" ? value.code : undefined,
+    source: typeof value.source === "string" ? value.source : undefined,
+    message: typeof value.message === "string" ? value.message : undefined,
+    reason: typeof value.reason === "string" ? value.reason : undefined,
+    blocking_step: typeof value.blocking_step === "string" ? value.blocking_step : undefined,
+    step_name: typeof value.step_name === "string" ? value.step_name : null,
+    retryable: typeof value.retryable === "boolean" ? value.retryable : undefined,
+    recommended_action:
+      typeof value.recommended_action === "string" ? value.recommended_action : null,
+    details:
+      isRecord(value.details) || Array.isArray(value.details)
+        ? value.details
+        : value.details == null
+          ? null
+          : null,
+  };
+}
+
 export function normalizeRunDetail(detail: Partial<RunDetailDTO>): RunDetail {
+  const delivery = normalizeRecord(detail.delivery);
   return {
     run_id: typeof detail.run_id === "string" ? detail.run_id : "",
     tenant_id: typeof detail.tenant_id === "string" ? detail.tenant_id : "",
@@ -223,7 +260,10 @@ export function normalizeRunDetail(detail: Partial<RunDetailDTO>): RunDetail {
     evidence: Array.isArray(detail.evidence) ? detail.evidence : [],
     artifacts: Array.isArray(detail.artifacts) ? detail.artifacts : [],
     validation: normalizeRecord(detail.validation),
-    delivery: normalizeRecord(detail.delivery),
+    delivery: {
+      ...delivery,
+      failure: normalizeFailure(delivery.failure),
+    },
     related_tasks: Array.isArray(detail.related_tasks) ? detail.related_tasks : [],
     timeline: normalizeRunTimeline(detail),
   };

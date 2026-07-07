@@ -27,6 +27,39 @@ def test_production_rejects_default_jwt() -> None:
     assert any("JWT" in p for p in problems)
 
 
+@pytest.mark.parametrize(
+    "jwt_secret",
+    [
+        "dev-insecure-lite-jwt-secret-for-local-only",
+        "dev-insecure-change-me",
+        "change-me",
+        "change-me-to-random",
+        "change-me-to-a-long-random-secret",
+        "short-secret",
+    ],
+)
+def test_production_rejects_placeholder_or_short_jwt(jwt_secret: str) -> None:
+    s = Settings(mode=RunMode.full)
+    s.security.jwt_secret = jwt_secret
+    problems = s.validate_for_production()
+    assert any("JWT" in p for p in problems)
+
+
+def test_full_mode_does_not_seed_default_admin(monkeypatch: pytest.MonkeyPatch) -> None:
+    from xagent.enterprise.auth.users import get_user_store, reset_user_store
+    from xagent.infra.settings import get_settings
+
+    monkeypatch.setenv("XAGENT_MODE", "full")
+    get_settings.cache_clear()
+    reset_user_store()
+    try:
+        store = get_user_store()
+        assert store.authenticate("admin", "admin") is None
+    finally:
+        reset_user_store()
+        get_settings.cache_clear()
+
+
 def test_nested_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XAGENT_LLM__DEFAULT_MODEL", "claude-3-5-sonnet")
     monkeypatch.setenv("XAGENT_DB__ECHO", "true")

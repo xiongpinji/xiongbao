@@ -34,6 +34,29 @@ async def persist_workflow_run(session: AsyncSession, view: dict) -> None:
     )
 
 
+async def load_workflow_run_by_id(
+    session: AsyncSession,
+    tenant_id: str,
+    run_id: str,
+) -> dict | None:
+    try:
+        stmt = select(WorkflowRunORM).where(
+            WorkflowRunORM.tenant_id == tenant_id,
+            WorkflowRunORM.run_id == run_id,
+        )
+        result = await session.execute(stmt)
+        row = result.scalar_one_or_none()
+        return json.loads(row.view) if row is not None else None
+    except Exception as exc:
+        logger.warning(
+            "load_workflow_run_by_id_failed",
+            tenant_id=tenant_id,
+            run_id=run_id,
+            error=str(exc),
+        )
+        return None
+
+
 async def load_workflow_runs(session: AsyncSession, tenant_id: str, limit: int = 50) -> list[dict]:
     try:
         stmt = (

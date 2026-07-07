@@ -1,62 +1,72 @@
-# X-Agent 重构路线图
+# X-Agent 路线图
 
-> 全功能一次到位，单机/桌面优先，底座全换开源。每阶段可独立验收。
+> 当前发布 / 商用 readiness 判断以 [`COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。本文用于区分历史阶段、当前收口项和后续增强；不作为正式 GA 结论。
 
-## Phase 0 — 脚手架与底座（单机可启动）✅ 进行中
+## 1. 历史功能阶段
 
-- [x] monorepo 骨架 + README / LICENSE / .gitignore
-- [ ] `apps/api` pyproject + settings(XAGENT_*) + 配置体系
-- [ ] infra：DB(SQLAlchemy2 + Alembic) / Redis / 结构化日志 / 健康探针
-- [ ] FastAPI app 骨架 + `/health` `/ready` + 中间件（CORS/请求日志/租户隔离占位）
-- [ ] adapters：llm(LiteLLM) / observability(Langfuse) / memory(Qdrant)，Protocol + 工厂 + lite 降级
-- [ ] deploy/compose：docker-compose（postgres/redis/qdrant/langfuse/litellm）
-- [ ] CI：ruff + mypy + pytest + **license-check 门禁**
-- [ ] 三链路验收脚本 `scripts/smoke_three_chains.py`
+Phase 0-5 表示代码骨架、接入点和本地能力链路的历史建设路线，不等同于当前正式商用封板。
 
-**验收**：`docker compose up` 起依赖；`xagent serve` 启动；`/health` `/ready` 200；三链路脚本通过。
+| 阶段 | 历史目标 | 当前口径 |
+|---|---|---|
+| Phase 0 | 脚手架、配置、健康探针、LLM/trace/向量三链路 | 历史已实现 |
+| Phase 1 | LangGraph 编排、记忆、MCP、鉴权/租户隔离 | 历史已实现 |
+| Phase 2 | 工作流、浏览器/桌面/编码执行 agent | 历史已实现 |
+| Phase 3 | 短剧工厂、多模态、开源发现、插件单内核 | 历史已实现 |
+| Phase 4 | React 前端工作台、Tauri 桌面壳 | 历史已实现 |
+| Phase 5 | 企业硬化、计费、部署交付骨架 | 历史已实现 |
 
-## Phase 1 — 编排与记忆内核
+## 2. 当前 readiness 收口（2026-07-06）
 
-- [ ] LangGraph agent 状态机 + 角色注册 / 能力匹配
-- [ ] Mem0 + Graphiti 记忆适配；向量统一走 Qdrant
-- [ ] 官方 MCP SDK + 工具注册；ContextForge 网关接口
-- [ ] 沙箱适配（docker 兜底 + E2B 接口）
-- [ ] 鉴权中间件（内置 JWT / Keycloak）+ 租户隔离 + RBAC(Casbin)，**全端点强制 principal**
+已完成或进入 Review 的证据项以 `docs/coordination/TASK_BOARD.md` 和 `docs/coordination/reports/delivery-report.md` 为准。
 
-**验收**：单 agent run（LLM + 记忆读写 + 工具调用）端到端；越权回归全绿。
+| 任务 | 当前口径 |
+|---|---|
+| P0-A 到 P0-E | 已在任务板 DONE，覆盖 orchestration await bug、前端 lint、demo/fallback 清理、危险默认值、CI 最小门禁 |
+| R2 | DONE：前端 lint/typecheck/build 本地可复现，CI build 门禁已补入 |
+| R3 | DONE：关键 E2E 冒烟包与 canvas run 持久化回归已补 |
+| R6 | DONE：发布/回滚 Runbook v1 已补 |
+| R7 | DONE：环境基线与 secret 注入说明已补 |
+| R8 | 本次刷新后转 REVIEW：对外口径一致性终检记录与当前任务板状态对齐 |
+| R9 | DONE：关键页面截图 / 验收记录已补齐 |
+| R10 | DONE：full-flow E2E selector 漂移已修正；R13 已承接并修复 Chat SSE 完成态阻断 |
+| R11 | DONE：npm audit / Vite chunk warning 风险已拆解；生产依赖 audit 为 0，全量 dev-build 工具链风险未清零 |
+| R12 | DONE：SQLite/Alembic `0007` 历史本地库漂移已诊断；fresh DB 迁移到当前 head `0005` 通过 |
+| R13 | DONE：Chat SSE 完成态 / fallback / 主区 runId 渲染已修复；本地 full-flow 9/9 通过 |
+| R14 | REVIEW：Vite chunk warning 已通过路由级懒加载拆包清除；最大 JS chunk 294.19 kB / gzip 96.09 kB，本地 full-flow 9/9 通过 |
+| R15 | REVIEW：任务板、delivery-report 与 R8 审计记录的状态 / 证据口径已同步 |
+| R16 | REVIEW：full-mode 演练前置清单已补齐，覆盖 secret、账号、端口、依赖服务、LLM 路径和 compose config 预检 |
+| R17 | REVIEW：PR 证据矩阵源数据已汇总为 R5 输入，不直接产出最终 PR 文案 |
 
-## Phase 2 — 工作流 + 自动化执行
+仍需闭环的发布准备项：
 
-- [ ] 工作流引擎（Temporal，lite 降级 Celery）+ 保留结构化 view model
-- [ ] 浏览器 agent（browser-use）
-- [ ] 桌面 agent（UI-TARS）
-- [ ] 编码 agent（OpenHands，保留 PR 交付 / 审批语义）
+- R4 目标环境演练与发布证据归档。
+- R5 PR 审查包组装与 reviewer 入口清理。
+- R8 对外口径一致性终检包等待 REVIEW 验收。
+- R17 PR 矩阵源数据包等待 REVIEW 验收。
 
-**验收**：一个含补偿/审批/回放的 workflow 跑通；三类执行 agent 各跑通一个真实任务。
+## 3. 进入 PR 审查前的最低条件
 
-## Phase 3 — 独有域 + 多模态
+- 远端 CI 当前候选全绿。
+- `apps/web` 前端 `lint`、`typecheck`、`build` 可复现。
+- 关键 E2E 冒烟证据可映射到发布检查表。
+- 发布/回滚 Runbook、环境基线、secret 注入说明可被 reviewer 找到。
+- 目标环境演练结果、异常和回滚/处置证据归档。
+- PR 描述包含风险摘要、验证矩阵、证据链接和 reviewer 关注点。
 
-- [ ] 短剧工厂移植（producer/storyboard/media/quality/prompt_compiler）
-- [ ] 媒体生成 = 云 AI 生成 API provider（LibLib/LibTV 风格：选模型/LoRA → 提交生成任务 → 轮询取结果；可插拔图像/视频 provider）+ faster-whisper(STT) + Piper(TTS)
-- [ ] 开源候选发现收敛（provider 去重 + 统一评分）
-- [ ] 插件 / 技能单内核 + Composio 工具后端
+## 4. 后续增强方向
 
-**验收**：一句话 brief → 短剧生产工作流草稿 → 审核导出；开源发现多源聚合打分可用。
+这些项目不阻塞当前 PR 审查准备，必须另建任务包推进：
 
-## Phase 4 — 前端 + 桌面
+- K8s/HA 与真实 secret manager / secretRef 演练。
+- 完整 full-flow E2E 与长稳压测。
+- 计费、审计、租户隔离的更大规模场景验证。
+- 桌面壳打包、签名和分发验证。
 
-- [ ] React18 + Vite + Tailwind 工作台（react-router 替自研 hash 路由）
-- [ ] 页面：对话/线程/任务/项目/短剧工厂(React Flow)/工作流/智能体/知识库/工具/数据/审计/自动化/设置
-- [ ] SSE 流式 + WebSocket 实时
-- [ ] Tauri 桌面壳
+## 5. 不可对外表述
 
-**验收**：前端全页面接真实后端；桌面应用可打包启动。
+在 R1/R4/R5 等发布准备证据闭环前，不应把当前仓库表述为：
 
-## Phase 5 — 企业硬化 + 计费 + 交付
-
-- [ ] Keycloak SSO（realm = 租户）+ OpenFGA + OPA
-- [ ] 防篡改审计链（HMAC 哈希链 + Postgres）
-- [ ] 计费 / 订阅 / 合作伙伴
-- [ ] 多租户隔离渗透测试；compose 交付 + 桌面打包 + 文档 + 迁移脚本
-
-**验收**：越权 / 跨租户测试全绿；`docker compose up` 全功能可用；桌面可分发。
+- 正式商用 GA。
+- 无需审查即可发布。
+- 已完成目标环境发布演练。
+- 已具备生产 secret manager / K8s secretRef 实际接入证据。

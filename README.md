@@ -4,6 +4,10 @@
 
 这是 X-Agent 的全新净重写版本。设计原则：不重复造轮子，把成熟能力（LLM 路由、记忆、可观测、沙箱、编排、SSO、授权、MCP）交给生产级开源组件，X-Agent 只保留并强化自己的差异化语义（工作流结构化视图、短剧工厂、开源候选发现、多租户审计黑板）。
 
+## 当前状态口径（2026-07-06）
+
+当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。项目主链可运行、功能版图完整，适合内部试点或受控私有部署；但尚未达到正式商用 GA，仍需远端 CI 全绿、目标环境演练、PR 审查包和发布签字。
+
 ## 架构总览
 
 ```
@@ -101,7 +105,7 @@ curl http://localhost:8000/ready
 - 若后台任务仍在执行，Run Console 会通过 `delivery.resume` 暴露最小续航指针；审批型工作流会暴露审批续跑指针。
 - 并行 worktree 开发时，可通过 `XAGENT_DEV_API_TARGET` 指向独立后端端口，再配合 `E2E_BASE_URL` 指向对应前端端口完成独立验收；例如前端 `4173` / 后端 `8100`。
 - `apps/web/vite.config.ts` 默认读取 `XAGENT_DEV_API_TARGET`，未设置时回退到 `http://localhost:8000`。
-- Playwright 使用 `E2E_BASE_URL` 指定前端地址，默认回退到 `http://localhost:3000`；full 模式验收账号可通过 `E2E_USERNAME` / `E2E_PASSWORD` 覆盖，未设置时默认回退到 `admin/admin`。
+- Playwright 使用 `E2E_BASE_URL` 指定前端地址，默认回退到 `http://localhost:3000`；full 模式验收账号必须通过 `E2E_USERNAME` / `E2E_PASSWORD` 显式提供。
 - 后端测试建议从 `apps/api` 目录运行，或先设置 `PYTHONPATH=apps/api`，避免在仓库根直接执行时出现 `ModuleNotFoundError: xagent`。
 - 详细部署与排障请看 [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md)。
 
@@ -119,19 +123,21 @@ curl http://localhost:8000/ready
 - `docs/coordination/`（多会话协作总控、handoff、report）
 - `docs/coordination/reports/delivery-report.md`（本轮交付报告）
 
-## 开发阶段
+## 历史阶段与当前收口
 
+Phase 0-5 描述功能骨架与历史建设路线，不等同于当前正式 GA 结论。
 
-- **Phase 0**（当前）：脚手架 + 单机可启动 + LLM/trace/向量 三链路打通
-- Phase 1：编排(LangGraph) + 记忆(Mem0) + MCP + 鉴权/租户隔离
-- Phase 2：工作流(Temporal) + 浏览器/桌面/编码三类执行 agent
-- Phase 3：短剧工厂 + 多模态 + 开源发现 + 插件单内核
-- Phase 4：React 前端 + Tauri 桌面
-- Phase 5：企业硬化 + 计费 + 交付
+- Phase 0：脚手架 + 单机可启动 + LLM/trace/向量三链路打通（历史已实现）
+- Phase 1：编排(LangGraph) + 记忆(Mem0) + MCP + 鉴权/租户隔离（历史已实现）
+- Phase 2：工作流(Temporal) + 浏览器/桌面/编码三类执行 agent（历史已实现）
+- Phase 3：短剧工厂 + 多模态 + 开源发现 + 插件单内核（历史已实现）
+- Phase 4：React 前端 + Tauri 桌面（历史已实现）
+- Phase 5：企业硬化 + 计费 + 交付骨架（历史已实现）
+- 当前收口：远端 CI、目标环境演练、PR 审查包、关键页面验收记录
 
-详见 `docs/ARCHITECTURE.md` 与 `docs/ROADMAP.md`。
+详见 `docs/ARCHITECTURE.md`、`docs/ROADMAP.md` 与 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`。
 
-> **接续开发请先读 [`docs/项目总览与开发指南.md`](docs/项目总览与开发指南.md)** —— 项目唯一权威入口（功能版图 / 架构 / 技术栈映射 / 开发约定 / 进度）。
+> **接续开发请先读 [`docs/项目总览与开发指南.md`](docs/项目总览与开发指南.md)** —— 功能版图 / 架构 / 技术栈映射 / 开发约定入口；当前发布状态以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。
 
 ## License
 

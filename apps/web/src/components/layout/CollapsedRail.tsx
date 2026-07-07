@@ -1,12 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { Bot, Film, MessageSquare, Plus, Search, Sparkles, Workflow } from "lucide-react";
+import { Bot, Code2, MessageSquare, Plus, Sparkles } from "lucide-react";
 
 const primaryItems = [
   { to: "/chat", label: "新建任务", icon: Plus },
-  { to: "/chat", label: "搜索", icon: Search },
   { to: "/settings?section=skills", label: "技能", icon: Sparkles },
-  { to: "/creative", label: "短剧工厂", icon: Film },
-  { to: "/workflows", label: "工作流", icon: Workflow },
+  { to: "/creative/canvas", label: "专业模式", icon: Code2 },
 ];
 
 const workspaceItems = [
@@ -16,9 +14,9 @@ const workspaceItems = [
 
 export default function CollapsedRail() {
   return (
-    <aside className="flex h-screen w-14 shrink-0 flex-col items-center border-r border-neutral-800 bg-neutral-950 py-3 text-neutral-300">
-      <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 text-lg font-black text-white shadow-sm">
-        X
+    <aside className="flex h-screen w-14 shrink-0 flex-col items-center border-r border-white/[0.07] bg-black/48 py-3 text-neutral-300 backdrop-blur-2xl">
+      <div className="xagent-brand-logo mb-5 h-9 w-9 rounded-xl">
+        <img src="/assets/xiongbao-logo.png" alt="熊宝智能体系统" />
       </div>
 
       <nav className="flex w-full flex-col items-center gap-1 px-2">
@@ -27,7 +25,7 @@ export default function CollapsedRail() {
         ))}
       </nav>
 
-      <div className="my-4 h-px w-8 bg-neutral-800" />
+      <div className="my-4 h-px w-8 bg-white/[0.07]" />
 
       <nav className="flex w-full flex-1 flex-col items-center gap-1 px-2">
         {workspaceItems.map((item) => (
@@ -46,8 +44,8 @@ function RailLink({ to, label, icon: Icon }: { to: string; label: string; icon: 
       className={({ isActive }) =>
         `flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
           isActive
-            ? "bg-neutral-800 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-            : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
+            ? "bg-[#21180c] text-[#f2d99c] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            : "text-neutral-500 hover:bg-white/[0.055] hover:text-white"
         }`
       }
     >

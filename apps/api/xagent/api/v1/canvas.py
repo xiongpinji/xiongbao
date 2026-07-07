@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.core.workflow import (
     ApprovalGate,
@@ -34,8 +35,12 @@ from xagent.domains.creative_studio.canvas.quality import (
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
+from xagent.infra.db import get_session
+from xagent.infra.logging import get_logger
+from xagent.infra.repos.workflow import persist_workflow_run
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
+logger = get_logger("xagent.api.canvas")
 
 _canvases: dict[str, ProductionCanvas] = {}
 _canvas_tenants: dict[str, str] = {}
@@ -55,6 +60,42 @@ def _persist_snapshot() -> None:
     except OSError:
         # 持久化是 best-effort，失败不影响主流程
         pass
+
+
+def _is_workflow_persistence_schema_mismatch(exc: Exception) -> bool:
+    parts = [str(exc)]
+    for attr in ("orig", "statement", "params"):
+        value = getattr(exc, attr, None)
+        if value is not None:
+            parts.append(str(value))
+    lowered = " ".join(parts).lower()
+    return "workflow_runs" in lowered and any(
+        token in lowered
+        for token in (
+            "no such table",
+            "does not exist",
+            "no such column",
+            "unknown column",
+            "undefined column",
+            "has no column named",
+        )
+    )
+
+
+async def _persist_canvas_workflow_view(session: AsyncSession, workflow: dict) -> None:
+    try:
+        await persist_workflow_run(session, workflow)
+        await session.commit()
+    except Exception as exc:
+        await session.rollback()
+        if _is_workflow_persistence_schema_mismatch(exc):
+            logger.warning(
+                "canvas_workflow_view_persist_skipped",
+                run_id=workflow.get("run_id"),
+                error=str(exc),
+            )
+            return
+        raise
 
 
 def _load_snapshot_once() -> None:
@@ -430,6 +471,7 @@ async def save_layout(
 async def run_canvas(
     canvas_id: str,
     principal: Principal = Depends(require_permission("creative", "execute")),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     canvas = _get(canvas_id, principal)
     if not canvas.nodes:
@@ -441,6 +483,7 @@ async def run_canvas(
     run = await engine.execute(run.run_id, principal)
     _persist_snapshot()
     workflow = run.to_view()
+    await _persist_canvas_workflow_view(session, workflow)
     return {
         "canvas_id": canvas.canvas_id,
         "workflow_run_id": run.run_id,

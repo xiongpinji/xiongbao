@@ -8,34 +8,45 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Plus, Play, Trash2 } from "lucide-react";
 import { runWorkflow, type WorkflowView } from "../api";
+import ConversationalCommand from "../components/chat/ConversationalCommand";
 import { useShellActions } from "../shell/useShellStore";
 
 interface Step { id: string; name: string; role?: string; goal: string; }
 
+const workflowNodeStyle = {
+  background: "#18181b",
+  border: "1px solid #52525b",
+  color: "#f4f4f5",
+  borderRadius: 14,
+  padding: 12,
+  boxShadow: "0 18px 40px rgba(0,0,0,0.24)",
+};
+
 export default function WorkflowsPage() {
   const navigate = useNavigate();
   const { syncRunTask } = useShellActions();
-  const [name, setName] = useState("demo");
+  const [name, setName] = useState("新工作流");
   const [view, setView] = useState<WorkflowView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState([
-    { id: "s1", type: "input", position: { x: 100, y: 100 }, data: { label: "步骤1: 打招呼" } },
+    { id: "s1", type: "input", position: { x: 100, y: 100 }, data: { label: "步骤1" }, style: workflowNodeStyle },
   ]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [steps, setSteps] = useState<Step[]>([{ id: "s1", name: "打招呼", goal: "你好" }]);
+  const [steps, setSteps] = useState<Step[]>([{ id: "s1", name: "步骤1", goal: "" }]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges(eds => addEdge({ ...conn, markerEnd: { type: MarkerType.ArrowClosed }, animated: true }, eds));
   }, [setEdges]);
 
-  function addStep() {
-    const id = `s${steps.length + 1}`;
-    setSteps([...steps, { id, name: `步骤${steps.length + 1}`, goal: "" }]);
+  function addStep(goal = "") {
+    const nextIndex = steps.length + 1;
+    const id = `s${nextIndex}`;
+    setSteps([...steps, { id, name: `步骤${nextIndex}`, goal }]);
     setNodes(ns => [...ns, {
       id, position: { x: 100 + steps.length * 200, y: 100 },
-      data: { label: `步骤${steps.length + 1}` },
-      style: { background: "#f0fdf4", border: "1px solid #86efac" },
+      data: { label: goal ? `步骤${nextIndex}: ${goal.slice(0, 12)}` : `步骤${nextIndex}` },
+      style: workflowNodeStyle,
     }]);
   }
 
@@ -60,50 +71,68 @@ export default function WorkflowsPage() {
 
   return (
     <ReactFlowProvider>
-      <div className="p-6 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-xl font-semibold flex-1">工作流</h1>
-          <input className="border rounded px-2 py-1 text-sm w-32" value={name}
-            onChange={e => setName(e.target.value)} />
-          <button onClick={addStep} className="px-3 py-1.5 bg-slate-700 text-white rounded text-sm flex items-center gap-1">
-            <Plus size={14} /> 添加步骤
-          </button>
-          <button onClick={run} disabled={loading}
-            className="px-4 py-1.5 bg-brand-600 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
-            <Play size={14} /> {loading ? "执行中..." : "创建并执行"}
-          </button>
+      <div className="flex h-full flex-col bg-transparent p-4 text-neutral-100 md:p-6">
+        <div className="mb-4 flex flex-col gap-3 border-b border-white/[0.07] pb-4 md:flex-row md:items-center">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold text-white">工作流</h1>
+            <p className="mt-1 text-xs text-neutral-500">在专业模式中维护步骤、依赖和执行结果。</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] md:w-auto md:min-w-[520px]">
+            <input className="field h-10 rounded-xl py-1.5" value={name}
+              onChange={e => setName(e.target.value)} />
+            <button onClick={() => addStep()} className="xagent-chip flex h-10 items-center justify-center gap-1 rounded-xl px-3">
+              <Plus size={14} /> 添加步骤
+            </button>
+            <button onClick={run} disabled={loading}
+              className="gold-button flex h-10 items-center justify-center gap-1 px-4">
+              <Play size={14} /> {loading ? "执行中..." : "创建并执行"}
+            </button>
+          </div>
         </div>
-        <div className="mb-3 space-y-2 max-h-40 overflow-auto">
+        <ConversationalCommand
+          compact
+          className="mb-4"
+          title="工作流编排助手"
+          context="专业模式 / 工作流"
+          placeholder="一句话描述要新增的步骤、审批或执行目标..."
+          initialAssistantMessage="你说一句目标，我会把它写入工作流步骤，并同步到画布节点。"
+          suggestions={["补一个质量验收步骤", "增加人工审批节点", "拆分成生成与校验两步"]}
+          onSubmit={(value) => {
+            addStep(value);
+            return `已把「${value}」加入工作流步骤。你可以继续补充依赖关系，或直接创建并执行。`;
+          }}
+        />
+        <div className="mb-3 max-h-40 space-y-2 overflow-auto">
           {steps.map(s => (
-            <div key={s.id} className="flex gap-2 items-center">
-              <input className="border rounded px-2 py-1 text-sm w-32" placeholder="步骤名"
+            <div key={s.id} className="grid gap-2 sm:grid-cols-[144px_minmax(0,1fr)_auto] sm:items-center">
+              <input className="field h-9 rounded-xl py-1.5" placeholder="步骤名"
                 value={s.name} onChange={e => setSteps(ss => ss.map(x => x.id === s.id ? { ...x, name: e.target.value } : x))} />
-              <input className="flex-1 border rounded px-2 py-1 text-sm" placeholder="目标"
+              <input className="field h-9 flex-1 rounded-xl py-1.5" placeholder="目标"
                 value={s.goal} onChange={e => setSteps(ss => ss.map(x => x.id === s.id ? { ...x, goal: e.target.value } : x))} />
-              <button onClick={() => removeStep(s.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+              <button onClick={() => removeStep(s.id)} className="flex h-9 items-center justify-center rounded-xl text-red-400 hover:bg-red-400/10 hover:text-red-300"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>
-        {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
+        {error && <div className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
         {view && (
-          <div className="mb-3 bg-white border rounded-md p-3">
-            <div className="text-sm font-medium mb-2">状态：<span className="text-brand-700">{view.status}</span></div>
+          <div className="xagent-surface-subtle mb-3 p-3">
+            <div className="mb-2 text-sm font-medium text-white">状态：<span className="text-blue-300">{view.status}</span></div>
             <div className="space-y-1">
               {view.steps.map(st => (
-                <div key={st.id} className="text-sm flex items-center gap-2">
+                <div key={st.id} className="flex items-center gap-2 text-sm text-neutral-300">
                   <span className="w-2 h-2 rounded-full" style={{ background: st.status === "succeeded" ? "#10b981" : st.status === "failed" ? "#ef4444" : "#f59e0b" }} />
-                  <span>{st.name}</span><span className="text-xs text-slate-500">({st.status})</span>
-                  {st.has_approval && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 rounded">审批</span>}
-                  {st.has_compensation && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 rounded">可补偿</span>}
+                  <span>{st.name}</span><span className="text-xs text-neutral-500">({st.status})</span>
+                  {st.has_approval && <span className="rounded bg-amber-400/10 px-1.5 text-xs text-amber-200">审批</span>}
+                  {st.has_compensation && <span className="rounded bg-sky-400/10 px-1.5 text-xs text-sky-200">可补偿</span>}
                 </div>
               ))}
             </div>
           </div>
         )}
-        <div className="flex-1 border rounded-md bg-white">
-          <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+        <div className="xagent-surface-subtle min-h-[320px] flex-1 overflow-hidden">
+          <ReactFlow className="xagent-dark-flow" nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
             onConnect={onConnect} fitView minZoom={0.2} maxZoom={3}>
-            <Background /><Controls /><MiniMap />
+            <Background color="#3f3f46" gap={28} /><Controls /><MiniMap nodeColor="#52525b" maskColor="rgba(9,9,11,0.72)" />
           </ReactFlow>
         </div>
       </div>

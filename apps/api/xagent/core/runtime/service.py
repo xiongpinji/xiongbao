@@ -13,7 +13,7 @@ from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.repos.evidence import load_evidence_records
-from xagent.infra.repos.workflow import load_workflow_runs
+from xagent.infra.repos.workflow import load_workflow_run_by_id, load_workflow_runs
 
 
 def _is_schema_mismatch(exc: Exception, table_name: str) -> bool:
@@ -123,9 +123,33 @@ def _ensure_validation_contract(validation: dict[str, Any] | None) -> dict[str, 
     return merged
 
 
+def _normalize_failure_bundle(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    normalized = deepcopy(value)
+    if "code" in normalized and normalized.get("code") is not None:
+        normalized["code"] = str(normalized.get("code") or "").strip()
+    if "source" in normalized and normalized.get("source") is not None:
+        normalized["source"] = str(normalized.get("source") or "").strip()
+    if "message" in normalized and normalized.get("message") is not None:
+        normalized["message"] = str(normalized.get("message") or "").strip()
+    if "blocking_step" in normalized and normalized.get("blocking_step") is not None:
+        normalized["blocking_step"] = str(normalized.get("blocking_step") or "").strip()
+    if "step_name" in normalized and normalized.get("step_name") is not None:
+        normalized["step_name"] = str(normalized.get("step_name") or "").strip() or None
+    if "recommended_action" in normalized and normalized.get("recommended_action") is not None:
+        normalized["recommended_action"] = (
+            str(normalized.get("recommended_action") or "").strip() or None
+        )
+    if "retryable" in normalized:
+        normalized["retryable"] = bool(normalized.get("retryable"))
+    return normalized
+
+
 def _ensure_delivery_contract(delivery: dict[str, Any] | None) -> dict[str, Any]:
     merged = deepcopy(delivery) if isinstance(delivery, dict) else {}
     merged["risks"] = _normalize_risks(merged.get("risks"))
+    merged["failure"] = _normalize_failure_bundle(merged.get("failure"))
     return merged
 
 
@@ -265,6 +289,10 @@ async def _load_workflow_view(
     run_id: str,
     tenant_id: str,
 ) -> dict[str, Any] | None:
+    exact = await load_workflow_run_by_id(session, tenant_id, run_id)
+    if exact is not None:
+        return exact
+
     runs = await load_workflow_runs(session, tenant_id, limit=200)
     for view in runs:
         if view.get("run_id") == run_id:

@@ -1,23 +1,38 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { getToken } from "./api/client";
+import { lazy, Suspense } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { isLoggedIn } from "./api/client";
 import AppShell from "./components/layout/AppShell";
-import ChatPage from "./pages/ChatPage";
-import AgentsPage from "./pages/AgentsPage";
-import WorkflowsPage from "./pages/WorkflowsPage";
-import CreativeStudioPage from "./pages/CreativeStudioPage";
-import CanvasPage from "./pages/CanvasPage";
-import EditorPage from "./pages/EditorPage";
-import OpenSourcePage from "./pages/OpenSourcePage";
-import MemoryPage from "./pages/MemoryPage";
 import LoginPage from "./pages/LoginPage";
-import SettingsPage from "./pages/SettingsPage";
-import RunPage from "./pages/RunPage";
+
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const AgentsPage = lazy(() => import("./pages/AgentsPage"));
+const ProfessionalModePage = lazy(() => import("./pages/ProfessionalModePage"));
+const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
+const EditorPage = lazy(() => import("./pages/EditorPage"));
+const OpenSourcePage = lazy(() => import("./pages/OpenSourcePage"));
+const MemoryPage = lazy(() => import("./pages/MemoryPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const RunPage = lazy(() => import("./pages/RunPage"));
+
+function PageFallback() {
+  return (
+    <div className="flex min-h-[320px] items-center justify-center text-sm text-neutral-500">
+      加载中...
+    </div>
+  );
+}
+
+function ProfessionalRedirect({ mode }: { mode: "drama" | "workflow" }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("mode", mode);
+  return <Navigate to={`/professional?${params.toString()}${location.hash}`} replace />;
+}
 
 export default function App() {
-  // lite 模式后端允许匿名；full 模式需登录。
-  const loggedIn = !!getToken();
+  const location = useLocation();
+  const loggedIn = isLoggedIn();
 
-  // 未登录时只显示登录页（lite 模式后端允许匿名，用户也可跳过）
   if (!loggedIn) {
     return (
       <Routes>
@@ -27,23 +42,38 @@ export default function App() {
     );
   }
 
+  if (location.pathname === "/creative/canvas") {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/creative/canvas" element={<CreativeStudioPage variant="canvas" />} />
+          <Route path="*" element={<Navigate to="/creative/canvas" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   return (
     <AppShell>
-      <Routes>
-        <Route path="/" element={<Navigate to="/chat" replace />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/agents" element={<AgentsPage />} />
-        <Route path="/workflows" element={<WorkflowsPage />} />
-        <Route path="/creative" element={<CreativeStudioPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/runs/:runId" element={<RunPage />} />
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/chat" replace />} />
+          <Route path="/home" element={<ChatPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/professional" element={<ProfessionalModePage />} />
+          <Route path="/workflows" element={<ProfessionalRedirect mode="workflow" />} />
+          <Route path="/creative" element={<Navigate to="/creative/canvas" replace />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/runs/:runId" element={<RunPage />} />
 
-        {/* 兼容旧入口：不再显示在主导航中。 */}
-        <Route path="/canvas" element={<CanvasPage />} />
-        <Route path="/editor" element={<EditorPage />} />
-        <Route path="/open-source" element={<OpenSourcePage />} />
-        <Route path="/memory" element={<MemoryPage />} />
-      </Routes>
+          {/* 兼容旧入口：不再显示在主导航中。 */}
+          <Route path="/canvas" element={<Navigate to="/creative/canvas" replace />} />
+          <Route path="/editor" element={<EditorPage />} />
+          <Route path="/open-source" element={<OpenSourcePage />} />
+          <Route path="/memory" element={<MemoryPage />} />
+        </Routes>
+      </Suspense>
     </AppShell>
   );
 }

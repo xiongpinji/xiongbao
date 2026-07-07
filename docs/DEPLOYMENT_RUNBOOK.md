@@ -2,6 +2,8 @@
 
 > 适用：full 模式单机生产 / 试点部署。lite 模式见根 README。
 > 企业 K8s / HA 为后续工作，本文档暂不覆盖。
+> 发布执行、DB 迁移签字、回滚与 smoke 证据归档请使用 `docs/RELEASE_RUNBOOK_V1.md`。
+> dev / staging / prod 配置基线与 secret 注入说明见 `docs/ENVIRONMENT_BASELINE_V1.md`。
 
 ## 1. 前置
 
@@ -15,7 +17,7 @@
 
 - `XAGENT_DEV_API_TARGET`：前端 dev server 代理到哪个后端，默认 `http://localhost:8000`。
 - `E2E_BASE_URL`：Playwright 对哪个前端地址做验收，默认 `http://localhost:3000`。
-- `E2E_USERNAME` / `E2E_PASSWORD`：full 模式 Playwright 验收账号；未设置时回退到 `admin/admin`。
+- `E2E_USERNAME` / `E2E_PASSWORD`：full 模式 Playwright 验收账号；必须显式设置，不提供默认账号回退。
 - 并行 worktree 开发时，可以把前端 / 后端分别切到独立端口，例如 `E2E_BASE_URL=http://127.0.0.1:4173`、`XAGENT_DEV_API_TARGET=http://127.0.0.1:8100`。
 - 后端测试建议从 `apps/api` 目录运行；如果必须从仓库根运行，请先设置 `PYTHONPATH=apps/api`，避免 `ModuleNotFoundError: xagent`。
 
@@ -30,6 +32,7 @@ cd ../../deploy/compose
 cp .env.example .env
 # 编辑 .env：
 #   - 生产必填 XAGENT_SECURITY__JWT_SECRET（长随机串）
+#   - 生产必填 LANGFUSE_NEXTAUTH_SECRET / LANGFUSE_SALT / LANGFUSE_INIT_USER_PASSWORD
 #   - 若使用 LiteLLM，填写 XAGENT_LLM__PROXY_URL / XAGENT_LLM__PROXY_API_KEY
 #   - 若使用宿主机 Ollama，保持默认 host.docker.internal 配置即可
 #   - 并行 worktree 验收时，可配合前端 / 后端独立端口：
@@ -103,17 +106,17 @@ XAGENT_MODE=full xagent serve
 ## 6. 登录与鉴权
 
 - lite：匿名可用（演示）。默认 admin / admin（内置）。
-- full / enterprise：`require_auth` 自动开启。用 `POST /api/v1/auth/login` 换 token，前端在「设置」页填入，或使用 `Authorization: Bearer <token>`。
+- full / enterprise：`require_auth` 自动开启，且不会内置默认 `admin/admin`。需要先接 Keycloak / DB 用户源或显式初始化管理员，再用 `POST /api/v1/auth/login` 换 token，前端在「设置」页填入，或使用 `Authorization: Bearer <token>`。
 - 接 Keycloak：设置 `XAGENT_SECURITY__OIDC_JWKS_URL` + `OIDC_ISSUER`，启用 RS256 验签（OIDC 回调端点 `/api/v1/auth/oidc/callback`）。
 
 ## 7. 安全检查清单（上线前）
 
 - [ ] `XAGENT_SECURITY__JWT_SECRET` 已改为长随机串
 - [ ] Langfuse 的 `NEXTAUTH_SECRET` / `SALT` 已改为生产随机值
-- [ ] Langfuse 初始管理员密码（默认 `admin12345`）已修改或禁用初始化默认账号
+- [ ] Langfuse 初始管理员密码已通过 `LANGFUSE_INIT_USER_PASSWORD` 显式设置为强密码
 - [ ] `XAGENT_CORS_ORIGINS` 不含 `*`
 - [ ] `require_auth` 未被显式关闭
-- [ ] 默认 admin / admin 已改密（`UserStore` 或接 Keycloak）
+- [ ] full / enterprise 管理员来自显式用户源（Keycloak / DB / 初始化流程），不存在默认 admin / admin
 - [ ] `python scripts/license_check.py` 通过（无 AGPL / GPL / ELv2）
 - [ ] 数据库 / Redis / Qdrant 不直接公网暴露（经 Nginx / 网关）
 - [ ] HTTPS（Nginx 终止 TLS）
