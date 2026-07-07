@@ -317,6 +317,56 @@ async def test_warmup_ollama_model_returns_failure_detail(monkeypatch: pytest.Mo
         warmup_wait_timeout_seconds=0,
     )
     result = await warmup_ollama_model(cfg)
+
     assert result.ok is False
     assert result.skipped is False
     assert "ollama unreachable" in result.detail
+
+
+@pytest.mark.asyncio
+async def test_warmup_ollama_model_zero_wait_budget_still_makes_one_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timeouts: list[float] = []
+    attempts = {"count": 0}
+    sleeps: list[float] = []
+
+    class _SingleAttemptClient:
+        def __init__(self, *, timeout):
+            timeouts.append(timeout.connect)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str):
+            attempts["count"] += 1
+            raise RuntimeError("ollama unreachable")
+
+    async def _fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **kwargs: _SingleAttemptClient(**kwargs),
+    )
+    monkeypatch.setattr("xagent.scripts.ollama_warmup.asyncio.sleep", _fake_sleep)
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen3:4b",
+        warmup_enabled=True,
+        request_timeout_seconds=60,
+        warmup_wait_timeout_seconds=0,
+        warmup_poll_interval_seconds=1,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result.ok is False
+    assert result.skipped is False
+    assert "ollama unreachable" in result.detail
+    assert attempts["count"] == 1
+    assert timeouts == [60]
+    assert sleeps == []
