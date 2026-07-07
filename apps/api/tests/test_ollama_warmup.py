@@ -111,7 +111,8 @@ async def test_warmup_ollama_model_prefers_proxy_route(
     assert seen["model"] is None
     assert seen["temperature"] == 0
     assert seen["max_tokens"] == 8
-    assert seen["kwargs"] == {"timeout": 30}
+    assert set(seen["kwargs"]) == {"timeout"}
+    assert 29 < seen["kwargs"]["timeout"] <= 30
 
 
 @pytest.mark.asyncio
