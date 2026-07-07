@@ -128,7 +128,11 @@ async def test_warmup_ollama_model_uses_proxy_model_even_when_ollama_base_url_is
             "usage": {},
         }
 
-    monkeypatch.setitem(sys.modules, "litellm", types.SimpleNamespace(acompletion=_fake_acompletion))
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        types.SimpleNamespace(acompletion=_fake_acompletion),
+    )
     cfg = LLMSettings(
         proxy_url="http://localhost:4000",
         proxy_api_key="sk-proxy",
