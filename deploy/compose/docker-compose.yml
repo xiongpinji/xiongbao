@@ -157,8 +157,8 @@ services:
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
       - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://localhost:3000"]}
     command: >
-      sh -c "python -m xagent.cli warmup || true &&
-             python -m alembic upgrade head &&
+      sh -c "python -m alembic upgrade head &&
+             (python -m xagent.cli warmup || true) &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
 
   # X-Agent Celery worker（后台长任务）
@@ -189,8 +189,8 @@ services:
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
     command: >
-      sh -c "python -m xagent.cli warmup || true &&
-             celery -A xagent.worker.celery_app worker --loglevel=info"
+      sh -c "(python -m xagent.cli warmup || true) &&
+             exec celery -A xagent.worker.celery_app worker --loglevel=info"
 
   # X-Agent 前端（nginx 托管 + 反代 api）
   web:
