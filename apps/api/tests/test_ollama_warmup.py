@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from xagent.infra.settings import LLMSettings
 from xagent.scripts.ollama_warmup import WarmupResult, warmup_ollama_model
 
@@ -22,7 +21,9 @@ class _FakeResponse:
 
 
 @pytest.mark.asyncio
-async def test_warmup_ollama_model_posts_minimal_chat(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_warmup_ollama_model_posts_minimal_chat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen: dict = {}
 
     class _FakeAsyncClient:
@@ -41,7 +42,10 @@ async def test_warmup_ollama_model_posts_minimal_chat(monkeypatch: pytest.Monkey
             seen["payload"] = json
             return _FakeResponse()
 
-    monkeypatch.setattr("xagent.scripts.ollama_warmup.httpx.AsyncClient", lambda **_: _FakeAsyncClient())
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **_: _FakeAsyncClient(),
+    )
     cfg = LLMSettings(
         ollama_base_url="http://host.docker.internal:11434",
         ollama_model="qwen2.5vl:7b",
@@ -64,6 +68,133 @@ async def test_warmup_ollama_model_posts_minimal_chat(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
+async def test_warmup_ollama_model_prefers_proxy_route(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict = {}
+
+    async def _fake_complete(
+        self,
+        messages,
+        *,
+        model=None,
+        temperature=0.7,
+        max_tokens=None,
+        **kwargs,
+    ):
+        seen["messages"] = messages
+        seen["model"] = model
+        seen["temperature"] = temperature
+        seen["max_tokens"] = max_tokens
+        seen["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setattr("xagent.scripts.ollama_warmup.LiteLLMClient.complete", _fake_complete)
+    cfg = LLMSettings(
+        proxy_url="http://localhost:4000",
+        proxy_api_key="sk-proxy",
+        default_model="qwen3:4b",
+        warmup_enabled=True,
+        warmup_prompt="回复一个字：好",
+        warmup_max_tokens=8,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result == WarmupResult(ok=True, skipped=False, detail="ok")
+    assert [message.role for message in seen["messages"]] == ["user"]
+    assert [message.content for message in seen["messages"]] == ["回复一个字：好"]
+    assert seen["model"] is None
+    assert seen["temperature"] == 0
+    assert seen["max_tokens"] == 8
+    assert seen["kwargs"] == {}
+
+
+@pytest.mark.asyncio
+async def test_warmup_ollama_model_normalizes_ollama_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict = {}
+
+    class _FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str):
+            seen["tags_url"] = url
+            return _FakeResponse(payload={"models": [{"name": "qwen3:4b"}]})
+
+        async def post(self, url: str, json: dict):
+            seen["chat_url"] = url
+            seen["payload"] = json
+            return _FakeResponse()
+
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **_: _FakeAsyncClient(),
+    )
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        default_model="ollama/qwen3:4b",
+        warmup_enabled=True,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result == WarmupResult(ok=True, skipped=False, detail="ok")
+    assert seen["payload"]["model"] == "qwen3:4b"
+
+
+@pytest.mark.asyncio
+async def test_warmup_ollama_model_retries_within_wait_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = {"count": 0}
+    sleeps: list[float] = []
+
+    class _FlakyClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str):
+            attempts["count"] += 1
+            if attempts["count"] == 1:
+                raise RuntimeError("ollama unreachable")
+            return _FakeResponse(payload={"models": [{"name": "qwen3:4b"}]})
+
+        async def post(self, url: str, json: dict):
+            return _FakeResponse()
+
+    async def _fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **_: _FlakyClient(),
+    )
+    monkeypatch.setattr("xagent.scripts.ollama_warmup.asyncio.sleep", _fake_sleep)
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen3:4b",
+        warmup_enabled=True,
+        warmup_wait_timeout_seconds=5,
+        warmup_poll_interval_seconds=0.25,
+    )
+
+    result = await warmup_ollama_model(cfg)
+
+    assert result == WarmupResult(ok=True, skipped=False, detail="ok")
+    assert attempts["count"] == 2
+    assert sleeps == [0.25]
+
+
+@pytest.mark.asyncio
 async def test_warmup_ollama_model_skips_when_disabled() -> None:
     cfg = LLMSettings(warmup_enabled=False)
     result = await warmup_ollama_model(cfg)
@@ -82,8 +213,19 @@ async def test_warmup_ollama_model_returns_failure_detail(monkeypatch: pytest.Mo
         async def get(self, url: str):
             raise RuntimeError("ollama unreachable")
 
-    monkeypatch.setattr("xagent.scripts.ollama_warmup.httpx.AsyncClient", lambda **_: _BoomClient())
-    cfg = LLMSettings(ollama_base_url="http://host.docker.internal:11434", warmup_enabled=True)
+    async def _fake_sleep(seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "xagent.scripts.ollama_warmup.httpx.AsyncClient",
+        lambda **_: _BoomClient(),
+    )
+    monkeypatch.setattr("xagent.scripts.ollama_warmup.asyncio.sleep", _fake_sleep)
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        warmup_enabled=True,
+        warmup_wait_timeout_seconds=0,
+    )
     result = await warmup_ollama_model(cfg)
     assert result.ok is False
     assert result.skipped is False
