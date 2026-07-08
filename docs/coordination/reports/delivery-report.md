@@ -22,6 +22,41 @@
 
 ---
 
+### [R29] 候选冻结与 CI 绑定
+
+- 交付人：Claude Code
+- 日期：2026-07-07
+- 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
+- 变更摘要：
+  - 新增 `docs/coordination/reports/R29_CANDIDATE_FREEZE_BINDING.md`，记录最小可送审候选的 branch / commit / 远端 CI 绑定事实。
+  - 已创建候选分支 `candidate/min-send-review-20260707-claude`，并生成候选提交 `1c29e5316a43f403e462cdaacf5c271f2553f23b`。
+  - 已推送候选分支到远端并触发 GitHub Actions `CI` workflow，run id 为 `28838799599`。
+  - 后续已补充记录：该 run 已进入终态并为 `success`；当前没有 PR，R4 / R5 仍未闭环。
+- 验证命令：
+  - `git -C "xagent" rev-parse HEAD`
+  - `git -C "xagent" status --short --branch`
+  - `git -C "xagent" push -u origin "candidate/min-send-review-20260707-claude"`
+  - `gh pr view "candidate/min-send-review-20260707-claude" --json ...`
+  - `gh workflow run CI -R xiongpinji/xiongbao --ref candidate/min-send-review-20260707-claude`
+  - `gh run list -R xiongpinji/xiongbao --branch candidate/min-send-review-20260707-claude --limit 5 --json ...`
+- 验证结果：
+  - `HEAD = 1c29e5316a43f403e462cdaacf5c271f2553f23b`。
+  - 候选分支已成功推送并建立 upstream：`origin/candidate/min-send-review-20260707-claude`。
+  - `gh pr view` 返回：当前候选分支尚无 PR。
+  - 已成功触发 `CI` workflow；run `28838799599` 绑定到该 branch/sha，最终状态为 `completed / success`。
+  - 当前工作树仍保留默认 NO / Exclude 项，说明本次确实是“最小候选冻结”，而非全量工作树打包。
+- Reviewer 关注点：
+  - 确认 R29 记录的是“候选已冻结并获得对应 CI success”，而不是把 R4 完成或 R5 可签发写成已完成。
+  - 确认候选分支、提交 SHA、CI run id 三者已形成绑定关系。
+  - 确认当前无 PR，后续若进入 review 流程需要单独创建。
+- 剩余风险：
+  - PR 尚未创建。
+  - R4 / R5 gate 仍未解除。
+- 关联提交 / PR：候选提交 `1c29e5316a43f403e462cdaacf5c271f2553f23b`；PR 未创建
+- 证据：`docs/coordination/reports/R29_CANDIDATE_FREEZE_BINDING.md`；GitHub Actions run `28838799599`
+
+---
+
 ### [R28] 候选冻结前执行检查单
 
 - 交付人：Claude Code
