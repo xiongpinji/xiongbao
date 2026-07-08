@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import ForeignKeyConstraint, UniqueConstraint
+from xagent.core.spine.models import GoalStatus, SpinePhase
+from xagent.core.spine.service import create_goal, decompose_goal
 from xagent.infra.models import DeliveryTaskORM, GoalORM, InitiativeORM, ReleaseRecordORM
 
 EXPECTED_SPINE_TABLES = {
@@ -111,6 +113,53 @@ def _inspected_foreign_key_signatures(
         )
         for foreign_key in inspector.get_foreign_keys(table_name)
     }
+
+
+
+def test_create_goal_defaults_to_planning_phase() -> None:
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    assert goal.phase is SpinePhase.planning
+    assert goal.status is GoalStatus.pending
+    assert goal.title == "Build auto-delivery spine"
+
+
+
+def test_decompose_goal_creates_initiatives_and_ready_tasks() -> None:
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    initiatives, tasks = decompose_goal(goal)
+    assert [item.title for item in initiatives] == [
+        "Goal / Taskboard / Session Core",
+        "Execution Environment Orchestrator",
+        "PR / Review / Release Packaging Core",
+        "Deploy / Verify / Recover Core",
+        "Control / Policy / Safety Core",
+        "Evidence / Archive / Continuous Learning Core",
+    ]
+    assert all(task.status == "ready" for task in tasks)
+
+
+
+def test_spine_package_exports_core_symbols() -> None:
+    import xagent.core.spine as spine
+
+    assert spine.SpinePhase is SpinePhase
+    assert spine.GoalStatus is GoalStatus
+    assert spine.Goal.__name__ == "Goal"
+    assert spine.Initiative.__name__ == "Initiative"
+    assert spine.DeliveryTask.__name__ == "DeliveryTask"
+    assert spine.INITIATIVE_BLUEPRINTS[0] == "Goal / Taskboard / Session Core"
+    assert spine.create_goal is create_goal
+    assert spine.decompose_goal is decompose_goal
 
 
 
