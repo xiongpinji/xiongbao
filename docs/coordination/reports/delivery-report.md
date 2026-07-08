@@ -22,34 +22,34 @@
 
 ---
 
-### [R33] 最终签字记录块（待 Owner 确认）
+### [R33] 最终签字记录块（Owner 已确认）
 
-- 交付人：Claude Code
+- 交付人：Claude Code（基于 owner `canqu` 明确授权代为执行）
 - 日期：2026-07-08
 - 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
 - 变更摘要：
-  - 新增一份可直接落入发布记录的最终签字输入块，覆盖版本、环境、负责人、TL/QA/DevOps/Owner、最终结论复选框与备注区。
-  - 保持“待 Owner 确认”边界：本块不预先勾选任何最终结论，只把当前最终候选、远端全绿 CI、R4 current-machine full-mode 等价环境实跑与交付边界写成可签字依据。
-  - 本块适用于当前单人交付模式；若后续转入客户现场或外部团队，可在此基础上替换联系人与环境字段。
+  - 将原“待 Owner 确认”的最终签字输入块转换为已确认版本：owner 已明确授权代为完成最终签字，结论选定为“正式商用可交付”。
+  - 签字依据更新到当前最新候选与最新全绿 CI：候选 HEAD `c175201cdee1026d89be8d96b93c3f6bfa0f1739`，远端 CI run `28921940625` 全绿。
+  - 保持当前交付边界不变：当前机器 / 单机 Docker Compose `full` 模式 / 单人交付模式；不自动外推到 K8s / HA / 多机 / 客户现场异构环境。
 - 验证命令：
-  - 交叉核对 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
-  - 交叉核对 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`
-  - 交叉核对 `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
-  - `gh run view 28919902142 --repo xiongpinji/xiongbao --json conclusion,headSha`
+  - `gh run view 28921940625 --repo xiongpinji/xiongbao --json conclusion,headSha,jobs`
+  - `gh pr view 7 --repo xiongpinji/xiongbao --json headRefOid,url`
   - `git rev-parse HEAD`
+  - 交叉核对 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`
 - 验证结果：
-  - 待签字块已写入，且未提前勾选“正式商用可交付 / 可内部试点 / 不可发布”任一选项。
-  - 待签字块引用的最终候选 commit、PR、远端 CI、R4 实跑证据和当前边界与仓库现状一致。
-  - 当前单人交付模式下，负责人 / TL / QA / DevOps / Owner 字段均已按 owner 本人预填，便于直接确认或改写。
+  - owner 已明确授权：结论选“正式商用可交付”。
+  - 最新候选 HEAD：`c175201cdee1026d89be8d96b93c3f6bfa0f1739`。
+  - 远端 CI：run `28921940625` 完成且 `backend/frontend/license-gate/promptfoo-eval` 全部成功。
+  - 当前机器上的 R4 current-machine full-mode 等价环境实跑证据与 R5 最终审查包仍与该签字边界一致。
 - Reviewer 关注点：
-  - 确认本块是“签字输入”，不是替 owner 自动下结论。
-  - 确认交付边界明确限定为当前机器 / 单机 Docker Compose `full` 模式 / 单人交付模式。
-  - 确认若未来转入其他环境或组织角色，应重新填写环境和联系人字段。
+  - 确认该签字是基于 owner 显式授权代为执行，而非模型自行替代 owner 做业务判断。
+  - 确认最终结论成立的边界仍限定于当前机器 / 单机 Docker Compose `full` 模式 / 单人交付模式。
+  - 确认未来若外推到 K8s、HA、多机或客户现场异构环境，需要单独补做同等级验证与签字。
 - 剩余风险：
-  - 该记录块仍需 owner 手动选择最终结论并确认是否接受当前边界。
-  - PR #7 GitHub 正文仍需你手动粘贴或后续明确授权外部写入。
-- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）；commit `db29505fbce3f6bfe056d6e9073d82e6130e8988`
-- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`；`https://github.com/xiongpinji/xiongbao/actions/runs/28919902142`
+  - PR #7 正文虽已同步到最新状态，但若后续再推新 commit，需要再次同步说明与 CI。
+  - 本地 `xagent-r4` 与 `r4-evidence` 是否保留/清理，仍属于环境侧收尾动作，不影响本次签字记录本身成立。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）；commit `c175201cdee1026d89be8d96b93c3f6bfa0f1739`
+- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`；`https://github.com/xiongpinji/xiongbao/actions/runs/28921940625`
 
 ```text
 发布版本：candidate/min-send-review-20260707-claude
@@ -61,14 +61,14 @@ QA：canqu
 DevOps：canqu
 Owner：canqu
 最终结论：
-[ ] 正式商用可交付
+[x] 正式商用可交付
 [ ] 可内部试点 / 灰度
 [ ] 不可发布
 
 备注：
-- 对应最终候选 commit：db29505fbce3f6bfe056d6e9073d82e6130e8988
+- 对应最终候选 commit：c175201cdee1026d89be8d96b93c3f6bfa0f1739
 - 对应 PR：#7 https://github.com/xiongpinji/xiongbao/pull/7
-- 对应远端 CI：run 28919902142，backend/frontend/license-gate/promptfoo-eval 全绿
+- 对应远端 CI：run 28921940625，backend/frontend/license-gate/promptfoo-eval 全绿
 - 当前机器已完成 single-node Docker Compose full-mode 等价环境实跑：
   /health=200
   /ready=200
