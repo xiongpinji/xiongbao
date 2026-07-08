@@ -22,6 +22,110 @@
 
 ---
 
+### [R32] R5 最终审查包（当前候选）
+
+- 交付人：Claude Code
+- 日期：2026-07-08
+- 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
+- 变更摘要：
+  - 新增 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`，将候选分支、PR、远端 CI、R4 当前机器等价环境实跑、交付材料与剩余风险收敛为一份 reviewer / owner 可直接使用的最终审查包。
+  - 明确区分“当前候选分支已有远端 CI 绿色记录”和“当前本地新增收口改动尚未被新的远端 CI 覆盖”的边界，避免错误放大证据范围。
+  - 给出最终发布判断的三档建议：试点/受控交付可成立、当前本地闭环状态可送审但需冻结并重跑 CI、正式商用可交付取决于 owner 是否接受当前机器等价环境与单人签字模式。
+- 验证命令：
+  - 交叉核对 `docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`
+  - 交叉核对 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
+  - 交叉核对 `docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md`
+  - 交叉核对 `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
+  - 交叉核对 `docs/DELIVERY_MATERIALS_INDEX_V1.md`
+  - `git status --short --branch`
+- 验证结果：
+  - R5 最终审查包已具备候选范围、验证矩阵、reviewer 关注点、剩余风险、发布判定建议与最终 owner 检查单。
+  - R5 没有把“当前本地已收口”直接伪装成“已被远端 CI 覆盖”；文中显式保留了重新冻结并重跑 CI 的前提。
+  - R5 已把当前单人交付模式纳入最终判定条件，不再错误地把“缺联系人”作为当前单人模式下的独立阻断。
+- Reviewer 关注点：
+  - 确认本包用于最终判断与签发，不是自动发布命令。
+  - 确认正式商用可交付的建议依赖于 owner 是否接受当前机器等价环境与单人签字模式。
+  - 确认仍未跳过“冻结本地收口改动并重跑远端 CI”这一步。
+- 剩余风险：
+  - 当前本地新增收口改动尚未形成新的远端 CI 证据。
+  - 若你不接受当前机器作为正式交付环境/等价环境，则仍需其他目标环境复演。
+  - 最终是否判定为正式商用可交付，仍取决于 owner 的明确接受与签字。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）
+- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
+
+---
+
+### [R31] 当前机器 R4 full-mode 等价环境实跑
+
+- 交付人：Claude Code
+- 日期：2026-07-08
+- 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
+- 变更摘要：
+  - 在当前机器上使用 isolated compose 项目 `xagent-r4` 执行一轮 full-mode 等价环境演练，避免污染默认 `xagent` 栈。
+  - 通过运行时生成的本地 secret 拉起 `postgres`、`redis`、`qdrant`、`litellm`、`langfuse`、`api`、`worker`、`web`，并验证 `/health`、`/ready`、`alembic current`、`python -m xagent.cli smoke`、显式 full-mode 账号注册和 `full-flow.spec.ts`。
+  - 根因排查并收口了两处真实阻断：`deploy/compose/postgres-init.sh` 的 CRLF shebang 问题，以及 worker 继承 API 健康检查导致的伪失败；full-flow 唯一失败项进一步定位为 Run Console replay/resume 区块中重复 task path 文本导致的严格选择器误报，并以最小范围收紧测试断言后复绿。
+- 验证命令：
+  - `docker compose -p xagent-r4 ... up -d --build`
+  - `curl http://localhost:8000/health`
+  - `curl http://localhost:8000/ready`
+  - `docker exec xagent-r4-api-1 python -m alembic current`
+  - `docker exec xagent-r4-api-1 python -m xagent.cli smoke`
+  - `npx playwright test specs/full-flow.spec.ts --project=chromium`
+- 验证结果：
+  - `compose ps`：`api` healthy，`postgres/redis/qdrant` healthy，`web`/`worker` running，isolated stack 正常存活。
+  - `/health`：200，返回 `{"status":"ok","version":"0.1.0"}`。
+  - `/ready`：200，返回 `ready=true`，database/cache healthy。
+  - `alembic current`：`0005 (head)`。
+  - `python -m xagent.cli smoke`：PASS，三链路全通。
+  - full-mode 显式账号：现场注册成功，并能用于 API / Playwright 登录。
+  - `full-flow.spec.ts --project=chromium`：9/9 通过。
+- Reviewer 关注点：
+  - 确认本次 R4 证据属于当前机器上的单机 compose 等价环境实跑，不自动外推为客户现场或其他目标环境签字。
+  - 确认 worker 健康检查修复是针对已确认根因的最小配置修复，而不是范围外功能改动。
+  - 确认 full-flow 唯一失败项属于测试 strict selector 与重复文本节点冲突，不是主链运行失败。
+- 剩余风险：
+  - 当前仍缺真实交付环境中的实名联系人、最终签字与客户目标环境演练签收。
+  - 这轮演练使用的是运行时本地生成 secret，不应当作长期环境凭据保存或复用。
+  - R5 PR 审查包仍需把本轮 R4 证据正式挂接并由你最终确认发布口径。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）
+- 证据：`C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\compose-ps.txt`；`C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\alembic-current.txt`；`C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\api-smoke.txt`；`C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\full-flow-fixed.txt`
+
+---
+
+### [R30] 正式交付剩余外部条件与 R4 环境输入清单
+
+- 交付人：Claude Code
+- 日期：2026-07-08
+- 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
+- 变更摘要：
+  - 新增 `docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md`，把当前正式交付剩余阻断明确收敛为外部条件：R4 环境演练、R5 签发级证据、真实联系人、最终签字。
+  - 文档中显式列出 R4 必需输入：候选绑定信息、必填 secret 来源、full-mode 显式账号、至少一条 LLM 路径、依赖服务与端口状态，以及完成后必须回传的日志 / smoke / E2E / 回滚证据。
+  - 把“现在可以直接发给环境 / 发布负责人”的最小请求文案固化，避免继续围绕代码层重复沟通。
+  - 同步将 `R20_FINAL_WRAP_UP_DELIVERY.md` 的相关证据入口补入交付材料索引、管理员部署手册、运维手册、已知问题/试点边界、支持升级路径和本次外部条件清单。
+- 验证命令：
+  - 交叉核对 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
+  - 交叉核对 `docs/RELEASE_RUNBOOK_V1.md`
+  - 交叉核对 `docs/DELIVERY_MATERIALS_INDEX_V1.md`
+  - 交叉核对 `docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md`
+  - `git diff --check -- docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md docs/coordination/reports/delivery-report.md`
+- 验证结果：
+  - R30 已把“当前还差什么”压缩为单页外部条件清单，明确当前剩余阻断不再是代码功能问题。
+  - R30 保留了与现有准绳一致的边界：不把 lite/dev 证据写成目标环境演练完成，不把角色占位表写成真实联系人，不把 R5 / 最终签字写成已完成。
+  - `R20_FINAL_WRAP_UP_DELIVERY.md` 的证据入口已补上交付材料包与外部条件清单，便于 reviewer / 发布负责人统一检索。
+  - `git diff --check`：退出码 0。
+- Reviewer 关注点：
+  - 确认 R30 的作用是压缩外部依赖与环境输入，不是宣称正式交付已经闭环。
+  - 确认文档要求提供 secret 来源而不是把真实 secret 写入 Git。
+  - 确认新增材料入口与最终收尾文档口径一致，没有把“试点可交付”升级表述成“正式商用已签发”。
+- 剩余风险：
+  - R4 仍需环境 / 发布负责人实际提供 full-mode secret、账号、依赖、LLM 路径并完成实跑。
+  - R5 仍需基于 R4 证据、reviewer 验收与最终签字输入才能进入可签发状态。
+  - 真实联系人与值守信息仍待具体交付环境补齐。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）
+- 证据：`docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md`；`docs/DELIVERY_MATERIALS_INDEX_V1.md`；`docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md`
+
+---
+
 ### [R28] 候选冻结前执行检查单
 
 - 交付人：Claude Code

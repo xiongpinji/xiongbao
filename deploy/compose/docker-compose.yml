@@ -188,6 +188,8 @@ services:
       - XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=${XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS:-1}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
+    healthcheck:
+      disable: true  # worker 不暴露 /health，避免继承 API 镜像的 8000 探针导致假失败
     command: >
       sh -c "(python -m xagent.cli warmup || true) &&
              exec celery -A xagent.worker.celery_app worker --loglevel=info"

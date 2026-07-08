@@ -8,6 +8,8 @@
 
 当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。项目主链可运行、功能版图完整，适合内部试点或受控私有部署；但尚未达到正式商用 GA，仍需远端 CI 全绿、目标环境演练、PR 审查包和发布签字。
 
+如需查看当前候选可直接交付给管理员 / 运维 / 试点负责人的材料入口，请从 [`docs/DELIVERY_MATERIALS_INDEX_V1.md`](docs/DELIVERY_MATERIALS_INDEX_V1.md) 开始。
+
 ## 架构总览
 
 ```

@@ -248,6 +248,12 @@
 
 - `docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`
 - `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
+- `docs/DELIVERY_MATERIALS_INDEX_V1.md`
+- `docs/ADMIN_DEPLOYMENT_MANUAL_V1.md`
+- `docs/OPERATIONS_MANUAL_V1.md`
+- `docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md`
+- `docs/SUPPORT_ESCALATION_PATH_V1.md`
+- `docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md`
 - `docs/coordination/TASK_BOARD.md`
 - `docs/coordination/reports/delivery-report.md`
 - `docs/coordination/reports/R15_EVIDENCE_SYNC.md`
@@ -255,6 +261,7 @@
 - `docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md`
 - `docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md`
 - `docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md`
+- `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
 - `OSS_BENCHMARK_AND_REBUILD_PLAN_20260621.md`
 
 ---

@@ -100,8 +100,18 @@ test.describe("X-Agent 核心流程", () => {
 
     await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
     await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
-    await expect(page.getByText("查看后台任务", { exact: true })).toBeVisible();
-    await expect(page.getByText(`/api/v1/tasks/${runId}`, { exact: true })).toBeVisible();
+
+    const replayCard = page.locator("article").filter({
+      has: page.getByText("查看后台任务", { exact: true }),
+    });
+    await expect(replayCard).toBeVisible();
+    await expect(replayCard.getByText(`/api/v1/tasks/${runId}`, { exact: true })).toBeVisible();
+
+    const resumeCard = page.locator("article").filter({
+      has: page.getByText("继续查看后台任务", { exact: true }),
+    });
+    await expect(resumeCard).toBeVisible();
+    await expect(resumeCard.getByText(`/runs/${runId}`, { exact: true })).toBeVisible();
   });
 
   test("短剧工厂生成草稿 + 节点画布", async ({ page }) => {

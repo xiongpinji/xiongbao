@@ -24,8 +24,8 @@
 
 ## Ready to Claim
 
-- [U2] 为 R4 生成 full-mode 环境恢复执行包 | 区域: coordination/rehearsal-unblock | 状态: READY | Owner: Claude Code | 分支/工作树: 待填 | 依赖: R16(REVIEW) | 验收摘要: 基于 R16 清单生成可执行的环境申请/恢复步骤，明确谁提供 secret、谁拉起依赖服务、谁验证 full-mode 账号与 LLM 路径，使 R4 满足恢复条件 | 证据: 待填
-- [R5] PR 审查包组装与 reviewer 入口清理 | 区域: pr-packaging | 状态: BLOCKED | Owner: Claude Code | 分支/工作树: 待填 | 依赖: R1(DONE),R4(BLOCKED),R8(REVIEW) | 验收摘要: PR 描述、风险摘要、验证矩阵、证据链接、reviewer 关注点齐全，可直接送审 | 证据: 待填
+- [U2] 为 R4 生成 full-mode 环境恢复执行包 | 区域: coordination/rehearsal-unblock | 状态: DONE | Owner: Claude Code | 分支/工作树: `candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent` | 依赖: R16(REVIEW) | 验收摘要: 在当前机器完成 isolated compose `xagent-r4` 等价环境实跑，验证 `/health`、`/ready`、`alembic current`、`xagent.cli smoke`、full-mode 显式账号与 `full-flow.spec.ts` 9/9，通过后形成 R31 交付记录 | 证据: reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑
+- [R5] PR 审查包组装与 reviewer 入口清理 | 区域: pr-packaging | 状态: REVIEW | Owner: Claude Code | 分支/工作树: `candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent` | 依赖: R1(DONE),R4(当前机器等价环境已实跑),R8(REVIEW) | 验收摘要: `R5_FINAL_REVIEW_PACKAGE.md` 已形成候选范围、验证矩阵、reviewer 关注点、剩余风险与最终 owner 检查单；是否进入正式商用签发仍取决于 owner 是否接受当前机器等价环境与单人签字模式 | 证据: reports/R5_FINAL_REVIEW_PACKAGE.md; reports/delivery-report.md#r32-r5-最终审查包当前候选
 
 ---
 

@@ -82,9 +82,11 @@
 - CI 后端最小门禁保留 `ruff check xagent tests` 与 `pytest -q`
 - 发布 / 回滚 Runbook v1 已补充为 `docs/RELEASE_RUNBOOK_V1.md`；目标环境完整演练与证据归档仍需后续 R4 完成
 - dev / staging / prod 环境基线与 secret 注入说明已补充为 `docs/ENVIRONMENT_BASELINE_V1.md`；真实目标环境 secret manager / secretRef 接入仍需 R4 或平台化任务演练
+- 交付材料索引与最小交付包已补充为 `docs/DELIVERY_MATERIALS_INDEX_V1.md`、`docs/ADMIN_DEPLOYMENT_MANUAL_V1.md`、`docs/OPERATIONS_MANUAL_V1.md`、`docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md`、`docs/SUPPORT_ESCALATION_PATH_V1.md`；其中真实联系人、目标环境演练结果与最终签字仍需按具体交付环境补齐
 - full-mode 演练前置清单已形成 R16 证据：已整理 R4 恢复所需的 Langfuse secrets、JWT secret、显式账号、端口、依赖服务、LLM 路径和 compose config 预检；该清单不替代 R4 目标环境实跑
 - README、ROADMAP、项目总览与接手说明已按本唯一事实源补齐当前发布口径，差异清单见 `docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md`
 - 关键页面本地截图 / 验收记录已补充为 `docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md`；真实目标环境页面验收仍需 R4 或发布负责人签字
+- R4 full-mode 演练已在当前机器形成一轮等价环境实跑证据：isolated compose 项目 `xagent-r4` 已拉起，`/health` 与 `/ready` 返回 200，`alembic current` 为 `0005 (head)`，`python -m xagent.cli smoke` 通过，`tests/e2e/specs/full-flow.spec.ts --project=chromium` 已 9/9 通过；该证据仍属于当前机器上的单机等价环境，不自动等同于客户目标环境签字
 - SQLite/Alembic 漂移已形成 R12 诊断：当前迁移 head 为 `0005`，fresh SQLite 可迁移并包含 `evidence_records`；旧本地 `apps/api/xagent.db` 为未知 revision `0007` 且缺 `evidence_records`，不得作为当前发布证据
 - Chat SSE 完成态已形成 R13 修复与证据：`readAgentRunStream` 对无 `done` 的流结束显式失败并触发 fallback，Chat 主区在 done-only run 下显示“查看运行详情”；本地 `full-flow.spec.ts` 已 9/9 通过，目标环境复验仍需 R4
 - Vite chunk warning 已形成 R14 修复与证据：`App.tsx` 改为路由级 `React.lazy` / `Suspense` 拆包，本地 `full-flow.spec.ts` 仍 9/9 通过；该证据不等于正式性能或发布签字

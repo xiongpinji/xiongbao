@@ -4,6 +4,7 @@
 > 企业 K8s / HA 为后续工作，本文档暂不覆盖。
 > 发布执行、DB 迁移签字、回滚与 smoke 证据归档请使用 `docs/RELEASE_RUNBOOK_V1.md`。
 > dev / staging / prod 配置基线与 secret 注入说明见 `docs/ENVIRONMENT_BASELINE_V1.md`。
+> 若需要交付给管理员 / 运维 / 试点负责人的成套材料入口，请先看 `docs/DELIVERY_MATERIALS_INDEX_V1.md`。
 
 ## 1. 前置
 
