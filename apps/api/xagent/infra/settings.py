@@ -67,6 +67,11 @@ class LLMSettings(BaseModel):
     ollama_base_url: str = ""            # 例如 http://localhost:11434
     ollama_model: str = ""               # 例如 qwen3:4b（为空则用 default_model）
     request_timeout_seconds: int = 60
+    warmup_enabled: bool = False
+    warmup_prompt: str = "回复一个字：好"
+    warmup_max_tokens: int = 8
+    warmup_wait_timeout_seconds: int = 30
+    warmup_poll_interval_seconds: float = 1.0
     # 直连模式下的 provider key（full 模式建议在 LiteLLM Proxy 侧配置）
     openai_api_key: str = ""
     anthropic_api_key: str = ""

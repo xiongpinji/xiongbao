@@ -144,6 +144,12 @@ services:
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
+      - XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=${XAGENT_LLM__REQUEST_TIMEOUT_SECONDS:-150}
+      - XAGENT_LLM__WARMUP_ENABLED=${XAGENT_LLM__WARMUP_ENABLED:-true}
+      - XAGENT_LLM__WARMUP_PROMPT=${XAGENT_LLM__WARMUP_PROMPT:-回复一个字：好}
+      - XAGENT_LLM__WARMUP_MAX_TOKENS=${XAGENT_LLM__WARMUP_MAX_TOKENS:-8}
+      - XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=${XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS:-30}
+      - XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=${XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS:-1}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_HOST=http://langfuse:3000
       - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
@@ -152,6 +158,7 @@ services:
       - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://localhost:3000"]}
     command: >
       sh -c "python -m alembic upgrade head &&
+             (python -m xagent.cli warmup || true) &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
 
   # X-Agent Celery worker（后台长任务）
@@ -173,9 +180,17 @@ services:
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
+      - XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=${XAGENT_LLM__REQUEST_TIMEOUT_SECONDS:-150}
+      - XAGENT_LLM__WARMUP_ENABLED=${XAGENT_LLM__WARMUP_ENABLED:-true}
+      - XAGENT_LLM__WARMUP_PROMPT=${XAGENT_LLM__WARMUP_PROMPT:-回复一个字：好}
+      - XAGENT_LLM__WARMUP_MAX_TOKENS=${XAGENT_LLM__WARMUP_MAX_TOKENS:-8}
+      - XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=${XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS:-30}
+      - XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=${XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS:-1}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
-    command: ["celery", "-A", "xagent.worker.celery_app", "worker", "--loglevel=info"]
+    command: >
+      sh -c "(python -m xagent.cli warmup || true) &&
+             exec celery -A xagent.worker.celery_app worker --loglevel=info"
 
   # X-Agent 前端（nginx 托管 + 反代 api）
   web:

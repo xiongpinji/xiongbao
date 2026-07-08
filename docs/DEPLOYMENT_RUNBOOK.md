@@ -16,7 +16,7 @@
 环境与验收约定：
 
 - `XAGENT_DEV_API_TARGET`：前端 dev server 代理到哪个后端，默认 `http://localhost:8000`。
-- `E2E_BASE_URL`：Playwright 对哪个前端地址做验收，默认 `http://localhost:3000`。
+- `E2E_BASE_URL`：Playwright 对哪个前端地址做验收；当前 Compose 基线应使用 `http://localhost:3000`。若改走前端 dev server，再显式切到 `http://localhost:3000` 或其他 worktree 端口。
 - `E2E_USERNAME` / `E2E_PASSWORD`：full 模式 Playwright 验收账号；必须显式设置，不提供默认账号回退。
 - 并行 worktree 开发时，可以把前端 / 后端分别切到独立端口，例如 `E2E_BASE_URL=http://127.0.0.1:4173`、`XAGENT_DEV_API_TARGET=http://127.0.0.1:8100`。
 - 后端测试建议从 `apps/api` 目录运行；如果必须从仓库根运行，请先设置 `PYTHONPATH=apps/api`，避免 `ModuleNotFoundError: xagent`。
@@ -30,11 +30,14 @@ npm run build
 
 cd ../../deploy/compose
 cp .env.example .env
+# 冷启动 rehearsal 前，改用 cp .env.rehearsal .env，这样本次 compose 会显式使用 qwen2.5vl:7b 与 warmup 参数。
 # 编辑 .env：
 #   - 生产必填 XAGENT_SECURITY__JWT_SECRET（长随机串）
 #   - 生产必填 LANGFUSE_NEXTAUTH_SECRET / LANGFUSE_SALT / LANGFUSE_INIT_USER_PASSWORD
 #   - 若使用 LiteLLM，填写 XAGENT_LLM__PROXY_URL / XAGENT_LLM__PROXY_API_KEY
 #   - 若使用宿主机 Ollama，保持默认 host.docker.internal 配置即可
+#   - 当前 Compose 基线前端对外暴露在 3000，请把 XAGENT_CORS_ORIGINS 对齐到实际浏览器来源，示例：
+#       XAGENT_CORS_ORIGINS=["http://localhost:3000"]
 #   - 并行 worktree 验收时，可配合前端 / 后端独立端口：
 #       XAGENT_DEV_API_TARGET=http://127.0.0.1:8100
 #       E2E_BASE_URL=http://127.0.0.1:4173
@@ -51,9 +54,44 @@ docker compose up -d --build
 - `api` 负责 `/api/v1/tasks`、`/api/v1/workflows`、`/api/v1/runs/:run_id` 等 unified runtime 主链入口。
 - `worker` 负责 full 模式后台长任务；当 Redis / Celery 可用时，后台任务可跨实例续跑。
 - compose 默认通过 `host.docker.internal:11434` 访问宿主机 Ollama，并为 `api` / `worker` 配置了 `extra_hosts: ["host.docker.internal:host-gateway"]`，以兼容 Linux Docker。
-- compose 中的 `XAGENT_CORS_ORIGINS` 会直接读取 `.env` / `.env.example` 的值；修改 `.env` 后重新启动 compose 即可生效。
-- `web` 提供统一 Run Console，容器内直接反代 `api:8000`。
+- `deploy/compose/.env.example` 与 `.env.rehearsal` 已包含冷启动加固相关参数：`XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`、`XAGENT_LLM__WARMUP_ENABLED=true`、`XAGENT_LLM__WARMUP_PROMPT=回复一个字：好`、`XAGENT_LLM__WARMUP_MAX_TOKENS=8`、`XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=30`、`XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`。复制到 `.env` 后应保留这组基线。
+- compose 中的 `XAGENT_CORS_ORIGINS` 会直接读取 `.env` 的值；当前 Compose 基线前端对外端口是 `3000`，因此浏览器来源通常应写成 `http://localhost:3000`，不要沿用旧的 `3000` 示例。
+- `web` 提供统一 Run Console，容器内直接反代 `api:8000`，对外入口是 `http://localhost:3000`。
 - `apps/web/dist` 不会在镜像内自动构建，因此 `docker compose up` 前必须先执行 `npm run build`。
+
+## 2.1 Ollama 冷启动加固
+
+当前基线默认把本地模型冷启动视为常态，而不是异常：
+
+- `XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`：给首次拉起大模型留足时间。`qwen2.5vl:7b` 这类模型在宿主机冷启动时，可能同时发生模型装载、显存分配、KV cache 初始化；若仍使用较短默认超时，首个真实请求很容易在模型可用前就超时。
+- `XAGENT_LLM__WARMUP_ENABLED=true`：在服务正式接流量前，先用最小 prompt 触发一次模型装载。
+- `XAGENT_LLM__WARMUP_PROMPT=回复一个字：好` + `XAGENT_LLM__WARMUP_MAX_TOKENS=8`：把 warmup 成本压到最低，只验证链路可达与模型可响应。
+- `XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=120` + `XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`：对 `qwen2.5vl:7b` 这类冷启动明显慢于 30 秒的本地模型，给启动阶段更现实的 120 秒窗口，让 warmup 更有机会在首个真实请求前完成，而不是过早失败后把冷启动成本转嫁给用户请求。
+
+为什么 `api` 和 `worker` 都要 warm up：
+
+- `api` 可能是栈重启后的第一个调用方：登录后的即时试跑、健康后第一条 `/api/v1/agents/run` 都会命中它。
+- `worker` 也可能是第一个真实 LLM 调用方：`/api/v1/tasks`、工作流后台步骤、异步任务续跑都可能绕过交互式前台，直接由 Celery worker 首次触发模型。
+- 因此只预热 `api` 不足以覆盖 full 模式主链；`api`、`worker` 各自启动前都执行一次 warmup，才能把冷启动抖动压到最小。
+
+## 2.2 启动顺序与 warmup 日志
+
+当前 Compose 命令链路如下：
+
+- `api`：`python -m alembic upgrade head` -> `python -m xagent.cli warmup` -> `uvicorn xagent.main:app`
+- `worker`：`python -m xagent.cli warmup` -> `celery -A xagent.worker.celery_app worker --loglevel=info`
+
+warmup 实际行为：
+
+- 若配置了 `XAGENT_LLM__PROXY_URL`，warmup 走 LiteLLM Proxy。
+- 否则若配置了 `XAGENT_LLM__OLLAMA_BASE_URL`，warmup 直接请求宿主机 Ollama 的 `/api/tags` 与 `/api/chat`。
+- 若关闭了 `XAGENT_LLM__WARMUP_ENABLED`，或既没配 proxy 也没配 Ollama base URL，则 warmup 会跳过。
+
+日志判读：
+
+- 成功：日志名为 `ollama_warmup_succeeded`，会带上 `model`、`route`、`elapsed_seconds`。
+- 失败：日志名为 `ollama_warmup_failed`，会带上 `error`、`model`、`route`、`wait_timeout_seconds`。
+- 当前 Compose 命令使用 `(python -m xagent.cli warmup || true)`，所以 warmup 失败不会阻止 `api` / `worker` 继续拉起；这意味着“容器已启动”不等于“冷启动已验证通过”，必须结合日志与首个真实请求一起确认。
 
 ## 3. 启动后验证
 
@@ -75,6 +113,78 @@ curl http://localhost:3000
 - `E2E_BASE_URL=http://127.0.0.1:<web-port>`
 - `E2E_USERNAME=<full-mode-user>`
 - `E2E_PASSWORD=<full-mode-password>`
+
+## 3.1 显式冷启动验证流程（Ollama rehearshal）
+
+在演练或上线前，建议至少跑一次“从冷模型到首个真实 agent 请求”的完整验证。以下步骤以 `.env.rehearsal` 中的 `qwen2.5vl:7b` 为例：
+
+1. 确认宿主机 Ollama 已拉到目标模型：`ollama pull qwen2.5vl:7b`
+2. 在宿主机显式卸载模型，制造冷启动条件：
+
+```bash
+ollama stop qwen2.5vl:7b
+```
+
+3. 在 `deploy/compose` 目录显式激活 `.env.rehearsal` 作为当前 `.env`，确保本次 cold-start rehearsal 实际使用 `qwen2.5vl:7b` 和 warmup 参数，然后重启整套 Compose：
+
+```bash
+cd deploy/compose
+cp .env.rehearsal .env
+docker compose down
+docker compose up -d --build
+```
+
+4. 观察 warmup 日志，确认 `api` 和 `worker` 都至少产出一次成功或失败信号：
+
+```bash
+docker compose logs api worker --since=10m | grep -E "ollama_warmup_(succeeded|failed)"
+```
+
+判读要求：
+
+- 理想情况：`api`、`worker` 都出现 `ollama_warmup_succeeded`。
+- 若任一服务出现 `ollama_warmup_failed`，先检查宿主机 Ollama 是否存活、模型名是否与 `.env` 一致、`host.docker.internal:11434` 是否可达，再继续下面的首个真实请求验证。
+
+5. 做基础健康检查：
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+curl http://localhost:3000
+```
+
+6. 做鉴权引导。full 模式不会内置 `admin/admin`；演练环境可以先自助注册一个用户，已有用户则直接登录：
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"rehearsal-admin","password":"ChangeMe-123456","tenant_id":"rehearsal"}'
+```
+
+从返回 JSON 里取出 `access_token`，若用户已存在则改用：
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"rehearsal-admin","password":"ChangeMe-123456","tenant_id":"rehearsal"}'
+```
+
+7. 用拿到的 token 发送首个真实 agent 请求，验证冷启动后主链是否可用：
+
+```bash
+TOKEN=<上一步返回的 access_token>
+
+curl -X POST http://localhost:8000/api/v1/agents/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"goal":"请用一句话确认 Ollama 冷启动验证通过"}'
+```
+
+期望：
+
+- 返回 200，且响应里包含 `run_id` / `final_answer` / `steps` 等结果字段。
+- 若这一步是重启后的首个真实 LLM 请求，整体耗时仍可能明显高于热机请求；但在 150 秒超时基线内应能完成，而不是过早超时。
+- 成功后可在浏览器打开 `http://localhost:3000`，登录同一账号，确认 Run Console 能查看对应运行记录。
 
 ## 4. unified runtime 验证路径
 
@@ -106,7 +216,7 @@ XAGENT_MODE=full xagent serve
 ## 6. 登录与鉴权
 
 - lite：匿名可用（演示）。默认 admin / admin（内置）。
-- full / enterprise：`require_auth` 自动开启，且不会内置默认 `admin/admin`。需要先接 Keycloak / DB 用户源或显式初始化管理员，再用 `POST /api/v1/auth/login` 换 token，前端在「设置」页填入，或使用 `Authorization: Bearer <token>`。
+- full / enterprise：`require_auth` 自动开启，且不会内置默认 `admin/admin`。当前基线可通过 `POST /api/v1/auth/register` 自助引导首个演练账号，或使用已接入的 Keycloak / DB 用户源，再通过 `POST /api/v1/auth/login` 换 token；前端在「设置」页填入，或使用 `Authorization: Bearer <token>`。
 - 接 Keycloak：设置 `XAGENT_SECURITY__OIDC_JWKS_URL` + `OIDC_ISSUER`，启用 RS256 验签（OIDC 回调端点 `/api/v1/auth/oidc/callback`）。
 
 ## 7. 安全检查清单（上线前）
@@ -114,7 +224,7 @@ XAGENT_MODE=full xagent serve
 - [ ] `XAGENT_SECURITY__JWT_SECRET` 已改为长随机串
 - [ ] Langfuse 的 `NEXTAUTH_SECRET` / `SALT` 已改为生产随机值
 - [ ] Langfuse 初始管理员密码已通过 `LANGFUSE_INIT_USER_PASSWORD` 显式设置为强密码
-- [ ] `XAGENT_CORS_ORIGINS` 不含 `*`
+- [ ] `XAGENT_CORS_ORIGINS` 已对齐当前前端实际来源（当前 Compose 基线通常为 `http://localhost:3000`），且不含 `*`
 - [ ] `require_auth` 未被显式关闭
 - [ ] full / enterprise 管理员来自显式用户源（Keycloak / DB / 初始化流程），不存在默认 admin / admin
 - [ ] `python scripts/license_check.py` 通过（无 AGPL / GPL / ELv2）
@@ -127,6 +237,7 @@ XAGENT_MODE=full xagent serve
 - Prometheus 指标：`/metrics`；Grafana 仪表板导入 `deploy/grafana/xagent-dashboard.json`
 - 后端日志：structlog JSON 输出到 stdout
 - 健康探针：`/health`（liveness）`/ready`（readiness）
+- Ollama 预热日志：`ollama_warmup_succeeded` / `ollama_warmup_failed`
 
 ## 8.1 Worker（后台长任务）
 
@@ -172,5 +283,6 @@ celery -A xagent.worker.celery_app worker --loglevel=info
 | `/ready` 返回 503 | 查看 `components` 字段定位 DB / 缓存依赖 |
 | `Run Console` 打不开运行详情 | 检查 `/api/v1/runs/:run_id` 与 `/api/v1/tasks/:task_id` 是否返回 200 |
 | 后台任务一直 pending | 查看 `worker` 日志，确认 Redis broker 与 Celery 已连通 |
+| 看到 `ollama_warmup_failed` | 检查宿主机 Ollama 进程、模型名、`host.docker.internal:11434` 连通性，并重跑 3.1 的冷启动验证 |
 | LLM 调用失败 | 查看 LiteLLM Proxy 日志（`:4000`）或宿主机 Ollama |
 | 403 越权 | 角色 / 权限不足，调用 `/auth/me` 查看角色 |

@@ -43,6 +43,12 @@ llm:
   ollamaBaseUrl: ""
   ollamaModel: "qwen3:4b"
   proxyUrl: ""
+  requestTimeoutSeconds: 150
+  warmupEnabled: false
+  warmupPrompt: "回复一个字：好"
+  warmupMaxTokens: 8
+  warmupWaitTimeoutSeconds: 30
+  warmupPollIntervalSeconds: 1
 
 # 安全
 security:

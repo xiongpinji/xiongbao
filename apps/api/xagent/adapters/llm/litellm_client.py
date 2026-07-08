@@ -23,14 +23,17 @@ class LiteLLMClient(LLMClient):
     def effective_model(self) -> str:
         """实际使用的模型名（带 litellm provider 前缀供路由）。
 
+        - proxy: 始终使用 default_model，由 proxy 侧做最终路由
         - ollama: 加 ollama/ 前缀
         - deepseek 直连（无 proxy/ollama）: 加 deepseek/ 前缀
         - 其他: 原样返回（openai 兼容）
         """
+        if self._cfg.proxy_url:
+            return self._cfg.default_model
         if self._cfg.ollama_base_url:
             model = self._cfg.ollama_model or self._cfg.default_model
             return model if model.startswith("ollama/") else f"ollama/{model}"
-        if not self._cfg.proxy_url and self._cfg.deepseek_api_key:
+        if self._cfg.deepseek_api_key:
             model = self._cfg.default_model
             return model if model.startswith("deepseek/") else f"deepseek/{model}"
         return self._cfg.default_model

@@ -229,15 +229,30 @@ def test_litellm_effective_model_adds_deepseek_prefix() -> None:
     assert client.effective_model == "deepseek/deepseek-v4-flash"
 
 
-def test_litellm_effective_model_no_prefix_when_proxy() -> None:
+def test_litellm_effective_model_prefers_proxy_default_over_ollama_prefix() -> None:
     cfg = LLMSettings(
-        default_model="deepseek-v4-flash",
-        deepseek_api_key="sk-fake",
+        default_model="proxy-default",
         proxy_url="http://localhost:4000",
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen3:4b",
     )
     client = LiteLLMClient(cfg)
-    # 有 proxy 时不加 deepseek/ 前缀（由 proxy 路由）
-    assert client.effective_model == "deepseek-v4-flash"
+    assert client.effective_model == "proxy-default"
+
+
+def test_litellm_call_kwargs_uses_request_timeout_seconds() -> None:
+    cfg = LLMSettings(
+        ollama_base_url="http://host.docker.internal:11434",
+        ollama_model="qwen2.5vl:7b",
+        request_timeout_seconds=150,
+    )
+    client = LiteLLMClient(cfg)
+
+    kwargs = client._call_kwargs()
+
+    assert kwargs["timeout"] == 150
+    assert kwargs["api_base"] == "http://host.docker.internal:11434"
+    assert kwargs["model"] == "ollama/qwen2.5vl:7b"
 
 
 def test_litellm_call_kwargs_deepseek_key_transmitted() -> None:
