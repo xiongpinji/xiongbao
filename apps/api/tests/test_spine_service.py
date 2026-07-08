@@ -10,8 +10,9 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy import ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from xagent.core.spine.models import GoalStatus, SpinePhase
+from xagent.core.spine.models import DeliveryTask, GoalStatus, SpinePhase
 from xagent.core.spine.service import INITIATIVE_BLUEPRINTS, create_goal, decompose_goal
+from xagent.infra.db import dispose_engine, get_engine, get_sessionmaker
 from xagent.infra.models import DeliveryTaskORM, GoalORM, InitiativeORM, ReleaseRecordORM
 from xagent.infra.repos.spine import (
     load_goal_snapshot,
@@ -19,6 +20,7 @@ from xagent.infra.repos.spine import (
     persist_initiatives,
     persist_tasks,
 )
+from xagent.infra.settings import get_settings
 
 EXPECTED_SPINE_TABLES = {
     "delivery_goals",
@@ -225,6 +227,136 @@ async def test_spine_snapshot_round_trip_preserves_order_and_serialization(
     assert snapshot["goal"] == goal.to_dict()
     assert snapshot["initiatives"][0]["position"] == 0
     assert snapshot["tasks"][0]["position"] == 0
+
+
+
+async def test_spine_snapshot_tasks_stay_grouped_by_initiative_order(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    initiatives, tasks = decompose_goal(goal)
+    for index, task in enumerate(tasks):
+        task.position = 0
+        task.task_id = f"task-{index}"
+
+    follow_up_task = DeliveryTask(
+        task_id="task-z",
+        initiative_id=initiatives[0].initiative_id,
+        goal_id=goal.goal_id,
+        tenant_id=goal.tenant_id,
+        title="Follow-up Goal / Taskboard / Session Core",
+        detail="Second task for the first initiative",
+        position=1,
+    )
+    tasks.append(follow_up_task)
+
+    try:
+        async with session_factory() as session:
+            await persist_goal(session, goal)
+            await persist_initiatives(session, initiatives)
+            await persist_tasks(session, tasks)
+            await session.commit()
+
+        async with session_factory() as session:
+            snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+    finally:
+        await engine.dispose()
+
+    assert snapshot is not None
+    assert [item["initiative_id"] for item in snapshot["tasks"][:2]] == [
+        initiatives[0].initiative_id,
+        initiatives[0].initiative_id,
+    ]
+    assert [item["title"] for item in snapshot["tasks"][:2]] == [
+        tasks[0].title,
+        follow_up_task.title,
+    ]
+    assert snapshot["tasks"][2]["initiative_id"] == initiatives[1].initiative_id
+
+
+
+async def test_app_engine_enforces_sqlite_foreign_keys_for_spine_hierarchy(
+    migrated_spine_db: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_url = f"sqlite+aiosqlite:///{migrated_spine_db}"
+    monkeypatch.setenv("XAGENT_DB__URL", db_url)
+    get_settings.cache_clear()
+    await dispose_engine()
+
+    try:
+        engine = get_engine()
+        async with engine.connect() as conn:
+            pragma_value = (await conn.execute(sa.text("PRAGMA foreign_keys"))).scalar_one()
+        assert pragma_value == 1
+
+        session_factory = get_sessionmaker()
+        async with session_factory() as session:
+            session.add_all(
+                [
+                    GoalORM(
+                        goal_id="goal-1",
+                        tenant_id="tenant-1",
+                        owner_id="owner-1",
+                        title="Goal 1",
+                        description="",
+                        phase="planning",
+                        status="pending",
+                        metadata_json="{}",
+                    ),
+                    GoalORM(
+                        goal_id="goal-2",
+                        tenant_id="tenant-1",
+                        owner_id="owner-1",
+                        title="Goal 2",
+                        description="",
+                        phase="planning",
+                        status="pending",
+                        metadata_json="{}",
+                    ),
+                    InitiativeORM(
+                        initiative_id="initiative-1",
+                        goal_id="goal-1",
+                        tenant_id="tenant-1",
+                        title="Initiative 1",
+                        status="pending",
+                        priority="medium",
+                        position=0,
+                    ),
+                ]
+            )
+            await session.commit()
+
+        async with session_factory() as session:
+            session.add(
+                DeliveryTaskORM(
+                    task_id="task-cross-goal",
+                    initiative_id="initiative-1",
+                    goal_id="goal-2",
+                    tenant_id="tenant-1",
+                    title="Invalid task linkage",
+                    detail="",
+                    status="ready",
+                    task_kind="execution",
+                    run_id="run-1",
+                    blocker_reason="",
+                    position=0,
+                )
+            )
+            with pytest.raises(sa.exc.IntegrityError):
+                await session.commit()
+            await session.rollback()
+    finally:
+        await dispose_engine()
+        get_settings.cache_clear()
 
 
 

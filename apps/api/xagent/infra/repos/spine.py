@@ -144,11 +144,21 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
         (
             await session.execute(
                 select(DeliveryTaskORM)
+                .join(
+                    InitiativeORM,
+                    (DeliveryTaskORM.tenant_id == InitiativeORM.tenant_id)
+                    & (DeliveryTaskORM.goal_id == InitiativeORM.goal_id)
+                    & (DeliveryTaskORM.initiative_id == InitiativeORM.initiative_id),
+                )
                 .where(
                     DeliveryTaskORM.goal_id == goal_id,
                     DeliveryTaskORM.tenant_id == tenant_id,
                 )
-                .order_by(DeliveryTaskORM.position.asc(), DeliveryTaskORM.task_id.asc())
+                .order_by(
+                    InitiativeORM.position.asc(),
+                    DeliveryTaskORM.position.asc(),
+                    DeliveryTaskORM.task_id.asc(),
+                )
             )
         )
         .scalars()

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -20,6 +20,18 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from xagent.infra.settings import get_settings
+
+
+def _enable_sqlite_foreign_keys(engine: AsyncEngine) -> None:
+    sync_engine = engine.sync_engine
+    if not str(sync_engine.url).startswith("sqlite"):
+        return
+
+    @event.listens_for(sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 class Base(DeclarativeBase):
@@ -44,6 +56,7 @@ def get_engine() -> AsyncEngine:
                 pool_pre_ping=True,
             )
         _engine = create_async_engine(settings.db.url, **kwargs)
+        _enable_sqlite_foreign_keys(_engine)
     return _engine
 
 
