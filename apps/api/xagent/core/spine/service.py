@@ -44,7 +44,7 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
                 tenant_id=goal.tenant_id,
                 title=f"Initialize {title}",
                 detail=f"Bootstrap the first execution path for {title}",
-                position=position,
+                position=0,
             )
         )
     return initiatives, tasks

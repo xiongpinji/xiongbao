@@ -39,7 +39,6 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=256), nullable=False, server_default=""),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="pending"),
         sa.Column("priority", sa.String(length=16), nullable=False, server_default="medium"),
-        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -74,7 +73,6 @@ def upgrade() -> None:
         sa.Column("task_kind", sa.String(length=32), nullable=False, server_default="execution"),
         sa.Column("run_id", sa.String(length=64), nullable=False, server_default=""),
         sa.Column("blocker_reason", sa.Text(), nullable=False, server_default=""),
-        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(

@@ -30,19 +30,23 @@ EXPECTED_SPINE_TABLES = {
 }
 
 
-@pytest.fixture
-def migrated_spine_db(tmp_path: Path) -> Path:
-    db_file = tmp_path / "spine.db"
+def _run_alembic_upgrade(db_file: Path, revision: str) -> None:
     url = f"sqlite+aiosqlite:///{db_file}"
     api_dir = Path(__file__).resolve().parent.parent
     env = {**os.environ, "XAGENT_DB__URL": url, "PYTHONPATH": str(api_dir)}
     subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", revision],
         cwd=api_dir,
         env=env,
         check=True,
         capture_output=True,
     )
+
+
+@pytest.fixture
+def migrated_spine_db(tmp_path: Path) -> Path:
+    db_file = tmp_path / "spine.db"
+    _run_alembic_upgrade(db_file, "head")
     return db_file
 
 
@@ -172,6 +176,19 @@ def test_spine_package_exports_core_symbols() -> None:
 
 
 
+def test_decompose_goal_bootstrap_tasks_start_at_position_zero() -> None:
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    _, tasks = decompose_goal(goal)
+
+    assert all(task.position == 0 for task in tasks)
+
+
+
 def test_goal_to_dict_produces_stable_serializable_shape() -> None:
     goal = create_goal(
         tenant_id="t-1",
@@ -283,6 +300,46 @@ async def test_spine_snapshot_tasks_stay_grouped_by_initiative_order(
 
 
 
+async def test_spine_snapshot_tasks_follow_initiative_order_when_positions_tie(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    initiatives, tasks = decompose_goal(goal)
+    initiatives[0].position = 0
+    initiatives[1].position = 0
+    tasks[0].position = 0
+    tasks[1].position = 0
+    tasks[0].task_id = "task-b"
+    tasks[1].task_id = "task-a"
+
+    try:
+        async with session_factory() as session:
+            await persist_goal(session, goal)
+            await persist_initiatives(session, initiatives)
+            await persist_tasks(session, [tasks[0], tasks[1]])
+            await session.commit()
+
+        async with session_factory() as session:
+            snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+    finally:
+        await engine.dispose()
+
+    assert snapshot is not None
+    expected_initiative_order = [
+        item["initiative_id"] for item in snapshot["initiatives"][:2]
+    ]
+    assert [item["initiative_id"] for item in snapshot["tasks"][:2]] == expected_initiative_order
+
+
+
 async def test_app_engine_enforces_sqlite_foreign_keys_for_spine_hierarchy(
     migrated_spine_db: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -357,6 +414,69 @@ async def test_app_engine_enforces_sqlite_foreign_keys_for_spine_hierarchy(
     finally:
         await dispose_engine()
         get_settings.cache_clear()
+
+
+
+async def test_spine_timestamp_round_trip_normalizes_to_utc_without_losing_instant(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    goal.created_at = "2026-07-08T18:11:12+08:00"
+    goal.updated_at = "2026-07-08T18:12:12+08:00"
+
+    try:
+        async with session_factory() as session:
+            await persist_goal(session, goal)
+            await session.commit()
+
+        async with session_factory() as session:
+            snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+    finally:
+        await engine.dispose()
+
+    assert snapshot is not None
+    assert snapshot["goal"]["created_at"] == "2026-07-08T10:11:12+00:00"
+    assert snapshot["goal"]["updated_at"] == "2026-07-08T10:12:12+00:00"
+
+
+
+def test_spine_follow_up_migration_adds_position_columns(tmp_path: Path) -> None:
+    db_file = tmp_path / "spine_old.db"
+    _run_alembic_upgrade(db_file, "20260708_spine")
+
+    engine = sa.create_engine(f"sqlite:///{db_file}")
+    try:
+        inspector = sa.inspect(engine)
+        initiative_columns = {
+            column["name"] for column in inspector.get_columns("delivery_initiatives")
+        }
+        task_columns = {column["name"] for column in inspector.get_columns("delivery_tasks")}
+        assert "position" not in initiative_columns
+        assert "position" not in task_columns
+    finally:
+        engine.dispose()
+
+    _run_alembic_upgrade(db_file, "head")
+
+    engine = sa.create_engine(f"sqlite:///{db_file}")
+    try:
+        inspector = sa.inspect(engine)
+        initiative_columns = {
+            column["name"] for column in inspector.get_columns("delivery_initiatives")
+        }
+        task_columns = {column["name"] for column in inspector.get_columns("delivery_tasks")}
+        assert "position" in initiative_columns
+        assert "position" in task_columns
+    finally:
+        engine.dispose()
 
 
 

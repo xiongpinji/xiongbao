@@ -11,12 +11,17 @@ from xagent.infra.models.spine import DeliveryTaskORM, GoalORM, InitiativeORM
 
 
 def _parse_timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value)
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _serialize_timestamp(value: datetime) -> str:
     if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
+    else:
+        value = value.astimezone(UTC)
     return value.isoformat()
 
 
@@ -156,6 +161,7 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
                 )
                 .order_by(
                     InitiativeORM.position.asc(),
+                    InitiativeORM.initiative_id.asc(),
                     DeliveryTaskORM.position.asc(),
                     DeliveryTaskORM.task_id.asc(),
                 )
