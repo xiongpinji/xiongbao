@@ -27,24 +27,36 @@ def upgrade() -> None:
         sa.Column("metadata_json", sa.Text(), nullable=False, server_default="{}"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.UniqueConstraint("tenant_id", "goal_id", name="uq_delivery_goals_tenant_goal"),
     )
     op.create_index("ix_delivery_goals_tenant_id", "delivery_goals", ["tenant_id"])
 
     op.create_table(
         "delivery_initiatives",
         sa.Column("initiative_id", sa.String(length=64), primary_key=True),
-        sa.Column(
-            "goal_id",
-            sa.String(length=64),
-            sa.ForeignKey("delivery_goals.goal_id"),
-            nullable=False,
-        ),
+        sa.Column("goal_id", sa.String(length=64), nullable=False),
         sa.Column("tenant_id", sa.String(length=64), nullable=False),
         sa.Column("title", sa.String(length=256), nullable=False, server_default=""),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="pending"),
         sa.Column("priority", sa.String(length=16), nullable=False, server_default="medium"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "goal_id"],
+            ["delivery_goals.tenant_id", "delivery_goals.goal_id"],
+            name="fk_delivery_initiatives_tenant_goal",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "initiative_id",
+            name="uq_delivery_initiatives_tenant_initiative",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "goal_id",
+            "initiative_id",
+            name="uq_delivery_initiatives_tenant_goal_initiative",
+        ),
     )
     op.create_index("ix_delivery_initiatives_goal_id", "delivery_initiatives", ["goal_id"])
     op.create_index("ix_delivery_initiatives_tenant_id", "delivery_initiatives", ["tenant_id"])
@@ -52,18 +64,8 @@ def upgrade() -> None:
     op.create_table(
         "delivery_tasks",
         sa.Column("task_id", sa.String(length=64), primary_key=True),
-        sa.Column(
-            "initiative_id",
-            sa.String(length=64),
-            sa.ForeignKey("delivery_initiatives.initiative_id"),
-            nullable=False,
-        ),
-        sa.Column(
-            "goal_id",
-            sa.String(length=64),
-            sa.ForeignKey("delivery_goals.goal_id"),
-            nullable=False,
-        ),
+        sa.Column("initiative_id", sa.String(length=64), nullable=False),
+        sa.Column("goal_id", sa.String(length=64), nullable=False),
         sa.Column("tenant_id", sa.String(length=64), nullable=False),
         sa.Column("title", sa.String(length=256), nullable=False, server_default=""),
         sa.Column("detail", sa.Text(), nullable=False, server_default=""),
@@ -73,6 +75,20 @@ def upgrade() -> None:
         sa.Column("blocker_reason", sa.Text(), nullable=False, server_default=""),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "goal_id"],
+            ["delivery_goals.tenant_id", "delivery_goals.goal_id"],
+            name="fk_delivery_tasks_tenant_goal",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "goal_id", "initiative_id"],
+            [
+                "delivery_initiatives.tenant_id",
+                "delivery_initiatives.goal_id",
+                "delivery_initiatives.initiative_id",
+            ],
+            name="fk_delivery_tasks_tenant_goal_initiative",
+        ),
     )
     op.create_index("ix_delivery_tasks_goal_id", "delivery_tasks", ["goal_id"])
     op.create_index(
@@ -85,12 +101,7 @@ def upgrade() -> None:
     op.create_table(
         "release_records",
         sa.Column("release_id", sa.String(length=64), primary_key=True),
-        sa.Column(
-            "goal_id",
-            sa.String(length=64),
-            sa.ForeignKey("delivery_goals.goal_id"),
-            nullable=False,
-        ),
+        sa.Column("goal_id", sa.String(length=64), nullable=False),
         sa.Column("tenant_id", sa.String(length=64), nullable=False),
         sa.Column("branch_name", sa.String(length=128), nullable=False, server_default=""),
         sa.Column("commit_sha", sa.String(length=64), nullable=False, server_default=""),
@@ -99,6 +110,11 @@ def upgrade() -> None:
         sa.Column("summary_json", sa.Text(), nullable=False, server_default="{}"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "goal_id"],
+            ["delivery_goals.tenant_id", "delivery_goals.goal_id"],
+            name="fk_release_records_tenant_goal",
+        ),
     )
     op.create_index("ix_release_records_goal_id", "release_records", ["goal_id"])
     op.create_index("ix_release_records_tenant_id", "release_records", ["tenant_id"])
