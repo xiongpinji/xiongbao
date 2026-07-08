@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,35 @@ def migrated_spine_db(tmp_path: Path) -> Path:
         capture_output=True,
     )
     return db_file
+
+
+
+def _sqlite_engine_with_foreign_keys(db_file: Path) -> sa.Engine:
+    engine = sa.create_engine(f"sqlite:///{db_file}")
+
+    @sa.event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
+
+
+
+def _assert_insert_rejected(
+    engine: sa.Engine,
+    statement: sa.Insert,
+    params: dict[str, object],
+) -> None:
+    with engine.connect() as conn:
+        transaction = conn.begin()
+        try:
+            with pytest.raises(sa.exc.IntegrityError):
+                conn.execute(statement, params)
+        finally:
+            transaction.rollback()
+
 
 
 def _orm_unique_signatures(table: sa.Table) -> set[tuple[str, ...]]:
@@ -166,5 +196,115 @@ def test_spine_migration_head_creates_tables_and_composite_constraints(
             "delivery_goals",
             ("tenant_id", "goal_id"),
         ) in _inspected_foreign_key_signatures(inspector, "release_records")
+    finally:
+        engine.dispose()
+
+
+
+def test_spine_database_constraints_reject_bad_hierarchy_data(
+    migrated_spine_db: Path,
+) -> None:
+    engine = _sqlite_engine_with_foreign_keys(migrated_spine_db)
+    metadata = sa.MetaData()
+    now = datetime.now(UTC)
+
+    try:
+        goals = sa.Table("delivery_goals", metadata, autoload_with=engine)
+        initiatives = sa.Table("delivery_initiatives", metadata, autoload_with=engine)
+        tasks = sa.Table("delivery_tasks", metadata, autoload_with=engine)
+
+        with engine.connect() as conn:
+            assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar_one() == 1
+
+        with engine.begin() as conn:
+            conn.execute(
+                goals.insert(),
+                [
+                    {
+                        "goal_id": "goal-1",
+                        "tenant_id": "tenant-1",
+                        "title": "Goal 1",
+                        "description": "",
+                        "phase": "planning",
+                        "status": "pending",
+                        "owner_id": "owner-1",
+                        "metadata_json": "{}",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "goal_id": "goal-2",
+                        "tenant_id": "tenant-1",
+                        "title": "Goal 2",
+                        "description": "",
+                        "phase": "planning",
+                        "status": "pending",
+                        "owner_id": "owner-1",
+                        "metadata_json": "{}",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ],
+            )
+            conn.execute(
+                initiatives.insert(),
+                {
+                    "initiative_id": "initiative-1",
+                    "goal_id": "goal-1",
+                    "tenant_id": "tenant-1",
+                    "title": "Initiative 1",
+                    "status": "pending",
+                    "priority": "medium",
+                    "created_at": now,
+                    "updated_at": now,
+                },
+            )
+
+        _assert_insert_rejected(
+            engine,
+            initiatives.insert(),
+            {
+                "initiative_id": "initiative-1",
+                "goal_id": "goal-2",
+                "tenant_id": "tenant-1",
+                "title": "Duplicate initiative id within tenant",
+                "status": "pending",
+                "priority": "medium",
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        _assert_insert_rejected(
+            engine,
+            initiatives.insert(),
+            {
+                "initiative_id": "initiative-cross-tenant",
+                "goal_id": "goal-1",
+                "tenant_id": "tenant-2",
+                "title": "Mismatched tenant",
+                "status": "pending",
+                "priority": "medium",
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        _assert_insert_rejected(
+            engine,
+            tasks.insert(),
+            {
+                "task_id": "task-cross-goal",
+                "initiative_id": "initiative-1",
+                "goal_id": "goal-2",
+                "tenant_id": "tenant-1",
+                "title": "Invalid task linkage",
+                "detail": "",
+                "status": "ready",
+                "task_kind": "execution",
+                "run_id": "run-1",
+                "blocker_reason": "",
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
     finally:
         engine.dispose()
