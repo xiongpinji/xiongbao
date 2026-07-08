@@ -33,7 +33,8 @@ spec:
             - { name: XAGENT_LLM__WARMUP_MAX_TOKENS, value: {{ .Values.llm.warmupMaxTokens | quote }} }
             - { name: XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS, value: {{ .Values.llm.warmupWaitTimeoutSeconds | quote }} }
             - { name: XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS, value: {{ .Values.llm.warmupPollIntervalSeconds | quote }} }
-            - { name: XAGENT_SECURITY__JWT_SECRET, value: "{{ .Values.security.jwtSecret }}" }
+            - name: XAGENT_SECURITY__JWT_SECRET
+              value: {{ required "security.jwtSecret is required and must be a 32+ character random value" .Values.security.jwtSecret | quote }}
             - { name: XAGENT_SECURITY__REQUIRE_AUTH, value: "{{ .Values.security.requireAuth }}" }
           command: ["sh", "-c"]
           args:
