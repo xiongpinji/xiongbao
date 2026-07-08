@@ -22,6 +22,66 @@
 
 ---
 
+### [R33] 最终签字记录块（待 Owner 确认）
+
+- 交付人：Claude Code
+- 日期：2026-07-08
+- 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
+- 变更摘要：
+  - 新增一份可直接落入发布记录的最终签字输入块，覆盖版本、环境、负责人、TL/QA/DevOps/Owner、最终结论复选框与备注区。
+  - 保持“待 Owner 确认”边界：本块不预先勾选任何最终结论，只把当前最终候选、远端全绿 CI、R4 current-machine full-mode 等价环境实跑与交付边界写成可签字依据。
+  - 本块适用于当前单人交付模式；若后续转入客户现场或外部团队，可在此基础上替换联系人与环境字段。
+- 验证命令：
+  - 交叉核对 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
+  - 交叉核对 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`
+  - 交叉核对 `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
+  - `gh run view 28919902142 --repo xiongpinji/xiongbao --json conclusion,headSha`
+  - `git rev-parse HEAD`
+- 验证结果：
+  - 待签字块已写入，且未提前勾选“正式商用可交付 / 可内部试点 / 不可发布”任一选项。
+  - 待签字块引用的最终候选 commit、PR、远端 CI、R4 实跑证据和当前边界与仓库现状一致。
+  - 当前单人交付模式下，负责人 / TL / QA / DevOps / Owner 字段均已按 owner 本人预填，便于直接确认或改写。
+- Reviewer 关注点：
+  - 确认本块是“签字输入”，不是替 owner 自动下结论。
+  - 确认交付边界明确限定为当前机器 / 单机 Docker Compose `full` 模式 / 单人交付模式。
+  - 确认若未来转入其他环境或组织角色，应重新填写环境和联系人字段。
+- 剩余风险：
+  - 该记录块仍需 owner 手动选择最终结论并确认是否接受当前边界。
+  - PR #7 GitHub 正文仍需你手动粘贴或后续明确授权外部写入。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）；commit `db29505fbce3f6bfe056d6e9073d82e6130e8988`
+- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`；`https://github.com/xiongpinji/xiongbao/actions/runs/28919902142`
+
+```text
+发布版本：candidate/min-send-review-20260707-claude
+发布环境：当前机器 / 单机 Docker Compose full 模式
+发布日期：2026-07-08
+发布负责人：canqu
+TL：canqu
+QA：canqu
+DevOps：canqu
+Owner：canqu
+最终结论：
+[ ] 正式商用可交付
+[ ] 可内部试点 / 灰度
+[ ] 不可发布
+
+备注：
+- 对应最终候选 commit：db29505fbce3f6bfe056d6e9073d82e6130e8988
+- 对应 PR：#7 https://github.com/xiongpinji/xiongbao/pull/7
+- 对应远端 CI：run 28919902142，backend/frontend/license-gate/promptfoo-eval 全绿
+- 当前机器已完成 single-node Docker Compose full-mode 等价环境实跑：
+  /health=200
+  /ready=200
+  alembic current=0005 (head)
+  xagent.cli smoke=PASS
+  full-mode 显式账号注册/登录成功
+  full-flow.spec.ts=9/9 通过
+- 当前签字边界限定为：当前机器 / 单机 Docker Compose full 模式 / 单人交付模式
+- 不自动外推为：K8s / HA / 多机 / 客户现场异构环境已完成同等级验证
+```
+
+---
+
 ### [R32] R5 最终审查包（当前候选）
 
 - 交付人：Claude Code
@@ -29,29 +89,26 @@
 - 关联分支 / 工作树：`candidate/min-send-review-20260707-claude` / `D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`
 - 变更摘要：
   - 新增 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`，将候选分支、PR、远端 CI、R4 当前机器等价环境实跑、交付材料与剩余风险收敛为一份 reviewer / owner 可直接使用的最终审查包。
-  - 明确区分“当前候选分支已有远端 CI 绿色记录”和“当前本地新增收口改动尚未被新的远端 CI 覆盖”的边界，避免错误放大证据范围。
-  - 给出最终发布判断的三档建议：试点/受控交付可成立、当前本地闭环状态可送审但需冻结并重跑 CI、正式商用可交付取决于 owner 是否接受当前机器等价环境与单人签字模式。
+  - 随最终候选提交 `db29505fbce3f6bfe056d6e9073d82e6130e8988` 推送后，远端 CI run `28919902142` 已全绿，R5 审查包已同步更新为“最终候选已冻结且 CI 已覆盖”的口径。
+  - 最终建议已收敛为：若 owner 接受当前机器等价环境与单人签字模式，则可直接进入最终签字，不再需要额外的技术补洞或 CI 对齐步骤。
 - 验证命令：
-  - 交叉核对 `docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`
-  - 交叉核对 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`
-  - 交叉核对 `docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md`
-  - 交叉核对 `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
-  - 交叉核对 `docs/DELIVERY_MATERIALS_INDEX_V1.md`
-  - `git status --short --branch`
+  - `gh run view 28919902142 --repo xiongpinji/xiongbao --json status,conclusion,headSha,jobs`
+  - `gh pr view 7 --repo xiongpinji/xiongbao --json headRefOid,statusCheckRollup,url`
+  - `git rev-parse HEAD`
+  - 交叉核对 `docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`
 - 验证结果：
-  - R5 最终审查包已具备候选范围、验证矩阵、reviewer 关注点、剩余风险、发布判定建议与最终 owner 检查单。
-  - R5 没有把“当前本地已收口”直接伪装成“已被远端 CI 覆盖”；文中显式保留了重新冻结并重跑 CI 的前提。
-  - R5 已把当前单人交付模式纳入最终判定条件，不再错误地把“缺联系人”作为当前单人模式下的独立阻断。
+  - 最终候选 commit：`db29505fbce3f6bfe056d6e9073d82e6130e8988`。
+  - 远端 CI：run `28919902142` 完成且结论 `success`，backend / frontend / license-gate / promptfoo-eval 全部通过。
+  - R5 最终审查包已更新为当前最终状态：最终候选已冻结、已推送、已获得新的远端全绿记录。
 - Reviewer 关注点：
-  - 确认本包用于最终判断与签发，不是自动发布命令。
-  - 确认正式商用可交付的建议依赖于 owner 是否接受当前机器等价环境与单人签字模式。
-  - 确认仍未跳过“冻结本地收口改动并重跑远端 CI”这一步。
+  - 确认 R5 当前版本已不再保留“尚未冻结 / 尚未重跑 CI”的旧风险表述。
+  - 确认正式商用可交付的建议依赖于 owner 对当前机器等价环境与单人签字模式的接受。
+  - 确认当前交付边界仍限定于单机 / Docker Compose `full` 模式。
 - 剩余风险：
-  - 当前本地新增收口改动尚未形成新的远端 CI 证据。
-  - 若你不接受当前机器作为正式交付环境/等价环境，则仍需其他目标环境复演。
-  - 最终是否判定为正式商用可交付，仍取决于 owner 的明确接受与签字。
-- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）
-- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
+  - 若未来要外推到客户现场、K8s、HA 或异构机器，仍需额外环境复演。
+  - 最终是否正式签字，仍取决于 owner 本人的明确接受与记录。
+- 关联提交 / PR：PR #7（candidate/min-send-review-20260707-claude）；commit `db29505fbce3f6bfe056d6e9073d82e6130e8988`
+- 证据：`docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md`；`docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`；`https://github.com/xiongpinji/xiongbao/actions/runs/28919902142`
 
 ---
 
