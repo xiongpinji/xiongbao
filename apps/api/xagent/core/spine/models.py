@@ -1,12 +1,26 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 
 
 def _utcnow() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _serialize_value(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    return value
+
+
+def _to_dict(instance: Any) -> dict[str, Any]:
+    return {
+        item.name: _serialize_value(getattr(instance, item.name))
+        for item in fields(instance)
+    }
 
 
 class SpinePhase(str, Enum):  # noqa: UP042
@@ -39,6 +53,9 @@ class Goal:
     created_at: str = field(default_factory=_utcnow)
     updated_at: str = field(default_factory=_utcnow)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _to_dict(self)
+
 
 @dataclass(slots=True)
 class Initiative:
@@ -48,8 +65,12 @@ class Initiative:
     title: str
     status: str = "pending"
     priority: str = "medium"
+    position: int = 0
     created_at: str = field(default_factory=_utcnow)
     updated_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _to_dict(self)
 
 
 @dataclass(slots=True)
@@ -64,5 +85,9 @@ class DeliveryTask:
     task_kind: str = "execution"
     run_id: str = ""
     blocker_reason: str = ""
+    position: int = 0
     created_at: str = field(default_factory=_utcnow)
     updated_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _to_dict(self)

@@ -64,6 +64,7 @@ class InitiativeORM(Base):
     title: Mapped[str] = mapped_column(String(256), default="", nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
     priority: Mapped[str] = mapped_column(String(16), default="medium", nullable=False)
+    position: Mapped[int] = mapped_column(default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -106,6 +107,7 @@ class DeliveryTaskORM(Base):
     )
     run_id: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     blocker_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    position: Mapped[int] = mapped_column(default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

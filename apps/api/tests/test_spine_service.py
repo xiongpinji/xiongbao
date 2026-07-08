@@ -9,9 +9,16 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from xagent.core.spine.models import GoalStatus, SpinePhase
-from xagent.core.spine.service import create_goal, decompose_goal
+from xagent.core.spine.service import INITIATIVE_BLUEPRINTS, create_goal, decompose_goal
 from xagent.infra.models import DeliveryTaskORM, GoalORM, InitiativeORM, ReleaseRecordORM
+from xagent.infra.repos.spine import (
+    load_goal_snapshot,
+    persist_goal,
+    persist_initiatives,
+    persist_tasks,
+)
 
 EXPECTED_SPINE_TABLES = {
     "delivery_goals",
@@ -160,6 +167,64 @@ def test_spine_package_exports_core_symbols() -> None:
     assert spine.INITIATIVE_BLUEPRINTS[0] == "Goal / Taskboard / Session Core"
     assert spine.create_goal is create_goal
     assert spine.decompose_goal is decompose_goal
+
+
+
+def test_goal_to_dict_produces_stable_serializable_shape() -> None:
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+
+    assert goal.to_dict() == {
+        "goal_id": goal.goal_id,
+        "tenant_id": "t-1",
+        "owner_id": "owner-1",
+        "title": "Build auto-delivery spine",
+        "description": "Phase 1 self-hosted delivery loop",
+        "phase": "planning",
+        "status": "pending",
+        "created_at": goal.created_at,
+        "updated_at": goal.updated_at,
+    }
+
+
+
+async def test_spine_snapshot_round_trip_preserves_order_and_serialization(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    initiatives, tasks = decompose_goal(goal)
+
+    async with session_factory() as session:
+        await persist_goal(session, goal)
+        await persist_initiatives(session, initiatives)
+        await persist_tasks(session, tasks)
+        await session.commit()
+
+    async with session_factory() as session:
+        snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+
+    await engine.dispose()
+
+    assert snapshot is not None
+    assert [item["title"] for item in snapshot["initiatives"]] == INITIATIVE_BLUEPRINTS
+    assert [item["title"] for item in snapshot["tasks"]] == [
+        task.to_dict()["title"] for task in tasks
+    ]
+    assert snapshot["goal"] == goal.to_dict()
+    assert snapshot["initiatives"][0]["position"] == 0
+    assert snapshot["tasks"][0]["position"] == 0
 
 
 

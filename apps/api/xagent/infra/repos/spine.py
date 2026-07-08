@@ -1,12 +1,69 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+from xagent.core.spine.models import DeliveryTask, Goal, GoalStatus, Initiative, SpinePhase
 from xagent.infra.models.spine import DeliveryTaskORM, GoalORM, InitiativeORM
+
+
+def _parse_timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value)
+
+
+def _serialize_timestamp(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.isoformat()
+
+
+def _goal_from_orm(row: GoalORM) -> Goal:
+    return Goal(
+        goal_id=row.goal_id,
+        tenant_id=row.tenant_id,
+        owner_id=row.owner_id,
+        title=row.title,
+        description=row.description,
+        phase=SpinePhase(row.phase),
+        status=GoalStatus(row.status),
+        created_at=_serialize_timestamp(row.created_at),
+        updated_at=_serialize_timestamp(row.updated_at),
+    )
+
+
+def _initiative_from_orm(row: InitiativeORM) -> Initiative:
+    return Initiative(
+        initiative_id=row.initiative_id,
+        goal_id=row.goal_id,
+        tenant_id=row.tenant_id,
+        title=row.title,
+        status=row.status,
+        priority=row.priority,
+        position=row.position,
+        created_at=_serialize_timestamp(row.created_at),
+        updated_at=_serialize_timestamp(row.updated_at),
+    )
+
+
+def _task_from_orm(row: DeliveryTaskORM) -> DeliveryTask:
+    return DeliveryTask(
+        task_id=row.task_id,
+        initiative_id=row.initiative_id,
+        goal_id=row.goal_id,
+        tenant_id=row.tenant_id,
+        title=row.title,
+        detail=row.detail,
+        status=row.status,
+        task_kind=row.task_kind,
+        run_id=row.run_id,
+        blocker_reason=row.blocker_reason,
+        position=row.position,
+        created_at=_serialize_timestamp(row.created_at),
+        updated_at=_serialize_timestamp(row.updated_at),
+    )
 
 
 async def persist_goal(session: AsyncSession, goal: Goal) -> None:
@@ -20,6 +77,8 @@ async def persist_goal(session: AsyncSession, goal: Goal) -> None:
             phase=goal.phase.value,
             status=goal.status.value,
             metadata_json=json.dumps({}),
+            created_at=_parse_timestamp(goal.created_at),
+            updated_at=_parse_timestamp(goal.updated_at),
         )
     )
 
@@ -34,6 +93,9 @@ async def persist_initiatives(session: AsyncSession, initiatives: list[Initiativ
                 title=item.title,
                 status=item.status,
                 priority=item.priority,
+                position=item.position,
+                created_at=_parse_timestamp(item.created_at),
+                updated_at=_parse_timestamp(item.updated_at),
             )
         )
 
@@ -52,6 +114,9 @@ async def persist_tasks(session: AsyncSession, tasks: list[DeliveryTask]) -> Non
                 task_kind=task.task_kind,
                 run_id=task.run_id,
                 blocker_reason=task.blocker_reason,
+                position=task.position,
+                created_at=_parse_timestamp(task.created_at),
+                updated_at=_parse_timestamp(task.updated_at),
             )
         )
 
@@ -64,10 +129,12 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
     initiatives = (
         (
             await session.execute(
-                select(InitiativeORM).where(
+                select(InitiativeORM)
+                .where(
                     InitiativeORM.goal_id == goal_id,
                     InitiativeORM.tenant_id == tenant_id,
                 )
+                .order_by(InitiativeORM.position.asc(), InitiativeORM.initiative_id.asc())
             )
         )
         .scalars()
@@ -76,10 +143,12 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
     tasks = (
         (
             await session.execute(
-                select(DeliveryTaskORM).where(
+                select(DeliveryTaskORM)
+                .where(
                     DeliveryTaskORM.goal_id == goal_id,
                     DeliveryTaskORM.tenant_id == tenant_id,
                 )
+                .order_by(DeliveryTaskORM.position.asc(), DeliveryTaskORM.task_id.asc())
             )
         )
         .scalars()
@@ -87,33 +156,7 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
     )
 
     return {
-        "goal": {
-            "goal_id": goal.goal_id,
-            "title": goal.title,
-            "description": goal.description,
-            "phase": goal.phase,
-            "status": goal.status,
-        },
-        "initiatives": [
-            {
-                "initiative_id": item.initiative_id,
-                "title": item.title,
-                "status": item.status,
-                "priority": item.priority,
-            }
-            for item in initiatives
-        ],
-        "tasks": [
-            {
-                "task_id": item.task_id,
-                "initiative_id": item.initiative_id,
-                "title": item.title,
-                "detail": item.detail,
-                "status": item.status,
-                "task_kind": item.task_kind,
-                "run_id": item.run_id,
-                "blocker_reason": item.blocker_reason,
-            }
-            for item in tasks
-        ],
+        "goal": _goal_from_orm(goal).to_dict(),
+        "initiatives": [_initiative_from_orm(item).to_dict() for item in initiatives],
+        "tasks": [_task_from_orm(item).to_dict() for item in tasks],
     }

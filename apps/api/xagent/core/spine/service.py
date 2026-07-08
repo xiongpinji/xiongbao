@@ -27,12 +27,13 @@ def create_goal(*, tenant_id: str, owner_id: str, title: str, description: str) 
 def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
     initiatives: list[Initiative] = []
     tasks: list[DeliveryTask] = []
-    for title in INITIATIVE_BLUEPRINTS:
+    for position, title in enumerate(INITIATIVE_BLUEPRINTS):
         initiative = Initiative(
             initiative_id=uuid.uuid4().hex,
             goal_id=goal.goal_id,
             tenant_id=goal.tenant_id,
             title=title,
+            position=position,
         )
         initiatives.append(initiative)
         tasks.append(
@@ -43,6 +44,7 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
                 tenant_id=goal.tenant_id,
                 title=f"Initialize {title}",
                 detail=f"Bootstrap the first execution path for {title}",
+                position=position,
             )
         )
     return initiatives, tasks
