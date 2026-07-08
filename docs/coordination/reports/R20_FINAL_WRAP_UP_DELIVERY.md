@@ -262,6 +262,7 @@
 - `docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md`
 - `docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md`
 - `docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑`
+- `docs/coordination/reports/FINAL_RELEASE_MANIFEST_20260708.md`
 - `OSS_BENCHMARK_AND_REBUILD_PLAN_20260621.md`
 
 ---
