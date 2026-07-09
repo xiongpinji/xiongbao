@@ -13,6 +13,7 @@ from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.repos.evidence import load_evidence_records
+from xagent.infra.repos.spine import load_spine_linkage_by_run_id
 from xagent.infra.repos.workflow import load_workflow_run_by_id, load_workflow_runs
 
 
@@ -482,6 +483,11 @@ async def get_runtime_run_detail(
         if db_task is not None
         else deepcopy((creative_view or {}).get("related_tasks") or [])
     )
+    spine = await load_spine_linkage_by_run_id(
+        session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+    )
 
     return {
         "run_id": run_id,
@@ -493,4 +499,5 @@ async def get_runtime_run_detail(
         "validation": validation,
         "delivery": delivery,
         "related_tasks": related_tasks,
+        "spine": spine,
     }

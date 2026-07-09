@@ -62,6 +62,16 @@ def _enrich_delivery(detail: dict) -> dict:
     return merged
 
 
+def _enrich_spine(detail: dict) -> dict[str, str]:
+    spine = detail.get("spine")
+    if not isinstance(spine, dict):
+        return {"goal_id": "", "initiative_id": ""}
+    return {
+        "goal_id": str(spine.get("goal_id") or ""),
+        "initiative_id": str(spine.get("initiative_id") or ""),
+    }
+
+
 @router.get("/{run_id}", summary="查看统一 Runtime 聚合视图")
 async def get_run(
     run_id: str,
@@ -77,6 +87,7 @@ async def get_run(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "运行不存在或无权访问")
     detail["validation"] = _enrich_validation(detail)
     detail["delivery"] = _enrich_delivery(detail)
+    detail["spine"] = _enrich_spine(detail)
     if not _can_read_runtime_detail(principal, detail):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "无权访问该运行")
     return detail

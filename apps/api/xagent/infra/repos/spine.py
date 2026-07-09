@@ -147,6 +147,66 @@ async def persist_tasks(session: AsyncSession, tasks: list[DeliveryTask]) -> Non
         )
 
 
+async def attach_run_to_task(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    task_title: str,
+    run_id: str,
+    next_status: str = "in_progress",
+) -> dict[str, str] | None:
+    if not tenant_id or not task_title or not run_id:
+        return None
+
+    stmt = (
+        select(DeliveryTaskORM)
+        .where(
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.title == task_title,
+            DeliveryTaskORM.status == "ready",
+            DeliveryTaskORM.run_id == "",
+        )
+        .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+    )
+    row = (await session.execute(stmt)).scalars().first()
+    if row is None:
+        return None
+
+    row.run_id = run_id
+    row.status = next_status
+    return {
+        "task_id": row.task_id,
+        "goal_id": row.goal_id,
+        "initiative_id": row.initiative_id,
+    }
+
+
+async def load_spine_linkage_by_run_id(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+) -> dict[str, str]:
+    if not tenant_id or not run_id:
+        return {"goal_id": "", "initiative_id": ""}
+
+    stmt = (
+        select(DeliveryTaskORM)
+        .where(
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.run_id == run_id,
+        )
+        .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+    )
+    row = (await session.execute(stmt)).scalars().first()
+    if row is None:
+        return {"goal_id": "", "initiative_id": ""}
+    return {
+        "goal_id": row.goal_id,
+        "initiative_id": row.initiative_id,
+    }
+
+
 async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str) -> dict | None:
     goal = await session.get(GoalORM, goal_id)
     if goal is None or goal.tenant_id != tenant_id:

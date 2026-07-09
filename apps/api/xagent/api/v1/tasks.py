@@ -22,6 +22,7 @@ from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
+from xagent.infra.repos.spine import attach_run_to_task
 from xagent.worker import get_task_runner
 from xagent.worker.celery_app import (
     get_celery_app,
@@ -170,6 +171,34 @@ async def _load_persisted_task_views(tenant_id: str) -> dict[str, dict[str, Any]
     return task_views
 
 
+async def _try_attach_spine_task(
+    *,
+    task_id: str,
+    task_title: str,
+    principal: Principal,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as session:
+            linkage = await attach_run_to_task(
+                session,
+                tenant_id=principal.tenant_id,
+                task_title=task_title,
+                run_id=task_id,
+            )
+            if linkage is None:
+                return None
+            await session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_task_failed",
+            task_id=task_id,
+            tenant_id=principal.tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.post("", summary="提交 agent 运行为后台任务")
 async def submit_task(
     body: TaskSubmitIn,
@@ -224,6 +253,11 @@ async def submit_task(
                     status.HTTP_503_SERVICE_UNAVAILABLE,
                     f"后台任务已投递但初始持久化失败：{exc}",
                 ) from exc
+            await _try_attach_spine_task(
+                task_id=str(async_result.id),
+                task_title=body.goal,
+                principal=principal,
+            )
             return _build_metadata_view(metadata, status_value="pending")
     except HTTPException:
         raise
@@ -243,6 +277,11 @@ async def submit_task(
         backend="inproc",
         kind="agent.run",
         input_payload=input_payload,
+    )
+    await _try_attach_spine_task(
+        task_id=task_id,
+        task_title=body.goal,
+        principal=principal,
     )
     return _build_metadata_view(metadata, status_value="pending")
 
