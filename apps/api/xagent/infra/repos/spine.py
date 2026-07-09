@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from enum import Enum
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +26,26 @@ def _serialize_timestamp(value: datetime) -> str:
     return value.isoformat()
 
 
+def _enum_storage_value(value: Enum | str) -> str:
+    if isinstance(value, Enum):
+        return value.value
+    return value
+
+
+def _safe_goal_phase(value: str) -> SpinePhase | str:
+    try:
+        return SpinePhase(value)
+    except ValueError:
+        return value
+
+
+def _safe_goal_status(value: str) -> GoalStatus | str:
+    try:
+        return GoalStatus(value)
+    except ValueError:
+        return value
+
+
 def _goal_from_orm(row: GoalORM) -> Goal:
     return Goal(
         goal_id=row.goal_id,
@@ -32,8 +53,8 @@ def _goal_from_orm(row: GoalORM) -> Goal:
         owner_id=row.owner_id,
         title=row.title,
         description=row.description,
-        phase=SpinePhase(row.phase),
-        status=GoalStatus(row.status),
+        phase=_safe_goal_phase(row.phase),
+        status=_safe_goal_status(row.status),
         created_at=_serialize_timestamp(row.created_at),
         updated_at=_serialize_timestamp(row.updated_at),
     )
@@ -79,8 +100,8 @@ async def persist_goal(session: AsyncSession, goal: Goal) -> None:
             owner_id=goal.owner_id,
             title=goal.title,
             description=goal.description,
-            phase=goal.phase.value,
-            status=goal.status.value,
+            phase=_enum_storage_value(goal.phase),
+            status=_enum_storage_value(goal.status),
             metadata_json=json.dumps({}),
             created_at=_parse_timestamp(goal.created_at),
             updated_at=_parse_timestamp(goal.updated_at),
@@ -131,7 +152,7 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
     if goal is None or goal.tenant_id != tenant_id:
         return None
 
-    initiatives = (
+    initiative_rows = (
         (
             await session.execute(
                 select(InitiativeORM)
@@ -145,25 +166,19 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
         .scalars()
         .all()
     )
-    tasks = (
+    initiative_views = [_initiative_from_orm(item).to_dict() for item in initiative_rows]
+    initiative_order = {
+        item.initiative_id: (index, item.position, item.initiative_id)
+        for index, item in enumerate(initiative_rows)
+    }
+
+    task_rows = (
         (
             await session.execute(
                 select(DeliveryTaskORM)
-                .join(
-                    InitiativeORM,
-                    (DeliveryTaskORM.tenant_id == InitiativeORM.tenant_id)
-                    & (DeliveryTaskORM.goal_id == InitiativeORM.goal_id)
-                    & (DeliveryTaskORM.initiative_id == InitiativeORM.initiative_id),
-                )
                 .where(
                     DeliveryTaskORM.goal_id == goal_id,
                     DeliveryTaskORM.tenant_id == tenant_id,
-                )
-                .order_by(
-                    InitiativeORM.position.asc(),
-                    InitiativeORM.initiative_id.asc(),
-                    DeliveryTaskORM.position.asc(),
-                    DeliveryTaskORM.task_id.asc(),
                 )
             )
         )
@@ -171,8 +186,21 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
         .all()
     )
 
+    def _task_sort_key(row: DeliveryTaskORM) -> tuple[int, int, str, int, str]:
+        parent = initiative_order.get(row.initiative_id)
+        if parent is None:
+            return (1, row.position, row.initiative_id, row.position, row.task_id)
+        _index, initiative_position, initiative_id = parent
+        return (0, initiative_position, initiative_id, row.position, row.task_id)
+
+    task_views: list[dict] = []
+    for row in sorted(task_rows, key=_task_sort_key):
+        task_view = _task_from_orm(row).to_dict()
+        task_view["orphaned"] = row.initiative_id not in initiative_order
+        task_views.append(task_view)
+
     return {
         "goal": _goal_from_orm(goal).to_dict(),
-        "initiatives": [_initiative_from_orm(item).to_dict() for item in initiatives],
-        "tasks": [_task_from_orm(item).to_dict() for item in tasks],
+        "initiatives": initiative_views,
+        "tasks": task_views,
     }

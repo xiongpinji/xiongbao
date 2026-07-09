@@ -15,14 +15,24 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "delivery_initiatives",
-        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
-    )
-    op.add_column(
-        "delivery_tasks",
-        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    initiative_columns = {
+        column["name"] for column in inspector.get_columns("delivery_initiatives")
+    }
+    if "position" not in initiative_columns:
+        op.add_column(
+            "delivery_initiatives",
+            sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
+        )
+
+    task_columns = {column["name"] for column in inspector.get_columns("delivery_tasks")}
+    if "position" not in task_columns:
+        op.add_column(
+            "delivery_tasks",
+            sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
+        )
 
 
 def downgrade() -> None:

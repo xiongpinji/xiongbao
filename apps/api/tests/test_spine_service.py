@@ -33,9 +33,21 @@ EXPECTED_SPINE_TABLES = {
 def _run_alembic_upgrade(db_file: Path, revision: str) -> None:
     url = f"sqlite+aiosqlite:///{db_file}"
     api_dir = Path(__file__).resolve().parent.parent
-    env = {**os.environ, "XAGENT_DB__URL": url, "PYTHONPATH": str(api_dir)}
+    site_packages = api_dir / ".venv" / "Lib" / "site-packages"
+    env = {
+        **os.environ,
+        "XAGENT_DB__URL": url,
+        "PYTHONPATH": str(api_dir),
+        "PYTHONUTF8": "1",
+    }
+    script = (
+        "import sys; "
+        f"sys.path[:0] = [{str(site_packages)!r}, {str(api_dir)!r}]; "
+        "from alembic.config import main; "
+        "raise SystemExit(main(argv=['upgrade', sys.argv[1]]))"
+    )
     subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", revision],
+        [sys.executable, "-S", "-c", script, revision],
         cwd=api_dir,
         env=env,
         check=True,
@@ -475,6 +487,124 @@ def test_spine_follow_up_migration_adds_position_columns(tmp_path: Path) -> None
         task_columns = {column["name"] for column in inspector.get_columns("delivery_tasks")}
         assert "position" in initiative_columns
         assert "position" in task_columns
+    finally:
+        engine.dispose()
+
+
+
+async def test_spine_snapshot_tolerates_unknown_goal_phase_and_status(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+
+    try:
+        async with session_factory() as session:
+            await persist_goal(session, goal)
+            await session.commit()
+            await session.execute(
+                sa.update(GoalORM)
+                .where(GoalORM.goal_id == goal.goal_id)
+                .values(phase="future-phase", status="future-status")
+            )
+            await session.commit()
+
+        async with session_factory() as session:
+            snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+    finally:
+        await engine.dispose()
+
+    assert snapshot is not None
+    assert snapshot["goal"]["phase"] == "future-phase"
+    assert snapshot["goal"]["status"] == "future-status"
+
+
+
+async def test_spine_snapshot_keeps_orphan_task_visible(
+    migrated_spine_db: Path,
+) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{migrated_spine_db}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    goal = create_goal(
+        tenant_id="t-1",
+        owner_id="owner-1",
+        title="Build auto-delivery spine",
+        description="Phase 1 self-hosted delivery loop",
+    )
+    initiatives, tasks = decompose_goal(goal)
+
+    try:
+        async with session_factory() as session:
+            await persist_goal(session, goal)
+            await persist_initiatives(session, initiatives)
+            await persist_tasks(session, tasks)
+            await session.commit()
+
+        raw_engine = sa.create_engine(f"sqlite:///{migrated_spine_db}")
+        try:
+            with raw_engine.begin() as conn:
+                conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+                conn.execute(
+                    sa.update(sa.Table("delivery_tasks", sa.MetaData(), autoload_with=raw_engine))
+                    .where(sa.column("task_id") == tasks[0].task_id)
+                    .values(initiative_id="missing-initiative")
+                )
+                conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+        finally:
+            raw_engine.dispose()
+
+        async with session_factory() as session:
+            snapshot = await load_goal_snapshot(session, goal.goal_id, goal.tenant_id)
+    finally:
+        await engine.dispose()
+
+    assert snapshot is not None
+    orphan_titles = [item["title"] for item in snapshot["tasks"] if item.get("orphaned")]
+    assert tasks[0].title in orphan_titles
+
+
+
+def test_spine_follow_up_migration_is_idempotent_for_intermediate_schema(tmp_path: Path) -> None:
+    db_file = tmp_path / "spine_intermediate.db"
+    _run_alembic_upgrade(db_file, "20260708_spine")
+
+    engine = sa.create_engine(f"sqlite:///{db_file}")
+    try:
+        with engine.begin() as conn:
+            conn.exec_driver_sql(
+                "ALTER TABLE delivery_initiatives ADD COLUMN position INTEGER NOT NULL DEFAULT 0"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE delivery_tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0"
+            )
+    finally:
+        engine.dispose()
+
+    _run_alembic_upgrade(db_file, "head")
+
+    engine = sa.create_engine(f"sqlite:///{db_file}")
+    try:
+        inspector = sa.inspect(engine)
+        initiative_positions = [
+            column["name"]
+            for column in inspector.get_columns("delivery_initiatives")
+            if column["name"] == "position"
+        ]
+        task_positions = [
+            column["name"]
+            for column in inspector.get_columns("delivery_tasks")
+            if column["name"] == "position"
+        ]
+        assert initiative_positions == ["position"]
+        assert task_positions == ["position"]
     finally:
         engine.dispose()
 
