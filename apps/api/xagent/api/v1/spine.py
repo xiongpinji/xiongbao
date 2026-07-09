@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +16,18 @@ from xagent.infra.repos.spine import (
 )
 
 router = APIRouter(prefix="/spine", tags=["spine"])
+
+TASKBOARD_COLUMNS = (
+    "ready",
+    "in_progress",
+    "blocked",
+    "review",
+    "release_ready",
+    "deploying",
+    "verifying",
+    "delivered",
+    "recovery",
+)
 
 
 class GoalCreateIn(BaseModel):
@@ -63,12 +73,13 @@ async def get_goal_board(
     if snapshot is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "目标不存在或无权访问")
 
-    columns: defaultdict[str, list[dict]] = defaultdict(list)
+    columns: dict[str, list[dict]] = {column: [] for column in TASKBOARD_COLUMNS}
     for task in snapshot["tasks"]:
-        columns[str(task["status"])].append(task)
+        task_status = str(task["status"])
+        columns.setdefault(task_status, []).append(task)
 
     return {
         "goal": snapshot["goal"],
         "initiatives": snapshot["initiatives"],
-        "columns": dict(columns),
+        "columns": columns,
     }

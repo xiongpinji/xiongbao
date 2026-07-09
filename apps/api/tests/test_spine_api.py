@@ -7,11 +7,22 @@ from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-
 from xagent.enterprise.auth import create_access_token
 from xagent.infra.db import dispose_engine
 from xagent.infra.settings import get_settings
 from xagent.main import create_app
+
+EXPECTED_BOARD_COLUMNS = [
+    "ready",
+    "in_progress",
+    "blocked",
+    "review",
+    "release_ready",
+    "deploying",
+    "verifying",
+    "delivered",
+    "recovery",
+]
 
 
 def _run_alembic_upgrade(db_file: Path, revision: str) -> None:
@@ -67,9 +78,7 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def test_create_goal_returns_goal_tree(client: AsyncClient) -> None:
-    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
-
+async def _create_goal(client: AsyncClient, token: str) -> dict:
     response = await client.post(
         "/api/v1/spine/goals",
         json={
@@ -78,9 +87,15 @@ async def test_create_goal_returns_goal_tree(client: AsyncClient) -> None:
         },
         headers=_auth(token),
     )
-
     assert response.status_code == 200
-    body = response.json()
+    return response.json()
+
+
+async def test_create_goal_returns_goal_tree(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+
+    body = await _create_goal(client, token)
+
     assert body["goal"]["title"] == "Auto-Delivery Spine Phase 1"
     assert len(body["initiatives"]) == 6
     assert len(body["tasks"]) == 6
@@ -89,19 +104,34 @@ async def test_create_goal_returns_goal_tree(client: AsyncClient) -> None:
 async def test_get_goal_board_snapshot_returns_grouped_columns(client: AsyncClient) -> None:
     token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
 
-    created = await client.post(
-        "/api/v1/spine/goals",
-        json={
-            "title": "Auto-Delivery Spine Phase 1",
-            "description": "Make xagent upgrade itself",
-        },
-        headers=_auth(token),
-    )
-    goal_id = created.json()["goal"]["goal_id"]
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
 
     response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token))
 
     assert response.status_code == 200
     board = response.json()
-    assert "ready" in board["columns"]
+    assert list(board["columns"]) == EXPECTED_BOARD_COLUMNS
     assert board["columns"]["ready"]
+    for column in EXPECTED_BOARD_COLUMNS[1:]:
+        assert board["columns"][column] == []
+
+
+async def test_get_goal_board_returns_404_for_missing_goal(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+
+    response = await client.get("/api/v1/spine/goals/missing-goal/board", headers=_auth(token))
+
+    assert response.status_code == 404
+
+
+async def test_get_goal_board_enforces_tenant_isolation(client: AsyncClient) -> None:
+    token_a = create_access_token(user_id="goal-owner-a", tenant_id="tenant-a", roles=["member"])
+    token_b = create_access_token(user_id="goal-owner-b", tenant_id="tenant-b", roles=["member"])
+
+    created = await _create_goal(client, token_a)
+    goal_id = created["goal"]["goal_id"]
+
+    response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token_b))
+
+    assert response.status_code == 404
