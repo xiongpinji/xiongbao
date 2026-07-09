@@ -74,12 +74,17 @@ async def get_goal_board(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "目标不存在或无权访问")
 
     columns: dict[str, list[dict]] = {column: [] for column in TASKBOARD_COLUMNS}
+    unknown_status_tasks: list[dict] = []
     for task in snapshot["tasks"]:
         task_status = str(task["status"])
-        columns.setdefault(task_status, []).append(task)
+        if task_status in columns:
+            columns[task_status].append(task)
+        else:
+            unknown_status_tasks.append(task)
 
     return {
         "goal": snapshot["goal"],
         "initiatives": snapshot["initiatives"],
         "columns": columns,
+        "unknown_status_tasks": unknown_status_tasks,
     }

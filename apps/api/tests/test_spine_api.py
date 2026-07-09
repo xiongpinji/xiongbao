@@ -113,6 +113,7 @@ async def test_get_goal_board_snapshot_returns_grouped_columns(client: AsyncClie
     board = response.json()
     assert list(board["columns"]) == EXPECTED_BOARD_COLUMNS
     assert board["columns"]["ready"]
+    assert board["unknown_status_tasks"] == []
     for column in EXPECTED_BOARD_COLUMNS[1:]:
         assert board["columns"][column] == []
 
@@ -135,3 +136,50 @@ async def test_get_goal_board_enforces_tenant_isolation(client: AsyncClient) -> 
     response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token_b))
 
     assert response.status_code == 404
+
+
+async def test_get_goal_board_separates_unknown_status_tasks(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
+
+    import xagent.api.v1.spine as spine_api
+
+    original_loader = spine_api.load_goal_snapshot
+
+    async def _patched_loader(session, requested_goal_id: str, tenant_id: str):
+        snapshot = await original_loader(session, requested_goal_id, tenant_id)
+        assert snapshot is not None
+        snapshot["tasks"] = [
+            *snapshot["tasks"],
+            {
+                "task_id": "unexpected-task",
+                "initiative_id": snapshot["initiatives"][0]["initiative_id"],
+                "goal_id": requested_goal_id,
+                "tenant_id": tenant_id,
+                "title": "Unexpected status task",
+                "detail": "Should not create a dynamic board column",
+                "status": "surprising_status",
+                "task_kind": "execution",
+                "run_id": "",
+                "blocker_reason": "",
+                "position": 999,
+                "created_at": snapshot["goal"]["created_at"],
+                "updated_at": snapshot["goal"]["updated_at"],
+            },
+        ]
+        return snapshot
+
+    monkeypatch.setattr(spine_api, "load_goal_snapshot", _patched_loader)
+
+    response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token))
+
+    assert response.status_code == 200
+    board = response.json()
+    assert list(board["columns"]) == EXPECTED_BOARD_COLUMNS
+    assert "surprising_status" not in board["columns"]
+    assert [task["task_id"] for task in board["unknown_status_tasks"]] == ["unexpected-task"]
+    assert board["unknown_status_tasks"][0]["status"] == "surprising_status"
