@@ -13,6 +13,7 @@ from xagent.api.v1 import (
     memory,
     open_source,
     runs,
+    spine,
     stream,
     system,
     tasks,
@@ -27,6 +28,7 @@ api_v1.include_router(tasks.router)
 api_v1.include_router(memory.router)
 api_v1.include_router(workflows.router)
 api_v1.include_router(runs.router)
+api_v1.include_router(spine.router)
 api_v1.include_router(canvas.router)
 api_v1.include_router(creative_studio.router)
 api_v1.include_router(editor.router)
