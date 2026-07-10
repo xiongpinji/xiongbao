@@ -32,18 +32,27 @@ logger = get_logger("xagent.api.agents")
 
 class RunRequest(BaseModel):
     goal: str = Field(..., min_length=1, description="任务目标")
+    goal_id: str = Field(default="", description="关联的 Spine goal 标识")
+    spine_task_id: str = Field(default="", description="关联的 Spine task 标识")
     role: str | None = Field(None, description="指定角色名；不指定则按能力匹配")
     capabilities: list[str] = Field(default_factory=list, description="任务所需能力标签")
     model: str | None = None
 
 
 def _build_input_payload(body: RunRequest) -> dict:
-    return {
+    payload = {
         "goal": body.goal,
         "role": body.role,
         "capabilities": list(body.capabilities),
         "model": body.model,
     }
+    goal_id = str(body.goal_id or "").strip()
+    spine_task_id = str(body.spine_task_id or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if spine_task_id:
+        payload["spine_task_id"] = spine_task_id
+    return payload
 
 
 def _build_result_summary(result: dict) -> dict:
@@ -176,6 +185,8 @@ async def _try_attach_spine_run(
     *,
     run_id: str,
     task_title: str,
+    goal_id: str,
+    spine_task_id: str,
     tenant_id: str,
 ) -> dict[str, str] | None:
     try:
@@ -183,8 +194,11 @@ async def _try_attach_spine_run(
             linkage = await attach_run_to_task(
                 session,
                 tenant_id=tenant_id,
-                task_title=task_title,
                 run_id=run_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title,
+                next_status="ready",
             )
             if linkage is None:
                 return None
@@ -254,6 +268,8 @@ async def run(
         await _try_attach_spine_run(
             run_id=run_id,
             task_title=body.goal,
+            goal_id=body.goal_id,
+            spine_task_id=body.spine_task_id,
             tenant_id=principal.tenant_id,
         )
         result_payload = result.to_dict()

@@ -147,33 +147,96 @@ async def persist_tasks(session: AsyncSession, tasks: list[DeliveryTask]) -> Non
         )
 
 
-async def attach_run_to_task(
+async def load_spine_task_reference(
     session: AsyncSession,
     *,
     tenant_id: str,
-    task_title: str,
-    run_id: str,
-    next_status: str = "in_progress",
+    goal_id: str,
+    spine_task_id: str,
 ) -> dict[str, str] | None:
-    if not tenant_id or not task_title or not run_id:
+    if not tenant_id or not goal_id or not spine_task_id:
         return None
 
-    stmt = (
-        select(DeliveryTaskORM)
-        .where(
-            DeliveryTaskORM.tenant_id == tenant_id,
-            DeliveryTaskORM.title == task_title,
-            DeliveryTaskORM.status == "ready",
-            DeliveryTaskORM.run_id == "",
-        )
-        .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+    stmt = select(DeliveryTaskORM).where(
+        DeliveryTaskORM.tenant_id == tenant_id,
+        DeliveryTaskORM.goal_id == goal_id,
+        DeliveryTaskORM.task_id == spine_task_id,
     )
     row = (await session.execute(stmt)).scalars().first()
     if row is None:
         return None
+    return {
+        "task_id": row.task_id,
+        "goal_id": row.goal_id,
+        "initiative_id": row.initiative_id,
+        "title": row.title,
+        "status": row.status,
+        "run_id": row.run_id,
+    }
+
+
+async def attach_run_to_task(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    spine_task_id: str = "",
+    goal_id: str = "",
+    task_title: str = "",
+    next_status: str | None = None,
+) -> dict[str, str] | None:
+    if not tenant_id or not run_id:
+        return None
+
+    explicit_task_id = spine_task_id.strip()
+    explicit_goal_id = goal_id.strip()
+    fallback_title = task_title.strip()
+
+    row: DeliveryTaskORM | None = None
+    if explicit_task_id and explicit_goal_id:
+        stmt = select(DeliveryTaskORM).where(
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.goal_id == explicit_goal_id,
+            DeliveryTaskORM.task_id == explicit_task_id,
+        )
+        row = (await session.execute(stmt)).scalars().first()
+    elif explicit_task_id:
+        stmt = select(DeliveryTaskORM).where(
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.task_id == explicit_task_id,
+        )
+        row = (await session.execute(stmt)).scalars().first()
+    elif explicit_goal_id and fallback_title:
+        stmt = (
+            select(DeliveryTaskORM)
+            .where(
+                DeliveryTaskORM.tenant_id == tenant_id,
+                DeliveryTaskORM.goal_id == explicit_goal_id,
+                DeliveryTaskORM.title == fallback_title,
+                DeliveryTaskORM.status == "ready",
+                DeliveryTaskORM.run_id == "",
+            )
+            .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+        )
+        row = (await session.execute(stmt)).scalars().first()
+    elif fallback_title:
+        stmt = (
+            select(DeliveryTaskORM)
+            .where(
+                DeliveryTaskORM.tenant_id == tenant_id,
+                DeliveryTaskORM.title == fallback_title,
+                DeliveryTaskORM.status == "ready",
+                DeliveryTaskORM.run_id == "",
+            )
+            .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+        )
+        row = (await session.execute(stmt)).scalars().first()
+    if row is None:
+        return None
 
     row.run_id = run_id
-    row.status = next_status
+    if next_status is not None:
+        row.status = next_status
     return {
         "task_id": row.task_id,
         "goal_id": row.goal_id,

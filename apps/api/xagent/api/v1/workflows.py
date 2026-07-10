@@ -46,6 +46,8 @@ class StepIn(BaseModel):
 
 class SpecIn(BaseModel):
     name: str
+    goal_id: str = ""
+    spine_task_id: str = ""
     description: str = ""
     steps: list[StepIn]
 
@@ -243,6 +245,8 @@ def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
             "kind": "request.input",
             "payload": {
                 "spec_name": run_view.get("spec_name", ""),
+                "goal_id": run_view.get("goal_id", ""),
+                "spine_task_id": run_view.get("spine_task_id", ""),
                 "steps": [
                     {
                         "id": step.get("id"),
@@ -332,6 +336,8 @@ def _build_workflow_task_record(
         input_payload=json.dumps(
             {
                 "spec_name": run_view.get("spec_name", ""),
+                "goal_id": run_view.get("goal_id", ""),
+                "spine_task_id": run_view.get("spine_task_id", ""),
                 "steps": [
                     {
                         "id": step.get("id"),
@@ -502,6 +508,8 @@ async def _try_attach_spine_workflow_run(
     *,
     run_id: str,
     task_title: str,
+    goal_id: str,
+    spine_task_id: str,
     tenant_id: str,
 ) -> dict[str, str] | None:
     try:
@@ -509,8 +517,11 @@ async def _try_attach_spine_workflow_run(
             linkage = await attach_run_to_task(
                 attach_session,
                 tenant_id=tenant_id,
-                task_title=task_title,
                 run_id=run_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title,
+                next_status="ready",
             )
             if linkage is None:
                 return None
@@ -537,6 +548,8 @@ async def create_and_run(
     run = engine.create_run(spec, principal)
     run = await engine.execute(run.run_id, principal)
     view = run.to_view()
+    view["goal_id"] = body.goal_id
+    view["spine_task_id"] = body.spine_task_id
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
@@ -546,6 +559,8 @@ async def create_and_run(
     await _try_attach_spine_workflow_run(
         run_id=str(view.get("run_id") or ""),
         task_title=body.name,
+        goal_id=body.goal_id,
+        spine_task_id=body.spine_task_id,
         tenant_id=principal.tenant_id,
     )
     get_audit_log().record(

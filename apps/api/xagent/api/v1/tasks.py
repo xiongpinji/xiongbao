@@ -42,16 +42,25 @@ _task_metadata: dict[str, dict[str, Any]] = {}
 
 class TaskSubmitIn(BaseModel):
     goal: str = Field(..., min_length=1)
+    goal_id: str = Field(default="")
+    spine_task_id: str = Field(default="")
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
 
 
 def _build_input_payload(body: TaskSubmitIn) -> dict[str, Any]:
-    return {
+    payload = {
         "goal": body.goal,
         "role": body.role,
         "capabilities": list(body.capabilities),
     }
+    goal_id = str(getattr(body, "goal_id", "") or "").strip()
+    spine_task_id = str(getattr(body, "spine_task_id", "") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if spine_task_id:
+        payload["spine_task_id"] = spine_task_id
+    return payload
 
 
 def _remember_task(
@@ -175,6 +184,8 @@ async def _try_attach_spine_task(
     *,
     task_id: str,
     task_title: str,
+    goal_id: str,
+    spine_task_id: str,
     principal: Principal,
 ) -> dict[str, str] | None:
     try:
@@ -182,8 +193,11 @@ async def _try_attach_spine_task(
             linkage = await attach_run_to_task(
                 session,
                 tenant_id=principal.tenant_id,
-                task_title=task_title,
                 run_id=task_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title,
+                next_status="in_progress",
             )
             if linkage is None:
                 return None
@@ -256,6 +270,8 @@ async def submit_task(
             await _try_attach_spine_task(
                 task_id=str(async_result.id),
                 task_title=body.goal,
+                goal_id=body.goal_id,
+                spine_task_id=body.spine_task_id,
                 principal=principal,
             )
             return _build_metadata_view(metadata, status_value="pending")
@@ -281,6 +297,8 @@ async def submit_task(
     await _try_attach_spine_task(
         task_id=task_id,
         task_title=body.goal,
+        goal_id=body.goal_id,
+        spine_task_id=body.spine_task_id,
         principal=principal,
     )
     return _build_metadata_view(metadata, status_value="pending")
