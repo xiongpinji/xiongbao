@@ -85,24 +85,19 @@ async def _create_goal(client: AsyncClient, token: str) -> dict:
     return response.json()
 
 
-async def test_task_submission_updates_delivery_task_with_run_id(client: AsyncClient) -> None:
-    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
-    created = await _create_goal(client, token)
-    goal_id = created["goal"]["goal_id"]
-
+async def _get_first_ready_spine_task(client: AsyncClient, token: str, goal_id: str) -> dict:
     board_response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token))
     assert board_response.status_code == 200, board_response.text
-    board = board_response.json()
-    spine_task = board["columns"]["ready"][0]
+    return board_response.json()["columns"]["ready"][0]
 
-    response = await client.post(
-        "/api/v1/tasks",
-        json={"goal": spine_task["title"]},
-        headers=_auth(token),
-    )
-    assert response.status_code == 200, response.text
-    run_id = response.json()["run_id"]
 
+async def _assert_spine_task_attached(
+    client: AsyncClient,
+    token: str,
+    goal_id: str,
+    spine_task: dict,
+    run_id: str,
+) -> None:
     board_after_response = await client.get(
         f"/api/v1/spine/goals/{goal_id}/board",
         headers=_auth(token),
@@ -110,7 +105,10 @@ async def test_task_submission_updates_delivery_task_with_run_id(client: AsyncCl
     assert board_after_response.status_code == 200, board_after_response.text
     board_after = board_after_response.json()
 
-    assert not any(task["task_id"] == spine_task["task_id"] for task in board_after["columns"]["ready"])
+    assert not any(
+        task["task_id"] == spine_task["task_id"]
+        for task in board_after["columns"]["ready"]
+    )
     updated = next(
         task
         for task in board_after["columns"]["in_progress"]
@@ -120,27 +118,92 @@ async def test_task_submission_updates_delivery_task_with_run_id(client: AsyncCl
     assert updated["status"] == "in_progress"
 
 
-async def test_run_detail_exposes_spine_linkage_for_submitted_task(client: AsyncClient) -> None:
+async def _assert_run_spine_linkage(
+    client: AsyncClient,
+    token: str,
+    run_id: str,
+    *,
+    goal_id: str,
+    initiative_id: str,
+) -> None:
+    run_response = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_response.status_code == 200, run_response.text
+    assert run_response.json()["spine"] == {
+        "goal_id": goal_id,
+        "initiative_id": initiative_id,
+    }
+
+
+async def test_task_submission_updates_delivery_task_with_run_id(client: AsyncClient) -> None:
     token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
     created = await _create_goal(client, token)
     goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
 
-    board_response = await client.get(f"/api/v1/spine/goals/{goal_id}/board", headers=_auth(token))
-    assert board_response.status_code == 200, board_response.text
-    spine_task = board_response.json()["columns"]["ready"][0]
-
-    submit_response = await client.post(
+    response = await client.post(
         "/api/v1/tasks",
         json={"goal": spine_task["title"]},
         headers=_auth(token),
     )
-    assert submit_response.status_code == 200, submit_response.text
-    run_id = submit_response.json()["run_id"]
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
 
-    run_response = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
-    assert run_response.status_code == 200, run_response.text
+    await _assert_spine_task_attached(client, token, goal_id, spine_task, run_id)
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )
 
-    assert run_response.json()["spine"] == {
-        "goal_id": goal_id,
-        "initiative_id": spine_task["initiative_id"],
-    }
+
+async def test_agent_run_updates_delivery_task_with_run_id(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    response = await client.post(
+        "/api/v1/agents/run",
+        json={"goal": spine_task["title"]},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
+
+    await _assert_spine_task_attached(client, token, goal_id, spine_task, run_id)
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )
+
+
+async def test_workflow_run_updates_delivery_task_with_run_id(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task["title"],
+            "steps": [{"id": "s1", "name": "执行", "goal": "最小 workflow 接线"}],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
+
+    await _assert_spine_task_attached(client, token, goal_id, spine_task, run_id)
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )

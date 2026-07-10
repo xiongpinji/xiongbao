@@ -19,12 +19,15 @@ from xagent.domains.billing import get_billing_service
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
-from xagent.infra.db import get_session
+from xagent.infra.db import get_session, get_sessionmaker
+from xagent.infra.logging import get_logger
 from xagent.infra.repos.billing import persist_billing_record
 from xagent.infra.repos.evidence import persist_evidence_bundle
+from xagent.infra.repos.spine import attach_run_to_task
 from xagent.worker.celery_app import persist_agent_task_record_in_session
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+logger = get_logger("xagent.api.agents")
 
 
 class RunRequest(BaseModel):
@@ -169,6 +172,34 @@ def _is_runtime_persistence_schema_mismatch(exc: Exception) -> bool:
     )
 
 
+async def _try_attach_spine_run(
+    *,
+    run_id: str,
+    task_title: str,
+    tenant_id: str,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as session:
+            linkage = await attach_run_to_task(
+                session,
+                tenant_id=tenant_id,
+                task_title=task_title,
+                run_id=run_id,
+            )
+            if linkage is None:
+                return None
+            await session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_agent_run_failed",
+            run_id=run_id,
+            tenant_id=tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.get("/roles", summary="列出可用 agent 角色")
 async def list_roles(
     principal: Principal = Depends(require_permission("agent", "read")),
@@ -219,6 +250,11 @@ async def run(
             model=body.model,
             session=session,
             run_id=run_id,
+        )
+        await _try_attach_spine_run(
+            run_id=run_id,
+            task_title=body.goal,
+            tenant_id=principal.tenant_id,
         )
         result_payload = result.to_dict()
         delivery_summary = _build_delivery_summary(result.run_id, result_payload)

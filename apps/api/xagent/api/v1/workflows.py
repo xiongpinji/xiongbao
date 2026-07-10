@@ -21,10 +21,11 @@ from xagent.core.workflow import (
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
-from xagent.infra.db import get_session
+from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.repos.evidence import persist_evidence_bundle
+from xagent.infra.repos.spine import attach_run_to_task
 from xagent.infra.repos.workflow import load_workflow_runs, persist_workflow_run
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
@@ -497,6 +498,34 @@ async def _persist_workflow_runtime_and_view(
     await _persist_workflow_view(session, view)
 
 
+async def _try_attach_spine_workflow_run(
+    *,
+    run_id: str,
+    task_title: str,
+    tenant_id: str,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as attach_session:
+            linkage = await attach_run_to_task(
+                attach_session,
+                tenant_id=tenant_id,
+                task_title=task_title,
+                run_id=run_id,
+            )
+            if linkage is None:
+                return None
+            await attach_session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_workflow_run_failed",
+            run_id=run_id,
+            tenant_id=tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.post("", summary="创建并启动工作流")
 async def create_and_run(
     body: SpecIn,
@@ -512,6 +541,11 @@ async def create_and_run(
         session,
         view=view,
         owner_id=principal.user_id,
+        tenant_id=principal.tenant_id,
+    )
+    await _try_attach_spine_workflow_run(
+        run_id=str(view.get("run_id") or ""),
+        task_title=body.name,
         tenant_id=principal.tenant_id,
     )
     get_audit_log().record(
