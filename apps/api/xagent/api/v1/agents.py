@@ -23,7 +23,7 @@ from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.repos.billing import persist_billing_record
 from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.infra.repos.spine import attach_run_to_task
+from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
 from xagent.worker.celery_app import persist_agent_task_record_in_session
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -53,6 +53,37 @@ def _build_input_payload(body: RunRequest) -> dict:
     if spine_task_id:
         payload["spine_task_id"] = spine_task_id
     return payload
+
+
+async def _resolve_spine_contract(
+    *,
+    principal: Principal,
+    goal_id: str,
+    spine_task_id: str,
+) -> tuple[str, str, bool]:
+    resolved_goal_id = goal_id.strip()
+    resolved_spine_task_id = spine_task_id.strip()
+    if not resolved_goal_id and not resolved_spine_task_id:
+        return "", "", False
+    if not resolved_goal_id or not resolved_spine_task_id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "spine goal_id 与 spine_task_id 必须同时提供",
+        )
+
+    async with get_sessionmaker()() as session:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=principal.tenant_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+        )
+    if reference is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "spine task 不存在或与 goal_id 不匹配",
+        )
+    return resolved_goal_id, resolved_spine_task_id, True
 
 
 def _build_result_summary(result: dict) -> dict:
@@ -187,6 +218,7 @@ async def _try_attach_spine_run(
     task_title: str,
     goal_id: str,
     spine_task_id: str,
+    allow_legacy_title_fallback: bool,
     tenant_id: str,
 ) -> dict[str, str] | None:
     try:
@@ -197,7 +229,7 @@ async def _try_attach_spine_run(
                 run_id=run_id,
                 spine_task_id=spine_task_id,
                 goal_id=goal_id,
-                task_title=task_title,
+                task_title=task_title if allow_legacy_title_fallback else "",
                 next_status="ready",
             )
             if linkage is None:
@@ -252,6 +284,11 @@ async def run(
         ) from exc
 
     run_id = uuid.uuid4().hex
+    resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
+        principal=principal,
+        goal_id=body.goal_id,
+        spine_task_id=body.spine_task_id,
+    )
     input_payload = _build_input_payload(body)
     started_at = datetime.now(UTC)
 
@@ -265,13 +302,19 @@ async def run(
             session=session,
             run_id=run_id,
         )
-        await _try_attach_spine_run(
+        linkage = await _try_attach_spine_run(
             run_id=run_id,
             task_title=body.goal,
-            goal_id=body.goal_id,
-            spine_task_id=body.spine_task_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=not strict_spine,
             tenant_id=principal.tenant_id,
         )
+        if strict_spine and linkage is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "spine task 挂接失败",
+            )
         result_payload = result.to_dict()
         delivery_summary = _build_delivery_summary(result.run_id, result_payload)
         validation_summary = {"risks": []}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect
 from sqlalchemy.exc import ProgrammingError
@@ -25,7 +25,7 @@ from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.infra.repos.spine import attach_run_to_task
+from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
 from xagent.infra.repos.workflow import load_workflow_runs, persist_workflow_run
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
@@ -69,6 +69,41 @@ def _to_spec(body: SpecIn) -> WorkflowSpec:
         for s in body.steps
     ]
     return WorkflowSpec(name=body.name, description=body.description, steps=steps)
+
+
+def _decode_json_payload(payload: str | None) -> dict:
+    if not payload:
+        return {}
+    try:
+        value = json.loads(payload)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+async def _resolve_spine_contract(
+    *,
+    principal: Principal,
+    goal_id: str,
+    spine_task_id: str,
+) -> tuple[str, str, bool]:
+    resolved_goal_id = goal_id.strip()
+    resolved_spine_task_id = spine_task_id.strip()
+    if not resolved_goal_id and not resolved_spine_task_id:
+        return "", "", False
+    if not resolved_goal_id or not resolved_spine_task_id:
+        raise ValueError("spine goal_id 与 spine_task_id 必须同时提供")
+
+    async with get_sessionmaker()() as session:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=principal.tenant_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+        )
+    if reference is None:
+        raise ValueError("spine task 不存在或与 goal_id 不匹配")
+    return resolved_goal_id, resolved_spine_task_id, True
 
 
 def build_workflow_replay_pointer(run_id: str) -> dict[str, str] | None:
@@ -425,13 +460,17 @@ async def _upsert_runtime_task_record(
         )
         return
 
-    task_record = _build_workflow_task_record(
-        run_view=run_view,
-        owner_id=owner_id,
-        tenant_id=tenant_id,
-    )
     try:
         existing = await session.get(AgentTaskORM, run_view["run_id"])
+        if existing is not None:
+            existing_input = _decode_json_payload(existing.input_payload)
+            run_view.setdefault("goal_id", str(existing_input.get("goal_id") or ""))
+            run_view.setdefault("spine_task_id", str(existing_input.get("spine_task_id") or ""))
+        task_record = _build_workflow_task_record(
+            run_view=run_view,
+            owner_id=owner_id,
+            tenant_id=tenant_id,
+        )
         if existing is None:
             session.add(task_record)
             return
@@ -510,6 +549,7 @@ async def _try_attach_spine_workflow_run(
     task_title: str,
     goal_id: str,
     spine_task_id: str,
+    allow_legacy_title_fallback: bool,
     tenant_id: str,
 ) -> dict[str, str] | None:
     try:
@@ -520,7 +560,7 @@ async def _try_attach_spine_workflow_run(
                 run_id=run_id,
                 spine_task_id=spine_task_id,
                 goal_id=goal_id,
-                task_title=task_title,
+                task_title=task_title if allow_legacy_title_fallback else "",
                 next_status="ready",
             )
             if linkage is None:
@@ -544,25 +584,38 @@ async def create_and_run(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     engine: WorkflowEngine = get_engine()
+    try:
+        resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
+            principal=principal,
+            goal_id=body.goal_id,
+            spine_task_id=body.spine_task_id,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 422 if "必须同时提供" in message else 409
+        raise HTTPException(status_code, message) from exc
     spec = _to_spec(body)
     run = engine.create_run(spec, principal)
     run = await engine.execute(run.run_id, principal)
     view = run.to_view()
-    view["goal_id"] = body.goal_id
-    view["spine_task_id"] = body.spine_task_id
+    view["goal_id"] = resolved_goal_id
+    view["spine_task_id"] = resolved_spine_task_id
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
         owner_id=principal.user_id,
         tenant_id=principal.tenant_id,
     )
-    await _try_attach_spine_workflow_run(
+    linkage = await _try_attach_spine_workflow_run(
         run_id=str(view.get("run_id") or ""),
         task_title=body.name,
-        goal_id=body.goal_id,
-        spine_task_id=body.spine_task_id,
+        goal_id=resolved_goal_id,
+        spine_task_id=resolved_spine_task_id,
+        allow_legacy_title_fallback=not strict_spine,
         tenant_id=principal.tenant_id,
     )
+    if strict_spine and linkage is None:
+        raise HTTPException(status_code=409, detail="spine task 挂接失败")
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -610,6 +663,10 @@ async def approve(
     )
     run = await engine.approve(run_id, step_id, principal)
     view = run.to_view()
+    if existing is not None:
+        existing_input = _decode_json_payload(existing.input_payload)
+        view["goal_id"] = str(existing_input.get("goal_id") or "")
+        view["spine_task_id"] = str(existing_input.get("spine_task_id") or "")
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
@@ -640,6 +697,10 @@ async def deny(
     )
     run = await engine.deny(run_id, step_id, principal)
     view = run.to_view()
+    if existing is not None:
+        existing_input = _decode_json_payload(existing.input_payload)
+        view["goal_id"] = str(existing_input.get("goal_id") or "")
+        view["spine_task_id"] = str(existing_input.get("spine_task_id") or "")
     await _persist_workflow_runtime_and_view(
         session,
         view=view,

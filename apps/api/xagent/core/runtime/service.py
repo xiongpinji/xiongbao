@@ -13,7 +13,7 @@ from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.repos.evidence import load_evidence_records
-from xagent.infra.repos.spine import load_spine_linkage_by_run_id
+from xagent.infra.repos.spine import load_spine_linkage_by_run_id, load_spine_task_reference
 from xagent.infra.repos.workflow import load_workflow_run_by_id, load_workflow_runs
 
 
@@ -199,6 +199,46 @@ def _decode_json_payload(payload: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+async def _resolve_spine_linkage(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    db_task: AgentTaskORM | None,
+    task_view: dict[str, Any] | None,
+    workflow_view: dict[str, Any] | None,
+) -> dict[str, str]:
+    input_payload = (
+        _decode_json_payload(db_task.input_payload)
+        if db_task is not None
+        else deepcopy((task_view or {}).get("input") or {})
+    )
+    if not input_payload and isinstance(workflow_view, dict):
+        input_payload = {
+            "goal_id": str(workflow_view.get("goal_id") or ""),
+            "spine_task_id": str(workflow_view.get("spine_task_id") or ""),
+        }
+    goal_id = str(input_payload.get("goal_id") or "").strip()
+    spine_task_id = str(input_payload.get("spine_task_id") or "").strip()
+    if goal_id and spine_task_id:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=tenant_id,
+            goal_id=goal_id,
+            spine_task_id=spine_task_id,
+        )
+        if reference is not None:
+            return {
+                "goal_id": reference["goal_id"],
+                "initiative_id": reference["initiative_id"],
+            }
+    return await load_spine_linkage_by_run_id(
+        session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+    )
 
 
 def _build_runtime_task_view(row: AgentTaskORM) -> dict[str, Any]:
@@ -483,10 +523,13 @@ async def get_runtime_run_detail(
         if db_task is not None
         else deepcopy((creative_view or {}).get("related_tasks") or [])
     )
-    spine = await load_spine_linkage_by_run_id(
+    spine = await _resolve_spine_linkage(
         session,
         tenant_id=tenant_id,
         run_id=run_id,
+        db_task=db_task,
+        task_view=task,
+        workflow_view=workflow_view,
     )
 
     return {

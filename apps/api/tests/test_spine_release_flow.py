@@ -250,7 +250,7 @@ async def test_explicit_spine_ids_bind_correct_goal_when_titles_duplicate(
 
 
 @pytest.mark.parametrize(("entrypoint", "expected_status"), ENTRYPOINT_CASES)
-async def test_explicit_spine_ids_rebind_latest_run_without_silent_failure(
+async def test_explicit_spine_ids_rebind_latest_run_without_losing_old_run_provenance(
     client: AsyncClient,
     entrypoint: str,
     expected_status: str,
@@ -275,11 +275,65 @@ async def test_explicit_spine_ids_rebind_latest_run_without_silent_failure(
     await _assert_run_spine_linkage(
         client,
         token,
+        first_run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
         second_run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
     )
 
-    first_run_response = await client.get(f"/api/v1/runs/{first_run_id}", headers=_auth(token))
-    assert first_run_response.status_code == 200, first_run_response.text
-    assert first_run_response.json()["spine"] == {"goal_id": "", "initiative_id": ""}
+
+@pytest.mark.parametrize("entrypoint", ["task", "agent", "workflow"])
+@pytest.mark.parametrize("missing_field", ["goal_id", "spine_task_id"])
+async def test_partial_spine_ids_are_rejected(
+    client: AsyncClient,
+    entrypoint: str,
+    missing_field: str,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    path, payload = _build_entrypoint_request(entrypoint, spine_task)
+    payload.pop(missing_field)
+
+    response = await client.post(path, json=payload, headers=_auth(token))
+
+    assert response.status_code == 422, response.text
+    board = await _get_board(client, token, goal_id)
+    _, task = _find_task(board, spine_task["task_id"])
+    assert task["status"] == "ready"
+    assert task["run_id"] == ""
+
+
+@pytest.mark.parametrize("entrypoint", ["task", "agent", "workflow"])
+async def test_mismatched_spine_ids_are_rejected_without_binding_wrong_goal(
+    client: AsyncClient,
+    entrypoint: str,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Goal A")
+    goal_b = await _create_goal(client, token, title="Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+    spine_task_b = await _get_first_ready_spine_task(client, token, goal_b_id)
+    path, payload = _build_entrypoint_request(entrypoint, spine_task_a)
+    payload["goal_id"] = goal_b_id
+
+    response = await client.post(path, json=payload, headers=_auth(token))
+
+    assert response.status_code == 409, response.text
+    board_a = await _get_board(client, token, goal_a_id)
+    _, task_a = _find_task(board_a, spine_task_a["task_id"])
+    assert task_a["status"] == "ready"
+    assert task_a["run_id"] == ""
+    board_b = await _get_board(client, token, goal_b_id)
+    _, task_b = _find_task(board_b, spine_task_b["task_id"])
+    assert task_b["status"] == "ready"
+    assert task_b["run_id"] == ""
