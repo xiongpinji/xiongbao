@@ -12,6 +12,7 @@ from xagent.enterprise.auth import create_access_token
 from xagent.infra.db import dispose_engine
 from xagent.infra.settings import get_settings
 from xagent.main import create_app
+from xagent.worker.celery_app import persist_agent_task_record, persist_submitted_agent_task
 
 ENTRYPOINT_CASES = (
     ("task", "in_progress"),
@@ -384,3 +385,82 @@ async def test_mismatched_spine_ids_are_rejected_without_binding_wrong_goal(
     _, task_b = _find_task(board_b, spine_task_b["task_id"])
     assert task_b["status"] == "ready"
     assert task_b["run_id"] == ""
+
+
+async def test_agent_run_returns_409_for_mismatched_explicit_ids(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Agent Goal A")
+    goal_b = await _create_goal(client, token, title="Agent Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+    spine_task_b = await _get_first_ready_spine_task(client, token, goal_b_id)
+
+    response = await client.post(
+        "/api/v1/agents/run",
+        json={
+            "goal": spine_task_a["title"],
+            "goal_id": goal_b_id,
+            "spine_task_id": spine_task_a["task_id"],
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 409, response.text
+    board_a = await _get_board(client, token, goal_a_id)
+    _, task_a = _find_task(board_a, spine_task_a["task_id"])
+    assert task_a["status"] == "ready"
+    assert task_a["run_id"] == ""
+    board_b = await _get_board(client, token, goal_b_id)
+    _, task_b = _find_task(board_b, spine_task_b["task_id"])
+    assert task_b["status"] == "ready"
+    assert task_b["run_id"] == ""
+
+
+async def test_celery_persistence_retains_spine_provenance_on_terminal_update(
+    client: AsyncClient,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Celery Provenance Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    run_id = "celery-provenance-run"
+
+    await persist_submitted_agent_task(
+        task_id=run_id,
+        tenant_id="tenant-1",
+        owner_id="goal-owner",
+        kind="agent.run",
+        backend="celery",
+        input_payload={
+            "goal": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+            "role": None,
+            "capabilities": [],
+        },
+        status="pending",
+    )
+    await persist_agent_task_record(
+        task_id=run_id,
+        run_id=run_id,
+        tenant_id="tenant-1",
+        owner_id="goal-owner",
+        kind="agent.run",
+        backend="celery",
+        status="succeeded",
+        input_payload={
+            "goal": spine_task["title"],
+            "role": None,
+            "capabilities": [],
+        },
+        result_payload={"run_id": run_id, "final_answer": "done"},
+    )
+
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )

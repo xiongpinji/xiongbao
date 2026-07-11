@@ -392,6 +392,8 @@ async def run(
                 await session.commit()
             else:
                 raise
+    except HTTPException:
+        raise
     except Exception as exc:
         await session.rollback()
         if _is_runtime_persistence_schema_mismatch(exc):
