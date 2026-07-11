@@ -106,6 +106,17 @@ async def _resolve_spine_contract(
     return resolved_goal_id, resolved_spine_task_id, True
 
 
+def _apply_spine_provenance(view: dict, linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        view["goal_id"] = goal_id
+    if task_id:
+        view["spine_task_id"] = task_id
+
+
 def build_workflow_replay_pointer(run_id: str) -> dict[str, str] | None:
     run_id = str(run_id or "").strip()
     if not run_id:
@@ -600,12 +611,6 @@ async def create_and_run(
     view = run.to_view()
     view["goal_id"] = resolved_goal_id
     view["spine_task_id"] = resolved_spine_task_id
-    await _persist_workflow_runtime_and_view(
-        session,
-        view=view,
-        owner_id=principal.user_id,
-        tenant_id=principal.tenant_id,
-    )
     linkage = await _try_attach_spine_workflow_run(
         run_id=str(view.get("run_id") or ""),
         task_title=body.name,
@@ -616,6 +621,13 @@ async def create_and_run(
     )
     if strict_spine and linkage is None:
         raise HTTPException(status_code=409, detail="spine task 挂接失败")
+    _apply_spine_provenance(view, linkage)
+    await _persist_workflow_runtime_and_view(
+        session,
+        view=view,
+        owner_id=principal.user_id,
+        tenant_id=principal.tenant_id,
+    )
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,

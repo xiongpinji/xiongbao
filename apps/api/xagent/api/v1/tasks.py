@@ -94,6 +94,29 @@ async def _resolve_spine_contract(
     return resolved_goal_id, resolved_spine_task_id, True
 
 
+def _apply_spine_provenance(payload: dict[str, Any], linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if task_id:
+        payload["spine_task_id"] = task_id
+
+
+def _backfill_task_runner_provenance(
+    *,
+    task_id: str,
+    principal: Principal,
+    linkage: dict[str, str] | None,
+) -> None:
+    record = get_task_runner().get(task_id, principal.tenant_id)
+    if record is None:
+        return
+    _apply_spine_provenance(record.input_payload, linkage)
+
+
 def _remember_task(
     *,
     task_id: str,
@@ -282,6 +305,20 @@ async def submit_task(
                     "user_id": principal.user_id,
                 },
             )
+            linkage = await _try_attach_spine_task(
+                task_id=str(async_result.id),
+                task_title=body.goal,
+                goal_id=resolved_goal_id,
+                spine_task_id=resolved_spine_task_id,
+                allow_legacy_title_fallback=not strict_spine,
+                principal=principal,
+            )
+            if strict_spine and linkage is None:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    "spine task 挂接失败",
+                )
+            _apply_spine_provenance(input_payload, linkage)
             metadata = _remember_task(
                 task_id=async_result.id,
                 principal=principal,
@@ -304,19 +341,6 @@ async def submit_task(
                     status.HTTP_503_SERVICE_UNAVAILABLE,
                     f"后台任务已投递但初始持久化失败：{exc}",
                 ) from exc
-            linkage = await _try_attach_spine_task(
-                task_id=str(async_result.id),
-                task_title=body.goal,
-                goal_id=resolved_goal_id,
-                spine_task_id=resolved_spine_task_id,
-                allow_legacy_title_fallback=not strict_spine,
-                principal=principal,
-            )
-            if strict_spine and linkage is None:
-                raise HTTPException(
-                    status.HTTP_409_CONFLICT,
-                    "spine task 挂接失败",
-                )
             return _build_metadata_view(metadata, status_value="pending")
     except HTTPException:
         raise
@@ -328,13 +352,6 @@ async def submit_task(
         kind="agent.run",
         tenant_id=principal.tenant_id,
         owner_id=principal.user_id,
-        input_payload=input_payload,
-    )
-    metadata = _remember_task(
-        task_id=task_id,
-        principal=principal,
-        backend="inproc",
-        kind="agent.run",
         input_payload=input_payload,
     )
     linkage = await _try_attach_spine_task(
@@ -350,6 +367,19 @@ async def submit_task(
             status.HTTP_409_CONFLICT,
             "spine task 挂接失败",
         )
+    _apply_spine_provenance(input_payload, linkage)
+    _backfill_task_runner_provenance(
+        task_id=task_id,
+        principal=principal,
+        linkage=linkage,
+    )
+    metadata = _remember_task(
+        task_id=task_id,
+        principal=principal,
+        backend="inproc",
+        kind="agent.run",
+        input_payload=input_payload,
+    )
     return _build_metadata_view(metadata, status_value="pending")
 
 

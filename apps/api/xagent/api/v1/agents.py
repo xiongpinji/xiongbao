@@ -86,6 +86,17 @@ async def _resolve_spine_contract(
     return resolved_goal_id, resolved_spine_task_id, True
 
 
+def _apply_spine_provenance(payload: dict, linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if task_id:
+        payload["spine_task_id"] = task_id
+
+
 def _build_result_summary(result: dict) -> dict:
     final_answer = str(result.get("final_answer") or "").strip()
     steps_value = result.get("steps")
@@ -315,6 +326,7 @@ async def run(
                 status.HTTP_409_CONFLICT,
                 "spine task 挂接失败",
             )
+        _apply_spine_provenance(input_payload, linkage)
         result_payload = result.to_dict()
         delivery_summary = _build_delivery_summary(result.run_id, result_payload)
         validation_summary = {"risks": []}

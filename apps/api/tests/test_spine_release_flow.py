@@ -288,6 +288,53 @@ async def test_explicit_spine_ids_rebind_latest_run_without_losing_old_run_prove
     )
 
 
+@pytest.mark.parametrize(("entrypoint", "expected_status"), ENTRYPOINT_CASES)
+async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
+    client: AsyncClient,
+    entrypoint: str,
+    expected_status: str,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token)
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    path, payload = _build_entrypoint_request(entrypoint, spine_task)
+    payload.pop("goal_id")
+    payload.pop("spine_task_id")
+
+    first_response = await client.post(path, json=payload, headers=_auth(token))
+    assert first_response.status_code == 200, first_response.text
+    first_run_id = first_response.json()["run_id"]
+
+    second_response = await client.post(path, json=payload, headers=_auth(token))
+    assert second_response.status_code == 200, second_response.text
+    second_run_id = second_response.json()["run_id"]
+
+    assert second_run_id != first_run_id
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status=expected_status,
+        expected_run_id=second_run_id,
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        first_run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        second_run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+    )
+
+
 @pytest.mark.parametrize("entrypoint", ["task", "agent", "workflow"])
 @pytest.mark.parametrize("missing_field", ["goal_id", "spine_task_id"])
 async def test_partial_spine_ids_are_rejected(
