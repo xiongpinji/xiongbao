@@ -225,12 +225,12 @@ async def attach_run_to_task(
             .where(
                 DeliveryTaskORM.tenant_id == tenant_id,
                 DeliveryTaskORM.title == fallback_title,
-                DeliveryTaskORM.status == "ready",
-                DeliveryTaskORM.run_id == "",
             )
             .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
         )
-        row = (await session.execute(stmt)).scalars().first()
+        rows = (await session.execute(stmt)).scalars().all()
+        if len(rows) == 1:
+            row = rows[0]
     if row is None:
         return None
 
