@@ -26,7 +26,11 @@ from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.repos.evidence import persist_evidence_bundle
 from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
-from xagent.infra.repos.workflow import load_workflow_runs, persist_workflow_run
+from xagent.infra.repos.workflow import (
+    load_workflow_run_by_id,
+    load_workflow_runs,
+    persist_workflow_run,
+)
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 logger = get_logger("xagent.api.workflows")
@@ -656,7 +660,11 @@ async def list_runs(
 async def get_view(
     run_id: str,
     principal: Principal = Depends(require_permission("workflow", "read")),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
+    persisted_view = await load_workflow_run_by_id(session, principal.tenant_id, run_id)
+    if persisted_view is not None:
+        return persisted_view
     engine = get_engine()
     return engine.replay(run_id, principal)
 

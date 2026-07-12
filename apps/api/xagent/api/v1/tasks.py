@@ -400,6 +400,9 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
             input_payload=deepcopy(persisted.get("input") or {}),
             created_at=str(persisted.get("created_at") or "") or None,
         )
+        metadata["started_at"] = str(persisted.get("started_at") or "") or None
+        metadata["finished_at"] = str(persisted.get("finished_at") or "") or None
+        metadata["updated_at"] = str(persisted.get("updated_at") or "") or None
         _task_tenants[task_id] = str(persisted.get("tenant_id") or tenant_id)
         _task_metadata[task_id] = metadata
         persisted_status = str(persisted.get("status") or "").lower()
@@ -445,6 +448,9 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
                 status_value=task_status,
                 result=result if isinstance(result, dict) else {"value": result},
                 error=error,
+                started_at=str(metadata.get("started_at") or "") or None,
+                finished_at=str(metadata.get("finished_at") or "") or None,
+                updated_at=str(metadata.get("updated_at") or "") or None,
             )
     except Exception:  # noqa: S110  Celery 查询失败降级内存合同
         pass

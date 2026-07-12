@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from xagent.core.workflow import reset_engine
 from xagent.enterprise.auth import create_access_token
 from xagent.infra.db import dispose_engine
 from xagent.infra.settings import get_settings
@@ -464,3 +465,81 @@ async def test_celery_persistence_retains_spine_provenance_on_terminal_update(
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
     )
+
+
+async def test_workflow_replay_reads_persisted_view_after_engine_reset(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    create_response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": "persisted-workflow-replay",
+            "steps": [{"id": "s1", "name": "执行", "goal": "回放持久化视图"}],
+        },
+        headers=_auth(token),
+    )
+    assert create_response.status_code == 200, create_response.text
+    run_id = create_response.json()["run_id"]
+
+    reset_engine()
+
+    replay_response = await client.get(f"/api/v1/workflows/{run_id}", headers=_auth(token))
+    assert replay_response.status_code == 200, replay_response.text
+    assert replay_response.json()["run_id"] == run_id
+    assert replay_response.json()["status"] == "completed"
+    assert replay_response.json()["steps"]
+
+
+async def test_celery_polling_preserves_persisted_timestamps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import xagent.api.v1.tasks as tasks_api
+
+    async def _fake_load_persisted(task_id: str, tenant_id: str) -> dict[str, object] | None:
+        assert task_id == "celery-ts"
+        assert tenant_id == "tenant-1"
+        return {
+            "task_id": task_id,
+            "run_id": task_id,
+            "tenant_id": tenant_id,
+            "owner_id": "user-1",
+            "kind": "agent.run",
+            "backend": "celery",
+            "status": "running",
+            "input": {"goal": "timestamp check"},
+            "result": {},
+            "error": "",
+            "created_at": "2026-07-12T10:00:00+00:00",
+            "started_at": "2026-07-12T10:01:00+00:00",
+            "finished_at": "2026-07-12T10:02:00+00:00",
+            "updated_at": "2026-07-12T10:03:00+00:00",
+            "source": "task",
+            "intent_type": "agent",
+            "route_source": "fallback",
+        }
+
+    class _StartedResult:
+        state = "STARTED"
+        result = None
+
+        def successful(self) -> bool:
+            return False
+
+        def failed(self) -> bool:
+            return False
+
+    class _CeleryStub:
+        def AsyncResult(self, task_id: str) -> _StartedResult:  # noqa: N802
+            assert task_id == "celery-ts"
+            return _StartedResult()
+
+    monkeypatch.setattr(tasks_api, "load_persisted_agent_task", _fake_load_persisted)
+    monkeypatch.setattr(tasks_api, "get_celery_app", lambda: _CeleryStub())
+
+    view = await tasks_api.get_task_runtime_view("celery-ts", "tenant-1")
+
+    assert view is not None
+    assert view["status"] == "running"
+    assert view["created_at"] == "2026-07-12T10:00:00+00:00"
+    assert view["started_at"] == "2026-07-12T10:01:00+00:00"
+    assert view["finished_at"] == "2026-07-12T10:02:00+00:00"
+    assert view["updated_at"] == "2026-07-12T10:03:00+00:00"
