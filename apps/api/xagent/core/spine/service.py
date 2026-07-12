@@ -52,8 +52,10 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
 
 
 def summarize_goal_board(snapshot: dict) -> dict:
+    goal = snapshot.get("goal", {})
+    columns = snapshot.get("columns", {})
     return {
-        "goal": snapshot["goal"],
-        "columns": snapshot["columns"],
-        "next_action": choose_next_action(snapshot),
+        "goal": goal,
+        "columns": columns,
+        "next_action": choose_next_action({"goal": goal, "columns": columns}),
     }
