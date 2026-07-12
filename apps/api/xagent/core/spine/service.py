@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+from xagent.core.spine.session import choose_next_action
 
 INITIATIVE_BLUEPRINTS = [
     "Goal / Taskboard / Session Core",
@@ -48,3 +49,11 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
             )
         )
     return initiatives, tasks
+
+
+def summarize_goal_board(snapshot: dict) -> dict:
+    return {
+        "goal": snapshot["goal"],
+        "columns": snapshot["columns"],
+        "next_action": choose_next_action(snapshot),
+    }
