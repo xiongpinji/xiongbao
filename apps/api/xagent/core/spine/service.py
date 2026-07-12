@@ -5,6 +5,18 @@ import uuid
 from xagent.core.spine.models import DeliveryTask, Goal, Initiative
 from xagent.core.spine.session import choose_next_action
 
+TASKBOARD_COLUMNS = (
+    "ready",
+    "in_progress",
+    "blocked",
+    "review",
+    "release_ready",
+    "deploying",
+    "verifying",
+    "delivered",
+    "recovery",
+)
+
 INITIATIVE_BLUEPRINTS = [
     "Goal / Taskboard / Session Core",
     "Execution Environment Orchestrator",
@@ -51,9 +63,23 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
     return initiatives, tasks
 
 
+def _group_tasks_into_columns(tasks: list[dict]) -> dict[str, list[dict]]:
+    columns: dict[str, list[dict]] = {column: [] for column in TASKBOARD_COLUMNS}
+    for task in tasks:
+        task_status = str(task.get("status", ""))
+        if task_status in columns:
+            columns[task_status].append(task)
+    return columns
+
+
 def summarize_goal_board(snapshot: dict) -> dict:
     goal = snapshot.get("goal", {})
-    columns = snapshot.get("columns", {})
+    columns = snapshot.get("columns")
+    if columns is None:
+        if "tasks" in snapshot:
+            columns = _group_tasks_into_columns(snapshot.get("tasks") or [])
+        else:
+            columns = {}
     return {
         "goal": goal,
         "columns": columns,
