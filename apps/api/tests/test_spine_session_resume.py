@@ -51,6 +51,52 @@ def test_choose_next_action_prefers_recovery_column() -> None:
     }
 
 
+def test_choose_next_action_in_recovery_phase_prefers_recovery_over_blocked() -> None:
+    snapshot = {
+        "goal": {"phase": "recovery", "status": "active"},
+        "columns": {
+            "blocked": [
+                {
+                    "task_id": "t-old",
+                    "title": "Old blocker",
+                    "blocker_reason": "stale issue",
+                }
+            ],
+            "recovery": [
+                {
+                    "task_id": "t-9",
+                    "title": "Rollback deploy",
+                    "blocker_reason": "rollback running",
+                }
+            ],
+        },
+    }
+
+    action = choose_next_action(snapshot)
+
+    assert action == {
+        "kind": "recovery",
+        "task_id": "t-9",
+        "reason": "rollback running",
+    }
+
+
+def test_choose_next_action_reviews_review_task() -> None:
+    snapshot = {
+        "goal": {"phase": "execution", "status": "active"},
+        "columns": {
+            "review": [{"task_id": "t-3", "title": "Check PR"}],
+        },
+    }
+
+    action = choose_next_action(snapshot)
+
+    assert action == {
+        "kind": "review",
+        "task_id": "t-3",
+    }
+
+
 def test_choose_next_action_follows_in_progress_task() -> None:
     snapshot = {
         "goal": {"phase": "execution", "status": "active"},
@@ -77,6 +123,13 @@ def test_choose_next_action_releases_release_ready_task() -> None:
     snapshot = {
         "goal": {"phase": "release", "status": "active"},
         "columns": {
+            "blocked": [
+                {
+                    "task_id": "t-old",
+                    "title": "Old blocker",
+                    "blocker_reason": "stale planning issue",
+                }
+            ],
             "release_ready": [{"task_id": "t-5", "title": "Cut release"}],
         },
     }
@@ -87,6 +140,39 @@ def test_choose_next_action_releases_release_ready_task() -> None:
         "kind": "release",
         "task_id": "t-5",
     }
+
+
+def test_choose_next_action_returns_idle_for_delivered_terminal_tasks() -> None:
+    snapshot = {
+        "goal": {"phase": "execution", "status": "active"},
+        "columns": {
+            "delivered": [{"task_id": "t-12", "title": "Already shipped"}],
+        },
+    }
+
+    action = choose_next_action(snapshot)
+
+    assert action == {"kind": "idle"}
+
+
+def test_choose_next_action_returns_idle_in_archive_phase() -> None:
+    snapshot = {
+        "goal": {"phase": "archive", "status": "delivered"},
+        "columns": {
+            "blocked": [
+                {
+                    "task_id": "t-old",
+                    "title": "Old blocker",
+                    "blocker_reason": "stale planning issue",
+                }
+            ],
+            "ready": [{"task_id": "t-13", "title": "Do not dispatch"}],
+        },
+    }
+
+    action = choose_next_action(snapshot)
+
+    assert action == {"kind": "idle"}
 
 
 def test_choose_next_action_monitors_deploying_task() -> None:
@@ -211,6 +297,7 @@ def test_summarize_goal_board_includes_review_next_action() -> None:
     assert summary == {
         "goal": snapshot["goal"],
         "columns": snapshot["columns"],
+        "unknown_status_tasks": [],
         "next_action": {
             "kind": "review",
             "task_id": "t-3",
@@ -224,6 +311,7 @@ def test_summarize_goal_board_defaults_missing_fields_to_empty_board() -> None:
     assert summary == {
         "goal": {},
         "columns": {},
+        "unknown_status_tasks": [],
         "next_action": {"kind": "idle"},
     }
 
@@ -251,7 +339,33 @@ def test_summarize_goal_board_groups_persisted_snapshot_tasks() -> None:
     summary = summarize_goal_board(snapshot)
 
     assert [task["task_id"] for task in summary["columns"]["release_ready"]] == ["t-release"]
+    assert summary["unknown_status_tasks"] == []
     assert summary["next_action"] == {
         "kind": "release",
         "task_id": "t-release",
     }
+
+
+def test_summarize_goal_board_keeps_unknown_status_tasks_visible() -> None:
+    snapshot = {
+        "goal": {"phase": "execution", "status": "active"},
+        "initiatives": [{"initiative_id": "i-1", "title": "Execution"}],
+        "tasks": [
+            {
+                "task_id": "t-future",
+                "title": "Future task",
+                "status": "future_status",
+            },
+            {
+                "task_id": "t-known",
+                "title": "Write docs",
+                "status": "ready",
+                "run_id": "",
+            },
+        ],
+    }
+
+    summary = summarize_goal_board(snapshot)
+
+    assert [task["task_id"] for task in summary["unknown_status_tasks"]] == ["t-future"]
+    assert [task["task_id"] for task in summary["columns"]["ready"]] == ["t-known"]

@@ -23,7 +23,19 @@ def _ready_action(task: dict) -> dict:
     }
 
 
+_DEFAULT_PRIORITY = (
+    "blocked",
+    "recovery",
+    "review",
+    "release_ready",
+    "deploying",
+    "verifying",
+    "in_progress",
+    "ready",
+)
+
 _PHASE_PRIORITIES = {
+    "execution": _DEFAULT_PRIORITY,
     "deploy": (
         "verifying",
         "deploying",
@@ -51,23 +63,19 @@ _PHASE_PRIORITIES = {
         "in_progress",
         "ready",
     ),
+    "archive": (),
 }
 
-_DEFAULT_PRIORITY = (
-    "blocked",
-    "recovery",
-    "review",
-    "release_ready",
-    "deploying",
-    "verifying",
-    "in_progress",
-    "ready",
-)
+_TERMINAL_GOAL_STATUSES = {"delivered", "archived"}
 
 
 def choose_next_action(snapshot: dict) -> dict:
     goal = snapshot.get("goal") or {}
     phase = goal.get("phase")
+    status = goal.get("status")
+    if phase == "archive" or status in _TERMINAL_GOAL_STATUSES:
+        return {"kind": "idle"}
+
     columns = snapshot.get("columns") or {}
     priority = _PHASE_PRIORITIES.get(phase, _DEFAULT_PRIORITY)
 

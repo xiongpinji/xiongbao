@@ -63,25 +63,30 @@ def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
     return initiatives, tasks
 
 
-def _group_tasks_into_columns(tasks: list[dict]) -> dict[str, list[dict]]:
+def _group_tasks_into_columns(tasks: list[dict]) -> tuple[dict[str, list[dict]], list[dict]]:
     columns: dict[str, list[dict]] = {column: [] for column in TASKBOARD_COLUMNS}
+    unknown_status_tasks: list[dict] = []
     for task in tasks:
         task_status = str(task.get("status", ""))
         if task_status in columns:
             columns[task_status].append(task)
-    return columns
+        else:
+            unknown_status_tasks.append(task)
+    return columns, unknown_status_tasks
 
 
 def summarize_goal_board(snapshot: dict) -> dict:
     goal = snapshot.get("goal", {})
     columns = snapshot.get("columns")
+    unknown_status_tasks = snapshot.get("unknown_status_tasks") or []
     if columns is None:
         if "tasks" in snapshot:
-            columns = _group_tasks_into_columns(snapshot.get("tasks") or [])
+            columns, unknown_status_tasks = _group_tasks_into_columns(snapshot.get("tasks") or [])
         else:
             columns = {}
     return {
         "goal": goal,
         "columns": columns,
+        "unknown_status_tasks": unknown_status_tasks,
         "next_action": choose_next_action({"goal": goal, "columns": columns}),
     }
