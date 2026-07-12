@@ -84,8 +84,9 @@ class TaskRunner:
         tenant_id: str,
         owner_id: str = "",
         input_payload: dict[str, Any] | None = None,
+        task_id: str | None = None,
     ) -> str:
-        task_id = uuid.uuid4().hex
+        task_id = task_id or uuid.uuid4().hex
         rec = TaskRecord(
             task_id=task_id,
             kind=kind,

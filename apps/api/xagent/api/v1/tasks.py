@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
@@ -291,10 +292,28 @@ async def submit_task(
             )
         ).to_dict()
 
+    planned_task_id = uuid.uuid4().hex if strict_spine else None
+    strict_linkage: dict[str, str] | None = None
+    if strict_spine:
+        strict_linkage = await _try_attach_spine_task(
+            task_id=str(planned_task_id or ""),
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            principal=principal,
+        )
+        if strict_linkage is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "spine task 挂接失败",
+            )
+
     # full 模式 + Celery 可用 -> 走 Celery；否则进程内
     try:
         celery_app = get_celery_app()
         if celery_app is not None:
+            task_id = str(planned_task_id or uuid.uuid4().hex)
             async_result = celery_app.send_task(
                 "xagent.run_agent",
                 kwargs={
@@ -304,19 +323,17 @@ async def submit_task(
                     "tenant_id": principal.tenant_id,
                     "user_id": principal.user_id,
                 },
+                task_id=task_id,
             )
-            linkage = await _try_attach_spine_task(
-                task_id=str(async_result.id),
-                task_title=body.goal,
-                goal_id=resolved_goal_id,
-                spine_task_id=resolved_spine_task_id,
-                allow_legacy_title_fallback=not strict_spine,
-                principal=principal,
-            )
-            if strict_spine and linkage is None:
-                raise HTTPException(
-                    status.HTTP_409_CONFLICT,
-                    "spine task 挂接失败",
+            linkage = strict_linkage
+            if not strict_spine:
+                linkage = await _try_attach_spine_task(
+                    task_id=str(async_result.id),
+                    task_title=body.goal,
+                    goal_id=resolved_goal_id,
+                    spine_task_id=resolved_spine_task_id,
+                    allow_legacy_title_fallback=True,
+                    principal=principal,
                 )
             _apply_spine_provenance(input_payload, linkage)
             metadata = _remember_task(
@@ -353,19 +370,17 @@ async def submit_task(
         tenant_id=principal.tenant_id,
         owner_id=principal.user_id,
         input_payload=input_payload,
+        task_id=planned_task_id,
     )
-    linkage = await _try_attach_spine_task(
-        task_id=task_id,
-        task_title=body.goal,
-        goal_id=resolved_goal_id,
-        spine_task_id=resolved_spine_task_id,
-        allow_legacy_title_fallback=not strict_spine,
-        principal=principal,
-    )
-    if strict_spine and linkage is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "spine task 挂接失败",
+    linkage = strict_linkage
+    if not strict_spine:
+        linkage = await _try_attach_spine_task(
+            task_id=task_id,
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=True,
+            principal=principal,
         )
     _apply_spine_provenance(input_payload, linkage)
     _backfill_task_runner_provenance(

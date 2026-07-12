@@ -5,14 +5,17 @@ import subprocess
 import sys
 import sysconfig
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from xagent.core.workflow import reset_engine
+from xagent.core.workflow import get_engine, reset_engine
 from xagent.enterprise.auth import create_access_token
-from xagent.infra.db import dispose_engine
+from xagent.infra.db import dispose_engine, get_sessionmaker
+from xagent.infra.models.spine import DeliveryTaskORM
 from xagent.infra.settings import get_settings
 from xagent.main import create_app
+from xagent.worker import get_task_runner
 from xagent.worker.celery_app import persist_agent_task_record, persist_submitted_agent_task
 
 ENTRYPOINT_CASES = (
@@ -308,6 +311,13 @@ async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
     assert first_response.status_code == 200, first_response.text
     first_run_id = first_response.json()["run_id"]
 
+    async with get_sessionmaker()() as session:
+        candidate = await session.get(DeliveryTaskORM, spine_task["task_id"])
+        assert candidate is not None
+        candidate.status = "ready"
+        candidate.run_id = ""
+        await session.commit()
+
     second_response = await client.post(path, json=payload, headers=_auth(token))
     assert second_response.status_code == 200, second_response.text
     second_run_id = second_response.json()["run_id"]
@@ -416,6 +426,133 @@ async def test_agent_run_returns_409_for_mismatched_explicit_ids(client: AsyncCl
     _, task_b = _find_task(board_b, spine_task_b["task_id"])
     assert task_b["status"] == "ready"
     assert task_b["run_id"] == ""
+
+
+async def test_task_strict_attach_fails_before_submit_side_effect(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Task Strict Goal A")
+    goal_b = await _create_goal(client, token, title="Task Strict Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+
+    response = await client.post(
+        "/api/v1/tasks",
+        json={
+            "goal": spine_task_a["title"],
+            "goal_id": goal_b_id,
+            "spine_task_id": spine_task_a["task_id"],
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 409, response.text
+    assert get_task_runner().list("tenant-1") == []
+    board_a = await _get_board(client, token, goal_a_id)
+    _, task_a = _find_task(board_a, spine_task_a["task_id"])
+    assert task_a["status"] == "ready"
+    assert task_a["run_id"] == ""
+
+
+async def test_agent_strict_attach_fails_before_run_side_effect(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Agent Strict Goal A")
+    goal_b = await _create_goal(client, token, title="Agent Strict Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+    mocked_run_agent = AsyncMock()
+    monkeypatch.setattr("xagent.api.v1.agents.run_agent", mocked_run_agent)
+
+    response = await client.post(
+        "/api/v1/agents/run",
+        json={
+            "goal": spine_task_a["title"],
+            "goal_id": goal_b_id,
+            "spine_task_id": spine_task_a["task_id"],
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 409, response.text
+    assert mocked_run_agent.await_count == 0
+    board_a = await _get_board(client, token, goal_a_id)
+    _, task_a = _find_task(board_a, spine_task_a["task_id"])
+    assert task_a["status"] == "ready"
+    assert task_a["run_id"] == ""
+
+
+async def test_workflow_strict_attach_fails_before_run_side_effect(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Workflow Strict Goal A")
+    goal_b = await _create_goal(client, token, title="Workflow Strict Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+
+    response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task_a["title"],
+            "goal_id": goal_b_id,
+            "spine_task_id": spine_task_a["task_id"],
+            "steps": [{"id": "s1", "name": "执行", "goal": "workflow strict"}],
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 409, response.text
+    assert get_engine().list_runs("tenant-1") == []
+    board_a = await _get_board(client, token, goal_a_id)
+    _, task_a = _find_task(board_a, spine_task_a["task_id"])
+    assert task_a["status"] == "ready"
+    assert task_a["run_id"] == ""
+
+
+@pytest.mark.parametrize(("entrypoint", "expected_status"), ENTRYPOINT_CASES)
+async def test_legacy_fallback_binds_unique_ready_unbound_candidate(
+    client: AsyncClient,
+    entrypoint: str,
+    expected_status: str,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    goal_a = await _create_goal(client, token, title="Legacy Goal A")
+    goal_b = await _create_goal(client, token, title="Legacy Goal B")
+    goal_a_id = goal_a["goal"]["goal_id"]
+    goal_b_id = goal_b["goal"]["goal_id"]
+    spine_task_a = await _get_first_ready_spine_task(client, token, goal_a_id)
+    spine_task_b = await _get_first_ready_spine_task(client, token, goal_b_id)
+
+    async with get_sessionmaker()() as session:
+        historical = await session.get(DeliveryTaskORM, spine_task_b["task_id"])
+        assert historical is not None
+        historical.status = "review"
+        historical.run_id = "historical-run"
+        await session.commit()
+
+    path, payload = _build_entrypoint_request(entrypoint, spine_task_a)
+    payload.pop("goal_id")
+    payload.pop("spine_task_id")
+
+    response = await client.post(path, json=payload, headers=_auth(token))
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_a_id,
+        spine_task_id=spine_task_a["task_id"],
+        expected_status=expected_status,
+        expected_run_id=run_id,
+    )
+    board_b = await _get_board(client, token, goal_b_id)
+    _, historical_task = _find_task(board_b, spine_task_b["task_id"])
+    assert historical_task["status"] == "review"
+    assert historical_task["run_id"] == "historical-run"
 
 
 async def test_celery_persistence_retains_spine_provenance_on_terminal_update(

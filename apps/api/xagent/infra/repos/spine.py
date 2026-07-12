@@ -225,6 +225,8 @@ async def attach_run_to_task(
             .where(
                 DeliveryTaskORM.tenant_id == tenant_id,
                 DeliveryTaskORM.title == fallback_title,
+                DeliveryTaskORM.status == "ready",
+                DeliveryTaskORM.run_id == "",
             )
             .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
         )

@@ -302,6 +302,21 @@ async def run(
     )
     input_payload = _build_input_payload(body)
     started_at = datetime.now(UTC)
+    strict_linkage: dict[str, str] | None = None
+    if strict_spine:
+        strict_linkage = await _try_attach_spine_run(
+            run_id=run_id,
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            tenant_id=principal.tenant_id,
+        )
+        if strict_linkage is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "spine task 挂接失败",
+            )
 
     try:
         result = await run_agent(
@@ -313,18 +328,15 @@ async def run(
             session=session,
             run_id=run_id,
         )
-        linkage = await _try_attach_spine_run(
-            run_id=run_id,
-            task_title=body.goal,
-            goal_id=resolved_goal_id,
-            spine_task_id=resolved_spine_task_id,
-            allow_legacy_title_fallback=not strict_spine,
-            tenant_id=principal.tenant_id,
-        )
-        if strict_spine and linkage is None:
-            raise HTTPException(
-                status.HTTP_409_CONFLICT,
-                "spine task 挂接失败",
+        linkage = strict_linkage
+        if not strict_spine:
+            linkage = await _try_attach_spine_run(
+                run_id=run_id,
+                task_title=body.goal,
+                goal_id=resolved_goal_id,
+                spine_task_id=resolved_spine_task_id,
+                allow_legacy_title_fallback=True,
+                tenant_id=principal.tenant_id,
             )
         _apply_spine_provenance(input_payload, linkage)
         result_payload = result.to_dict()

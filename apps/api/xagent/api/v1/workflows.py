@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -610,21 +611,34 @@ async def create_and_run(
         status_code = 422 if "必须同时提供" in message else 409
         raise HTTPException(status_code, message) from exc
     spec = _to_spec(body)
-    run = engine.create_run(spec, principal)
+    planned_run_id = uuid.uuid4().hex if strict_spine else None
+    if strict_spine:
+        linkage = await _try_attach_spine_workflow_run(
+            run_id=str(planned_run_id or ""),
+            task_title=body.name,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            tenant_id=principal.tenant_id,
+        )
+        if linkage is None:
+            raise HTTPException(status_code=409, detail="spine task 挂接失败")
+    else:
+        linkage = None
+    run = engine.create_run(spec, principal, run_id=planned_run_id)
     run = await engine.execute(run.run_id, principal)
     view = run.to_view()
     view["goal_id"] = resolved_goal_id
     view["spine_task_id"] = resolved_spine_task_id
-    linkage = await _try_attach_spine_workflow_run(
-        run_id=str(view.get("run_id") or ""),
-        task_title=body.name,
-        goal_id=resolved_goal_id,
-        spine_task_id=resolved_spine_task_id,
-        allow_legacy_title_fallback=not strict_spine,
-        tenant_id=principal.tenant_id,
-    )
-    if strict_spine and linkage is None:
-        raise HTTPException(status_code=409, detail="spine task 挂接失败")
+    if not strict_spine:
+        linkage = await _try_attach_spine_workflow_run(
+            run_id=str(view.get("run_id") or ""),
+            task_title=body.name,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=not strict_spine,
+            tenant_id=principal.tenant_id,
+        )
     _apply_spine_provenance(view, linkage)
     await _persist_workflow_runtime_and_view(
         session,
