@@ -233,6 +233,7 @@ async def _resolve_spine_linkage(
             return {
                 "goal_id": reference["goal_id"],
                 "initiative_id": reference["initiative_id"],
+                "spine_task_id": reference["task_id"],
             }
     return await load_spine_linkage_by_run_id(
         session,

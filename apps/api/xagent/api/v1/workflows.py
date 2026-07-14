@@ -26,7 +26,11 @@ from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
 from xagent.infra.repos.workflow import (
     load_workflow_run_by_id,
     load_workflow_runs,
@@ -120,6 +124,17 @@ def _apply_spine_provenance(view: dict, linkage: dict[str, str] | None) -> None:
         view["goal_id"] = goal_id
     if task_id:
         view["spine_task_id"] = task_id
+
+
+def _workflow_board_status(status_value: str) -> tuple[str, str]:
+    normalized = str(status_value or "pending").strip().lower()
+    if normalized == "awaiting_approval":
+        return "review", ""
+    if normalized in {"failed", "rolled_back", "cancelled"}:
+        return "recovery", normalized
+    if normalized == "completed":
+        return "review", ""
+    return "in_progress", ""
 
 
 def build_workflow_replay_pointer(run_id: str) -> dict[str, str] | None:
@@ -646,6 +661,15 @@ async def create_and_run(
         owner_id=principal.user_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=str(view.get("run_id") or ""),
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -707,6 +731,15 @@ async def approve(
         owner_id=owner_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=run_id,
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -741,6 +774,15 @@ async def deny(
         owner_id=owner_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=run_id,
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,

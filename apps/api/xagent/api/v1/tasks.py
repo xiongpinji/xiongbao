@@ -23,7 +23,11 @@ from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
-from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
 from xagent.worker import get_task_runner
 from xagent.worker.celery_app import (
     get_celery_app,
@@ -116,6 +120,30 @@ def _backfill_task_runner_provenance(
     if record is None:
         return
     _apply_spine_provenance(record.input_payload, linkage)
+
+
+async def _sync_finished_task_status_if_needed(
+    *,
+    task_id: str,
+    principal: Principal,
+) -> None:
+    record = get_task_runner().get(task_id, principal.tenant_id)
+    if record is None:
+        return
+    if record.status.value not in {"succeeded", "failed"}:
+        return
+
+    next_status = "review" if record.status.value == "succeeded" else "recovery"
+    blocker_reason = str(record.error or "") if record.status.value == "failed" else ""
+    async with get_sessionmaker()() as session:
+        await update_task_status_by_run_id(
+            session,
+            tenant_id=principal.tenant_id,
+            run_id=task_id,
+            next_status=next_status,
+            blocker_reason=blocker_reason,
+        )
+        await session.commit()
 
 
 def _remember_task(
@@ -283,14 +311,51 @@ async def submit_task(
     input_payload = _build_input_payload(body)
 
     async def _run():
-        return (
-            await run_agent(
-                body.goal,
-                principal=principal,
-                role_name=body.role,
-                capabilities=set(body.capabilities) or None,
-            )
-        ).to_dict()
+        try:
+            result = (
+                await run_agent(
+                    body.goal,
+                    principal=principal,
+                    role_name=body.role,
+                    capabilities=set(body.capabilities) or None,
+                )
+            ).to_dict()
+            try:
+                async with get_sessionmaker()() as session:
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        run_id=task_id,
+                        next_status="review",
+                    )
+                    await session.commit()
+            except Exception as exc:
+                logger.warning(
+                    "update_spine_task_status_failed",
+                    task_id=task_id,
+                    tenant_id=principal.tenant_id,
+                    error=str(exc),
+                )
+            return result
+        except Exception as exc:
+            try:
+                async with get_sessionmaker()() as session:
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        run_id=task_id,
+                        next_status="recovery",
+                        blocker_reason=str(exc),
+                    )
+                    await session.commit()
+            except Exception as status_exc:
+                logger.warning(
+                    "update_spine_task_status_failed",
+                    task_id=task_id,
+                    tenant_id=principal.tenant_id,
+                    error=str(status_exc),
+                )
+            raise
 
     planned_task_id = uuid.uuid4().hex if strict_spine else None
     strict_linkage: dict[str, str] | None = None
@@ -387,6 +452,10 @@ async def submit_task(
         task_id=task_id,
         principal=principal,
         linkage=linkage,
+    )
+    await _sync_finished_task_status_if_needed(
+        task_id=task_id,
+        principal=principal,
     )
     metadata = _remember_task(
         task_id=task_id,

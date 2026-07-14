@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -19,9 +20,9 @@ from xagent.worker import get_task_runner
 from xagent.worker.celery_app import persist_agent_task_record, persist_submitted_agent_task
 
 ENTRYPOINT_CASES = (
-    ("task", "in_progress"),
-    ("agent", "ready"),
-    ("workflow", "ready"),
+    ("task", "review"),
+    ("agent", "review"),
+    ("workflow", "review"),
 )
 
 
@@ -175,13 +176,15 @@ async def _assert_run_spine_linkage(
     *,
     goal_id: str,
     initiative_id: str,
+    spine_task_id: str | None = None,
 ) -> None:
     run_response = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
     assert run_response.status_code == 200, run_response.text
-    assert run_response.json()["spine"] == {
-        "goal_id": goal_id,
-        "initiative_id": initiative_id,
-    }
+    actual = run_response.json()["spine"]
+    assert actual["goal_id"] == goal_id
+    assert actual["initiative_id"] == initiative_id
+    if spine_task_id is not None:
+        assert actual["spine_task_id"] == spine_task_id
 
 
 @pytest.mark.parametrize(("entrypoint", "expected_status"), ENTRYPOINT_CASES)
@@ -196,6 +199,8 @@ async def test_entrypoint_attaches_run_and_exposes_spine_linkage(
     spine_task = await _get_first_ready_spine_task(client, token, goal_id)
 
     run_id = await _start_entrypoint(client, token, entrypoint, spine_task)
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, run_id)
 
     await _assert_board_task_state(
         client,
@@ -231,6 +236,8 @@ async def test_explicit_spine_ids_bind_correct_goal_when_titles_duplicate(
     assert spine_task_a["title"] == spine_task_b["title"]
 
     run_id = await _start_entrypoint(client, token, entrypoint, spine_task_b)
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, run_id)
 
     await _assert_board_task_state(
         client,
@@ -266,7 +273,11 @@ async def test_explicit_spine_ids_rebind_latest_run_without_losing_old_run_prove
     spine_task = await _get_first_ready_spine_task(client, token, goal_id)
 
     first_run_id = await _start_entrypoint(client, token, entrypoint, spine_task)
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, first_run_id)
     second_run_id = await _start_entrypoint(client, token, entrypoint, spine_task)
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, second_run_id)
 
     assert second_run_id != first_run_id
     await _assert_board_task_state(
@@ -310,6 +321,8 @@ async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
     first_response = await client.post(path, json=payload, headers=_auth(token))
     assert first_response.status_code == 200, first_response.text
     first_run_id = first_response.json()["run_id"]
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, first_run_id)
 
     async with get_sessionmaker()() as session:
         candidate = await session.get(DeliveryTaskORM, spine_task["task_id"])
@@ -321,6 +334,8 @@ async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
     second_response = await client.post(path, json=payload, headers=_auth(token))
     assert second_response.status_code == 200, second_response.text
     second_run_id = second_response.json()["run_id"]
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, second_run_id)
 
     assert second_run_id != first_run_id
     await _assert_board_task_state(
@@ -540,6 +555,8 @@ async def test_legacy_fallback_binds_unique_ready_unbound_candidate(
     response = await client.post(path, json=payload, headers=_auth(token))
     assert response.status_code == 200, response.text
     run_id = response.json()["run_id"]
+    if entrypoint == "task":
+        await _wait_for_task_terminal(client, token, run_id)
 
     await _assert_board_task_state(
         client,
@@ -626,57 +643,225 @@ async def test_workflow_replay_reads_persisted_view_after_engine_reset(client: A
     assert replay_response.json()["steps"]
 
 
-async def test_celery_polling_preserves_persisted_timestamps(
+async def _wait_for_task_terminal(
+    client: AsyncClient,
+    token: str,
+    task_id: str,
+) -> dict:
+    for _ in range(40):
+        response = await client.get(f"/api/v1/tasks/{task_id}", headers=_auth(token))
+        assert response.status_code == 200, response.text
+        body = response.json()
+        if body["status"] in {"succeeded", "failed"}:
+            return body
+        await asyncio.sleep(0.05)
+    raise AssertionError(f"task {task_id} did not reach terminal status")
+
+
+async def test_task_success_updates_board_to_review(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Task Success Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    response = await client.post(
+        "/api/v1/tasks",
+        json={
+            "goal": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    task_id = response.json()["task_id"]
+
+    terminal = await _wait_for_task_terminal(client, token, task_id)
+    assert terminal["status"] == "succeeded"
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="review",
+        expected_run_id=task_id,
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        task_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
+    )
+
+
+async def test_task_failure_updates_board_to_recovery(
+    client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import xagent.api.v1.tasks as tasks_api
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Task Failure Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    monkeypatch.setattr(
+        "xagent.api.v1.tasks.run_agent",
+        AsyncMock(side_effect=RuntimeError("task exploded")),
+    )
 
-    async def _fake_load_persisted(task_id: str, tenant_id: str) -> dict[str, object] | None:
-        assert task_id == "celery-ts"
-        assert tenant_id == "tenant-1"
-        return {
-            "task_id": task_id,
-            "run_id": task_id,
-            "tenant_id": tenant_id,
-            "owner_id": "user-1",
-            "kind": "agent.run",
-            "backend": "celery",
-            "status": "running",
-            "input": {"goal": "timestamp check"},
-            "result": {},
-            "error": "",
-            "created_at": "2026-07-12T10:00:00+00:00",
-            "started_at": "2026-07-12T10:01:00+00:00",
-            "finished_at": "2026-07-12T10:02:00+00:00",
-            "updated_at": "2026-07-12T10:03:00+00:00",
-            "source": "task",
-            "intent_type": "agent",
-            "route_source": "fallback",
-        }
+    response = await client.post(
+        "/api/v1/tasks",
+        json={
+            "goal": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    task_id = response.json()["task_id"]
 
-    class _StartedResult:
-        state = "STARTED"
-        result = None
+    terminal = await _wait_for_task_terminal(client, token, task_id)
+    assert terminal["status"] == "failed"
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="recovery",
+        expected_run_id=task_id,
+    )
 
-        def successful(self) -> bool:
-            return False
 
-        def failed(self) -> bool:
-            return False
+async def test_agent_failure_updates_board_to_blocked(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Agent Failure Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    monkeypatch.setattr(
+        "xagent.api.v1.agents.run_agent",
+        AsyncMock(side_effect=RuntimeError("agent exploded")),
+    )
 
-    class _CeleryStub:
-        def AsyncResult(self, task_id: str) -> _StartedResult:  # noqa: N802
-            assert task_id == "celery-ts"
-            return _StartedResult()
+    response = await client.post(
+        "/api/v1/agents/run",
+        json={
+            "goal": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 500, response.text
+    run_id = response.json()["detail"]["run_id"]
 
-    monkeypatch.setattr(tasks_api, "load_persisted_agent_task", _fake_load_persisted)
-    monkeypatch.setattr(tasks_api, "get_celery_app", lambda: _CeleryStub())
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="blocked",
+        expected_run_id=run_id,
+    )
 
-    view = await tasks_api.get_task_runtime_view("celery-ts", "tenant-1")
 
-    assert view is not None
-    assert view["status"] == "running"
-    assert view["created_at"] == "2026-07-12T10:00:00+00:00"
-    assert view["started_at"] == "2026-07-12T10:01:00+00:00"
-    assert view["finished_at"] == "2026-07-12T10:02:00+00:00"
-    assert view["updated_at"] == "2026-07-12T10:03:00+00:00"
+async def test_workflow_awaiting_approval_updates_board_to_review(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Workflow Review Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+            "steps": [
+                {
+                    "id": "approve-step",
+                    "name": "人工审批",
+                    "goal": "等待审批",
+                    "approver_role": "admin",
+                    "approval_message": "请审批",
+                }
+            ],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
+    assert response.json()["status"] == "awaiting_approval"
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="review",
+        expected_run_id=run_id,
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
+    )
+
+
+async def test_workflow_cancelled_updates_board_to_recovery(client: AsyncClient) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Workflow Cancel Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    create_response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+            "steps": [
+                {
+                    "id": "approve-step",
+                    "name": "人工审批",
+                    "goal": "等待审批",
+                    "approver_role": "admin",
+                    "approval_message": "请审批",
+                }
+            ],
+        },
+        headers=_auth(token),
+    )
+    assert create_response.status_code == 200, create_response.text
+    run_id = create_response.json()["run_id"]
+    assert create_response.json()["status"] == "awaiting_approval"
+
+    deny_response = await client.post(
+        f"/api/v1/workflows/{run_id}/deny/approve-step",
+        headers=_auth(token),
+    )
+    assert deny_response.status_code == 200, deny_response.text
+    assert deny_response.json()["status"] == "cancelled"
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="recovery",
+        expected_run_id=run_id,
+    )
+    await _assert_run_spine_linkage(
+        client,
+        token,
+        run_id,
+        goal_id=goal_id,
+        initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
+    )

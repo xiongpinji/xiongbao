@@ -65,10 +65,11 @@ def _enrich_delivery(detail: dict) -> dict:
 def _enrich_spine(detail: dict) -> dict[str, str]:
     spine = detail.get("spine")
     if not isinstance(spine, dict):
-        return {"goal_id": "", "initiative_id": ""}
+        return {"goal_id": "", "initiative_id": "", "spine_task_id": ""}
     return {
         "goal_id": str(spine.get("goal_id") or ""),
         "initiative_id": str(spine.get("initiative_id") or ""),
+        "spine_task_id": str(spine.get("spine_task_id") or ""),
     }
 
 

@@ -23,7 +23,11 @@ from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.repos.billing import persist_billing_record
 from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.infra.repos.spine import attach_run_to_task, load_spine_task_reference
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
 from xagent.worker.celery_app import persist_agent_task_record_in_session
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -380,6 +384,12 @@ async def run(
                 task_id=result.run_id,
                 records=evidence_records,
             )
+            await update_task_status_by_run_id(
+                session,
+                tenant_id=principal.tenant_id,
+                run_id=result.run_id,
+                next_status="review",
+            )
             await session.commit()
         except Exception as evidence_exc:
             await session.rollback()
@@ -400,6 +410,12 @@ async def run(
                     preview_summary=preview_summary,
                     started_at=started_at,
                     finished_at=datetime.now(UTC),
+                )
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=result.run_id,
+                    next_status="review",
                 )
                 await session.commit()
             else:
@@ -451,6 +467,13 @@ async def run(
                     run_id=run_id,
                     task_id=run_id,
                     records=failure_evidence,
+                )
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=run_id,
+                    next_status="blocked",
+                    blocker_reason=failure_error,
                 )
                 await session.commit()
             except Exception:

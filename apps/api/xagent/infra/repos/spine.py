@@ -253,7 +253,7 @@ async def load_spine_linkage_by_run_id(
     run_id: str,
 ) -> dict[str, str]:
     if not tenant_id or not run_id:
-        return {"goal_id": "", "initiative_id": ""}
+        return {"goal_id": "", "initiative_id": "", "spine_task_id": ""}
 
     stmt = (
         select(DeliveryTaskORM)
@@ -265,10 +265,45 @@ async def load_spine_linkage_by_run_id(
     )
     row = (await session.execute(stmt)).scalars().first()
     if row is None:
-        return {"goal_id": "", "initiative_id": ""}
+        return {"goal_id": "", "initiative_id": "", "spine_task_id": ""}
     return {
         "goal_id": row.goal_id,
         "initiative_id": row.initiative_id,
+        "spine_task_id": row.task_id,
+    }
+
+
+async def update_task_status_by_run_id(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    next_status: str,
+    blocker_reason: str = "",
+) -> dict[str, str] | None:
+    if not tenant_id or not run_id or not next_status:
+        return None
+
+    stmt = (
+        select(DeliveryTaskORM)
+        .where(
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.run_id == run_id,
+        )
+        .order_by(DeliveryTaskORM.created_at.asc(), DeliveryTaskORM.task_id.asc())
+    )
+    row = (await session.execute(stmt)).scalars().first()
+    if row is None:
+        return None
+
+    row.status = next_status
+    row.blocker_reason = blocker_reason if next_status in {"blocked", "recovery"} else ""
+    return {
+        "task_id": row.task_id,
+        "goal_id": row.goal_id,
+        "initiative_id": row.initiative_id,
+        "spine_task_id": row.task_id,
+        "status": row.status,
     }
 
 

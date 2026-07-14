@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.infra.logging import get_logger
+from xagent.infra.repos.spine import update_task_status_by_run_id
 from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.celery")
@@ -422,6 +423,13 @@ def run_agent_task(
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
                         )
+                        await update_task_status_by_run_id(
+                            session,
+                            tenant_id=tenant_id,
+                            run_id=task_id,
+                            next_status="recovery",
+                            blocker_reason=run_error,
+                        )
                         await session.commit()
                 except Exception as persist_exc:
                     if _is_schema_mismatch(persist_exc, "agent_tasks"):
@@ -451,6 +459,12 @@ def run_agent_task(
                         error="",
                         started_at=started_at,
                         finished_at=datetime.now(UTC),
+                    )
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=tenant_id,
+                        run_id=task_id,
+                        next_status="review",
                     )
                     await session.commit()
             except Exception as persist_exc:
