@@ -221,7 +221,7 @@ function ensureRouteTaskState(state: ShellState, snapshot: ShellRouteSnapshot): 
     };
   }
 
-  if (snapshot.kind === "workflow" && !state.workflowTaskState.workflows) {
+  if (snapshot.taskId === "workflows" && !state.workflowTaskState.workflows) {
     return {
       workflowTaskState: {
         ...state.workflowTaskState,
@@ -243,8 +243,8 @@ function makeBaseTasks(): ShellTaskSummary[] {
     route: surface.route,
     status: surface.status,
     badge: surface.badge,
-    pinned: true,
-    isPrimary: true,
+    pinned: surface.pinned,
+    isPrimary: surface.isPrimary,
     updatedAt: now - index,
   }));
 }

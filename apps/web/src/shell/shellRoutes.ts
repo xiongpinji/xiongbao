@@ -65,6 +65,17 @@ export const PRIMARY_SHELL_SURFACES: ShellRouteSnapshot[] = [
     status: "ready",
   },
   {
+    taskId: "goal-board",
+    kind: "workflow",
+    route: "/goal-board",
+    title: "目标任务板",
+    subtitle: "持续推进当前交付主目标",
+    badge: "PM",
+    pinned: true,
+    isPrimary: true,
+    status: "ready",
+  },
+  {
     taskId: "workflows",
     kind: "workflow",
     route: "/professional?mode=workflow",
