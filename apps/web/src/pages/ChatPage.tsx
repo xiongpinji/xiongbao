@@ -9,6 +9,7 @@ import { useShellActions, useShellStore } from "../shell/useShellStore";
 export default function ChatPage() {
   const { appendActivity, syncRunTask } = useShellActions();
   const chatSessionVersion = useShellStore((state) => state.chatSessionVersion);
+  const chatSessionKey = useShellStore((state) => state.chatSessionKey);
   const [goal, setGoal] = useState("");
   const [submittedGoal, setSubmittedGoal] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,7 @@ export default function ChatPage() {
     setRunId(null);
     setStreamText("");
     setError(null);
-  }, [chatSessionVersion]);
+  }, [chatSessionVersion, chatSessionKey]);
 
   async function submit() {
     const nextGoal = goal.trim();

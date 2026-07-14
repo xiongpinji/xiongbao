@@ -4,6 +4,7 @@ import { resolveShellRoute } from "../../shell/shellRoutes";
 import { useShellActions } from "../../shell/useShellStore";
 import AmbientAurora from "../effects/AmbientAurora";
 import CollapsedRail from "./CollapsedRail";
+import CommandPalette from "./CommandPalette";
 import ShellContextPanel from "./ShellContextPanel";
 import TopBar from "./TopBar";
 import WorkspaceSidebar from "./WorkspaceSidebar";
@@ -20,6 +21,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="xagent-app-bg relative flex h-[100dvh] overflow-hidden text-neutral-100">
       <AmbientAurora />
+      <CommandPalette />
       <div className="relative z-10 flex h-full shrink-0">
         <CollapsedRail />
       </div>

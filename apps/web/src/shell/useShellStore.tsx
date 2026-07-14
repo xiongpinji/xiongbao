@@ -102,6 +102,7 @@ interface ShellState {
   threadPanelOpen: boolean;
   commandPaletteOpen: boolean;
   chatSessionVersion: number;
+  chatSessionKey: string;
   activity: ShellActivityItem[];
   workspaces: WorkspaceRecord[];
   customAgents: CustomAgentProfile[];
@@ -147,6 +148,10 @@ const FLOW_NODE_STYLE = {
 
 function createWorkflowStepId() {
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function createChatSessionKey() {
+  return `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function applyPatch<T>(current: T, patch: StatePatch<T>): T {
@@ -296,6 +301,7 @@ export function createShellStore() {
     threadPanelOpen: true,
     commandPaletteOpen: false,
     chatSessionVersion: 0,
+    chatSessionKey: createChatSessionKey(),
     activity: [
       {
         id: "boot",
@@ -400,6 +406,7 @@ export function createShellStore() {
               }
             : state.currentContext,
         chatSessionVersion: state.chatSessionVersion + 1,
+        chatSessionKey: createChatSessionKey(),
         chatTaskState: {
           ...state.chatTaskState,
           chat: makeDefaultChatTaskState(),

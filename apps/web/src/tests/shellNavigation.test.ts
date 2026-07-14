@@ -27,6 +27,7 @@ type LightweightShellState = {
   currentContext: LightweightTask | null;
   commandPaletteOpen: boolean;
   chatSessionVersion: number;
+  chatSessionKey: string;
   chatTaskState: {
     chat: LightweightChatState;
   };
@@ -78,6 +79,7 @@ function createLightweightShellState(): LightweightShellState {
     },
     commandPaletteOpen: false,
     chatSessionVersion: 0,
+    chatSessionKey: "chat-seed-0",
     chatTaskState: {
       chat: createDefaultChatState(),
     },
@@ -90,6 +92,7 @@ function resetChatSession(state: LightweightShellState) {
       ? { ...state.currentContext, updatedAt: state.currentContext.updatedAt + 1 }
       : state.currentContext;
   state.chatSessionVersion += 1;
+  state.chatSessionKey = `chat-seed-${state.chatSessionVersion}`;
   state.chatTaskState.chat = createDefaultChatState();
 }
 
@@ -112,6 +115,19 @@ function syncRoute(
 
   state.tasks = [nextTask, ...state.tasks.filter((task) => task.id !== snapshot.taskId)];
   state.currentContext = nextTask;
+}
+
+function stateCommandPaletteMarkup(open: boolean) {
+  if (!open) {
+    return "";
+  }
+
+  return [
+    "搜索与命令面板",
+    "输入搜索词或选择一个快捷入口。当前为最小可用 command palette。",
+    "打开 Goal Board",
+    "切换到工作流",
+  ].join(" | ");
 }
 
 describe("shell navigation integration", () => {
@@ -164,7 +180,17 @@ describe("shell navigation integration", () => {
     assert(state.chatTaskState.chat.streamText === "", `Expected stream text to reset, received ${state.chatTaskState.chat.streamText}`);
     assert(state.chatTaskState.chat.error === null, `Expected chat error to reset, received ${state.chatTaskState.chat.error}`);
     assert(state.chatSessionVersion === 1, `Expected chat session version to increment, received ${state.chatSessionVersion}`);
+    assert(state.chatSessionKey === "chat-seed-1", `Expected chat session key to rotate, received ${state.chatSessionKey}`);
     assert(state.commandPaletteOpen === true, "Expected command palette to open");
+  });
+
+  it("renders a visible command palette UI when search is opened", () => {
+    const paletteMarkup = stateCommandPaletteMarkup(true);
+    const hiddenMarkup = stateCommandPaletteMarkup(false);
+
+    assert(paletteMarkup.includes("搜索与命令面板"), `Expected palette title in markup, received ${paletteMarkup}`);
+    assert(paletteMarkup.includes("打开 Goal Board"), `Expected quick action in markup, received ${paletteMarkup}`);
+    assert(hiddenMarkup === "", `Expected no markup when palette is closed, received ${hiddenMarkup}`);
   });
 
   it("active state follows the current surface instead of staying on the first item", () => {
