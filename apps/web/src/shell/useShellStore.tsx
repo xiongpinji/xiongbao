@@ -20,8 +20,10 @@ import {
   type PersistedUserDockProfile,
 } from "./workspaceStorage.ts";
 import {
+  buildPrimaryNavigation,
   createRunShellRoute,
   PRIMARY_SHELL_SURFACES,
+  type ShellNavigationItem,
   type ShellRouteSnapshot,
   type ShellTaskKind,
   type ShellTaskStatus,
@@ -99,6 +101,7 @@ interface ShellState {
   sidebarCollapsed: boolean;
   threadPanelOpen: boolean;
   commandPaletteOpen: boolean;
+  chatSessionVersion: number;
   activity: ShellActivityItem[];
   workspaces: WorkspaceRecord[];
   customAgents: CustomAgentProfile[];
@@ -122,6 +125,7 @@ interface ShellState {
   ) => void;
   setCurrentContext: (context: Omit<ShellTaskSummary, "updatedAt">) => void;
   appendActivity: (entry: Omit<ShellActivityItem, "id" | "timestamp"> & { timestamp?: number }) => void;
+  resetChatSession: () => void;
   createWorkspaceRecord: (input: CreateWorkspaceInput) => WorkspaceRecord;
   renameWorkspaceRecord: (workspaceId: string, nextName: string) => void;
   saveCustomAgentProfile: (input: CreateCustomAgentProfileInput) => CustomAgentProfile;
@@ -291,6 +295,7 @@ export function createShellStore() {
     sidebarCollapsed: false,
     threadPanelOpen: true,
     commandPaletteOpen: false,
+    chatSessionVersion: 0,
     activity: [
       {
         id: "boot",
@@ -359,7 +364,7 @@ export function createShellStore() {
         const routeTaskState = ensureRouteTaskState(state, snapshot);
 
         return {
-          tasks: [nextTask, ...sortTasks(existingTasks)],
+          tasks: sortTasks([nextTask, ...existingTasks]),
           currentContext: nextTask,
           ...(routeTaskState ?? {}),
         };
@@ -372,7 +377,7 @@ export function createShellStore() {
           updatedAt: Date.now(),
         };
         return {
-          tasks: [nextTask, ...state.tasks.filter((task) => task.id !== nextTask.id)],
+          tasks: sortTasks([nextTask, ...state.tasks.filter((task) => task.id !== nextTask.id)]),
           currentContext: nextTask,
         };
       });
@@ -384,6 +389,22 @@ export function createShellStore() {
           activity: [nextEntry, ...state.activity].slice(0, MAX_ACTIVITY_ITEMS),
         };
       });
+    },
+    resetChatSession: () => {
+      set((state) => ({
+        currentContext:
+          state.currentContext?.id === "chat"
+            ? {
+                ...state.currentContext,
+                updatedAt: Date.now(),
+              }
+            : state.currentContext,
+        chatSessionVersion: state.chatSessionVersion + 1,
+        chatTaskState: {
+          ...state.chatTaskState,
+          chat: makeDefaultChatTaskState(),
+        },
+      }));
     },
     createWorkspaceRecord: (input) => {
       const workspace = createWorkspace(input);
@@ -491,6 +512,7 @@ export function useShellActions() {
     syncRunTask: state.syncRunTask,
     setCurrentContext: state.setCurrentContext,
     appendActivity: state.appendActivity,
+    resetChatSession: state.resetChatSession,
     createWorkspaceRecord: state.createWorkspaceRecord,
     renameWorkspaceRecord: state.renameWorkspaceRecord,
     saveCustomAgentProfile: state.saveCustomAgentProfile,
@@ -509,6 +531,16 @@ export function useShellChatTaskState(_taskId: string) {
 
 export function useShellWorkflowTaskState(_taskId: string) {
   return useShellStore((state) => state.workflowTaskState.workflows ?? FALLBACK_WORKFLOW_TASK_STATE);
+}
+
+export function useShellNavigation() {
+  const tasks = useShellStore((state) => state.tasks);
+  const currentContext = useShellStore((state) => state.currentContext);
+
+  return useMemo<ShellNavigationItem[]>(
+    () => buildPrimaryNavigation(tasks, currentContext?.id),
+    [currentContext?.id, tasks],
+  );
 }
 
 export function useShellDerivedState() {

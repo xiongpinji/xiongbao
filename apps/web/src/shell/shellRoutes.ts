@@ -14,7 +14,18 @@ export interface ShellRouteSnapshot {
   status: ShellTaskStatus;
 }
 
+export interface ShellTrackedTaskLike {
+  id: string;
+  route: string;
+}
+
+export interface ShellNavigationItem extends ShellRouteSnapshot {
+  preferredRoute: string;
+  active: boolean;
+}
+
 const RUN_ROUTE_PATTERN = /^\/runs\/[^/]+$/;
+const GOAL_BOARD_TASK_PREFIX = "goal-board:";
 
 export function isRunRoute(route: string) {
   return RUN_ROUTE_PATTERN.test(route);
@@ -49,6 +60,23 @@ export function createRunShellRoute(
     pinned: false,
     isPrimary: false,
     status: options.status ?? "ready",
+  };
+}
+
+export function createGoalBoardShellRoute(goalId?: string | null): ShellRouteSnapshot {
+  const normalizedGoalId = goalId?.trim() ?? "";
+  const encodedGoalId = normalizedGoalId ? encodeURIComponent(normalizedGoalId) : "";
+
+  return {
+    taskId: normalizedGoalId ? `${GOAL_BOARD_TASK_PREFIX}${normalizedGoalId}` : "goal-board",
+    kind: "workflow",
+    route: normalizedGoalId ? `/goal-board?goalId=${encodedGoalId}` : "/goal-board",
+    title: "目标任务板",
+    subtitle: normalizedGoalId ? `持续推进当前交付主目标 · ${normalizedGoalId}` : "持续推进当前交付主目标",
+    badge: "PM",
+    pinned: true,
+    isPrimary: true,
+    status: "ready",
   };
 }
 
@@ -120,3 +148,145 @@ export const PRIMARY_SHELL_SURFACES: ShellRouteSnapshot[] = [
     status: "ready",
   },
 ];
+
+function normalizeSurfaceTaskId(taskId: string | null | undefined) {
+  if (!taskId) {
+    return null;
+  }
+
+  if (taskId === "goal-board" || taskId.startsWith(GOAL_BOARD_TASK_PREFIX)) {
+    return "goal-board";
+  }
+
+  return taskId;
+}
+
+function createPrimarySurfaceSnapshot(surface: ShellRouteSnapshot, pathname: string, search: string): ShellRouteSnapshot {
+  if (!search) {
+    return surface;
+  }
+
+  return {
+    ...surface,
+    route: `${pathname}${search}`,
+  };
+}
+
+export function isShellSurfaceActive(surfaceTaskId: string, currentTaskId: string | null | undefined) {
+  return normalizeSurfaceTaskId(currentTaskId) === surfaceTaskId;
+}
+
+export function getPreferredSurfaceRoute(
+  surface: ShellRouteSnapshot,
+  tasks: ShellTrackedTaskLike[],
+  currentTaskId?: string | null,
+) {
+  if (currentTaskId && isShellSurfaceActive(surface.taskId, currentTaskId)) {
+    const activeTask = tasks.find((task) => task.id === currentTaskId);
+    if (activeTask) {
+      return activeTask.route;
+    }
+  }
+
+  const matchedTask = tasks.find((task) => isShellSurfaceActive(surface.taskId, task.id));
+  return matchedTask?.route ?? surface.route;
+}
+
+export function buildPrimaryNavigation(
+  tasks: ShellTrackedTaskLike[],
+  currentTaskId?: string | null,
+): ShellNavigationItem[] {
+  return PRIMARY_SHELL_SURFACES.map((surface) => ({
+    ...surface,
+    preferredRoute: getPreferredSurfaceRoute(surface, tasks, currentTaskId),
+    active: isShellSurfaceActive(surface.taskId, currentTaskId),
+  }));
+}
+
+export function resolveShellRoute(pathname: string, search: string): ShellRouteSnapshot {
+  const params = new URLSearchParams(search);
+
+  if (pathname.startsWith("/runs/")) {
+    const runId = decodeURIComponent(pathname.split("/").pop() ?? "run");
+    return createRunShellRoute(runId, { source: "run" });
+  }
+
+  if (pathname === "/professional") {
+    const mode = params.get("mode") === "workflow" ? "workflow" : "drama";
+    return {
+      taskId: mode === "workflow" ? "workflows" : "creative",
+      kind: mode === "workflow" ? "workflow" : "creative",
+      route: `/professional?mode=${mode}`,
+      title: mode === "workflow" ? "工作流" : "短剧工厂",
+      subtitle: mode === "workflow" ? "编排任务、审批节点与执行状态" : "从剧本到分镜、生成与剪辑的专业流程",
+      badge: "专业模式",
+      pinned: true,
+      isPrimary: true,
+      status: "ready",
+    };
+  }
+
+  if (pathname === "/goal-board") {
+    return createGoalBoardShellRoute(params.get("goalId"));
+  }
+
+  if (pathname === "/editor") {
+    return {
+      taskId: "editor",
+      kind: "creative",
+      route: "/editor",
+      title: "剪辑工作台",
+      subtitle: "时间线、素材轨道与剪映草稿导出",
+      badge: "Studio",
+      pinned: false,
+      isPrimary: false,
+      status: "ready",
+    };
+  }
+
+  if (pathname === "/memory") {
+    return {
+      taskId: "memory",
+      kind: "settings",
+      route: "/memory",
+      title: "长期记忆与知识库",
+      subtitle: "项目知识库、智能体专属记忆与隔离检索",
+      badge: "Memory",
+      pinned: false,
+      isPrimary: false,
+      status: "ready",
+    };
+  }
+
+  if (pathname === "/open-source") {
+    return {
+      taskId: "open-source",
+      kind: "settings",
+      route: "/open-source",
+      title: "开源补齐方案发现",
+      subtitle: "能力缺口、仓库比选、许可证与接入策略",
+      badge: "Scout",
+      pinned: false,
+      isPrimary: false,
+      status: "ready",
+    };
+  }
+
+  const normalizedPathname = pathname === "/home" ? "/chat" : pathname;
+  const primary = PRIMARY_SHELL_SURFACES.find((surface) => surface.route.split("?")[0] === normalizedPathname);
+  if (primary) {
+    return createPrimarySurfaceSnapshot(primary, normalizedPathname, search);
+  }
+
+  return {
+    taskId: "chat",
+    kind: "chat",
+    route: "/chat",
+    title: "对话",
+    subtitle: "统一工作区中的主对话上下文",
+    badge: "工作区",
+    pinned: true,
+    isPrimary: true,
+    status: "ready",
+  };
+}

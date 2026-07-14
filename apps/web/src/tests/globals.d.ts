@@ -17,3 +17,8 @@ declare global {
     toBeInTheDocument: () => void;
   };
 }
+
+declare module "*.png" {
+  const src: string;
+  export default src;
+}
