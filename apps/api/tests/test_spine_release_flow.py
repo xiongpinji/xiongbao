@@ -768,6 +768,37 @@ async def test_agent_failure_updates_board_to_blocked(
     )
 
 
+async def test_legacy_agent_failure_updates_board_to_blocked(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Legacy Agent Failure Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+    monkeypatch.setattr(
+        "xagent.api.v1.agents.run_agent",
+        AsyncMock(side_effect=RuntimeError("legacy agent exploded")),
+    )
+
+    response = await client.post(
+        "/api/v1/agents/run",
+        json={"goal": spine_task["title"]},
+        headers=_auth(token),
+    )
+    assert response.status_code == 500, response.text
+    run_id = response.json()["detail"]["run_id"]
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="blocked",
+        expected_run_id=run_id,
+    )
+
+
 async def test_workflow_awaiting_approval_updates_board_to_review(client: AsyncClient) -> None:
     token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
     created = await _create_goal(client, token, title="Workflow Review Goal")
