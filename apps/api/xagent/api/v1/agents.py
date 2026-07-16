@@ -245,7 +245,7 @@ async def _try_attach_spine_run(
                 spine_task_id=spine_task_id,
                 goal_id=goal_id,
                 task_title=task_title if allow_legacy_title_fallback else "",
-                next_status="ready",
+                next_status="in_progress",
             )
             if linkage is None:
                 return None
@@ -473,7 +473,7 @@ async def run(
                     session,
                     tenant_id=principal.tenant_id,
                     run_id=run_id,
-                    next_status="blocked",
+                    next_status="recovery",
                     blocker_reason=failure_error,
                 )
                 await session.commit()

@@ -592,7 +592,7 @@ async def _try_attach_spine_workflow_run(
                 spine_task_id=spine_task_id,
                 goal_id=goal_id,
                 task_title=task_title if allow_legacy_title_fallback else "",
-                next_status="ready",
+                next_status="in_progress",
             )
             if linkage is None:
                 return None

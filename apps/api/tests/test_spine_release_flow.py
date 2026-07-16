@@ -216,6 +216,7 @@ async def test_entrypoint_attaches_run_and_exposes_spine_linkage(
         run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
 
 
@@ -253,6 +254,7 @@ async def test_explicit_spine_ids_bind_correct_goal_when_titles_duplicate(
         run_id,
         goal_id=goal_b_id,
         initiative_id=spine_task_b["initiative_id"],
+        spine_task_id=spine_task_b["task_id"],
     )
 
     board_a = await _get_board(client, token, goal_a_id)
@@ -294,6 +296,7 @@ async def test_explicit_spine_ids_rebind_latest_run_without_losing_old_run_prove
         first_run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
     await _assert_run_spine_linkage(
         client,
@@ -301,6 +304,7 @@ async def test_explicit_spine_ids_rebind_latest_run_without_losing_old_run_prove
         second_run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
 
 
@@ -352,6 +356,7 @@ async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
         first_run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
     await _assert_run_spine_linkage(
         client,
@@ -359,6 +364,7 @@ async def test_legacy_title_fallback_preserves_old_run_provenance_after_rerun(
         second_run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
 
 
@@ -618,6 +624,7 @@ async def test_celery_persistence_retains_spine_provenance_on_terminal_update(
         run_id,
         goal_id=goal_id,
         initiative_id=spine_task["initiative_id"],
+        spine_task_id=spine_task["task_id"],
     )
 
 
@@ -733,7 +740,7 @@ async def test_task_failure_updates_board_to_recovery(
     )
 
 
-async def test_agent_failure_updates_board_to_blocked(
+async def test_agent_failure_updates_board_to_recovery(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -763,12 +770,12 @@ async def test_agent_failure_updates_board_to_blocked(
         token,
         goal_id=goal_id,
         spine_task_id=spine_task["task_id"],
-        expected_status="blocked",
+        expected_status="recovery",
         expected_run_id=run_id,
     )
 
 
-async def test_legacy_agent_failure_updates_board_to_blocked(
+async def test_legacy_agent_failure_updates_board_to_recovery(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -794,7 +801,7 @@ async def test_legacy_agent_failure_updates_board_to_blocked(
         token,
         goal_id=goal_id,
         spine_task_id=spine_task["task_id"],
-        expected_status="blocked",
+        expected_status="recovery",
         expected_run_id=run_id,
     )
 
