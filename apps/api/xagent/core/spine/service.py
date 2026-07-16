@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
+from typing import Any
 
 from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+from xagent.core.spine.release import build_release_package
 from xagent.core.spine.session import choose_next_action
 
 TASKBOARD_COLUMNS = (
@@ -96,3 +99,22 @@ def summarize_goal_board(snapshot: dict) -> dict:
         "unknown_status_tasks": unknown_status_tasks,
         "next_action": choose_next_action({"goal": goal, "columns": columns}),
     }
+
+
+def make_release_summary(
+    *,
+    goal_id: str,
+    branch_name: str,
+    commit_sha: str,
+    pr_number: str,
+    ci_run: dict[str, Any],
+    evidence_paths: Sequence[str],
+) -> dict[str, Any]:
+    return build_release_package(
+        goal_id=goal_id,
+        branch_name=branch_name,
+        commit_sha=commit_sha,
+        pr_number=pr_number,
+        ci_run=ci_run,
+        evidence_paths=evidence_paths,
+    )

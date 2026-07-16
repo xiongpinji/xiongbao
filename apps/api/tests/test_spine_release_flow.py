@@ -10,6 +10,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from xagent.core.spine.release import build_release_package
+from xagent.core.spine.service import make_release_summary
 from xagent.core.workflow import get_engine, reset_engine
 from xagent.enterprise.auth import create_access_token
 from xagent.infra.db import dispose_engine, get_sessionmaker
@@ -648,6 +650,94 @@ async def test_workflow_replay_reads_persisted_view_after_engine_reset(client: A
     assert replay_response.json()["run_id"] == run_id
     assert replay_response.json()["status"] == "completed"
     assert replay_response.json()["steps"]
+
+
+def test_build_release_package_returns_minimal_release_package_structure() -> None:
+    package = build_release_package(
+        goal_id="goal-123",
+        branch_name="release/spine-task-7",
+        commit_sha="abc123def456",
+        pr_number="42",
+        ci_run={"provider": "github-actions", "run_id": "run-99", "status": "success"},
+        evidence_paths=[
+            "artifacts/review/report.json",
+            "artifacts/evidence/log.txt",
+        ],
+    )
+
+    assert package == {
+        "goal_id": "goal-123",
+        "candidate": {
+            "branch_name": "release/spine-task-7",
+            "commit_sha": "abc123def456",
+            "pr_number": "42",
+        },
+        "review": {
+            "ci_run": {"provider": "github-actions", "run_id": "run-99", "status": "success"},
+            "status": "ready",
+        },
+        "evidence": [
+            "artifacts/review/report.json",
+            "artifacts/evidence/log.txt",
+        ],
+    }
+
+
+def test_build_release_package_snapshots_ci_run_payload() -> None:
+    ci_run = {
+        "provider": "github-actions",
+        "status": "success",
+        "metadata": {"attempt": 1},
+    }
+
+    package = build_release_package(
+        goal_id="goal-123",
+        branch_name="release/spine-task-7",
+        commit_sha="abc123def456",
+        pr_number="42",
+        ci_run=ci_run,
+        evidence_paths=["artifacts/review/report.json"],
+    )
+
+    ci_run["status"] = "failed"
+    ci_run["metadata"]["attempt"] = 2
+
+    assert package["review"]["ci_run"] == {
+        "provider": "github-actions",
+        "status": "success",
+        "metadata": {"attempt": 1},
+    }
+
+
+def test_release_summary_returns_minimal_release_package_structure() -> None:
+    summary = make_release_summary(
+        goal_id="goal-123",
+        branch_name="release/spine-task-7",
+        commit_sha="abc123def456",
+        pr_number="42",
+        ci_run={"provider": "github-actions", "run_id": "run-99", "status": "success"},
+        evidence_paths=[
+            "artifacts/review/report.json",
+            "artifacts/evidence/log.txt",
+        ],
+    )
+
+    assert summary == {
+        "goal_id": "goal-123",
+        "candidate": {
+            "branch_name": "release/spine-task-7",
+            "commit_sha": "abc123def456",
+            "pr_number": "42",
+        },
+        "review": {
+            "ci_run": {"provider": "github-actions", "run_id": "run-99", "status": "success"},
+            "status": "ready",
+        },
+        "evidence": [
+            "artifacts/review/report.json",
+            "artifacts/evidence/log.txt",
+        ],
+    }
 
 
 async def _wait_for_task_terminal(
