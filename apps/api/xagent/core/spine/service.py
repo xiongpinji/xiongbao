@@ -75,15 +75,21 @@ def _group_tasks_into_columns(tasks: list[dict]) -> tuple[dict[str, list[dict]],
     return columns, unknown_status_tasks
 
 
+def _columns_have_tasks(columns: dict | None) -> bool:
+    if not columns:
+        return False
+    return any(bool(tasks) for tasks in columns.values())
+
+
 def summarize_goal_board(snapshot: dict) -> dict:
     goal = snapshot.get("goal", {})
     columns = snapshot.get("columns")
     unknown_status_tasks = snapshot.get("unknown_status_tasks") or []
-    if columns is None:
+    if not _columns_have_tasks(columns):
         if "tasks" in snapshot:
             columns, unknown_status_tasks = _group_tasks_into_columns(snapshot.get("tasks") or [])
         else:
-            columns = {}
+            columns = columns or {}
     return {
         "goal": goal,
         "columns": columns,

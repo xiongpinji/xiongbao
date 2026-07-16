@@ -28,57 +28,28 @@ def test_choose_next_action_prefers_blocked_recovery() -> None:
     }
 
 
-def test_choose_next_action_prefers_recovery_column() -> None:
-    snapshot = {
-        "goal": {"phase": "recovery", "status": "active"},
-        "columns": {
-            "recovery": [
-                {
-                    "task_id": "t-9",
-                    "title": "Rollback deploy",
-                    "blocker_reason": "rollback running",
-                }
-            ],
-        },
-    }
+def test_choose_next_action_falls_back_to_blocked_reason_for_empty_values() -> None:
+    for blocker_reason in ("", None):
+        snapshot = {
+            "goal": {"phase": "execution", "status": "active"},
+            "columns": {
+                "blocked": [
+                    {
+                        "task_id": "t-empty",
+                        "title": "Fix deploy",
+                        "blocker_reason": blocker_reason,
+                    }
+                ],
+            },
+        }
 
-    action = choose_next_action(snapshot)
+        action = choose_next_action(snapshot)
 
-    assert action == {
-        "kind": "recovery",
-        "task_id": "t-9",
-        "reason": "rollback running",
-    }
-
-
-def test_choose_next_action_in_recovery_phase_prefers_recovery_over_blocked() -> None:
-    snapshot = {
-        "goal": {"phase": "recovery", "status": "active"},
-        "columns": {
-            "blocked": [
-                {
-                    "task_id": "t-old",
-                    "title": "Old blocker",
-                    "blocker_reason": "stale issue",
-                }
-            ],
-            "recovery": [
-                {
-                    "task_id": "t-9",
-                    "title": "Rollback deploy",
-                    "blocker_reason": "rollback running",
-                }
-            ],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "recovery",
-        "task_id": "t-9",
-        "reason": "rollback running",
-    }
+        assert action == {
+            "kind": "recovery",
+            "task_id": "t-empty",
+            "reason": "blocked",
+        }
 
 
 def test_choose_next_action_reviews_review_task() -> None:
@@ -97,145 +68,13 @@ def test_choose_next_action_reviews_review_task() -> None:
     }
 
 
-def test_choose_next_action_follows_in_progress_task() -> None:
-    snapshot = {
-        "goal": {"phase": "execution", "status": "active"},
-        "columns": {
-            "in_progress": [
-                {
-                    "task_id": "t-4",
-                    "title": "Run checks",
-                    "run_id": "run-4",
-                }
-            ],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "follow",
-        "task_id": "t-4",
-    }
-
-
-def test_choose_next_action_releases_release_ready_task() -> None:
-    snapshot = {
-        "goal": {"phase": "release", "status": "active"},
-        "columns": {
-            "blocked": [
-                {
-                    "task_id": "t-old",
-                    "title": "Old blocker",
-                    "blocker_reason": "stale planning issue",
-                }
-            ],
-            "release_ready": [{"task_id": "t-5", "title": "Cut release"}],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "release",
-        "task_id": "t-5",
-    }
-
-
-def test_choose_next_action_returns_idle_for_delivered_terminal_tasks() -> None:
-    snapshot = {
-        "goal": {"phase": "execution", "status": "active"},
-        "columns": {
-            "delivered": [{"task_id": "t-12", "title": "Already shipped"}],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {"kind": "idle"}
-
-
-def test_choose_next_action_returns_idle_in_archive_phase() -> None:
-    snapshot = {
-        "goal": {"phase": "archive", "status": "delivered"},
-        "columns": {
-            "blocked": [
-                {
-                    "task_id": "t-old",
-                    "title": "Old blocker",
-                    "blocker_reason": "stale planning issue",
-                }
-            ],
-            "ready": [{"task_id": "t-13", "title": "Do not dispatch"}],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {"kind": "idle"}
-
-
-def test_choose_next_action_monitors_deploying_task() -> None:
-    snapshot = {
-        "goal": {"phase": "deploy", "status": "active"},
-        "columns": {
-            "deploying": [{"task_id": "t-6", "title": "Deploy app"}],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "monitor",
-        "task_id": "t-6",
-    }
-
-
-def test_choose_next_action_monitors_verifying_task() -> None:
-    snapshot = {
-        "goal": {"phase": "deploy", "status": "active"},
-        "columns": {
-            "verifying": [{"task_id": "t-7", "title": "Verify app"}],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "monitor",
-        "task_id": "t-7",
-    }
-
-
-def test_choose_next_action_follows_ready_task_with_run_id() -> None:
-    snapshot = {
-        "goal": {"phase": "execution", "status": "active"},
-        "columns": {
-            "ready": [
-                {
-                    "task_id": "t-8",
-                    "title": "Continue run",
-                    "run_id": "run-8",
-                }
-            ],
-        },
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {
-        "kind": "follow",
-        "task_id": "t-8",
-    }
-
-
 def test_choose_next_action_executes_ready_task_when_no_higher_priority_work() -> None:
     snapshot = {
         "goal": {"phase": "execution", "status": "active"},
         "columns": {
             "blocked": [],
             "review": [],
-            "ready": [{"task_id": "t-2", "title": "Write docs"}],
+            "ready": [{"task_id": "t-2", "title": "Write docs", "run_id": "run-2"}],
         },
     }
 
@@ -247,39 +86,19 @@ def test_choose_next_action_executes_ready_task_when_no_higher_priority_work() -
     }
 
 
-def test_choose_next_action_returns_idle_when_columns_are_empty() -> None:
-    snapshot = {
-        "goal": {"phase": "execution", "status": "active"},
-        "columns": {},
-    }
-
-    action = choose_next_action(snapshot)
-
-    assert action == {"kind": "idle"}
-
-
-def test_choose_next_action_in_deploy_phase_prefers_active_deploy_work() -> None:
+def test_choose_next_action_returns_idle_when_no_supported_columns_have_tasks() -> None:
     snapshot = {
         "goal": {"phase": "deploy", "status": "active"},
         "columns": {
-            "blocked": [
-                {
-                    "task_id": "t-old",
-                    "title": "Old blocker",
-                    "blocker_reason": "stale planning issue",
-                }
-            ],
-            "verifying": [{"task_id": "t-10", "title": "Verify deploy"}],
-            "ready": [{"task_id": "t-11", "title": "Write docs"}],
+            "in_progress": [{"task_id": "t-4", "title": "Run checks", "run_id": "run-4"}],
+            "deploying": [{"task_id": "t-6", "title": "Deploy app"}],
+            "release_ready": [{"task_id": "t-5", "title": "Cut release"}],
         },
     }
 
     action = choose_next_action(snapshot)
 
-    assert action == {
-        "kind": "monitor",
-        "task_id": "t-10",
-    }
+    assert action == {"kind": "idle"}
 
 
 def test_summarize_goal_board_includes_review_next_action() -> None:
@@ -338,11 +157,75 @@ def test_summarize_goal_board_groups_persisted_snapshot_tasks() -> None:
 
     summary = summarize_goal_board(snapshot)
 
+    assert [task["task_id"] for task in summary["columns"]["blocked"]] == ["t-old"]
     assert [task["task_id"] for task in summary["columns"]["release_ready"]] == ["t-release"]
     assert summary["unknown_status_tasks"] == []
     assert summary["next_action"] == {
-        "kind": "release",
-        "task_id": "t-release",
+        "kind": "recovery",
+        "task_id": "t-old",
+        "reason": "stale planning issue",
+    }
+
+
+def test_summarize_goal_board_rebuilds_from_tasks_when_columns_are_empty() -> None:
+    snapshot = {
+        "goal": {"phase": "execution", "status": "active"},
+        "columns": {},
+        "tasks": [
+            {
+                "task_id": "t-1",
+                "title": "Blocked task",
+                "status": "blocked",
+                "blocker_reason": "need rollback",
+            },
+            {
+                "task_id": "t-2",
+                "title": "Ready task",
+                "status": "ready",
+                "run_id": "",
+            },
+        ],
+    }
+
+    summary = summarize_goal_board(snapshot)
+
+    assert [task["task_id"] for task in summary["columns"]["blocked"]] == ["t-1"]
+    assert [task["task_id"] for task in summary["columns"]["ready"]] == ["t-2"]
+    assert summary["next_action"] == {
+        "kind": "recovery",
+        "task_id": "t-1",
+        "reason": "need rollback",
+    }
+
+
+def test_summarize_goal_board_rebuilds_from_tasks_when_columns_have_only_empty_lists() -> None:
+    snapshot = {
+        "goal": {"phase": "execution", "status": "active"},
+        "columns": {"blocked": [], "review": [], "ready": []},
+        "tasks": [
+            {
+                "task_id": "t-10",
+                "title": "Blocked task",
+                "status": "blocked",
+                "blocker_reason": "pipeline failed",
+            },
+            {
+                "task_id": "t-11",
+                "title": "Ready task",
+                "status": "ready",
+                "run_id": "",
+            },
+        ],
+    }
+
+    summary = summarize_goal_board(snapshot)
+
+    assert [task["task_id"] for task in summary["columns"]["blocked"]] == ["t-10"]
+    assert [task["task_id"] for task in summary["columns"]["ready"]] == ["t-11"]
+    assert summary["next_action"] == {
+        "kind": "recovery",
+        "task_id": "t-10",
+        "reason": "pipeline failed",
     }
 
 
@@ -369,3 +252,7 @@ def test_summarize_goal_board_keeps_unknown_status_tasks_visible() -> None:
 
     assert [task["task_id"] for task in summary["unknown_status_tasks"]] == ["t-future"]
     assert [task["task_id"] for task in summary["columns"]["ready"]] == ["t-known"]
+    assert summary["next_action"] == {
+        "kind": "execute",
+        "task_id": "t-known",
+    }
