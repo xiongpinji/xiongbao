@@ -99,6 +99,21 @@ async def _create_goal(client: AsyncClient, token: str) -> dict:
     return response.json()
 
 
+async def test_create_goal_requires_spine_execute_permission(client: AsyncClient) -> None:
+    token = create_access_token(user_id="viewer-user", tenant_id="tenant-1", roles=["viewer"])
+
+    response = await client.post(
+        "/api/v1/spine/goals",
+        json={
+            "title": "Auto-Delivery Spine Phase 1",
+            "description": "Make xagent upgrade itself",
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 403
+
+
 async def test_create_goal_returns_goal_tree(client: AsyncClient) -> None:
     token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
 

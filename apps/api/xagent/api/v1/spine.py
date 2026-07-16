@@ -38,7 +38,7 @@ class GoalCreateIn(BaseModel):
 @router.post("/goals", summary="创建 delivery goal")
 async def create_delivery_goal(
     body: GoalCreateIn,
-    principal: Principal = Depends(require_permission("agent", "execute")),
+    principal: Principal = Depends(require_permission("spine", "execute")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     goal = create_goal(
@@ -66,7 +66,7 @@ async def create_delivery_goal(
 @router.get("/goals/{goal_id}/board", summary="获取 goal taskboard 快照")
 async def get_goal_board(
     goal_id: str,
-    principal: Principal = Depends(require_permission("agent", "read")),
+    principal: Principal = Depends(require_permission("spine", "read")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     snapshot = await load_goal_snapshot(session, goal_id, principal.tenant_id)

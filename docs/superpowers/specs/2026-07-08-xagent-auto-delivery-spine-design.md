@@ -444,3 +444,19 @@ Phase 1 成功不以模块数量衡量，而以这条闭环是否真实成立衡
 > **把 xagent 升级成一个以 PM Agent 为中枢、以 taskboard 为状态主视图、以 PR/Git 为交付出口、以 release/evidence/archive 为持久记忆的自动交付操作系统。**
 >
 > Phase 1 的目标不是先做完所有平台能力，而是先在 xagent 自己身上证明一条完整自动交付闭环成立。
+
+---
+
+## 14. Phase 1 验收与 owner 启动入口
+
+Phase 1 的最小验收报告模板已落在：
+
+- `docs/coordination/reports/auto-delivery-phase1-report.md`
+
+该报告模板用于沉淀：
+- goal 基本信息
+- taskboard 快照
+- execution evidence
+- final status
+
+owner / 接手者可优先从该报告与对应 taskboard、release evidence 入口理解当前 Phase 1 的完成度与下一步推进点。
