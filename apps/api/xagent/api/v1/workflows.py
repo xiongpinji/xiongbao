@@ -640,8 +640,26 @@ async def create_and_run(
             raise HTTPException(status_code=409, detail="spine task 挂接失败")
     else:
         linkage = None
-    run = engine.create_run(spec, principal, run_id=planned_run_id)
-    run = await engine.execute(run.run_id, principal)
+    try:
+        run = engine.create_run(spec, principal, run_id=planned_run_id)
+        run = await engine.execute(run.run_id, principal)
+    except Exception as exc:
+        if strict_spine and planned_run_id is not None:
+            try:
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=str(planned_run_id),
+                    next_status="recovery",
+                    blocker_reason=str(exc),
+                )
+                await session.commit()
+            except Exception:
+                await session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={"run_id": str(planned_run_id or ""), "error": str(exc)},
+        ) from exc
     view = run.to_view()
     view["goal_id"] = resolved_goal_id
     view["spine_task_id"] = resolved_spine_task_id

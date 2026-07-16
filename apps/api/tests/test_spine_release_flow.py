@@ -806,6 +806,94 @@ async def test_legacy_agent_failure_updates_board_to_recovery(
     )
 
 
+async def test_workflow_execution_failure_updates_board_to_recovery(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Workflow Failure Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    class _WorkflowEngineStub:
+        def create_run(self, spec, principal, run_id=None):
+            assert run_id
+            return type("WorkflowRunStub", (), {"run_id": run_id})()
+
+        async def execute(self, run_id, principal):
+            raise RuntimeError("workflow exploded")
+
+    monkeypatch.setattr("xagent.api.v1.workflows.get_engine", lambda: _WorkflowEngineStub())
+
+    response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+            "steps": [{"id": "s1", "name": "执行", "goal": "workflow failure"}],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 500, response.text
+    run_id = response.json()["detail"]["run_id"]
+    assert run_id
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="recovery",
+        expected_run_id=run_id,
+    )
+
+
+async def test_workflow_create_run_failure_updates_board_to_recovery(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
+    created = await _create_goal(client, token, title="Workflow Create Failure Goal")
+    goal_id = created["goal"]["goal_id"]
+    spine_task = await _get_first_ready_spine_task(client, token, goal_id)
+
+    class _WorkflowEngineStub:
+        def create_run(self, spec, principal, run_id=None):
+            assert run_id
+            raise RuntimeError("workflow create_run exploded")
+
+        async def execute(self, run_id, principal):
+            raise AssertionError("execute should not be called when create_run fails")
+
+    monkeypatch.setattr("xagent.api.v1.workflows.get_engine", lambda: _WorkflowEngineStub())
+
+    response = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": spine_task["title"],
+            "goal_id": goal_id,
+            "spine_task_id": spine_task["task_id"],
+            "steps": [{"id": "s1", "name": "执行", "goal": "workflow create failure"}],
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 500, response.text
+    detail = response.json()["detail"]
+    assert detail["error"] == "workflow create_run exploded"
+    run_id = detail["run_id"]
+    assert run_id
+
+    await _assert_board_task_state(
+        client,
+        token,
+        goal_id=goal_id,
+        spine_task_id=spine_task["task_id"],
+        expected_status="recovery",
+        expected_run_id=run_id,
+    )
+
+
 async def test_workflow_awaiting_approval_updates_board_to_review(client: AsyncClient) -> None:
     token = create_access_token(user_id="goal-owner", tenant_id="tenant-1", roles=["member"])
     created = await _create_goal(client, token, title="Workflow Review Goal")
