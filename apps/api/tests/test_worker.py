@@ -176,7 +176,12 @@ async def test_submit_task_returns_error_when_initial_celery_persist_fails(
             self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
+        def send_task(
+            self,
+            name: str,
+            kwargs: dict,
+            task_id: str | None = None,
+        ) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert task_id
@@ -192,7 +197,13 @@ async def test_submit_task_returns_error_when_initial_celery_persist_fails(
     body = type(
         "Body",
         (),
-        {"goal": "首次持久化失败", "goal_id": "", "spine_task_id": "", "role": None, "capabilities": []},
+        {
+            "goal": "首次持久化失败",
+            "goal_id": "",
+            "spine_task_id": "",
+            "role": None,
+            "capabilities": [],
+        },
     )()
 
     with pytest.raises(HTTPException) as exc_info:
@@ -216,7 +227,12 @@ async def test_task_submit_reuses_shared_celery_app(
             self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
+        def send_task(
+            self,
+            name: str,
+            kwargs: dict,
+            task_id: str | None = None,
+        ) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert kwargs["user_id"] == principal.user_id
@@ -233,7 +249,13 @@ async def test_task_submit_reuses_shared_celery_app(
     body = type(
         "Body",
         (),
-        {"goal": "复用共享 Celery app", "goal_id": "", "spine_task_id": "", "role": None, "capabilities": []},
+        {
+            "goal": "复用共享 Celery app",
+            "goal_id": "",
+            "spine_task_id": "",
+            "role": None,
+            "capabilities": [],
+        },
     )()
     created = await submit_task(body=body, principal=principal)
 
@@ -327,7 +349,12 @@ async def test_task_list_uses_persisted_celery_status(
             self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
+        def send_task(
+            self,
+            name: str,
+            kwargs: dict,
+            task_id: str | None = None,
+        ) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert task_id
@@ -340,7 +367,13 @@ async def test_task_list_uses_persisted_celery_status(
     body = type(
         "Body",
         (),
-        {"goal": "列表状态回查", "goal_id": "", "spine_task_id": "", "role": "planner", "capabilities": []},
+        {
+            "goal": "列表状态回查",
+            "goal_id": "",
+            "spine_task_id": "",
+            "role": "planner",
+            "capabilities": [],
+        },
     )()
     created = await submit_task(body=body, principal=principal)
     assert created["status"] == "pending"
@@ -552,7 +585,12 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
             self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
+        def send_task(
+            self,
+            name: str,
+            kwargs: dict,
+            task_id: str | None = None,
+        ) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert kwargs["user_id"] == principal.user_id
