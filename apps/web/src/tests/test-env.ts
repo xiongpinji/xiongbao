@@ -14,7 +14,7 @@ const runtime = globalThis as typeof globalThis & {
 
 function formatValue(value: unknown) {
   if (typeof value === "string") {
-    return `\"${value}\"`;
+    return `"${value}"`;
   }
   return String(value);
 }

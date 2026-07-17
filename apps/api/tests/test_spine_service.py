@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import sysconfig
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -33,7 +34,7 @@ EXPECTED_SPINE_TABLES = {
 def _run_alembic_upgrade(db_file: Path, revision: str) -> None:
     url = f"sqlite+aiosqlite:///{db_file}"
     api_dir = Path(__file__).resolve().parent.parent
-    site_packages = api_dir / ".venv" / "Lib" / "site-packages"
+    site_packages = _current_site_packages()
     env = {
         **os.environ,
         "XAGENT_DB__URL": url,
@@ -53,6 +54,13 @@ def _run_alembic_upgrade(db_file: Path, revision: str) -> None:
         check=True,
         capture_output=True,
     )
+
+
+def _current_site_packages() -> str:
+    purelib = sysconfig.get_path("purelib")
+    if purelib:
+        return purelib
+    raise RuntimeError("could not resolve current environment site-packages path")
 
 
 @pytest.fixture

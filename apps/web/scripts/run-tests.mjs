@@ -4,7 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const rawArg = process.argv[2] ?? "goalBoard.test.tsx";
+const { argv, execPath, exit } = process;
+const rawArg = argv[2] ?? "goalBoard.test.tsx";
 const normalizedArg = rawArg.replace(/^--\s*/, "").trim() || "goalBoard.test.tsx";
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const sourceEntry = normalizedArg.includes(path.sep) || normalizedArg.includes("/")
@@ -41,13 +42,13 @@ try {
     target: "node18",
   });
 
-  const result = spawnSync(process.execPath, [runnerOutput], {
+  const result = spawnSync(execPath, [runnerOutput], {
     cwd: projectRoot,
     stdio: "inherit",
   });
 
   if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+    exit(result.status ?? 1);
   }
 } finally {
   rmSync(outDir, { force: true, recursive: true });

@@ -45,7 +45,7 @@ const testingLibraryScreen = {
   getByText(matcher: string | RegExp) {
     if (typeof matcher === "string") {
       if (!currentText.includes(matcher)) {
-        throw new Error(`Unable to find text \"${matcher}\" in rendered output: ${currentText}`);
+        throw new Error(`Unable to find text "${matcher}" in rendered output: ${currentText}`);
       }
       return { textContent: matcher };
     }

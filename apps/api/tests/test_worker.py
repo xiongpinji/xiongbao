@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -15,6 +16,13 @@ from httpx import ASGITransport, AsyncClient
 from xagent.enterprise.auth import create_access_token
 from xagent.main import create_app
 from xagent.worker import get_task_runner
+
+
+def _current_site_packages() -> str:
+    purelib = sysconfig.get_path("purelib")
+    if purelib:
+        return purelib
+    raise RuntimeError("could not resolve current environment site-packages path")
 
 
 @pytest.fixture
@@ -30,9 +38,21 @@ async def migrated_db(monkeypatch: pytest.MonkeyPatch, tmp_path):
     await dispose_engine()
 
     api_dir = str(Path(__file__).resolve().parent.parent)
-    env = {**os.environ, "XAGENT_DB__URL": url, "PYTHONPATH": api_dir}
+    site_packages = _current_site_packages()
+    env = {
+        **os.environ,
+        "XAGENT_DB__URL": url,
+        "PYTHONPATH": api_dir,
+        "PYTHONUTF8": "1",
+    }
+    script = (
+        "import sys; "
+        f"sys.path[:0] = [{site_packages!r}, {api_dir!r}]; "
+        "from alembic.config import main; "
+        "raise SystemExit(main(argv=['upgrade', sys.argv[1]]))"
+    )
     subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-S", "-c", script, "head"],
         cwd=api_dir,
         env=env,
         check=True,
@@ -46,7 +66,7 @@ async def migrated_db(monkeypatch: pytest.MonkeyPatch, tmp_path):
 
 
 @pytest.fixture
-async def client():
+async def client(migrated_db):
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -152,21 +172,28 @@ async def test_submit_task_returns_error_when_initial_celery_persist_fails(
     principal = Principal(user_id="u-fail", tenant_id="tenant-fail", roles=frozenset({"member"}))
 
     class _AsyncResultStub:
-        id = "celery-task-fail"
+        def __init__(self, task_id: str) -> None:
+            self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict) -> _AsyncResultStub:
+        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
-            return _AsyncResultStub()
+            assert task_id
+            return _AsyncResultStub(task_id)
 
     async def _persist_fail(**kwargs):  # noqa: ARG001
         raise RuntimeError("persist failed")
 
     monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
     monkeypatch.setattr("xagent.api.v1.tasks.persist_submitted_agent_task", _persist_fail)
+    monkeypatch.setattr("xagent.api.v1.tasks.attach_run_to_task", AsyncMock(return_value=None))
 
-    body = type("Body", (), {"goal": "首次持久化失败", "role": None, "capabilities": []})()
+    body = type(
+        "Body",
+        (),
+        {"goal": "首次持久化失败", "goal_id": "", "spine_task_id": "", "role": None, "capabilities": []},
+    )()
 
     with pytest.raises(HTTPException) as exc_info:
         await submit_task(body=body, principal=principal)
@@ -185,25 +212,32 @@ async def test_task_submit_reuses_shared_celery_app(
     )
 
     class _AsyncResultStub:
-        id = "shared-celery-task"
+        def __init__(self, task_id: str) -> None:
+            self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict) -> _AsyncResultStub:
+        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert kwargs["user_id"] == principal.user_id
-            return _AsyncResultStub()
+            assert task_id
+            return _AsyncResultStub(task_id)
 
     async def _persist_stub(**kwargs):  # noqa: ARG001
         return None
 
     monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
     monkeypatch.setattr("xagent.api.v1.tasks.persist_submitted_agent_task", _persist_stub)
+    monkeypatch.setattr("xagent.api.v1.tasks.attach_run_to_task", AsyncMock(return_value=None))
 
-    body = type("Body", (), {"goal": "复用共享 Celery app", "role": None, "capabilities": []})()
+    body = type(
+        "Body",
+        (),
+        {"goal": "复用共享 Celery app", "goal_id": "", "spine_task_id": "", "role": None, "capabilities": []},
+    )()
     created = await submit_task(body=body, principal=principal)
 
-    assert created["task_id"] == "shared-celery-task"
+    assert created["task_id"]
     assert created["backend"] == "celery"
 
 
@@ -289,24 +323,31 @@ async def test_task_list_uses_persisted_celery_status(
     principal = Principal(user_id="u-list", tenant_id="tenant-list", roles=frozenset({"member"}))
 
     class _AsyncResultStub:
-        id = "celery-task-list"
+        def __init__(self, task_id: str) -> None:
+            self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict) -> _AsyncResultStub:
+        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
-            return _AsyncResultStub()
+            assert task_id
+            return _AsyncResultStub(task_id)
 
     monkeypatch.setenv("XAGENT_CACHE__REDIS_URL", "redis://stub-broker")
     get_settings.cache_clear()
     monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
 
-    body = type("Body", (), {"goal": "列表状态回查", "role": "planner", "capabilities": []})()
+    body = type(
+        "Body",
+        (),
+        {"goal": "列表状态回查", "goal_id": "", "spine_task_id": "", "role": "planner", "capabilities": []},
+    )()
     created = await submit_task(body=body, principal=principal)
     assert created["status"] == "pending"
+    task_id = created["task_id"]
 
     async with get_sessionmaker()() as session:
-        row = await session.get(AgentTaskORM, "celery-task-list")
+        row = await session.get(AgentTaskORM, task_id)
         assert row is not None
         row.status = "succeeded"
         row.result_payload = json.dumps({"final_answer": "done"}, ensure_ascii=False)
@@ -326,7 +367,7 @@ async def test_task_list_uses_persisted_celery_status(
         resp = await http_client.get("/api/v1/tasks", headers=_h(token))
 
     assert resp.status_code == 200, resp.text
-    item = next(task for task in resp.json()["tasks"] if task["task_id"] == "celery-task-list")
+    item = next(task for task in resp.json()["tasks"] if task["task_id"] == task_id)
     assert item["status"] == "succeeded"
     assert item["result"]["final_answer"] == "done"
     assert item["finished_at"]
@@ -364,6 +405,7 @@ def test_celery_worker_uses_task_id_as_run_id(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(
         "xagent.worker.celery_app.persist_agent_task_record_in_session", AsyncMock()
     )
+    monkeypatch.setattr("xagent.worker.celery_app.update_task_status_by_run_id", AsyncMock())
 
     result = run_agent_task(
         goal="Celery run id",
@@ -506,30 +548,41 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
     )
 
     class _AsyncResultStub:
-        id = "celery-task-1"
+        def __init__(self, task_id: str) -> None:
+            self.id = task_id
 
     class _SharedCeleryAppStub:
-        def send_task(self, name: str, kwargs: dict) -> _AsyncResultStub:
+        def send_task(self, name: str, kwargs: dict, task_id: str | None = None) -> _AsyncResultStub:
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert kwargs["user_id"] == principal.user_id
-            return _AsyncResultStub()
+            assert task_id
+            return _AsyncResultStub(task_id)
 
     monkeypatch.setenv("XAGENT_CACHE__REDIS_URL", "redis://stub-broker")
     get_settings.cache_clear()
     monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
 
     body = type(
-        "Body", (), {"goal": "持久化 Celery 元数据", "role": "planner", "capabilities": ["search"]}
+        "Body",
+        (),
+        {
+            "goal": "持久化 Celery 元数据",
+            "goal_id": "",
+            "spine_task_id": "",
+            "role": "planner",
+            "capabilities": ["search"],
+        },
     )()
     created = await submit_task(body=body, principal=principal)
 
-    assert created["task_id"] == "celery-task-1"
+    task_id = created["task_id"]
+    assert task_id
     assert created["backend"] == "celery"
     assert created["status"] == "pending"
 
     async with get_sessionmaker()() as session:
-        row = await session.get(AgentTaskORM, "celery-task-1")
+        row = await session.get(AgentTaskORM, task_id)
         assert row is not None
         assert row.tenant_id == principal.tenant_id
         assert row.owner_id == principal.user_id
@@ -544,9 +597,9 @@ async def test_celery_task_metadata_persists_and_can_be_reloaded(
 
     _task_tenants.clear()
     _task_metadata.clear()
-    reloaded = await get_task_runtime_view("celery-task-1", principal.tenant_id)
+    reloaded = await get_task_runtime_view(task_id, principal.tenant_id)
     assert reloaded is not None
-    assert reloaded["task_id"] == "celery-task-1"
+    assert reloaded["task_id"] == task_id
     assert reloaded["backend"] == "celery"
     assert reloaded["status"] == "pending"
     assert reloaded["owner_id"] == principal.user_id
