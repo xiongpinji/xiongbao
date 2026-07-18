@@ -1,0 +1,120 @@
+from __future__ import annotations
+
+import uuid
+from collections.abc import Sequence
+from typing import Any
+
+from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+from xagent.core.spine.release import build_release_package
+from xagent.core.spine.session import choose_next_action
+
+TASKBOARD_COLUMNS = (
+    "ready",
+    "in_progress",
+    "blocked",
+    "review",
+    "release_ready",
+    "deploying",
+    "verifying",
+    "delivered",
+    "recovery",
+)
+
+INITIATIVE_BLUEPRINTS = [
+    "Goal / Taskboard / Session Core",
+    "Execution Environment Orchestrator",
+    "PR / Review / Release Packaging Core",
+    "Deploy / Verify / Recover Core",
+    "Control / Policy / Safety Core",
+    "Evidence / Archive / Continuous Learning Core",
+]
+
+
+def create_goal(*, tenant_id: str, owner_id: str, title: str, description: str) -> Goal:
+    return Goal(
+        goal_id=uuid.uuid4().hex,
+        tenant_id=tenant_id,
+        owner_id=owner_id,
+        title=title,
+        description=description,
+    )
+
+
+def decompose_goal(goal: Goal) -> tuple[list[Initiative], list[DeliveryTask]]:
+    initiatives: list[Initiative] = []
+    tasks: list[DeliveryTask] = []
+    for position, title in enumerate(INITIATIVE_BLUEPRINTS):
+        initiative = Initiative(
+            initiative_id=uuid.uuid4().hex,
+            goal_id=goal.goal_id,
+            tenant_id=goal.tenant_id,
+            title=title,
+            position=position,
+        )
+        initiatives.append(initiative)
+        tasks.append(
+            DeliveryTask(
+                task_id=uuid.uuid4().hex,
+                initiative_id=initiative.initiative_id,
+                goal_id=goal.goal_id,
+                tenant_id=goal.tenant_id,
+                title=f"Initialize {title}",
+                detail=f"Bootstrap the first execution path for {title}",
+                position=0,
+            )
+        )
+    return initiatives, tasks
+
+
+def _group_tasks_into_columns(tasks: list[dict]) -> tuple[dict[str, list[dict]], list[dict]]:
+    columns: dict[str, list[dict]] = {column: [] for column in TASKBOARD_COLUMNS}
+    unknown_status_tasks: list[dict] = []
+    for task in tasks:
+        task_status = str(task.get("status", ""))
+        if task_status in columns:
+            columns[task_status].append(task)
+        else:
+            unknown_status_tasks.append(task)
+    return columns, unknown_status_tasks
+
+
+def _columns_have_tasks(columns: dict | None) -> bool:
+    if not columns:
+        return False
+    return any(bool(tasks) for tasks in columns.values())
+
+
+def summarize_goal_board(snapshot: dict) -> dict:
+    goal = snapshot.get("goal", {})
+    columns = snapshot.get("columns")
+    unknown_status_tasks = snapshot.get("unknown_status_tasks") or []
+    if not _columns_have_tasks(columns):
+        if "tasks" in snapshot:
+            columns, unknown_status_tasks = _group_tasks_into_columns(snapshot.get("tasks") or [])
+        else:
+            columns = columns or {}
+    return {
+        "goal": goal,
+        "columns": columns,
+        "unknown_status_tasks": unknown_status_tasks,
+        "next_action": choose_next_action({"goal": goal, "columns": columns}),
+    }
+
+
+def make_release_summary(
+    *,
+    goal_id: str,
+    branch_name: str,
+    commit_sha: str,
+    pr_number: str,
+    ci_run: dict[str, Any],
+    evidence_paths: Sequence[str],
+) -> dict[str, Any]:
+    return build_release_package(
+        goal_id=goal_id,
+        branch_name=branch_name,
+        commit_sha=commit_sha,
+        pr_number=pr_number,
+        ci_run=ci_run,
+        evidence_paths=evidence_paths,
+    )

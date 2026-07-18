@@ -19,28 +19,86 @@ from xagent.domains.billing import get_billing_service
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
-from xagent.infra.db import get_session
+from xagent.infra.db import get_session, get_sessionmaker
+from xagent.infra.logging import get_logger
 from xagent.infra.repos.billing import persist_billing_record
 from xagent.infra.repos.evidence import persist_evidence_bundle
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
 from xagent.worker.celery_app import persist_agent_task_record_in_session
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+logger = get_logger("xagent.api.agents")
 
 
 class RunRequest(BaseModel):
     goal: str = Field(..., min_length=1, description="任务目标")
+    goal_id: str = Field(default="", description="关联的 Spine goal 标识")
+    spine_task_id: str = Field(default="", description="关联的 Spine task 标识")
     role: str | None = Field(None, description="指定角色名；不指定则按能力匹配")
     capabilities: list[str] = Field(default_factory=list, description="任务所需能力标签")
     model: str | None = None
 
 
 def _build_input_payload(body: RunRequest) -> dict:
-    return {
+    payload = {
         "goal": body.goal,
         "role": body.role,
         "capabilities": list(body.capabilities),
         "model": body.model,
     }
+    goal_id = str(body.goal_id or "").strip()
+    spine_task_id = str(body.spine_task_id or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if spine_task_id:
+        payload["spine_task_id"] = spine_task_id
+    return payload
+
+
+async def _resolve_spine_contract(
+    *,
+    principal: Principal,
+    goal_id: str,
+    spine_task_id: str,
+) -> tuple[str, str, bool]:
+    resolved_goal_id = goal_id.strip()
+    resolved_spine_task_id = spine_task_id.strip()
+    if not resolved_goal_id and not resolved_spine_task_id:
+        return "", "", False
+    if not resolved_goal_id or not resolved_spine_task_id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "spine goal_id 与 spine_task_id 必须同时提供",
+        )
+
+    async with get_sessionmaker()() as session:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=principal.tenant_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+        )
+    if reference is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "spine task 不存在或与 goal_id 不匹配",
+        )
+    return resolved_goal_id, resolved_spine_task_id, True
+
+
+def _apply_spine_provenance(payload: dict, linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if task_id:
+        payload["spine_task_id"] = task_id
 
 
 def _build_result_summary(result: dict) -> dict:
@@ -169,6 +227,40 @@ def _is_runtime_persistence_schema_mismatch(exc: Exception) -> bool:
     )
 
 
+async def _try_attach_spine_run(
+    *,
+    run_id: str,
+    task_title: str,
+    goal_id: str,
+    spine_task_id: str,
+    allow_legacy_title_fallback: bool,
+    tenant_id: str,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as session:
+            linkage = await attach_run_to_task(
+                session,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title if allow_legacy_title_fallback else "",
+                next_status="in_progress",
+            )
+            if linkage is None:
+                return None
+            await session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_agent_run_failed",
+            run_id=run_id,
+            tenant_id=tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.get("/roles", summary="列出可用 agent 角色")
 async def list_roles(
     principal: Principal = Depends(require_permission("agent", "read")),
@@ -207,8 +299,40 @@ async def run(
         ) from exc
 
     run_id = uuid.uuid4().hex
+    resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
+        principal=principal,
+        goal_id=body.goal_id,
+        spine_task_id=body.spine_task_id,
+    )
     input_payload = _build_input_payload(body)
     started_at = datetime.now(UTC)
+    strict_linkage: dict[str, str] | None = None
+    if strict_spine:
+        strict_linkage = await _try_attach_spine_run(
+            run_id=run_id,
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            tenant_id=principal.tenant_id,
+        )
+        if strict_linkage is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "spine task 挂接失败",
+            )
+
+    linkage = strict_linkage
+    if not strict_spine:
+        linkage = await _try_attach_spine_run(
+            run_id=run_id,
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=True,
+            tenant_id=principal.tenant_id,
+        )
+    _apply_spine_provenance(input_payload, linkage)
 
     try:
         result = await run_agent(
@@ -261,6 +385,12 @@ async def run(
                 task_id=result.run_id,
                 records=evidence_records,
             )
+            await update_task_status_by_run_id(
+                session,
+                tenant_id=principal.tenant_id,
+                run_id=result.run_id,
+                next_status="review",
+            )
             await session.commit()
         except Exception as evidence_exc:
             await session.rollback()
@@ -282,9 +412,17 @@ async def run(
                     started_at=started_at,
                     finished_at=datetime.now(UTC),
                 )
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=result.run_id,
+                    next_status="review",
+                )
                 await session.commit()
             else:
                 raise
+    except HTTPException:
+        raise
     except Exception as exc:
         await session.rollback()
         if _is_runtime_persistence_schema_mismatch(exc):
@@ -330,6 +468,13 @@ async def run(
                     run_id=run_id,
                     task_id=run_id,
                     records=failure_evidence,
+                )
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=run_id,
+                    next_status="recovery",
+                    blocker_reason=failure_error,
                 )
                 await session.commit()
             except Exception:

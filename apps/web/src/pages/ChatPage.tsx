@@ -1,13 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUp, Bot, CheckCircle2, FileText, Plus, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
 import { readAgentRunStream } from "../api/chatStream";
 import { getToken } from "../api/client";
-import { useShellActions } from "../shell/useShellStore";
+import { useShellActions, useShellStore } from "../shell/useShellStore";
 
 export default function ChatPage() {
   const { appendActivity, syncRunTask } = useShellActions();
+  const chatSessionVersion = useShellStore((state) => state.chatSessionVersion);
+  const chatSessionKey = useShellStore((state) => state.chatSessionKey);
   const [goal, setGoal] = useState("");
   const [submittedGoal, setSubmittedGoal] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,6 +17,16 @@ export default function ChatPage() {
   const [runId, setRunId] = useState<string | null>(null);
   const [streamText, setStreamText] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGoal("");
+    setSubmittedGoal("");
+    setLoading(false);
+    setRun(null);
+    setRunId(null);
+    setStreamText("");
+    setError(null);
+  }, [chatSessionVersion, chatSessionKey]);
 
   async function submit() {
     const nextGoal = goal.trim();

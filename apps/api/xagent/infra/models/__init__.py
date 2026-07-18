@@ -6,6 +6,12 @@ from xagent.infra.models.audit import AuditEventORM
 from xagent.infra.models.billing import BillingRecordORM, SubscriptionORM
 from xagent.infra.models.evidence import EvidenceORM
 from xagent.infra.models.memory import MemoryMetaORM
+from xagent.infra.models.spine import (
+    DeliveryTaskORM,
+    GoalORM,
+    InitiativeORM,
+    ReleaseRecordORM,
+)
 from xagent.infra.models.user import Tenant, User
 from xagent.infra.models.workflow import WorkflowRunORM
 
@@ -20,4 +26,8 @@ __all__ = [
     "AgentTaskORM",
     "ArtifactORM",
     "EvidenceORM",
+    "GoalORM",
+    "InitiativeORM",
+    "DeliveryTaskORM",
+    "ReleaseRecordORM",
 ]
