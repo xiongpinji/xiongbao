@@ -10,15 +10,14 @@
 - gate result: 功能门=done；稳定性门=done；权限/可追溯门=done；试点交付门=done
 
 ## G2 正式商用 GA
-- status: active
-- active package: G2-B1 候选冻结包
-- ready packages: G2-B2 目标环境演练包
-- candidate: `commercialization-ladder @ 3a1eb28`
-- candidate PR: `#11`
-- candidate checks: backend=pass；frontend=pass；license-gate=pass；promptfoo-eval=pass
+- status: done
+- completed packages: G2-B1, G2-B2, G2-B3, G2-B4
+- gate result: 候选冻结门=done；目标环境演练门=done；发布/回滚门=done；签字/证据门=done
 
 ## G3 企业级长期运营
-- status: pending
+- status: active
+- active package: G3-C1 HA / K8s 包
+- ready packages: G3-C2 可观测 / 告警包
 
 ## blocked
 - reason: none
