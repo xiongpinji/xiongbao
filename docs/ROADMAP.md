@@ -19,12 +19,11 @@ Phase 0-5 表示代码骨架、接入点和本地能力链路的历史建设路�
 
 已完成或进入 Review 的证据项以 `docs/coordination/TASK_BOARD.md` 和 `docs/coordination/reports/delivery-report.md` 为准。
 
-### 2.1 商用成熟度阶段映射
+### 2.1 商用成熟度阶段口径
 
-- 当前激活阶段：**G1｜内部试点可稳定使用**。
-- **G2｜正式商用 GA** 未开启，因为还缺版本冻结、目标环境演练、签字闭环。
-- **G3｜企业级长期运营** 未开启，因为还缺 HA / K8s / SLO / 审计保留 / 容量边界。
-- 当前推进规则：仅 **G1** active；**G2** 仅在 G1 四个 Gate 全部通过后开启；**G3** 仅在 G2 四个 Gate 全部通过后开启。
+- 当前商用成熟度阶段以 [`COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。
+- 现阶段口径是：**G1 active**，项目仍处于内部试点 / 试点交付收口阶段。
+- **G2 / G3** 仍为后续阶段；是否开启与具体 gate 定义统一在唯一事实源维护，不在本文重复展开。
 
 | 任务 | 当前口径 |
 |---|---|
