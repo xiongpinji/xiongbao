@@ -13,6 +13,9 @@
 - status: active
 - active package: G2-B1 候选冻结包
 - ready packages: G2-B2 目标环境演练包
+- candidate: `commercialization-ladder @ 3a1eb28`
+- candidate PR: `#11`
+- candidate checks: backend=pass；frontend=pass；license-gate=pass；promptfoo-eval=pass
 
 ## G3 企业级长期运营
 - status: pending
