@@ -30,6 +30,7 @@
 | G3 可观测 / 告警包 | [coordination/reports/commercialization-g3-c2-observability-package.md](coordination/reports/commercialization-g3-c2-observability-package.md) | READY | 冻结企业级长期运营阶段的指标、日志、Trace、关键运行信号与告警方向，作为 G3-C2 的执行入口 |
 | G3 审计 / 保留策略包 | [coordination/reports/commercialization-g3-c3-audit-retention-package.md](coordination/reports/commercialization-g3-c3-audit-retention-package.md) | READY | 冻结企业级长期运营阶段的审计对象、数据保留方向、权限长期治理与多租户边界，作为 G3-C3 的执行入口 |
 | G3 容量 / 扩展边界包 | [coordination/reports/commercialization-g3-c4-capacity-boundary-package.md](coordination/reports/commercialization-g3-c4-capacity-boundary-package.md) | READY | 冻结企业级长期运营阶段的容量边界、并发分界、瓶颈对象与扩展前提，作为 G3-C4 的执行入口 |
+| G3 HA / K8s 验证计划 | [coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md](coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md) | READY | 将 G3-C1 从方向定义推进到真实验证阶段，冻结 HA / K8s / secret 注入 / 多实例一致性的最小验证计划 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
