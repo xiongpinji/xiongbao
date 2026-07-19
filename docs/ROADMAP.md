@@ -19,6 +19,12 @@ Phase 0-5 表示代码骨架、接入点和本地能力链路的历史建设路�
 
 已完成或进入 Review 的证据项以 `docs/coordination/TASK_BOARD.md` 和 `docs/coordination/reports/delivery-report.md` 为准。
 
+### 2.1 商用成熟度阶段口径
+
+- 当前商用成熟度阶段以 [`COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。
+- 现阶段口径是：**G1 active**，项目仍处于内部试点 / 试点交付收口阶段。
+- **G2 / G3** 仍为后续阶段；是否开启与具体 gate 定义统一在唯一事实源维护，不在本文重复展开。
+
 | 任务 | 当前口径 |
 |---|---|
 | P0-A 到 P0-E | 已在任务板 DONE，覆盖 orchestration await bug、前端 lint、demo/fallback 清理、危险默认值、CI 最小门禁 |
