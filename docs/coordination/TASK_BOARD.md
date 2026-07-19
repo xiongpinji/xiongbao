@@ -29,15 +29,14 @@
 
 ---
 
-## In Progress
+## Goal Board Entry
 
-> 领取后把任务卡整体移到这里，并补齐 Owner / 开始时间 / 分支或工作树 / 预计交付。
+- 当前总 Goal：`G0 xagent 商用完整交付`
+- 当前激活阶段：`G1 内部试点可稳定使用`
+- 当前 active 包：`G1-A1 功能链路包`
+- 当前 ready 包：`G1-A2 稳定性 / 恢复包`
+- Goal 板文档：[`commercialization-goal-board.md`](reports/commercialization-goal-board.md)
 
-暂无。
-
----
-
-## Blocked
 
 > 阻塞格式：`[ID] 标题 | Owner | 阻塞原因 | 需要谁决策 | 恢复条件 | 下次检查点`
 
