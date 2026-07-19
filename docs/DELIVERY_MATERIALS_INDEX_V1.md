@@ -20,6 +20,7 @@
 | 试点功能链路包 | [coordination/reports/commercialization-g1-a1-functional-package.md](coordination/reports/commercialization-g1-a1-functional-package.md) | READY | 固定内部试点标准日常使用路径、关键入口、现有证据与最小验证命令，作为 G1-A1 的交接入口 |
 | 稳定性 / 恢复包 | [coordination/reports/commercialization-g1-a2-stability-package.md](coordination/reports/commercialization-g1-a2-stability-package.md) | READY | 冻结内部试点阶段的失败观察入口、恢复动作、最小演练脚本与现有证据链接，作为 G1-A2 的交接入口 |
 | 数据 / 权限 / 审计包 | [coordination/reports/commercialization-g1-a3-data-governance-package.md](coordination/reports/commercialization-g1-a3-data-governance-package.md) | READY | 冻结内部试点阶段的权限边界、运行对象回查关系、最小审计入口与 secret / 默认值约束，作为 G1-A3 的交接入口 |
+| 试点交付材料包 | [coordination/reports/commercialization-g1-a4-pilot-delivery-package.md](coordination/reports/commercialization-g1-a4-pilot-delivery-package.md) | READY | 收敛内部试点阶段的部署、运维、边界、升级路径与 G1-A1/A2/A3 入口，作为 G1-A4 的最终交接入口 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
