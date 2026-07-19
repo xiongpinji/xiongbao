@@ -2,7 +2,7 @@
 
 ## A 平台化增强
 - status: active
-- active package: A1 平台化增强包
+- active package: A1 平台化增强包（验证中，已有首轮通过证据）
 - ready packages: B 自动化运营增强
 
 ## B 自动化运营增强
