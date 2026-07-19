@@ -17,6 +17,7 @@
 | 升级 / 回滚说明 | [RELEASE_RUNBOOK_V1.md](RELEASE_RUNBOOK_V1.md) | READY | 当前唯一发布 / 回滚执行手册 |
 | 已知问题列表 | [KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md](KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md) | READY | 明确当前候选不能被表述为正式 GA 的已知缺口与限制 |
 | 试点边界说明 | [KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md](KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md) | READY | 与已知问题合并维护，避免双份口径漂移 |
+| 试点功能链路包 | [coordination/reports/commercialization-g1-a1-functional-package.md](coordination/reports/commercialization-g1-a1-functional-package.md) | READY | 固定内部试点标准日常使用路径、关键入口、现有证据与最小验证命令，作为 G1-A1 的交接入口 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
