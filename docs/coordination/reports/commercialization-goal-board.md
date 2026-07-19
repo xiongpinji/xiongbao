@@ -17,7 +17,7 @@
 ## G3 企业级长期运营
 - status: active
 - active package: G3-C1 HA / K8s 包（验证中，已有首轮通过证据）
-- ready packages: G3-C2 可观测 / 告警包（验证中，已有首轮通过证据）；G3-C3 审计 / 保留策略包（验证中，已有首轮通过证据）；G3-C4 容量 / 扩展边界包
+- ready packages: G3-C2 可观测 / 告警包（验证中，已有首轮通过证据）；G3-C3 审计 / 保留策略包（验证中，已有首轮通过证据）；G3-C4 容量 / 扩展边界包（验证中，已有首轮通过证据）
 
 ## blocked
 - reason: none

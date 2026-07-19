@@ -36,6 +36,8 @@
 | G3 可观测 / 告警验证结果 | [coordination/reports/commercialization-g3-c2-observability-verification.md](coordination/reports/commercialization-g3-c2-observability-verification.md) | READY | 记录 G3-C2 第一轮真实验证结果，证明健康/就绪/指标/日志/scrape 入口已经形成首轮通过证据 |
 | G3 审计 / 保留策略验证计划 | [coordination/reports/commercialization-g3-c3-audit-retention-verification-plan.md](coordination/reports/commercialization-g3-c3-audit-retention-verification-plan.md) | READY | 将 G3-C3 从治理定义推进到真实验证阶段，冻结审计对象、保留方向、权限长期治理与多租户边界的验证口径 |
 | G3 审计 / 保留策略验证结果 | [coordination/reports/commercialization-g3-c3-audit-retention-verification.md](coordination/reports/commercialization-g3-c3-audit-retention-verification.md) | READY | 记录 G3-C3 第一轮真实验证结果，证明审计对象、保留方向、权限长期治理与租户长期边界已形成首轮通过证据 |
+| G3 容量 / 扩展边界验证计划 | [coordination/reports/commercialization-g3-c4-capacity-verification-plan.md](coordination/reports/commercialization-g3-c4-capacity-verification-plan.md) | READY | 将 G3-C4 从容量定义推进到真实验证阶段，冻结负载入口、性能检查项、瓶颈对象与规模边界的验证口径 |
+| G3 容量 / 扩展边界验证结果 | [coordination/reports/commercialization-g3-c4-capacity-verification.md](coordination/reports/commercialization-g3-c4-capacity-verification.md) | READY | 记录 G3-C4 第一轮真实验证结果，证明容量检查项、瓶颈对象和规模边界已经形成首轮通过证据 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
