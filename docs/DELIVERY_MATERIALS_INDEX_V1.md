@@ -32,6 +32,8 @@
 | G3 容量 / 扩展边界包 | [coordination/reports/commercialization-g3-c4-capacity-boundary-package.md](coordination/reports/commercialization-g3-c4-capacity-boundary-package.md) | READY | 冻结企业级长期运营阶段的容量边界、并发分界、瓶颈对象与扩展前提，作为 G3-C4 的执行入口 |
 | G3 HA / K8s 验证计划 | [coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md](coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md) | READY | 将 G3-C1 从方向定义推进到真实验证阶段，冻结 HA / K8s / secret 注入 / 多实例一致性的最小验证计划 |
 | G3 HA / K8s 验证结果 | [coordination/reports/commercialization-g3-c1-ha-k8s-verification.md](coordination/reports/commercialization-g3-c1-ha-k8s-verification.md) | READY | 记录 G3-C1 第一轮真实验证结果，证明 Helm/K8s 模板、多副本结构与基础探针入口已经形成首轮通过证据 |
+| G3 可观测 / 告警验证计划 | [coordination/reports/commercialization-g3-c2-observability-verification-plan.md](coordination/reports/commercialization-g3-c2-observability-verification-plan.md) | READY | 将 G3-C2 从方向定义推进到真实验证阶段，冻结可观测入口、日志信号与 Helm 中 metrics/scrape 的验证口径 |
+| G3 可观测 / 告警验证结果 | [coordination/reports/commercialization-g3-c2-observability-verification.md](coordination/reports/commercialization-g3-c2-observability-verification.md) | READY | 记录 G3-C2 第一轮真实验证结果，证明健康/就绪/指标/日志/scrape 入口已经形成首轮通过证据 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
