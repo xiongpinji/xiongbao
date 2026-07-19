@@ -25,6 +25,7 @@
 | G2 候选冻结包 | [coordination/reports/commercialization-g2-b1-candidate-freeze-package.md](coordination/reports/commercialization-g2-b1-candidate-freeze-package.md) | READY | 冻结正式商用 GA 的唯一候选对象、范围、CI 与证据入口，作为 G2-B1 的执行入口 |
 | 目标环境演练包 | [coordination/reports/commercialization-g2-b2-target-rehearsal-package.md](coordination/reports/commercialization-g2-b2-target-rehearsal-package.md) | READY | 冻结正式商用 GA 候选在目标环境 / full-mode 下的演练步骤、证据要求、发布 / 回滚 / smoke 闭环，作为 G2-B2 的执行入口 |
 | 发布 / 回滚包 | [coordination/reports/commercialization-g2-b3-release-rollback-package.md](coordination/reports/commercialization-g2-b3-release-rollback-package.md) | READY | 冻结正式商用 GA 候选的发布步骤、回滚边界、失败处置与 smoke 闭环，作为 G2-B3 的执行入口 |
+| 签字 / 证据包 | [coordination/reports/commercialization-g2-b4-signoff-evidence-package.md](coordination/reports/commercialization-g2-b4-signoff-evidence-package.md) | READY | 冻结正式商用 GA 的 reviewer / owner 签字入口、证据索引与最终结论模板，作为 G2-B4 的执行入口 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
 
 ---
