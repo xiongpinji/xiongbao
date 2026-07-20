@@ -21,6 +21,7 @@
 
 ```powershell
 helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=abcdefghijklmnopqrstuvwxyz123456
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret='' --set security.existingJwtSecretRef.name=xagent-secrets --set security.existingJwtSecretRef.key=jwt-secret
 ```
 
 ---
@@ -39,10 +40,11 @@ helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret
 - Service、Ingress、HPA 等结构已可见。
 
 ### 3.3 secret 注入当前态
-- **通过（当前态验证）**
-- `XAGENT_SECURITY__JWT_SECRET` 仍为显式注入项；
-- 当前仍以 env / values 注入为主；
-- 没有把 `secretRef` / external secret manager 误写成已完成事实。
+- **通过（当前态验证 + 首个实现增量）**
+- `XAGENT_SECURITY__JWT_SECRET` 仍支持显式 value 注入；
+- 同时新增了 `security.existingJwtSecretRef.name / key` 注入路径；
+- API / worker 模板现在可通过 `valueFrom.secretKeyRef` 引用现有 Kubernetes Secret；
+- 当前仍未把 `external secret manager` 写成已完成事实。
 
 ### 3.4 指标与平台入口
 - **通过**
@@ -56,7 +58,7 @@ helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret
 
 本轮验证通过后，A 平台化增强仍未完成的部分包括：
 
-1. `secretRef` / external secret manager 真正落地；
+1. `external secret manager` 真正落地；
 2. 完整 K8s 集群级演练；
 3. 更标准的环境模板体系；
 4. 更系统化的平台配置治理。

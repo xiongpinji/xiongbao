@@ -52,8 +52,13 @@ llm:
 
 # 安全
 security:
-  # 必填：每个部署环境提供独立的 32+ 字符随机值；模板会在缺失时 fail fast。
+  # 两种注入方式二选一：
+  # 1) 直接提供 jwtSecret（当前兼容模式）
+  # 2) 提供 existingJwtSecretRef.name / key（平台化推荐）
   jwtSecret: ""
+  existingJwtSecretRef:
+    name: ""
+    key: "jwt-secret"
   requireAuth: true
 
 # 可观测

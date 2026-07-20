@@ -99,17 +99,18 @@ docker compose --env-file .env config --quiet
 
 ### 4.2 Helm
 
-当前 Helm v1 对 `security.jwtSecret` 使用 `required` fail-fast。最小渲染：
+当前 Helm v1 对 `security.jwtSecret` 使用 `required` fail-fast；同时已新增 `security.existingJwtSecretRef.name / key` 作为 Kubernetes Secret 引用入口。最小渲染：
 
 ```powershell
 helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=<32+ chars random>
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret='' --set security.existingJwtSecretRef.name=<secret-name> --set security.existingJwtSecretRef.key=jwt-secret
 ```
 
 生产建议：
 
-- 由 CI secret store 或平台 secret manager 注入 `security.jwtSecret`。
+- 由 CI secret store 或平台 secret manager 注入 `security.jwtSecret`，或提供 `security.existingJwtSecretRef.*` 指向现有 Kubernetes Secret。
 - DB / Redis / Qdrant URL 使用托管服务或平台内 Secret / ConfigMap 管理。
-- 如目标平台要求 secretRef 而非 value 注入，应在后续平台化任务中扩展 Helm chart；当前 v1 文档不把 secretRef 能力伪装为已完成。
+- `external secret manager` 的完整自动接入仍属于后续平台化增强，不应误表述为当前已闭环。
 
 ---
 
