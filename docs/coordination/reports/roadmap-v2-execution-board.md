@@ -3,11 +3,11 @@
 ## A 平台化增强
 - status: active
 - active package: A1 平台化增强包（验证中，已有首轮通过证据）
-- ready packages: B 自动化运营增强（执行包已建立，验证计划已就绪）
+- ready packages: B 自动化运营增强（验证中，已有首轮通过证据）
 
 ## B 自动化运营增强
 - status: ready
-- active package: B1 自动化运营增强包（验证计划已就绪）
+- active package: B1 自动化运营增强包（验证中，已有首轮通过证据）
 
 ## C 容量与性能增强
 - status: pending
