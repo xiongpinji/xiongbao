@@ -13,11 +13,11 @@
 ## C 容量与性能增强
 - status: ready
 - active package: C1 容量与性能增强包（验证中，已有首轮通过证据）
-- ready packages: D 商业复制增强（执行包已建立，验证计划已就绪）
+- ready packages: D 商业复制增强（验证中，已有首轮通过证据）
 
 ## D 商业复制增强
 - status: ready
-- active package: D1 商业复制增强包（验证计划已就绪）
+- active package: D1 商业复制增强包（验证中，已有首轮通过证据）
 - ready packages: E 产品增强（执行包已建立）
 
 ## E 产品增强
