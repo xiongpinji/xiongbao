@@ -18,11 +18,11 @@
 ## D 商业复制增强
 - status: ready
 - active package: D1 商业复制增强包（验证中，已有首轮通过证据）
-- ready packages: E 产品增强（执行包已建立）
+- ready packages: E 产品增强（验证计划已就绪）
 
 ## E 产品增强
 - status: ready
-- active package: E1 产品增强包
+- active package: E1 产品增强包（验证计划已就绪）
 
 ## blocked
 - reason: none
