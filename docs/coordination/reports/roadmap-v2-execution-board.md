@@ -18,9 +18,11 @@
 ## D 商业复制增强
 - status: ready
 - active package: D1 商业复制增强包
+- ready packages: E 产品增强（执行包已建立）
 
 ## E 产品增强
-- status: pending
+- status: ready
+- active package: E1 产品增强包
 
 ## blocked
 - reason: none
