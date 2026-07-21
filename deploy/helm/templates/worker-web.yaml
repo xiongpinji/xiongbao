@@ -28,8 +28,33 @@ spec:
             - { name: XAGENT_LLM__WARMUP_MAX_TOKENS, value: {{ .Values.llm.warmupMaxTokens | quote }} }
             - { name: XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS, value: {{ .Values.llm.warmupWaitTimeoutSeconds | quote }} }
             - { name: XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS, value: {{ .Values.llm.warmupPollIntervalSeconds | quote }} }
+            {{- if .Values.observability.existingLangfuseSecretRef.name }}
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
+                  key: {{ .Values.observability.existingLangfuseSecretRef.publicKeyKey | quote }}
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
+                  key: {{ .Values.observability.existingLangfuseSecretRef.secretKeyKey | quote }}
+            {{- else }}
+            - name: LANGFUSE_PUBLIC_KEY
+              value: {{ .Values.observability.langfusePublicKey | quote }}
+            - name: LANGFUSE_SECRET_KEY
+              value: {{ .Values.observability.langfuseSecretKey | quote }}
+            {{- end }}
+            {{- if .Values.security.existingJwtSecretRef.name }}
             - name: XAGENT_SECURITY__JWT_SECRET
-              value: {{ required "security.jwtSecret is required and must be a 32+ character random value" .Values.security.jwtSecret | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.security.existingJwtSecretRef.name | quote }}
+                  key: {{ .Values.security.existingJwtSecretRef.key | quote }}
+            {{- else }}
+            - name: XAGENT_SECURITY__JWT_SECRET
+              value: {{ required "either security.jwtSecret or security.existingJwtSecretRef.name is required" .Values.security.jwtSecret | quote }}
+            {{- end }}
           command: ["sh", "-c"]
           args:
             - "(python -m xagent.cli warmup || true) && exec celery -A xagent.worker.celery_app worker --loglevel=info --concurrency {{ .Values.worker.concurrency }}"
