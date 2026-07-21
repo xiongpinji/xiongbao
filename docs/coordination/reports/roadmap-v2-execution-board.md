@@ -9,6 +9,7 @@
 - status: ready
 - active package: B1 自动化运营增强包（验证中，已有首轮通过证据）
 - ready packages: C 容量与性能增强（验证中，已有首轮通过证据）
+- automation entry: `collect_ops_evidence.py`
 
 ## C 容量与性能增强
 - status: ready
