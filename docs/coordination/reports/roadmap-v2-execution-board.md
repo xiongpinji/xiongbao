@@ -29,4 +29,4 @@
 - reason: none
 - owner: Claude Code
 - recovery condition: 当前 active 包恢复到 in_progress 或 done
-- next checkpoint: 完成 A 方向定义并进入验证入口
+- next checkpoint: 基于 A/B/C/D 已有首轮验证与真实实现，开始推进 E 产品增强的真实实现
