@@ -48,8 +48,8 @@
 | `XAGENT_LLM__PROXY_API_KEY` | LiteLLM proxy 访问 | 可留空 | Secret manager / `.env` / CI secret | env |
 | `XAGENT_LLM__OPENAI_API_KEY` | OpenAI 直连 | 可留空 | Secret manager / provider vault | env / LiteLLM config |
 | `XAGENT_LLM__DEEPSEEK_API_KEY` | DeepSeek 直连 | 可留空 | Secret manager / provider vault | env / LiteLLM config |
-| `XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY` | Langfuse public key | 可留空 | Langfuse project | env |
-| `XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY` | Langfuse secret key | 可留空 | Secret manager / Langfuse project | env |
+| `XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY` | Langfuse public key | 可留空 | Secret manager / K8s secret / `.env` / CI secret | env；Helm `observability.langfusePublicKey` 或 `observability.existingLangfuseSecretRef` |
+| `XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY` | Langfuse secret key | 可留空 | Secret manager / K8s secret / `.env` / CI secret | env；Helm `observability.langfuseSecretKey` 或 `observability.existingLangfuseSecretRef` |
 | `LANGFUSE_NEXTAUTH_SECRET` | Langfuse auth secret | 不需要 | Secret manager / `.env` / CI secret | compose env |
 | `LANGFUSE_SALT` | Langfuse salt | 不需要 | Secret manager / `.env` / CI secret | compose env |
 | `LANGFUSE_INIT_USER_PASSWORD` | Langfuse 初始化用户密码 | 不需要 | Secret manager / one-time bootstrap | compose env |

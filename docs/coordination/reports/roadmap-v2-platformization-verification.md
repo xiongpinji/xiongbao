@@ -22,6 +22,8 @@
 ```powershell
 helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=abcdefghijklmnopqrstuvwxyz123456
 helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret='' --set security.existingJwtSecretRef.name=xagent-secrets --set security.existingJwtSecretRef.key=jwt-secret
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=abcdefghijklmnopqrstuvwxyz123456 --set observability.langfusePublicKey=pk_test --set observability.langfuseSecretKey=sk_test
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=abcdefghijklmnopqrstuvwxyz123456 --set observability.langfusePublicKey='' --set observability.langfuseSecretKey='' --set observability.existingLangfuseSecretRef.name=langfuse-secrets --set observability.existingLangfuseSecretRef.publicKeyKey=langfuse-public-key --set observability.existingLangfuseSecretRef.secretKeyKey=langfuse-secret-key
 ```
 
 ---
@@ -40,10 +42,10 @@ helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret
 - Service、Ingress、HPA 等结构已可见。
 
 ### 3.3 secret 注入当前态
-- **通过（当前态验证 + 首个实现增量）**
-- `XAGENT_SECURITY__JWT_SECRET` 仍支持显式 value 注入；
-- 同时新增了 `security.existingJwtSecretRef.name / key` 注入路径；
-- API / worker 模板现在可通过 `valueFrom.secretKeyRef` 引用现有 Kubernetes Secret；
+- **通过（当前态验证 + 第二轮实现增量）**
+- `XAGENT_SECURITY__JWT_SECRET` 支持显式 value 注入，也支持 `security.existingJwtSecretRef`；
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` 现在支持显式 value 注入，也支持 `observability.existingLangfuseSecretRef`；
+- API / worker 模板现在都可通过 `valueFrom.secretKeyRef` 引用现有 Kubernetes Secret；
 - 当前仍未把 `external secret manager` 写成已完成事实。
 
 ### 3.4 指标与平台入口

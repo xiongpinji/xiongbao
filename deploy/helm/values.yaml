@@ -66,6 +66,10 @@ observability:
   langfuseHost: ""
   langfusePublicKey: ""
   langfuseSecretKey: ""
+  existingLangfuseSecretRef:
+    name: ""
+    publicKeyKey: "langfuse-public-key"
+    secretKeyKey: "langfuse-secret-key"
   prometheus: true
 
 ingress:
