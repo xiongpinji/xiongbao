@@ -22,7 +22,7 @@
 
 ## E 产品增强
 - status: ready
-- active package: E1 产品增强包（验证计划已就绪）
+- active package: E1 产品增强包（验证中，已有首轮通过证据）
 
 ## blocked
 - reason: none

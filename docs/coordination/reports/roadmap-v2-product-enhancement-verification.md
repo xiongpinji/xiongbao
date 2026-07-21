@@ -27,7 +27,7 @@
   - Goal Board 文档入口
   - 阶段推进 / Gate 评估记录
   - 执行包与验证结果的系统化挂接
-- 说明产品增强不是从空白开始，而是已有可推进的 Goal / taskboard 基础。
+- 说明产品增强不是从空白开始，而是已有真实 Goal / taskboard 基础。
 
 ### 2.2 review / recover / evidence 自动化基础
 - **通过**
@@ -45,7 +45,7 @@
   - Release / Recovery 侧栏
   - Run Console
   - Chat / Settings / Run detail 入口
-- 说明后续体验增强建立在真实产品面之上，而不是抽象设想。
+- 说明体验增强建立在真实产品面之上，而不是抽象设想。
 
 ### 2.4 执行 / 治理视图增强基础
 - **通过**
@@ -53,7 +53,7 @@
   - Goal Board
   - Delivery Materials Index
   - Final Summary
-  - Audit / Comparison 报告
+  - 审计与对比报告
 - 说明多层视图基础已经具备，后续增强不需要从零构造视图体系。
 
 ---
