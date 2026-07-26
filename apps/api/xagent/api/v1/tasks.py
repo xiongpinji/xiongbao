@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
@@ -22,6 +23,11 @@ from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
 from xagent.worker import get_task_runner
 from xagent.worker.celery_app import (
     get_celery_app,
@@ -41,16 +47,103 @@ _task_metadata: dict[str, dict[str, Any]] = {}
 
 class TaskSubmitIn(BaseModel):
     goal: str = Field(..., min_length=1)
+    goal_id: str = Field(default="")
+    spine_task_id: str = Field(default="")
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
 
 
 def _build_input_payload(body: TaskSubmitIn) -> dict[str, Any]:
-    return {
+    payload = {
         "goal": body.goal,
         "role": body.role,
         "capabilities": list(body.capabilities),
     }
+    goal_id = str(getattr(body, "goal_id", "") or "").strip()
+    spine_task_id = str(getattr(body, "spine_task_id", "") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if spine_task_id:
+        payload["spine_task_id"] = spine_task_id
+    return payload
+
+
+async def _resolve_spine_contract(
+    *,
+    principal: Principal,
+    goal_id: str,
+    spine_task_id: str,
+) -> tuple[str, str, bool]:
+    resolved_goal_id = goal_id.strip()
+    resolved_spine_task_id = spine_task_id.strip()
+    if not resolved_goal_id and not resolved_spine_task_id:
+        return "", "", False
+    if not resolved_goal_id or not resolved_spine_task_id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "spine goal_id 与 spine_task_id 必须同时提供",
+        )
+
+    async with get_sessionmaker()() as session:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=principal.tenant_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+        )
+    if reference is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "spine task 不存在或与 goal_id 不匹配",
+        )
+    return resolved_goal_id, resolved_spine_task_id, True
+
+
+def _apply_spine_provenance(payload: dict[str, Any], linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        payload["goal_id"] = goal_id
+    if task_id:
+        payload["spine_task_id"] = task_id
+
+
+def _backfill_task_runner_provenance(
+    *,
+    task_id: str,
+    principal: Principal,
+    linkage: dict[str, str] | None,
+) -> None:
+    record = get_task_runner().get(task_id, principal.tenant_id)
+    if record is None:
+        return
+    _apply_spine_provenance(record.input_payload, linkage)
+
+
+async def _sync_finished_task_status_if_needed(
+    *,
+    task_id: str,
+    principal: Principal,
+) -> None:
+    record = get_task_runner().get(task_id, principal.tenant_id)
+    if record is None:
+        return
+    if record.status.value not in {"succeeded", "failed"}:
+        return
+
+    next_status = "review" if record.status.value == "succeeded" else "recovery"
+    blocker_reason = str(record.error or "") if record.status.value == "failed" else ""
+    async with get_sessionmaker()() as session:
+        await update_task_status_by_run_id(
+            session,
+            tenant_id=principal.tenant_id,
+            run_id=task_id,
+            next_status=next_status,
+            blocker_reason=blocker_reason,
+        )
+        await session.commit()
 
 
 def _remember_task(
@@ -170,28 +263,122 @@ async def _load_persisted_task_views(tenant_id: str) -> dict[str, dict[str, Any]
     return task_views
 
 
+async def _try_attach_spine_task(
+    *,
+    task_id: str,
+    task_title: str,
+    goal_id: str,
+    spine_task_id: str,
+    allow_legacy_title_fallback: bool,
+    principal: Principal,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as session:
+            linkage = await attach_run_to_task(
+                session,
+                tenant_id=principal.tenant_id,
+                run_id=task_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title if allow_legacy_title_fallback else "",
+                next_status="in_progress",
+            )
+            if linkage is None:
+                return None
+            await session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_task_failed",
+            task_id=task_id,
+            tenant_id=principal.tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.post("", summary="提交 agent 运行为后台任务")
 async def submit_task(
     body: TaskSubmitIn,
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> dict:
     runner = get_task_runner()
+    resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
+        principal=principal,
+        goal_id=body.goal_id,
+        spine_task_id=body.spine_task_id,
+    )
     input_payload = _build_input_payload(body)
 
     async def _run():
-        return (
-            await run_agent(
-                body.goal,
-                principal=principal,
-                role_name=body.role,
-                capabilities=set(body.capabilities) or None,
+        try:
+            result = (
+                await run_agent(
+                    body.goal,
+                    principal=principal,
+                    role_name=body.role,
+                    capabilities=set(body.capabilities) or None,
+                )
+            ).to_dict()
+            try:
+                async with get_sessionmaker()() as session:
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        run_id=task_id,
+                        next_status="review",
+                    )
+                    await session.commit()
+            except Exception as exc:
+                logger.warning(
+                    "update_spine_task_status_failed",
+                    task_id=task_id,
+                    tenant_id=principal.tenant_id,
+                    error=str(exc),
+                )
+            return result
+        except Exception as exc:
+            try:
+                async with get_sessionmaker()() as session:
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        run_id=task_id,
+                        next_status="recovery",
+                        blocker_reason=str(exc),
+                    )
+                    await session.commit()
+            except Exception as status_exc:
+                logger.warning(
+                    "update_spine_task_status_failed",
+                    task_id=task_id,
+                    tenant_id=principal.tenant_id,
+                    error=str(status_exc),
+                )
+            raise
+
+    planned_task_id = uuid.uuid4().hex if strict_spine else None
+    strict_linkage: dict[str, str] | None = None
+    if strict_spine:
+        strict_linkage = await _try_attach_spine_task(
+            task_id=str(planned_task_id or ""),
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            principal=principal,
+        )
+        if strict_linkage is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "spine task 挂接失败",
             )
-        ).to_dict()
 
     # full 模式 + Celery 可用 -> 走 Celery；否则进程内
     try:
         celery_app = get_celery_app()
         if celery_app is not None:
+            task_id = str(planned_task_id or uuid.uuid4().hex)
             async_result = celery_app.send_task(
                 "xagent.run_agent",
                 kwargs={
@@ -201,7 +388,19 @@ async def submit_task(
                     "tenant_id": principal.tenant_id,
                     "user_id": principal.user_id,
                 },
+                task_id=task_id,
             )
+            linkage = strict_linkage
+            if not strict_spine:
+                linkage = await _try_attach_spine_task(
+                    task_id=str(async_result.id),
+                    task_title=body.goal,
+                    goal_id=resolved_goal_id,
+                    spine_task_id=resolved_spine_task_id,
+                    allow_legacy_title_fallback=True,
+                    principal=principal,
+                )
+            _apply_spine_provenance(input_payload, linkage)
             metadata = _remember_task(
                 task_id=async_result.id,
                 principal=principal,
@@ -236,6 +435,27 @@ async def submit_task(
         tenant_id=principal.tenant_id,
         owner_id=principal.user_id,
         input_payload=input_payload,
+        task_id=planned_task_id,
+    )
+    linkage = strict_linkage
+    if not strict_spine:
+        linkage = await _try_attach_spine_task(
+            task_id=task_id,
+            task_title=body.goal,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=True,
+            principal=principal,
+        )
+    _apply_spine_provenance(input_payload, linkage)
+    _backfill_task_runner_provenance(
+        task_id=task_id,
+        principal=principal,
+        linkage=linkage,
+    )
+    await _sync_finished_task_status_if_needed(
+        task_id=task_id,
+        principal=principal,
     )
     metadata = _remember_task(
         task_id=task_id,
@@ -264,6 +484,9 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
             input_payload=deepcopy(persisted.get("input") or {}),
             created_at=str(persisted.get("created_at") or "") or None,
         )
+        metadata["started_at"] = str(persisted.get("started_at") or "") or None
+        metadata["finished_at"] = str(persisted.get("finished_at") or "") or None
+        metadata["updated_at"] = str(persisted.get("updated_at") or "") or None
         _task_tenants[task_id] = str(persisted.get("tenant_id") or tenant_id)
         _task_metadata[task_id] = metadata
         persisted_status = str(persisted.get("status") or "").lower()
@@ -309,6 +532,9 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
                 status_value=task_status,
                 result=result if isinstance(result, dict) else {"value": result},
                 error=error,
+                started_at=str(metadata.get("started_at") or "") or None,
+                finished_at=str(metadata.get("finished_at") or "") or None,
+                updated_at=str(metadata.get("updated_at") or "") or None,
             )
     except Exception:  # noqa: S110  Celery 查询失败降级内存合同
         pass

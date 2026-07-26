@@ -2,7 +2,7 @@
 
 内置策略（默认）：
   - admin   : 全部资源全部动作
-  - member  : 对 agent/memory/workflow/creative 可读写自身租户数据；不可管理用户/计费
+  - member  : 对 agent/memory/workflow/creative/spine 可读写自身租户数据；不可管理用户/计费
   - viewer  : 只读
 
 Casbin 可选：安装 casbin 后可加载外部模型/策略文件覆盖内置（Phase 5 接入策略管理）。
@@ -36,6 +36,7 @@ _BUILTIN_POLICY: dict[str, dict[str, set[str]]] = {
         "memory": {"read", "write"},
         "workflow": {"read", "write", "execute"},
         "creative": {"read", "write", "execute"},
+        "spine": {"read", "write", "execute"},
         "tool": {"read", "execute"},
         "open_source": {"read"},
         "billing": {"read"},
@@ -46,6 +47,7 @@ _BUILTIN_POLICY: dict[str, dict[str, set[str]]] = {
         "memory": {"read"},
         "workflow": {"read"},
         "creative": {"read"},
+        "spine": {"read"},
         "tool": {"read"},
         "open_source": {"read"},
         "billing": {"read"},

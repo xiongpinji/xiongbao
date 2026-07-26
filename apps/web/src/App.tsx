@@ -12,6 +12,7 @@ const EditorPage = lazy(() => import("./pages/EditorPage"));
 const OpenSourcePage = lazy(() => import("./pages/OpenSourcePage"));
 const MemoryPage = lazy(() => import("./pages/MemoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const GoalBoardPage = lazy(() => import("./pages/GoalBoardPage"));
 const RunPage = lazy(() => import("./pages/RunPage"));
 
 function PageFallback() {
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/home" element={<ChatPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/goal-board" element={<GoalBoardPage />} />
           <Route path="/professional" element={<ProfessionalModePage />} />
           <Route path="/workflows" element={<ProfessionalRedirect mode="workflow" />} />
           <Route path="/creative" element={<Navigate to="/creative/canvas" replace />} />

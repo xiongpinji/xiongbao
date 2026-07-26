@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { discoverOpenSource, searchMemory, writeMemory, type ScoredCandidateDTO } from "../../api";
 import { SectionTitle } from "./GeneralSettings";
 
@@ -6,6 +6,10 @@ export type IndexTab = "knowledge" | "open-source";
 
 export default function IndexSettings({ initialTab = "knowledge" }: { initialTab?: IndexTab }) {
   const [tab, setTab] = useState<IndexTab>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="max-w-5xl space-y-6">

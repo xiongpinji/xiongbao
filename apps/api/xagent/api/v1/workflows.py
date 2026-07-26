@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import uuid
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect
 from sqlalchemy.exc import ProgrammingError
@@ -21,11 +22,20 @@ from xagent.core.workflow import (
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
-from xagent.infra.db import get_session
+from xagent.infra.db import get_session, get_sessionmaker
 from xagent.infra.logging import get_logger
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.repos.evidence import persist_evidence_bundle
-from xagent.infra.repos.workflow import load_workflow_runs, persist_workflow_run
+from xagent.infra.repos.spine import (
+    attach_run_to_task,
+    load_spine_task_reference,
+    update_task_status_by_run_id,
+)
+from xagent.infra.repos.workflow import (
+    load_workflow_run_by_id,
+    load_workflow_runs,
+    persist_workflow_run,
+)
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 logger = get_logger("xagent.api.workflows")
@@ -45,6 +55,8 @@ class StepIn(BaseModel):
 
 class SpecIn(BaseModel):
     name: str
+    goal_id: str = ""
+    spine_task_id: str = ""
     description: str = ""
     steps: list[StepIn]
 
@@ -66,6 +78,63 @@ def _to_spec(body: SpecIn) -> WorkflowSpec:
         for s in body.steps
     ]
     return WorkflowSpec(name=body.name, description=body.description, steps=steps)
+
+
+def _decode_json_payload(payload: str | None) -> dict:
+    if not payload:
+        return {}
+    try:
+        value = json.loads(payload)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+async def _resolve_spine_contract(
+    *,
+    principal: Principal,
+    goal_id: str,
+    spine_task_id: str,
+) -> tuple[str, str, bool]:
+    resolved_goal_id = goal_id.strip()
+    resolved_spine_task_id = spine_task_id.strip()
+    if not resolved_goal_id and not resolved_spine_task_id:
+        return "", "", False
+    if not resolved_goal_id or not resolved_spine_task_id:
+        raise ValueError("spine goal_id 与 spine_task_id 必须同时提供")
+
+    async with get_sessionmaker()() as session:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=principal.tenant_id,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+        )
+    if reference is None:
+        raise ValueError("spine task 不存在或与 goal_id 不匹配")
+    return resolved_goal_id, resolved_spine_task_id, True
+
+
+def _apply_spine_provenance(view: dict, linkage: dict[str, str] | None) -> None:
+    if linkage is None:
+        return
+    goal_id = str(linkage.get("goal_id") or "").strip()
+    task_id = str(linkage.get("task_id") or "").strip()
+    if goal_id:
+        view["goal_id"] = goal_id
+    if task_id:
+        view["spine_task_id"] = task_id
+
+
+def _workflow_board_status(status_value: str) -> tuple[str, str]:
+    normalized = str(status_value or "pending").strip().lower()
+    if normalized == "awaiting_approval":
+        return "review", ""
+    if normalized in {"failed", "rolled_back", "cancelled"}:
+        return "recovery", normalized
+    if normalized == "completed":
+        return "review", ""
+    return "in_progress", ""
 
 
 def build_workflow_replay_pointer(run_id: str) -> dict[str, str] | None:
@@ -242,6 +311,8 @@ def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
             "kind": "request.input",
             "payload": {
                 "spec_name": run_view.get("spec_name", ""),
+                "goal_id": run_view.get("goal_id", ""),
+                "spine_task_id": run_view.get("spine_task_id", ""),
                 "steps": [
                     {
                         "id": step.get("id"),
@@ -331,6 +402,8 @@ def _build_workflow_task_record(
         input_payload=json.dumps(
             {
                 "spec_name": run_view.get("spec_name", ""),
+                "goal_id": run_view.get("goal_id", ""),
+                "spine_task_id": run_view.get("spine_task_id", ""),
                 "steps": [
                     {
                         "id": step.get("id"),
@@ -418,13 +491,17 @@ async def _upsert_runtime_task_record(
         )
         return
 
-    task_record = _build_workflow_task_record(
-        run_view=run_view,
-        owner_id=owner_id,
-        tenant_id=tenant_id,
-    )
     try:
         existing = await session.get(AgentTaskORM, run_view["run_id"])
+        if existing is not None:
+            existing_input = _decode_json_payload(existing.input_payload)
+            run_view.setdefault("goal_id", str(existing_input.get("goal_id") or ""))
+            run_view.setdefault("spine_task_id", str(existing_input.get("spine_task_id") or ""))
+        task_record = _build_workflow_task_record(
+            run_view=run_view,
+            owner_id=owner_id,
+            tenant_id=tenant_id,
+        )
         if existing is None:
             session.add(task_record)
             return
@@ -497,6 +574,40 @@ async def _persist_workflow_runtime_and_view(
     await _persist_workflow_view(session, view)
 
 
+async def _try_attach_spine_workflow_run(
+    *,
+    run_id: str,
+    task_title: str,
+    goal_id: str,
+    spine_task_id: str,
+    allow_legacy_title_fallback: bool,
+    tenant_id: str,
+) -> dict[str, str] | None:
+    try:
+        async with get_sessionmaker()() as attach_session:
+            linkage = await attach_run_to_task(
+                attach_session,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                spine_task_id=spine_task_id,
+                goal_id=goal_id,
+                task_title=task_title if allow_legacy_title_fallback else "",
+                next_status="in_progress",
+            )
+            if linkage is None:
+                return None
+            await attach_session.commit()
+            return linkage
+    except Exception as exc:
+        logger.warning(
+            "attach_spine_workflow_run_failed",
+            run_id=run_id,
+            tenant_id=tenant_id,
+            error=str(exc),
+        )
+        return None
+
+
 @router.post("", summary="创建并启动工作流")
 async def create_and_run(
     body: SpecIn,
@@ -504,16 +615,79 @@ async def create_and_run(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     engine: WorkflowEngine = get_engine()
+    try:
+        resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
+            principal=principal,
+            goal_id=body.goal_id,
+            spine_task_id=body.spine_task_id,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 422 if "必须同时提供" in message else 409
+        raise HTTPException(status_code, message) from exc
     spec = _to_spec(body)
-    run = engine.create_run(spec, principal)
-    run = await engine.execute(run.run_id, principal)
+    planned_run_id = uuid.uuid4().hex if strict_spine else None
+    if strict_spine:
+        linkage = await _try_attach_spine_workflow_run(
+            run_id=str(planned_run_id or ""),
+            task_title=body.name,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=False,
+            tenant_id=principal.tenant_id,
+        )
+        if linkage is None:
+            raise HTTPException(status_code=409, detail="spine task 挂接失败")
+    else:
+        linkage = None
+    try:
+        run = engine.create_run(spec, principal, run_id=planned_run_id)
+        run = await engine.execute(run.run_id, principal)
+    except Exception as exc:
+        if strict_spine and planned_run_id is not None:
+            try:
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    run_id=str(planned_run_id),
+                    next_status="recovery",
+                    blocker_reason=str(exc),
+                )
+                await session.commit()
+            except Exception:
+                await session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={"run_id": str(planned_run_id or ""), "error": str(exc)},
+        ) from exc
     view = run.to_view()
+    view["goal_id"] = resolved_goal_id
+    view["spine_task_id"] = resolved_spine_task_id
+    if not strict_spine:
+        linkage = await _try_attach_spine_workflow_run(
+            run_id=str(view.get("run_id") or ""),
+            task_title=body.name,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=not strict_spine,
+            tenant_id=principal.tenant_id,
+        )
+    _apply_spine_provenance(view, linkage)
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
         owner_id=principal.user_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=str(view.get("run_id") or ""),
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -542,7 +716,11 @@ async def list_runs(
 async def get_view(
     run_id: str,
     principal: Principal = Depends(require_permission("workflow", "read")),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
+    persisted_view = await load_workflow_run_by_id(session, principal.tenant_id, run_id)
+    if persisted_view is not None:
+        return persisted_view
     engine = get_engine()
     return engine.replay(run_id, principal)
 
@@ -561,12 +739,25 @@ async def approve(
     )
     run = await engine.approve(run_id, step_id, principal)
     view = run.to_view()
+    if existing is not None:
+        existing_input = _decode_json_payload(existing.input_payload)
+        view["goal_id"] = str(existing_input.get("goal_id") or "")
+        view["spine_task_id"] = str(existing_input.get("spine_task_id") or "")
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
         owner_id=owner_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=run_id,
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -591,12 +782,25 @@ async def deny(
     )
     run = await engine.deny(run_id, step_id, principal)
     view = run.to_view()
+    if existing is not None:
+        existing_input = _decode_json_payload(existing.input_payload)
+        view["goal_id"] = str(existing_input.get("goal_id") or "")
+        view["spine_task_id"] = str(existing_input.get("spine_task_id") or "")
     await _persist_workflow_runtime_and_view(
         session,
         view=view,
         owner_id=owner_id,
         tenant_id=principal.tenant_id,
     )
+    board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+    await update_task_status_by_run_id(
+        session,
+        tenant_id=principal.tenant_id,
+        run_id=run_id,
+        next_status=board_status,
+        blocker_reason=blocker_reason,
+    )
+    await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
