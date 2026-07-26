@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bot,
+  CreditCard,
   MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { useShellActions, useShellNavigation } from "../../shell/useShellStore";
 
@@ -211,6 +213,21 @@ function UserRow({ settingsRoute }: { settingsRoute: string }) {
               {item.label}
             </button>
           ))}
+          <div className="my-1 h-px bg-neutral-800" />
+          <Link
+            to="/billing"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/[0.06] hover:text-white"
+          >
+            <CreditCard size={14} />计费与用量
+          </Link>
+          <Link
+            to="/audit"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/[0.06] hover:text-white"
+          >
+            <ShieldCheck size={14} />审计日志
+          </Link>
           <div className="my-1 h-px bg-neutral-800" />
           <Link
             to={settingsRoute}

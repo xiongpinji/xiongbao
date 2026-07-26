@@ -14,6 +14,8 @@ const MemoryPage = lazy(() => import("./pages/MemoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const GoalBoardPage = lazy(() => import("./pages/GoalBoardPage"));
 const RunPage = lazy(() => import("./pages/RunPage"));
+const BillingPage = lazy(() => import("./pages/BillingPage"));
+const AuditPage = lazy(() => import("./pages/AuditPage"));
 
 function PageFallback() {
   return (
@@ -68,6 +70,8 @@ export default function App() {
           <Route path="/creative" element={<Navigate to="/creative/canvas" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/runs/:runId" element={<RunPage />} />
+          <Route path="/billing" element={<BillingPage />} />
+          <Route path="/audit" element={<AuditPage />} />
 
           {/* 兼容旧入口：不再显示在主导航中。 */}
           <Route path="/canvas" element={<Navigate to="/creative/canvas" replace />} />
