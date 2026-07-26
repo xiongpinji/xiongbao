@@ -45,7 +45,7 @@
 | `XAGENT_SECURITY__JWT_SECRET` | HS256 JWT 签名 | lite 内置 dev secret | Secret manager / `.env` / CI secret / K8s secret | compose env；Helm `security.jwtSecret` |
 | `XAGENT_SECURITY__OIDC_JWKS_URL` | OIDC JWKS 验签 | 可留空 | IdP / Keycloak 配置 | env / Helm values |
 | `XAGENT_SECURITY__OIDC_ISSUER` | OIDC issuer 校验 | 可留空 | IdP / Keycloak 配置 | env / Helm values |
-| `XAGENT_LLM__PROXY_API_KEY` | LiteLLM proxy 访问 | 可留空 | Secret manager / `.env` / CI secret | env |
+| `XAGENT_LLM__PROXY_API_KEY` | LiteLLM proxy 访问 | 可留空 | Secret manager / `.env` / CI secret / K8s secret | env；Helm `llm.proxyApiKey` 或 `llm.existingProxyApiKeySecretRef` |
 | `XAGENT_LLM__OPENAI_API_KEY` | OpenAI 直连 | 可留空 | Secret manager / provider vault | env / LiteLLM config |
 | `XAGENT_LLM__DEEPSEEK_API_KEY` | DeepSeek 直连 | 可留空 | Secret manager / provider vault | env / LiteLLM config |
 | `XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY` | Langfuse public key | 可留空 | Secret manager / K8s secret / `.env` / CI secret | env；Helm `observability.langfusePublicKey` 或 `observability.existingLangfuseSecretRef` |

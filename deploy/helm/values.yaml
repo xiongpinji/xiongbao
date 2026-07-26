@@ -43,6 +43,10 @@ llm:
   ollamaBaseUrl: ""
   ollamaModel: "qwen3:4b"
   proxyUrl: ""
+  proxyApiKey: ""
+  existingProxyApiKeySecretRef:
+    name: ""
+    key: "proxy-api-key"
   requestTimeoutSeconds: 150
   warmupEnabled: false
   warmupPrompt: "回复一个字：好"
