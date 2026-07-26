@@ -1,0 +1,89 @@
+# X-Agent Prod 环境覆盖值
+# 用法: helm install xagent ./deploy/helm -f values.yaml -f environments/values-prod.yaml
+
+replicaCount: 3
+
+config:
+  mode: "enterprise"
+  debug: false
+  corsOrigins: "https://xagent.example.com"
+
+api:
+  workers: 4
+  resources:
+    requests: { cpu: "1000m", memory: "2Gi" }
+    limits: { cpu: "4000m", memory: "8Gi" }
+
+worker:
+  replicas: 3
+  concurrency: 16
+
+# Prod 强制 ESO
+secrets:
+  eso:
+    enabled: true
+    secretStoreName: ""
+    secretStoreKind: "ClusterSecretStore"
+    backend: "vault"
+    refreshInterval: "30m"
+    vault:
+      server: "https://vault.prod.internal:8200"
+      path: "secret/data/xagent/prod"
+      role: "xagent-prod"
+
+# Prod 开启全部告警
+alerting:
+  enabled: true
+  rules:
+    highErrorRateThreshold: 3
+    highLatencyP95Seconds: 20
+    crashLoopRestarts: 2
+    readinessDownMinutes: 1
+    workerQueueBacklog: 50
+    llmTimeoutRatePercent: 15
+  alertmanager:
+    enabled: true
+
+observability:
+  prometheus: true
+
+# Prod 开启全部运营自动化
+ops:
+  evidenceArchive:
+    enabled: true
+    schedule: "0 */6 * * *"
+    retentionDays: 90
+  healthSnapshot:
+    enabled: true
+    schedule: "*/15 * * * *"
+  postDeploySummary:
+    enabled: true
+
+recovery:
+  enabled: true
+  maxConsecutiveLlmTimeouts: 2
+  workerRestartThreshold: 3
+
+# Prod 开启 NetworkPolicy + PDB
+networkPolicy:
+  enabled: true
+  allowFromIngressController: true
+  allowFromMonitoring: true
+pdb:
+  enabled: true
+  minAvailable: 2
+
+namespace:
+  create: true
+  name: "xagent-prod"
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 65
+
+ingress:
+  enabled: true
+  host: xagent.example.com
+  tls: true

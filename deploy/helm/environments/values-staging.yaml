@@ -1,0 +1,73 @@
+# X-Agent Staging 环境覆盖值
+# 用法: helm install xagent ./deploy/helm -f values.yaml -f environments/values-staging.yaml
+
+replicaCount: 2
+
+config:
+  mode: "enterprise"
+  debug: false
+  corsOrigins: "https://staging.xagent.example.com"
+
+api:
+  workers: 2
+  resources:
+    requests: { cpu: "500m", memory: "1Gi" }
+    limits: { cpu: "2000m", memory: "4Gi" }
+
+worker:
+  replicas: 2
+  concurrency: 8
+
+# Staging 开启 ESO
+secrets:
+  eso:
+    enabled: true
+    secretStoreName: ""
+    secretStoreKind: "ClusterSecretStore"
+    backend: "vault"
+    refreshInterval: "1h"
+    vault:
+      server: "https://vault.staging.internal:8200"
+      path: "secret/data/xagent/staging"
+      role: "xagent-staging"
+
+# Staging 开启告警
+alerting:
+  enabled: true
+  alertmanager:
+    enabled: true
+
+# Staging 开启 Prometheus
+observability:
+  prometheus: true
+
+# Staging 开启运营自动化
+ops:
+  evidenceArchive:
+    enabled: true
+    schedule: "0 */6 * * *"
+    retentionDays: 14
+  healthSnapshot:
+    enabled: true
+    schedule: "*/30 * * * *"
+  postDeploySummary:
+    enabled: true
+
+recovery:
+  enabled: true
+
+networkPolicy:
+  enabled: false
+pdb:
+  enabled: false
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+
+ingress:
+  enabled: true
+  host: staging.xagent.example.com
+  tls: true

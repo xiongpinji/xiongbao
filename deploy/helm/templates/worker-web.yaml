@@ -2,6 +2,173 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: {{ include "xagent.fullname" . }}-worker
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "xagent.workerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xagent.workerSelectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "xagent.fullname" . }}-config
+          env:
+            {{- if .Values.secrets.eso.enabled }}
+            - name: XAGENT_SECURITY__JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xagent.fullname" . }}-eso
+                  key: jwt-secret
+            - name: XAGENT_LLM__PROXY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xagent.fullname" . }}-eso
+                  key: proxy-api-key
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xagent.fullname" . }}-eso
+                  key: langfuse-public-key
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xagent.fullname" . }}-eso
+                  key: langfuse-secret-key
+            {{- else }}
+            {{- if .Values.llm.existingProxyApiKeySecretRef.name }}
+            - name: XAGENT_LLM__PROXY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.existingProxyApiKeySecretRef.name | quote }}
+                  key: {{ .Values.llm.existingProxyApiKeySecretRef.key | quote }}
+            {{- else }}
+            - { name: XAGENT_LLM__PROXY_API_KEY, value: "{{ .Values.llm.proxyApiKey }}" }
+            {{- end }}
+            {{- if .Values.observability.existingLangfuseSecretRef.name }}
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
+                  key: {{ .Values.observability.existingLangfuseSecretRef.publicKeyKey | quote }}
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
+                  key: {{ .Values.observability.existingLangfuseSecretRef.secretKeyKey | quote }}
+            {{- else }}
+            - name: LANGFUSE_PUBLIC_KEY
+              value: {{ .Values.observability.langfusePublicKey | quote }}
+            - name: LANGFUSE_SECRET_KEY
+              value: {{ .Values.observability.langfuseSecretKey | quote }}
+            {{- end }}
+            {{- if .Values.security.existingJwtSecretRef.name }}
+            - name: XAGENT_SECURITY__JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.security.existingJwtSecretRef.name | quote }}
+                  key: {{ .Values.security.existingJwtSecretRef.key | quote }}
+            {{- else }}
+            - name: XAGENT_SECURITY__JWT_SECRET
+              value: {{ required "either security.jwtSecret or security.existingJwtSecretRef.name is required" .Values.security.jwtSecret | quote }}
+            {{- end }}
+            {{- end }}
+          command: ["sh", "-c"]
+          args:
+            - "(python -m xagent.cli warmup || true) && exec celery -A xagent.worker.celery_app worker --loglevel=info --concurrency {{ .Values.worker.concurrency }}"
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits: { cpu: "1000m", memory: "2Gi" }
+{{- end }}
+---
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xagent.fullname" . }}-web
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      {{- include "xagent.webSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xagent.webSelectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+      containers:
+        - name: web
+          image: "xagent-web:{{ .Values.image.tag }}"
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xagent.fullname" . }}-web
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "xagent.webSelectorLabels" . | nindent 4 }}
+  ports: [{ port: {{ .Values.web.port }}, targetPort: {{ .Values.web.port }} }]
+{{- end }}
+---
+{{- if .Values.observability.prometheus }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "xagent.fullname" . }}-prometheus-config
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: xagent-api
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+{{- end }}
+{{- if .Values.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: {{ .Release.Name }}-worker
   labels: { app: xagent-worker }
 spec:

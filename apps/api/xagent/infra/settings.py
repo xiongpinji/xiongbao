@@ -142,6 +142,16 @@ class ObservabilitySettings(BaseModel):
     enable_prometheus: bool = True
 
 
+class RecoverySettings(BaseModel):
+    """自动恢复引擎配置。"""
+
+    enabled: bool = True
+    max_consecutive_llm_timeouts: int = 3
+    fallback_on_llm_failure: bool = True
+    worker_restart_threshold: int = 5
+    evidence_output_dir: str = "./data/recovery-evidence"
+
+
 class SecuritySettings(BaseModel):
     """鉴权与安全。"""
 
@@ -181,6 +191,7 @@ class Settings(BaseSettings):
     memory: MemorySettings = Field(default_factory=MemorySettings)
     media: MediaSettings = Field(default_factory=MediaSettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
+    recovery: RecoverySettings = Field(default_factory=RecoverySettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
 
     @property

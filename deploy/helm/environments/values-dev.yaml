@@ -1,0 +1,52 @@
+# X-Agent Dev 环境覆盖值
+# 用法: helm install xagent ./deploy/helm -f values.yaml -f environments/values-dev.yaml
+
+replicaCount: 1
+
+config:
+  mode: "full"
+  debug: true
+  corsOrigins: "http://localhost:3000,http://localhost:5173"
+
+api:
+  workers: 1
+  resources:
+    requests: { cpu: "250m", memory: "512Mi" }
+    limits: { cpu: "1000m", memory: "2Gi" }
+
+worker:
+  replicas: 1
+  concurrency: 4
+
+web:
+  enabled: true
+
+# Dev 不开 ESO，用明文或 existingSecretRef
+secrets:
+  eso:
+    enabled: false
+
+# Dev 不开 NetworkPolicy / PDB
+networkPolicy:
+  enabled: false
+pdb:
+  enabled: false
+
+# Dev 不开告警
+alerting:
+  enabled: false
+
+# Dev 不开运营自动化
+ops:
+  evidenceArchive:
+    enabled: false
+  healthSnapshot:
+    enabled: false
+  postDeploySummary:
+    enabled: false
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: false

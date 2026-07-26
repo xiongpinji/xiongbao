@@ -1,5 +1,9 @@
 # X-Agent Helm values
 # 用法: helm install xagent ./deploy/helm -f values.yaml
+# 多环境: helm install xagent ./deploy/helm -f values.yaml -f environments/values-prod.yaml
+
+nameOverride: ""
+fullnameOverride: ""
 
 replicaCount: 2
 
@@ -8,7 +12,38 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+# Namespace 管理
+namespace:
+  create: false
+  name: ""
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# NetworkPolicy
+networkPolicy:
+  enabled: false
+  allowFromIngressController: true
+  allowFromMonitoring: true
+
+# PodDisruptionBudget
+pdb:
+  enabled: false
+  minAvailable: 1
+
+# 非敏感配置（注入 ConfigMap）
+config:
+  mode: "enterprise"
+  debug: false
+  corsOrigins: "http://localhost:3000"
+  dbEcho: false
+
 api:
+  enabled: true
   port: 8000
   workers: 4
   resources:
@@ -75,6 +110,66 @@ observability:
     publicKeyKey: "langfuse-public-key"
     secretKeyKey: "langfuse-secret-key"
   prometheus: true
+
+# External Secrets Operator (ESO)
+secrets:
+  eso:
+    enabled: false
+    secretStoreName: ""
+    secretStoreKind: "SecretStore"  # SecretStore | ClusterSecretStore
+    backend: "vault"  # vault | aws | gcp | azure
+    refreshInterval: "1h"
+    vault:
+      server: ""
+      path: "secret/data/xagent"
+      role: ""
+    aws:
+      region: ""
+      secretName: ""
+    gcp:
+      projectId: ""
+      secretName: ""
+    azure:
+      vaultUrl: ""
+
+# 告警
+alerting:
+  enabled: false
+  rules:
+    highErrorRateThreshold: 5
+    highLatencyP95Seconds: 30
+    crashLoopRestarts: 3
+    readinessDownMinutes: 2
+    workerQueueBacklog: 100
+    llmTimeoutRatePercent: 20
+  alertmanager:
+    enabled: false
+    webhookUrl: ""
+    emailTo: ""
+    smtpHost: ""
+    smtpPort: 587
+
+# 自动恢复
+recovery:
+  enabled: true
+  maxConsecutiveLlmTimeouts: 3
+  fallbackOnLlmFailure: true
+  workerRestartThreshold: 5
+  evidenceOutputDir: "./data/recovery-evidence"
+
+# 运营自动化
+ops:
+  evidenceArchive:
+    enabled: false
+    schedule: "0 */6 * * *"  # 每 6 小时
+    retentionDays: 30
+    s3Bucket: ""
+    s3Prefix: "xagent/evidence/"
+  healthSnapshot:
+    enabled: false
+    schedule: "*/30 * * * *"  # 每 30 分钟
+  postDeploySummary:
+    enabled: false
 
 ingress:
   enabled: true

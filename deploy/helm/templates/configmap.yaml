@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "xagent.fullname" . }}-config
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+data:
+  XAGENT_MODE: {{ .Values.config.mode | quote }}
+  XAGENT_DEBUG: {{ .Values.config.debug | quote }}
+  XAGENT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  XAGENT_DB__URL: {{ .Values.postgres.url | quote }}
+  XAGENT_DB__ECHO: {{ .Values.config.dbEcho | quote }}
+  XAGENT_CACHE__REDIS_URL: {{ .Values.redis.url | quote }}
+  XAGENT_MEMORY__QDRANT_URL: {{ .Values.qdrant.url | quote }}
+  XAGENT_LLM__OLLAMA_BASE_URL: {{ .Values.llm.ollamaBaseUrl | quote }}
+  XAGENT_LLM__OLLAMA_MODEL: {{ .Values.llm.ollamaModel | quote }}
+  XAGENT_LLM__PROXY_URL: {{ .Values.llm.proxyUrl | quote }}
+  XAGENT_LLM__REQUEST_TIMEOUT_SECONDS: {{ .Values.llm.requestTimeoutSeconds | quote }}
+  XAGENT_LLM__WARMUP_ENABLED: {{ .Values.llm.warmupEnabled | quote }}
+  XAGENT_LLM__WARMUP_PROMPT: {{ .Values.llm.warmupPrompt | quote }}
+  XAGENT_LLM__WARMUP_MAX_TOKENS: {{ .Values.llm.warmupMaxTokens | quote }}
+  XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS: {{ .Values.llm.warmupWaitTimeoutSeconds | quote }}
+  XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS: {{ .Values.llm.warmupPollIntervalSeconds | quote }}
+  XAGENT_SECURITY__REQUIRE_AUTH: {{ .Values.security.requireAuth | quote }}
+  XAGENT_OBSERVABILITY__ENABLE_PROMETHEUS: {{ .Values.observability.prometheus | quote }}
+  XAGENT_OBSERVABILITY__LANGFUSE_HOST: {{ .Values.observability.langfuseHost | quote }}
+  XAGENT_RECOVERY__ENABLED: {{ .Values.recovery.enabled | quote }}
+  XAGENT_RECOVERY__MAX_CONSECUTIVE_LLM_TIMEOUTS: {{ .Values.recovery.maxConsecutiveLlmTimeouts | quote }}
+  XAGENT_RECOVERY__FALLBACK_ON_LLM_FAILURE: {{ .Values.recovery.fallbackOnLlmFailure | quote }}
+  XAGENT_RECOVERY__WORKER_RESTART_THRESHOLD: {{ .Values.recovery.workerRestartThreshold | quote }}

@@ -1,0 +1,65 @@
+{{- if and .Values.alerting.enabled .Values.alerting.alertmanager.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "xagent.fullname" . }}-alertmanager-config
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      {{- if .Values.alerting.alertmanager.smtpHost }}
+      smtp_smarthost: '{{ .Values.alerting.alertmanager.smtpHost }}:{{ .Values.alerting.alertmanager.smtpPort }}'
+      smtp_from: 'xagent-alerts@example.com'
+      smtp_require_tls: true
+      {{- end }}
+
+    route:
+      group_by: ['alertname', 'namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: 'default'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical-webhook'
+          group_wait: 10s
+          repeat_interval: 1h
+        - match:
+            severity: warning
+          receiver: 'warning-email'
+          repeat_interval: 12h
+
+    receivers:
+      - name: 'default'
+        {{- if .Values.alerting.alertmanager.webhookUrl }}
+        webhook_configs:
+          - url: {{ .Values.alerting.alertmanager.webhookUrl | quote }}
+            send_resolved: true
+        {{- end }}
+
+      - name: 'critical-webhook'
+        {{- if .Values.alerting.alertmanager.webhookUrl }}
+        webhook_configs:
+          - url: {{ .Values.alerting.alertmanager.webhookUrl | quote }}
+            send_resolved: true
+            max_alerts: 10
+        {{- end }}
+
+      - name: 'warning-email'
+        {{- if .Values.alerting.alertmanager.emailTo }}
+        email_configs:
+          - to: {{ .Values.alerting.alertmanager.emailTo | quote }}
+            send_resolved: true
+        {{- end }}
+
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'component']
+{{- end }}
