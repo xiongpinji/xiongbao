@@ -1,20 +1,19 @@
-"""请求合并：将短时间内的多个请求合并为一次批量处理。
+"""请求批处理：将多个小请求合并为批量调用。
 
 功能：
-- 时间窗口内收集请求（默认 50ms）
-- 达到批次大小或超时后统一执行
-- 每个请求独立获得结果
-- 支持最大批次限制
+- 时间窗口聚合
+- 最大批量大小
+- 按 key 分组
+- 批量结果分发
 
 用法：
-    from xagent.api.request_batching import batch_processor
+    from xagent.api.request_batching import BatchProcessor
 
-    @batch_processor.register("embeddings", max_batch=32, window_ms=50)
-    async def process_embeddings(items: list[str]) -> list[list[float]]:
-        return await embedding_api.batch_embed(items)
+    async def process_batch(items: list[dict]) -> list[dict]:
+        return [{"id": i["id"], "result": "ok"} for i in items]
 
-    # 调用方：
-    result = await batch_processor.submit("embeddings", "hello world")
+    batcher = BatchProcessor(handler=process_batch, max_batch_size=50, window_ms=100)
+    result = await batcher.submit({"id": "req-1", "data": "..."})
 """
 
 from __future__ import annotations
@@ -31,134 +30,108 @@ logger = get_logger("xagent.batching")
 
 @dataclass
 class BatchItem:
-    """批次中的单个请求。"""
+    """批次中的单项。"""
 
     data: Any
     future: asyncio.Future
-    enqueued_at: float = field(default_factory=time.time)
-
-
-@dataclass
-class BatchConfig:
-    """批次配置。"""
-
-    name: str
-    handler: Callable[[list[Any]], Coroutine[Any, Any, list[Any]]]
-    max_batch: int = 32
-    window_ms: float = 50.0
-    max_wait_ms: float = 200.0
+    submitted_at: float = field(default_factory=time.time)
 
 
 class BatchProcessor:
-    """请求合并处理器。"""
+    """批处理器。"""
 
-    def __init__(self):
-        self._configs: dict[str, BatchConfig] = {}
-        self._queues: dict[str, list[BatchItem]] = {}
-        self._timers: dict[str, asyncio.Task | None] = {}
-        self._locks: dict[str, asyncio.Lock] = {}
-        self._stats: dict[str, dict[str, int]] = {}
-
-    def register(
+    def __init__(
         self,
-        name: str,
-        max_batch: int = 32,
-        window_ms: float = 50.0,
-        max_wait_ms: float = 200.0,
-    ) -> Callable:
-        """装饰器：注册批处理函数。"""
+        handler: Callable[[list[Any]], Coroutine[Any, Any, list[Any]]],
+        max_batch_size: int = 50,
+        window_ms: float = 100.0,
+        max_wait_ms: float = 5000.0,
+    ):
+        self._handler = handler
+        self._max_batch_size = max_batch_size
+        self._window_ms = window_ms
+        self._max_wait_ms = max_wait_ms
 
-        def decorator(
-            fn: Callable[[list[Any]], Coroutine[Any, Any, list[Any]]],
-        ) -> Callable:
-            self._configs[name] = BatchConfig(
-                name=name,
-                handler=fn,
-                max_batch=max_batch,
-                window_ms=window_ms,
-                max_wait_ms=max_wait_ms,
-            )
-            self._queues[name] = []
-            self._locks[name] = asyncio.Lock()
-            self._stats[name] = {"batches": 0, "items": 0, "errors": 0}
-            return fn
+        self._queue: list[BatchItem] = []
+        self._flush_task: asyncio.Task | None = None
+        self._lock = asyncio.Lock()
 
-        return decorator
+        # 统计
+        self._total_submitted = 0
+        self._total_batches = 0
+        self._total_errors = 0
 
-    async def submit(self, name: str, data: Any) -> Any:
-        """提交单个请求到批次。"""
-        config = self._configs.get(name)
-        if not config:
-            raise ValueError(f"Unknown batch processor: {name}")
-
+    async def submit(self, data: Any) -> Any:
+        """提交单项，等待批处理结果。"""
         loop = asyncio.get_event_loop()
         future: asyncio.Future = loop.create_future()
-        item = BatchItem(data=data, future=future)
 
-        async with self._locks[name]:
-            self._queues[name].append(item)
-            queue_size = len(self._queues[name])
+        async with self._lock:
+            self._queue.append(BatchItem(data=data, future=future))
+            self._total_submitted += 1
 
-            # 达到批次大小 → 立即触发
-            if queue_size >= config.max_batch:
-                await self._flush(name)
-            # 首个请求 → 启动窗口计时器
-            elif queue_size == 1:
-                self._timers[name] = asyncio.create_task(
-                    self._window_timer(name, config.window_ms / 1000)
-                )
+            # 达到批量大小立即刷新
+            if len(self._queue) >= self._max_batch_size:
+                await self._flush()
+            elif self._flush_task is None or self._flush_task.done():
+                # 启动窗口计时器
+                self._flush_task = asyncio.create_task(self._window_timer())
 
-        return await future
+        return await asyncio.wait_for(future, timeout=self._max_wait_ms / 1000)
 
-    async def _window_timer(self, name: str, window_s: float) -> None:
-        """窗口计时器到期后刷新批次。"""
-        await asyncio.sleep(window_s)
-        async with self._locks[name]:
-            if self._queues[name]:
-                await self._flush(name)
+    async def _window_timer(self) -> None:
+        """等待窗口时间后刷新。"""
+        await asyncio.sleep(self._window_ms / 1000)
+        async with self._lock:
+            await self._flush()
 
-    async def _flush(self, name: str) -> None:
-        """执行当前批次。"""
-        config = self._configs[name]
-        batch = self._queues[name][: config.max_batch]
-        self._queues[name] = self._queues[name][config.max_batch :]
-
-        if not batch:
+    async def _flush(self) -> None:
+        """刷新当前队列。"""
+        if not self._queue:
             return
 
-        # 取消计时器
-        timer = self._timers.get(name)
-        if timer and not timer.done():
-            timer.cancel()
-        self._timers[name] = None
+        batch = self._queue[:self._max_batch_size]
+        self._queue = self._queue[self._max_batch_size:]
+        self._total_batches += 1
 
-        self._stats[name]["batches"] += 1
-        self._stats[name]["items"] += len(batch)
+        items_data = [item.data for item in batch]
 
         try:
-            items_data = [item.data for item in batch]
-            results = await config.handler(items_data)
+            results = await self._handler(items_data)
 
-            if len(results) != len(batch):
-                raise ValueError(
-                    f"Handler returned {len(results)} results for {len(batch)} items"
-                )
-
+            # 分发结果
             for item, result in zip(batch, results):
                 if not item.future.done():
                     item.future.set_result(result)
 
+            logger.debug("batch processed: %d items", len(batch))
+
         except Exception as exc:
-            self._stats[name]["errors"] += 1
-            logger.error("batch %s failed: %s", name, exc)
+            self._total_errors += 1
+            logger.error("batch processing failed: %s", exc)
             for item in batch:
                 if not item.future.done():
                     item.future.set_exception(exc)
 
-    @property
-    def stats(self) -> dict[str, dict[str, int]]:
-        return self._stats
+        # 如果还有剩余，继续处理
+        if self._queue:
+            await self._flush()
 
+    def get_stats(self) -> dict[str, Any]:
+        """获取统计。"""
+        return {
+            "total_submitted": self._total_submitted,
+            "total_batches": self._total_batches,
+            "total_errors": self._total_errors,
+            "pending": len(self._queue),
+            "avg_batch_size": (
+                round(self._total_submitted / max(1, self._total_batches), 1)
+            ),
+        }
 
-# 全局单例
-batch_processor = BatchProcessor()
+    async def shutdown(self) -> None:
+        """关闭：刷新剩余。"""
+        async with self._lock:
+            await self._flush()
+        if self._flush_task and not self._flush_task.done():
+            self._flush_task.cancel()
