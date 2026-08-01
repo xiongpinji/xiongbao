@@ -11,6 +11,7 @@ from xagent.api.v1 import (
     canvas,
     creative_studio,
     editor,
+    knowledge,
     mcp,
     memory,
     open_source,
@@ -44,5 +45,6 @@ api_v1.include_router(automation.router)
 api_v1.include_router(mcp.router)
 api_v1.include_router(skills.router)
 api_v1.include_router(tenants.router)
+api_v1.include_router(knowledge.router)
 
 __all__ = ["api_v1"]

@@ -27,7 +27,9 @@ class UserRoleIn(BaseModel):
 
 
 @router.get("/users", summary="列出当前租户用户")
-async def list_users(principal: Principal = Depends(require_permission("system", "manage"))) -> dict:
+async def list_users(
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
     store = get_user_store()
     users = [
         {"user_id": u.user_id, "tenant_id": u.tenant_id, "roles": u.roles, "email": u.email}

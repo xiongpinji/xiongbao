@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from xagent.adapters.mcp import get_mcp_manager
 from xagent.adapters.tools import get_tool_registry
@@ -154,3 +154,50 @@ async def update_llm_config(
         "ollama_model": cfg.ollama_model,
         "request_timeout_seconds": cfg.request_timeout_seconds,
     }
+
+
+# ─── Webhook 管理 ───
+
+
+class WebhookCreateIn(BaseModel):
+    url: str = Field(..., min_length=1)
+    events: list[str] = Field(default_factory=lambda: ["*"])
+    secret: str = ""
+
+
+@router.get("/webhooks", summary="列出 Webhook")
+async def list_webhooks(
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
+    from xagent.core.webhooks import get_webhook_manager
+    mgr = get_webhook_manager()
+    hooks = [h.to_dict() for h in mgr.list(principal.tenant_id)]
+    return {"webhooks": hooks, "count": len(hooks)}
+
+
+@router.post("/webhooks", summary="注册 Webhook")
+async def create_webhook(
+    body: WebhookCreateIn,
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
+    from xagent.core.webhooks import get_webhook_manager
+    mgr = get_webhook_manager()
+    hook = mgr.register(
+        tenant_id=principal.tenant_id,
+        url=body.url,
+        events=body.events,
+        secret=body.secret,
+    )
+    return {"webhook": hook.to_dict()}
+
+
+@router.delete("/webhooks/{webhook_id}", summary="删除 Webhook")
+async def delete_webhook(
+    webhook_id: str,
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
+    from xagent.core.webhooks import get_webhook_manager
+    mgr = get_webhook_manager()
+    if not mgr.delete(webhook_id, principal.tenant_id):
+        raise HTTPException(404, "Webhook 不存在")
+    return {"deleted": webhook_id}

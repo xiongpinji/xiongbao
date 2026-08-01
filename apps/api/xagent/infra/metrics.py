@@ -11,19 +11,18 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 try:
     from prometheus_client import (
+        CONTENT_TYPE_LATEST,
         CollectorRegistry,
         Counter,
         Gauge,
         Histogram,
         generate_latest,
-        CONTENT_TYPE_LATEST,
     )
     _HAS_PROM = True
 except ImportError:
@@ -126,7 +125,9 @@ def _normalize_path(path: str) -> str:
 
 
 # ─── 便捷记录函数 ───
-def record_llm_call(model: str, success: bool, prompt_tokens: int = 0, completion_tokens: int = 0) -> None:
+def record_llm_call(
+    model: str, success: bool, prompt_tokens: int = 0, completion_tokens: int = 0,
+) -> None:
     if not _HAS_PROM:
         return
     LLM_CALLS.labels(model=model, status="ok" if success else "error").inc()

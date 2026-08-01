@@ -45,7 +45,7 @@ class WorkflowTemplateStore:
                 data = json.loads(f.read_text(encoding="utf-8"))
                 tpl = WorkflowTemplate(**data)
                 self._cache[tpl.template_id] = tpl
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
     def _persist(self, tpl: WorkflowTemplate) -> None:
@@ -61,7 +61,10 @@ class WorkflowTemplateStore:
             return tpl
         return None
 
-    def save(self, tenant_id: str, name: str, nodes: list[dict], edges: list[dict], template_id: str | None = None) -> WorkflowTemplate:
+    def save(
+        self, tenant_id: str, name: str, nodes: list[dict], edges: list[dict],
+        template_id: str | None = None,
+    ) -> WorkflowTemplate:
         """保存或更新模板。若 template_id 存在则版本+1。"""
         if template_id and template_id in self._cache:
             existing = self._cache[template_id]
@@ -73,7 +76,9 @@ class WorkflowTemplateStore:
             existing.version += 1
             existing.updated_at = time.time()
             self._persist(existing)
-            logger.info("workflow_template_updated", template_id=template_id, version=existing.version)
+            logger.info(
+                "workflow_template_updated", template_id=template_id, version=existing.version,
+            )
             return existing
 
         tpl = WorkflowTemplate(

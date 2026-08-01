@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from xagent.core.orchestration.parallel import SubTask, run_parallel_agents
+from xagent.core.orchestration.supervisor import run_supervisor
 from xagent.core.scheduler import get_scheduler
 from xagent.core.skills import get_skill_store
 from xagent.enterprise.auth.principal import Principal
@@ -43,6 +44,23 @@ async def parallel_run(
         return {"error": "至少需要一个有效子任务"}
     result = await run_parallel_agents(
         sub_tasks, principal, coordinator_goal=body.coordinator_goal
+    )
+    return result.to_dict()
+
+
+class SupervisorRunIn(BaseModel):
+    goal: str = Field(..., min_length=1)
+    roles: list[str] = Field(default_factory=list)
+
+
+@router.post("/agents/supervisor-run", summary="Supervisor 多 Agent 协作")
+async def supervisor_run(
+    body: SupervisorRunIn,
+    principal: Principal = Depends(require_permission("agent", "execute")),
+):
+    """Supervisor 模式：自动分解任务 → 并行分发 → 综合结果。"""
+    result = await run_supervisor(
+        body.goal, principal, roles=body.roles or None,
     )
     return result.to_dict()
 

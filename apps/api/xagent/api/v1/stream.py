@@ -233,6 +233,15 @@ async def _event_stream(
                     else:
                         raise
                 await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
+                # Webhook 通知
+                try:
+                    from xagent.core.webhooks import get_webhook_manager
+                    await get_webhook_manager().emit(
+                        principal.tenant_id, "agent.completed",
+                        {"run_id": run_id, "goal": goal[:200], "steps": result.steps},
+                    )
+                except Exception:  # noqa: S110
+                    pass
         except asyncio.TimeoutError:
             failure_error = f"Agent 运行超时（>{_AGENT_RUN_TIMEOUT}s），已自动终止。"
             await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))

@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Generator
+from typing import Any
 
 from xagent.infra.logging import get_logger
 from xagent.infra.settings import get_settings
@@ -66,14 +67,14 @@ class TraceSpan:
         if self._lf_span:
             try:
                 self._lf_span.end(output=str(output)[:2000])
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     def set_error(self, error: str) -> None:
         if self._lf_span:
             try:
                 self._lf_span.end(level="ERROR", status_message=error)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     def end(self) -> None:
@@ -81,7 +82,7 @@ class TraceSpan:
         if self._lf_span:
             try:
                 self._lf_span.end()
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
         else:
             logger.debug(
@@ -113,7 +114,7 @@ def trace_agent_run(
             )
             span.trace_id = trace.id if hasattr(trace, "id") else ""
             span._lf_span = trace.span(name="orchestration", input=goal[:500])
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     logger.info("trace_start", name="agent_run", goal=goal[:100], tenant_id=tenant_id)
@@ -143,7 +144,7 @@ def trace_llm_call(
                 model=model,
                 input=prompt_preview[:1000],
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     try:
@@ -161,5 +162,5 @@ def flush_traces() -> None:
     if lf:
         try:
             lf.flush()
-        except Exception:
+        except Exception:  # noqa: S110
             pass

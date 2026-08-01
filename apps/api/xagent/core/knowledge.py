@@ -1,0 +1,201 @@
+"""RAG 知识库：文档上传 → 分块 → 向量化 → 语义检索 → Agent 上下文注入。"""
+
+from __future__ import annotations
+
+import time
+import uuid
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+from xagent.infra.logging import get_logger
+
+logger = get_logger("xagent.knowledge")
+
+# 分块参数
+CHUNK_SIZE = 800  # 每块最大字符数
+CHUNK_OVERLAP = 100  # 重叠字符数
+
+
+@dataclass
+class Document:
+    """知识库文档元数据。"""
+    doc_id: str
+    title: str
+    tenant_id: str
+    source: str = "upload"  # upload | url | manual
+    content_type: str = "text/plain"
+    chunk_count: int = 0
+    created_at: float = field(default_factory=time.time)
+    tags: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
+    """智能分块：按段落优先，超长段落按句子切分。"""
+    paragraphs = text.split("\n\n")
+    chunks: list[str] = []
+    current = ""
+
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+        if len(current) + len(para) + 2 <= chunk_size:
+            current = f"{current}\n\n{para}" if current else para
+        else:
+            if current:
+                chunks.append(current)
+            # 段落本身超长 → 按句子切
+            if len(para) > chunk_size:
+                sentences = _split_sentences(para)
+                sub = ""
+                for sent in sentences:
+                    if len(sub) + len(sent) + 1 <= chunk_size:
+                        sub = f"{sub} {sent}" if sub else sent
+                    else:
+                        if sub:
+                            chunks.append(sub)
+                        sub = sent
+                if sub:
+                    current = sub
+            else:
+                current = para
+
+    if current:
+        chunks.append(current)
+
+    # 添加重叠
+    if overlap > 0 and len(chunks) > 1:
+        overlapped = [chunks[0]]
+        for i in range(1, len(chunks)):
+            prev_tail = chunks[i - 1][-overlap:]
+            overlapped.append(prev_tail + chunks[i])
+        chunks = overlapped
+
+    return chunks
+
+
+def _split_sentences(text: str) -> list[str]:
+    """简单句子切分。"""
+    import re
+    parts = re.split(r'(?<=[。！？.!?])\s*', text)
+    return [p for p in parts if p.strip()]
+
+
+class KnowledgeBase:
+    """知识库管理器：文档 CRUD + 向量索引 + 语义检索。"""
+
+    def __init__(self) -> None:
+        self._docs: dict[str, Document] = {}
+
+    async def ingest(
+        self,
+        text: str,
+        title: str,
+        tenant_id: str,
+        *,
+        source: str = "upload",
+        content_type: str = "text/plain",
+        tags: list[str] | None = None,
+    ) -> Document:
+        """上传文档 → 分块 → 向量化入库。"""
+        from xagent.adapters.memory import MemoryRecord, get_vector_store
+
+        doc_id = uuid.uuid4().hex[:12]
+        chunks = chunk_text(text)
+
+        # 向量化
+        records = [
+            MemoryRecord(
+                id=f"{doc_id}_c{i}",
+                text=chunk,
+                metadata={
+                    "doc_id": doc_id,
+                    "title": title,
+                    "tenant_id": tenant_id,
+                    "chunk_index": i,
+                    "source": source,
+                },
+            )
+            for i, chunk in enumerate(chunks)
+        ]
+        store = get_vector_store()
+        await store.ensure_collection()
+        await store.upsert(records)
+
+        doc = Document(
+            doc_id=doc_id,
+            title=title,
+            tenant_id=tenant_id,
+            source=source,
+            content_type=content_type,
+            chunk_count=len(chunks),
+            tags=tags or [],
+        )
+        self._docs[doc_id] = doc
+        logger.info(
+            "knowledge_ingested", doc_id=doc_id, title=title,
+            chunks=len(chunks), tenant_id=tenant_id,
+        )
+        return doc
+
+    async def search(
+        self, query: str, tenant_id: str, *, top_k: int = 5,
+    ) -> list[dict[str, Any]]:
+        """语义检索知识库。"""
+        from xagent.adapters.memory import get_vector_store
+
+        store = get_vector_store()
+        hits = await store.search(query, top_k=top_k, tenant_id=tenant_id)
+        return [
+            {
+                "text": h.text,
+                "score": h.score,
+                "doc_id": h.metadata.get("doc_id", ""),
+                "title": h.metadata.get("title", ""),
+                "chunk_index": h.metadata.get("chunk_index", 0),
+            }
+            for h in hits
+        ]
+
+    def list_docs(self, tenant_id: str) -> list[Document]:
+        return [d for d in self._docs.values() if d.tenant_id == tenant_id]
+
+    def get_doc(self, doc_id: str, tenant_id: str) -> Document | None:
+        doc = self._docs.get(doc_id)
+        if doc and doc.tenant_id == tenant_id:
+            return doc
+        return None
+
+    def delete_doc(self, doc_id: str, tenant_id: str) -> bool:
+        doc = self._docs.get(doc_id)
+        if not doc or doc.tenant_id != tenant_id:
+            return False
+        del self._docs[doc_id]
+        # 注意：向量库中的 chunks 暂不删除（需 Qdrant filter delete）
+        return True
+
+    async def build_context(
+        self, query: str, tenant_id: str, *, max_chunks: int = 3,
+    ) -> str:
+        """为 Agent 构建 RAG 上下文注入文本。"""
+        results = await self.search(query, tenant_id, top_k=max_chunks)
+        if not results:
+            return ""
+        parts = [
+            f"[知识库参考 {i+1}] (来源: {r['title']})\n{r['text']}"
+            for i, r in enumerate(results)
+        ]
+        return "\n\n---\n\n".join(parts)
+
+
+_kb: KnowledgeBase | None = None
+
+
+def get_knowledge_base() -> KnowledgeBase:
+    global _kb
+    if _kb is None:
+        _kb = KnowledgeBase()
+    return _kb
