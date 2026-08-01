@@ -178,6 +178,10 @@ def create_app() -> FastAPI:
     from xagent.api.health import router as health_router
     app.include_router(health_router)
 
+    # 运行时配置热更新（/api/v1/runtime-config）
+    from xagent.api.runtime_config import router as runtime_config_router
+    app.include_router(runtime_config_router, prefix="/api/v1")
+
     # API 版本发现
     @app.get("/api/versions", tags=["system"], summary="可用 API 版本")
     async def _api_versions() -> dict:
