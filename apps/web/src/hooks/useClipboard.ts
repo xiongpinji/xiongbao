@@ -3,24 +3,22 @@
  *
  * 功能：
  * - useClipboard：复制文本到剪贴板
- * - 支持成功/失败回调
- * - 自动重置 copied 状态
- * - 降级处理（旧浏览器）
+ * - 复制状态反馈（成功/失败/超时重置）
+ * - 兼容 Clipboard API + execCommand 降级
  *
  * 用法：
- *   const { copy, copied, error } = useClipboard();
- *   <button onClick={() => copy("Hello")}>复制</button>
- *   {copied && <span>已复制!</span>}
+ *   const { copy, copied, error } = useClipboard({ timeout: 2000 });
+ *   <button onClick={() => copy("Hello!")}>{copied ? "已复制" : "复制"}</button>
  */
 
 import { useCallback, useRef, useState } from "react";
 
 interface UseClipboardOptions {
-  /** copied 状态持续时间（ms，默认 2000） */
+  /** 复制成功后状态保持时间（ms，默认 2000） */
   timeout?: number;
-  /** 成功回调 */
+  /** 复制成功回调 */
   onSuccess?: (text: string) => void;
-  /** 失败回调 */
+  /** 复制失败回调 */
   onError?: (error: Error) => void;
 }
 
@@ -29,60 +27,76 @@ interface UseClipboardReturn {
   copy: (text: string) => Promise<void>;
   /** 是否刚复制成功 */
   copied: boolean;
-  /** 错误信息 */
+  /** 最近一次错误 */
   error: Error | null;
+  /** 是否支持 Clipboard API */
+  isSupported: boolean;
+}
+
+/** 降级复制（execCommand） */
+function fallbackCopy(text: string): void {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "-9999px";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 export function useClipboard(options: UseClipboardOptions = {}): UseClipboardReturn {
   const { timeout = 2000, onSuccess, onError } = options;
+
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const isSupported =
+    typeof navigator !== "undefined" && !!navigator.clipboard;
+
   const copy = useCallback(
     async (text: string) => {
-      setError(null);
+      // 清除之前的计时器
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
 
       try {
-        // 优先使用 Clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
+        if (isSupported) {
           await navigator.clipboard.writeText(text);
         } else {
-          // 降级：textarea + execCommand
-          const textarea = document.createElement("textarea");
-          textarea.value = text;
-          textarea.style.position = "fixed";
-          textarea.style.left = "-9999px";
-          textarea.style.top = "-9999px";
-          document.body.appendChild(textarea);
-          textarea.focus();
-          textarea.select();
-
-          const success = document.execCommand("copy");
-          document.body.removeChild(textarea);
-
-          if (!success) {
-            throw new Error("execCommand copy failed");
-          }
+          fallbackCopy(text);
         }
 
         setCopied(true);
+        setError(null);
         onSuccess?.(text);
 
-        // 自动重置
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setCopied(false), timeout);
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error("Copy failed");
-        setError(err);
+        // 超时重置
+        timerRef.current = setTimeout(() => {
+          setCopied(false);
+          timerRef.current = null;
+        }, timeout);
+      } catch (err) {
+        const copyError =
+          err instanceof Error ? err : new Error("Clipboard write failed");
         setCopied(false);
-        onError?.(err);
+        setError(copyError);
+        onError?.(copyError);
       }
     },
-    [timeout, onSuccess, onError],
+    [isSupported, timeout, onSuccess, onError],
   );
 
-  return { copy, copied, error };
+  return { copy, copied, error, isSupported };
 }
 
 export default useClipboard;

@@ -1,16 +1,19 @@
-"""优雅停机管理：连接排空 + 信号处理 + 任务等待。
+"""优雅关闭：信号处理 + 连接排空。
 
-确保部署/重启时不丢失正在处理的请求：
-1. 收到 SIGTERM/SIGINT → 停止接受新连接
-2. 等待进行中请求完成（最长 30s）
-3. 关闭后台任务（scheduler、MCP、WS）
-4. 刷新缓冲（traces、metrics）
-5. 关闭数据库连接池
+功能：
+- 捕获 SIGTERM / SIGINT 信号
+- 等待进行中请求完成（排空期）
+- 注册关闭钩子（数据库/缓存/队列清理）
+- 超时强制退出
 
 用法：
-    from xagent.api.graceful_shutdown import GracefulShutdownManager
-    manager = GracefulShutdownManager(app)
-    manager.install()
+    from xagent.api.graceful_shutdown import shutdown_manager
+
+    shutdown_manager.register_hook("close_db", close_database)
+    shutdown_manager.register_hook("flush_cache", flush_redis)
+    # 在 app lifespan 中：
+    shutdown_manager.install_signal_handlers(loop)
+    await shutdown_manager.wait_for_shutdown(timeout=30)
 """
 
 from __future__ import annotations
@@ -19,9 +22,7 @@ import asyncio
 import signal
 import time
 from dataclasses import dataclass, field
-
-from fastapi import FastAPI, Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from typing import Any, Callable, Coroutine
 
 from xagent.infra.logging import get_logger
 
@@ -29,112 +30,124 @@ logger = get_logger("xagent.shutdown")
 
 
 @dataclass
+class ShutdownHook:
+    """关闭钩子。"""
+
+    name: str
+    fn: Callable[[], Coroutine[Any, Any, None]]
+    timeout: float = 10.0
+    priority: int = 0  # 越小越先执行
+
+
+@dataclass
 class ShutdownState:
-    """停机状态追踪。"""
+    """关闭状态。"""
 
-    shutting_down: bool = False
+    is_shutting_down: bool = False
+    started_at: float = 0.0
     active_requests: int = 0
-    shutdown_started_at: float = 0.0
-    drain_timeout: float = 30.0
-    _waiters: list = field(default_factory=list)
-
-
-# 全局状态
-_state = ShutdownState()
-
-
-def get_shutdown_state() -> ShutdownState:
-    return _state
-
-
-class ActiveRequestTracker(BaseHTTPMiddleware):
-    """追踪活跃请求数，停机时拒绝新请求。"""
-
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        # 停机中 → 拒绝新请求（健康检查除外）
-        if _state.shutting_down and not request.url.path.startswith("/health"):
-            return Response(
-                content='{"detail":"服务正在关闭，请稍后重试"}',
-                status_code=503,
-                media_type="application/json",
-                headers={"Retry-After": "5", "Connection": "close"},
-            )
-
-        _state.active_requests += 1
-        try:
-            response = await call_next(request)
-            return response
-        finally:
-            _state.active_requests -= 1
-            # 如果正在排空且无活跃请求，通知等待者
-            if _state.shutting_down and _state.active_requests == 0:
-                for event in _state._waiters:
-                    event.set()
+    hooks_completed: list[str] = field(default_factory=list)
 
 
 class GracefulShutdownManager:
-    """优雅停机管理器。"""
+    """优雅关闭管理器。"""
 
-    def __init__(self, app: FastAPI, drain_timeout: float = 30.0):
-        self.app = app
-        _state.drain_timeout = drain_timeout
+    def __init__(self):
+        self._hooks: list[ShutdownHook] = []
+        self._state = ShutdownState()
+        self._shutdown_event = asyncio.Event()
+        self._active_requests = 0
+        self._lock = asyncio.Lock()
 
-    def install(self):
-        """安装信号处理器和中间件。"""
-        self.app.add_middleware(ActiveRequestTracker)
-        logger.info("graceful_shutdown_installed", drain_timeout=_state.drain_timeout)
+    @property
+    def is_shutting_down(self) -> bool:
+        return self._state.is_shutting_down
 
-    async def shutdown(self):
-        """执行优雅停机流程。"""
-        if _state.shutting_down:
-            return
+    @property
+    def active_requests(self) -> int:
+        return self._active_requests
 
-        _state.shutting_down = True
-        _state.shutdown_started_at = time.time()
-        logger.info("shutdown_initiated", active_requests=_state.active_requests)
+    def register_hook(
+        self,
+        name: str,
+        fn: Callable[[], Coroutine[Any, Any, None]],
+        timeout: float = 10.0,
+        priority: int = 0,
+    ) -> None:
+        """注册关闭钩子。"""
+        self._hooks.append(ShutdownHook(name=name, fn=fn, timeout=timeout, priority=priority))
+        self._hooks.sort(key=lambda h: h.priority)
+        logger.info("shutdown hook registered: %s (priority=%d)", name, priority)
 
-        # 等待活跃请求完成
-        if _state.active_requests > 0:
-            event = asyncio.Event()
-            _state._waiters.append(event)
+    def install_signal_handlers(self, loop: asyncio.AbstractEventLoop) -> None:
+        """安装信号处理器。"""
+        for sig in (signal.SIGTERM, signal.SIGINT):
             try:
-                await asyncio.wait_for(event.wait(), timeout=_state.drain_timeout)
-                logger.info("requests_drained")
+                loop.add_signal_handler(sig, self._signal_handler, sig)
+            except (NotImplementedError, RuntimeError):
+                # Windows 不支持 add_signal_handler
+                signal.signal(sig, lambda s, f: self._signal_handler(s))
+
+    def _signal_handler(self, sig: Any) -> None:
+        """信号触发关闭流程。"""
+        sig_name = signal.Signals(sig).name if isinstance(sig, int) else str(sig)
+        logger.warning("received signal %s, initiating graceful shutdown", sig_name)
+        self._state.is_shutting_down = True
+        self._state.started_at = time.time()
+        self._shutdown_event.set()
+
+    async def track_request_start(self) -> None:
+        """请求开始计数。"""
+        async with self._lock:
+            self._active_requests += 1
+
+    async def track_request_end(self) -> None:
+        """请求结束计数。"""
+        async with self._lock:
+            self._active_requests = max(0, self._active_requests - 1)
+
+    async def wait_for_shutdown(self, timeout: float = 30.0) -> None:
+        """等待关闭信号并执行清理。"""
+        await self._shutdown_event.wait()
+        await self._drain_and_cleanup(timeout)
+
+    async def _drain_and_cleanup(self, timeout: float) -> None:
+        """排空请求 + 执行钩子。"""
+        deadline = time.time() + timeout
+
+        # 1. 等待活跃请求完成
+        logger.info("draining %d active requests...", self._active_requests)
+        while self._active_requests > 0 and time.time() < deadline:
+            await asyncio.sleep(0.1)
+
+        if self._active_requests > 0:
+            logger.warning(
+                "force shutdown: %d requests still active", self._active_requests
+            )
+
+        # 2. 执行关闭钩子
+        for hook in self._hooks:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                logger.warning("shutdown timeout, skipping hook: %s", hook.name)
+                continue
+            try:
+                hook_timeout = min(hook.timeout, remaining)
+                await asyncio.wait_for(hook.fn(), timeout=hook_timeout)
+                self._state.hooks_completed.append(hook.name)
+                logger.info("shutdown hook completed: %s", hook.name)
             except asyncio.TimeoutError:
-                logger.warning(
-                    "drain_timeout",
-                    remaining=_state.active_requests,
-                    timeout=_state.drain_timeout,
-                )
-            finally:
-                _state._waiters.remove(event)
+                logger.error("shutdown hook timeout: %s", hook.name)
+            except Exception as exc:
+                logger.error("shutdown hook failed: %s — %s", hook.name, exc)
 
-        # 关闭后台服务
-        try:
-            from xagent.core.scheduler import get_scheduler
-            await get_scheduler().stop()
-        except Exception:
-            pass
+        elapsed = time.time() - self._state.started_at
+        logger.info("graceful shutdown complete (%.1fs)", elapsed)
 
-        try:
-            from xagent.adapters.mcp import get_mcp_manager
-            await get_mcp_manager().stop()
-        except Exception:
-            pass
+    async def trigger_shutdown(self) -> None:
+        """手动触发关闭（测试/管理端点用）。"""
+        self._signal_handler(signal.SIGTERM)
 
-        # 刷新追踪缓冲
-        try:
-            from xagent.infra.tracing import flush_traces
-            flush_traces()
-        except Exception:
-            pass
 
-        # 关闭数据库
-        try:
-            from xagent.infra import db
-            await db.dispose_engine()
-        except Exception:
-            pass
-
-        elapsed = time.time() - _state.shutdown_started_at
-        logger.info("shutdown_complete", elapsed_s=round(elapsed, 2))
+# 全局单例
+shutdown_manager = GracefulShutdownManager()
