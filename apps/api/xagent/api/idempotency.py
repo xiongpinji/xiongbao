@@ -1,40 +1,31 @@
-"""API 幂等性保障：Idempotency-Key 防重复提交。
+"""幂等性保障：防止重复提交。
 
-对 POST/PUT 请求，客户端携带 Idempotency-Key 头：
-- 首次请求：正常执行，缓存响应
-- 重复请求（相同 Key）：直接返回缓存响应，不重复执行
-- Key 有效期：24 小时
+功能：
+- Idempotency-Key 请求头
+- 结果缓存（相同 key 返回缓存响应）
+- 过期清理
+- 并发去重（同 key 只执行一次）
 
-用法（客户端）：
-    headers = {"Idempotency-Key": str(uuid4())}
-    requests.post("/api/v1/agents", json=data, headers=headers)
+用法：
+    from xagent.api.idempotency import IdempotencyMiddleware
 
-用法（服务端）：
-    app.add_middleware(IdempotencyMiddleware)
+    app.add_middleware(IdempotencyMiddleware, ttl_s=3600)
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
+import asyncio
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
-from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from xagent.infra.logging import get_logger
 
 logger = get_logger("xagent.idempotency")
-
-# 幂等 Key 有效期（秒）
-KEY_TTL = 86400  # 24 小时
-
-# 最大缓存条目
-MAX_ENTRIES = 10000
-
-# 需要幂等保护的方法
-IDEMPOTENT_METHODS = ("POST", "PUT", "PATCH")
 
 
 @dataclass
@@ -43,92 +34,141 @@ class CachedResponse:
 
     status_code: int
     body: bytes
-    content_type: str
+    headers: dict[str, str]
     created_at: float = field(default_factory=time.time)
+
+
+class IdempotencyStore:
+    """幂等性存储。"""
+
+    def __init__(self, ttl_s: float = 3600.0, max_entries: int = 10000):
+        self._store: dict[str, CachedResponse] = {}
+        self._in_progress: dict[str, asyncio.Event] = {}
+        self._ttl_s = ttl_s
+        self._max_entries = max_entries
+        self._hits = 0
+        self._misses = 0
+
+    def get(self, key: str) -> CachedResponse | None:
+        """获取缓存响应。"""
+        entry = self._store.get(key)
+        if entry is None:
+            self._misses += 1
+            return None
+
+        # 检查过期
+        if time.time() - entry.created_at > self._ttl_s:
+            del self._store[key]
+            self._misses += 1
+            return None
+
+        self._hits += 1
+        return entry
+
+    def set(self, key: str, response: CachedResponse) -> None:
+        """缓存响应。"""
+        # 容量限制
+        if len(self._store) >= self._max_entries:
+            self._evict()
+        self._store[key] = response
+
+    def is_in_progress(self, key: str) -> bool:
+        """是否有同 key 请求正在处理。"""
+        return key in self._in_progress
+
+    def mark_progress(self, key: str) -> asyncio.Event:
+        """标记处理中。"""
+        event = asyncio.Event()
+        self._in_progress[key] = event
+        return event
+
+    def complete_progress(self, key: str) -> None:
+        """完成处理。"""
+        event = self._in_progress.pop(key, None)
+        if event:
+            event.set()
+
+    def _evict(self) -> None:
+        """淘汰过期/最旧条目。"""
+        now = time.time()
+        expired = [k for k, v in self._store.items() if now - v.created_at > self._ttl_s]
+        for k in expired:
+            del self._store[k]
+
+        # 仍满则删除最旧
+        if len(self._store) >= self._max_entries:
+            sorted_keys = sorted(self._store, key=lambda k: self._store[k].created_at)
+            for k in sorted_keys[: len(sorted_keys) // 4]:
+                del self._store[k]
+
+    def get_stats(self) -> dict[str, Any]:
+        return {
+            "entries": len(self._store),
+            "in_progress": len(self._in_progress),
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": round(self._hits / max(1, self._hits + self._misses), 3),
+        }
 
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):
     """幂等性中间件。"""
 
-    def __init__(self, app, enabled: bool = True):
+    IDEMPOTENT_METHODS = {"POST", "PUT", "PATCH"}
+    HEADER = "idempotency-key"
+
+    def __init__(self, app, ttl_s: float = 3600.0, max_entries: int = 10000):
         super().__init__(app)
-        self.enabled = enabled
-        self._cache: dict[str, CachedResponse] = {}
-
-    def _make_key(self, request: Request, idempotency_key: str) -> str:
-        """生成缓存 key：方法 + 路径 + 幂等 Key。"""
-        raw = f"{request.method}:{request.url.path}:{idempotency_key}"
-        return hashlib.sha256(raw.encode()).hexdigest()[:32]
-
-    def _cleanup(self):
-        """清理过期条目。"""
-        if len(self._cache) < MAX_ENTRIES:
-            return
-        now = time.time()
-        expired = [k for k, v in self._cache.items() if now - v.created_at > KEY_TTL]
-        for k in expired:
-            del self._cache[k]
-        # 仍超限则删除最旧 25%
-        if len(self._cache) >= MAX_ENTRIES:
-            sorted_keys = sorted(self._cache, key=lambda k: self._cache[k].created_at)
-            for k in sorted_keys[: MAX_ENTRIES // 4]:
-                del self._cache[k]
+        self.store = IdempotencyStore(ttl_s=ttl_s, max_entries=max_entries)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if not self.enabled:
+        # 仅对写操作生效
+        if request.method not in self.IDEMPOTENT_METHODS:
             return await call_next(request)
 
-        # 仅保护写操作
-        if request.method not in IDEMPOTENT_METHODS:
+        key = request.headers.get(self.HEADER)
+        if not key:
             return await call_next(request)
-
-        # 提取幂等 Key
-        idempotency_key = request.headers.get("idempotency-key", "")
-        if not idempotency_key:
-            # 无 Key 则正常执行（不强制）
-            return await call_next(request)
-
-        cache_key = self._make_key(request, idempotency_key)
 
         # 检查缓存
-        cached = self._cache.get(cache_key)
+        cached = self.store.get(key)
         if cached:
-            # 检查过期
-            if time.time() - cached.created_at < KEY_TTL:
-                logger.info("idempotent_hit", key=idempotency_key[:16], path=request.url.path)
-                return Response(
-                    content=cached.body,
-                    status_code=cached.status_code,
-                    media_type=cached.content_type,
-                    headers={
-                        "X-Idempotent-Replay": "true",
-                        "Cache-Control": "no-store",
-                    },
-                )
-            else:
-                del self._cache[cache_key]
-
-        # 执行实际请求
-        response = await call_next(request)
-
-        # 缓存成功/客户端错误响应（不缓存 5xx）
-        if response.status_code < 500:
-            body = b""
-            async for chunk in response.body_iterator:
-                body += chunk if isinstance(chunk, bytes) else chunk.encode()
-
-            self._cleanup()
-            self._cache[cache_key] = CachedResponse(
-                status_code=response.status_code,
-                body=body,
-                content_type=response.media_type or "application/json",
-            )
-
+            logger.debug("idempotency hit: key=%s", key)
             return Response(
-                content=body,
-                status_code=response.status_code,
-                media_type=response.media_type,
-                headers={"X-Idempotent-Replay": "false"},
+                content=cached.body,
+                status_code=cached.status_code,
+                headers={**cached.headers, "X-Idempotent-Replay": "true"},
             )
 
-        return response
+        # 并发去重
+        if self.store.is_in_progress(key):
+            return JSONResponse(
+                status_code=409,
+                content={"error": "duplicate_in_progress", "detail": "Same request is being processed"},
+            )
+
+        event = self.store.mark_progress(key)
+        try:
+            response = await call_next(request)
+
+            # 缓存成功响应
+            if response.status_code < 500:
+                body = b""
+                async for chunk in response.body_iterator:
+                    body += chunk if isinstance(chunk, bytes) else chunk.encode()
+
+                self.store.set(key, CachedResponse(
+                    status_code=response.status_code,
+                    body=body,
+                    headers=dict(response.headers),
+                ))
+
+                return Response(
+                    content=body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                )
+
+            return response
+        finally:
+            self.store.complete_progress(key)
