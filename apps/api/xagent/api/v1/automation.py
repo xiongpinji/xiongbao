@@ -180,3 +180,22 @@ async def toggle_job(
     if not job:
         return {"error": "job not found"}
     return job.to_dict()
+
+
+# ─── 策略自适应 ───
+
+
+class StrategyIn(BaseModel):
+    goal: str = Field(..., min_length=1)
+    context: str = ""
+
+
+@router.post("/agents/strategy-select", summary="智能策略选择")
+async def strategy_select(
+    body: StrategyIn,
+    principal: Principal = Depends(require_permission("agent", "execute")),  # noqa: ARG001
+):
+    from xagent.core.intelligence import get_strategy_selector
+    selector = get_strategy_selector()
+    result = selector.select_with_confidence(body.goal, context=body.context)
+    return result

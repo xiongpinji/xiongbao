@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import {
   BarChart3,
+  Bell,
+  BookOpen,
   Box,
   Code2,
   Command,
@@ -26,6 +28,8 @@ export type SettingsSection =
   | "index"
   | "usage"
   | "team"
+  | "knowledge"
+  | "webhook"
   | "onboarding";
 
 const sections: { id: SettingsSection; label: string; description: string; icon: typeof Settings2 }[] = [
@@ -39,6 +43,8 @@ const sections: { id: SettingsSection; label: string; description: string; icon:
   { id: "index", label: "索引库", description: "知识库、记忆检索和候选发现", icon: Database },
   { id: "usage", label: "使用统计", description: "运行、产物与资源使用数据", icon: BarChart3 },
   { id: "team", label: "团队管理", description: "用户、角色与 API Key 管理", icon: Users },
+  { id: "knowledge", label: "知识库", description: "RAG 文档管理与语义检索", icon: BookOpen },
+  { id: "webhook", label: "Webhook & 安全", description: "通知回调与内容安全扫描", icon: Bell },
   { id: "onboarding", label: "引导", description: "快速上手和工作区初始化", icon: Rocket },
 ];
 

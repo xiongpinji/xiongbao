@@ -69,4 +69,9 @@ async def delete_document(
     kb = get_knowledge_base()
     if not kb.delete_doc(doc_id, principal.tenant_id):
         raise HTTPException(404, "文档不存在")
+    try:
+        from xagent.core.persistence import delete_document as persist_delete
+        await persist_delete(doc_id)
+    except Exception:  # noqa: S110
+        pass
     return {"deleted": doc_id}

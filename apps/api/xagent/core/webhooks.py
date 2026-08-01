@@ -50,6 +50,17 @@ class WebhookManager:
             secret=secret,
         )
         self._hooks[hook.webhook_id] = hook
+        # 持久化
+        try:
+            import asyncio
+
+            from xagent.core.persistence import save_webhook
+            asyncio.get_event_loop().create_task(save_webhook({
+                "webhook_id": hook.webhook_id, "tenant_id": tenant_id,
+                "url": url, "events": events, "secret": secret,
+            }))
+        except Exception:  # noqa: S110
+            pass
         logger.info("webhook_registered", webhook_id=hook.webhook_id, url=url)
         return hook
 
@@ -61,6 +72,13 @@ class WebhookManager:
         if not hook or hook.tenant_id != tenant_id:
             return False
         del self._hooks[webhook_id]
+        try:
+            import asyncio
+
+            from xagent.core.persistence import delete_webhook
+            asyncio.get_event_loop().create_task(delete_webhook(webhook_id))
+        except Exception:  # noqa: S110
+            pass
         return True
 
     async def emit(self, tenant_id: str, event: str, payload: dict) -> None:

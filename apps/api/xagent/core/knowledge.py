@@ -135,6 +135,16 @@ class KnowledgeBase:
             tags=tags or [],
         )
         self._docs[doc_id] = doc
+        # 持久化到 SQLite
+        try:
+            from xagent.core.persistence import save_chunks, save_document
+            await save_document({
+                "doc_id": doc_id, "tenant_id": tenant_id, "title": title,
+                "source": source, "chunk_count": len(chunks), "tags": tags or [],
+            })
+            await save_chunks(doc_id, tenant_id, chunks)
+        except Exception:  # noqa: S110
+            pass
         logger.info(
             "knowledge_ingested", doc_id=doc_id, title=title,
             chunks=len(chunks), tenant_id=tenant_id,

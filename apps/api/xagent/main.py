@@ -52,6 +52,29 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(db.Base.metadata.create_all)
     # 启动 MCP 管理器（无 server 时安全空转）
     await get_mcp_manager().start()
+    # 从 SQLite 恢复持久化数据（Webhook/知识库）
+    try:
+        from xagent.core.knowledge import Document, get_knowledge_base
+        from xagent.core.persistence import load_documents, load_webhooks
+        from xagent.core.webhooks import WebhookConfig, get_webhook_manager
+        hooks = await load_webhooks("default")
+        wm = get_webhook_manager()
+        for h in hooks:
+            wm._hooks[h["webhook_id"]] = WebhookConfig(
+                webhook_id=h["webhook_id"], tenant_id=h["tenant_id"],
+                url=h["url"], events=h["events"], secret=h["secret"],
+            )
+        docs = await load_documents("default")
+        kb = get_knowledge_base()
+        for d in docs:
+            kb._docs[d["doc_id"]] = Document(
+                doc_id=d["doc_id"], title=d["title"],
+                tenant_id=d["tenant_id"], source=d["source"],
+                chunk_count=d["chunk_count"], tags=d["tags"],
+            )
+        logger.info("persistence_loaded", webhooks=len(hooks), docs=len(docs))
+    except Exception:  # noqa: S110
+        pass
     # 启动定时调度器
     from xagent.core.scheduler import get_scheduler
     await get_scheduler().start()
@@ -97,6 +120,19 @@ def create_app() -> FastAPI:
     @app.get("/metrics", include_in_schema=False)
     async def _metrics() -> Response:
         return metrics_response()
+
+    # 性能统计端点
+    @app.get("/perf", include_in_schema=False)
+    async def _perf() -> dict:
+        from xagent.infra.performance import get_api_cache, get_search_cache
+        # 从中间件栈获取 timing 实例
+        for m in app.user_middleware:
+            if hasattr(m, "cls") and m.cls.__name__ == "TimingMiddleware":
+                break
+        return {
+            "cache_api": get_api_cache().stats,
+            "cache_search": get_search_cache().stats,
+        }
 
     return app
 

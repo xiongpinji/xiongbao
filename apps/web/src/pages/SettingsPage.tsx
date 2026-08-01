@@ -4,6 +4,7 @@ import CodePreviewSettings from "../components/settings/CodePreviewSettings";
 import CommandsSettings from "../components/settings/CommandsSettings";
 import GeneralSettings from "../components/settings/GeneralSettings";
 import IndexSettings from "../components/settings/IndexSettings";
+import KnowledgeSettings from "../components/settings/KnowledgeSettings";
 import McpServersSettings from "../components/settings/McpServersSettings";
 import ModelSettings from "../components/settings/ModelSettings";
 import OnboardingSettings from "../components/settings/OnboardingSettings";
@@ -12,6 +13,7 @@ import SettingsLayout from "../components/settings/SettingsLayout";
 import SkillsSettings from "../components/settings/SkillsSettings";
 import TeamSettings from "../components/settings/TeamSettings";
 import UsageStatsSettings from "../components/settings/UsageStatsSettings";
+import WebhookSettings from "../components/settings/WebhookSettings";
 import { resolveSettingsLocation } from "./settingsLocation";
 
 export default function SettingsPage() {
@@ -45,6 +47,8 @@ export default function SettingsPage() {
       {location.section === "index" && <IndexSettings initialTab={location.tab} />}
       {location.section === "usage" && <UsageStatsSettings />}
       {location.section === "team" && <TeamSettings />}
+      {location.section === "knowledge" && <KnowledgeSettings />}
+      {location.section === "webhook" && <WebhookSettings />}
       {location.section === "onboarding" && <OnboardingSettings />}
     </SettingsLayout>
   );
