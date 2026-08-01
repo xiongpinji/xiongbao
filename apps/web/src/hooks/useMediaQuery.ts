@@ -2,52 +2,43 @@
  * 媒体查询 Hook（零依赖）。
  *
  * 功能：
- * - useMediaQuery：监听 CSS 媒体查询匹配状态
- * - useBreakpoint：预设断点快捷方式
- * - SSR 安全（服务端返回默认值）
+ * - useMediaQuery：响应式 CSS 媒体查询匹配
+ * - 预置断点（sm/md/lg/xl/2xl）
+ * - 实时监听变化
  *
  * 用法：
  *   const isMobile = useMediaQuery("(max-width: 768px)");
- *   const { isMobile, isTablet, isDesktop } = useBreakpoint();
+ *   const { isDesktop, isTablet } = useBreakpoints();
  */
 
 import { useCallback, useEffect, useState } from "react";
 
-/** 监听任意媒体查询 */
-export function useMediaQuery(
-  query: string,
-  defaultValue: boolean = false,
-): boolean {
+/** 监听单个媒体查询。 */
+export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === "undefined") return defaultValue;
+    if (typeof window === "undefined") return false;
     return window.matchMedia(query).matches;
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const mql = window.matchMedia(query);
     setMatches(mql.matches);
 
-    const handler = (event: MediaQueryListEvent) => {
-      setMatches(event.matches);
-    };
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
 
     // 兼容旧浏览器
     if (mql.addEventListener) {
       mql.addEventListener("change", handler);
       return () => mql.removeEventListener("change", handler);
-    } else {
-      mql.addListener(handler);
-      return () => mql.removeListener(handler);
     }
+    mql.addListener(handler);
+    return () => mql.removeListener(handler);
   }, [query]);
 
   return matches;
 }
 
-// ─── 预设断点 ───
-
+/** Tailwind 断点。 */
 export const BREAKPOINTS = {
   sm: 640,
   md: 768,
@@ -56,33 +47,53 @@ export const BREAKPOINTS = {
   "2xl": 1536,
 } as const;
 
-interface BreakpointState {
-  /** < 640px */
+interface UseBreakpointsReturn {
+  /** >= 640px */
+  isSm: boolean;
+  /** >= 768px */
+  isMd: boolean;
+  /** >= 1024px */
+  isLg: boolean;
+  /** >= 1280px */
+  isXl: boolean;
+  /** >= 1536px */
+  is2xl: boolean;
+  /** < 768px */
   isMobile: boolean;
-  /** 640px - 1023px */
+  /** 768px - 1023px */
   isTablet: boolean;
   /** >= 1024px */
   isDesktop: boolean;
-  /** >= 1280px */
-  isWide: boolean;
-  /**  prefers-reduced-motion */
-  prefersReducedMotion: boolean;
-  /** prefers-color-scheme: dark */
-  prefersDark: boolean;
 }
 
-/** 预设断点 + 偏好检测 */
-export function useBreakpoint(): BreakpointState {
-  const isMobile = useMediaQuery(`(max-width: ${BREAKPOINTS.sm - 1}px)`);
-  const isTablet = useMediaQuery(
-    `(min-width: ${BREAKPOINTS.sm}px) and (max-width: ${BREAKPOINTS.lg - 1}px)`,
-  );
-  const isDesktop = useMediaQuery(`(min-width: ${BREAKPOINTS.lg}px)`);
-  const isWide = useMediaQuery(`(min-width: ${BREAKPOINTS.xl}px)`);
-  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
+/** 预置断点 Hook。 */
+export function useBreakpoints(): UseBreakpointsReturn {
+  const isSm = useMediaQuery(`(min-width: ${BREAKPOINTS.sm}px)`);
+  const isMd = useMediaQuery(`(min-width: ${BREAKPOINTS.md}px)`);
+  const isLg = useMediaQuery(`(min-width: ${BREAKPOINTS.lg}px)`);
+  const isXl = useMediaQuery(`(min-width: ${BREAKPOINTS.xl}px)`);
+  const is2xl = useMediaQuery(`(min-width: ${BREAKPOINTS["2xl"]}px)`);
 
-  return { isMobile, isTablet, isDesktop, isWide, prefersReducedMotion, prefersDark };
+  return {
+    isSm,
+    isMd,
+    isLg,
+    isXl,
+    is2xl,
+    isMobile: !isMd,
+    isTablet: isMd && !isLg,
+    isDesktop: isLg,
+  };
+}
+
+/** 监听 prefers-color-scheme。 */
+export function usePrefersDark(): boolean {
+  return useMediaQuery("(prefers-color-scheme: dark)");
+}
+
+/** 监听 prefers-reduced-motion。 */
+export function usePrefersReducedMotion(): boolean {
+  return useMediaQuery("(prefers-reduced-motion: reduce)");
 }
 
 export default useMediaQuery;

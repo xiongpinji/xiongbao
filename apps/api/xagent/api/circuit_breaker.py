@@ -1,17 +1,19 @@
-"""熔断器：防止级联故障。
+"""断路器：下游服务故障自动熔断。
 
 功能：
-- 三态：CLOSED → OPEN → HALF_OPEN → CLOSED
-- 失败率阈值触发熔断
-- 半开状态探测恢复
+- 三态：closed → open → half-open
+- 失败率/连续失败触发
+- 半开探测恢复
 - 按服务名隔离
 
 用法：
-    from xagent.api.circuit_breaker import circuit_breaker
+    from xagent.api.circuit_breaker import CircuitBreaker
 
-    @circuit_breaker.protect("llm_api", failure_threshold=5, recovery_timeout=30)
-    async def call_llm(prompt: str) -> str:
-        return await llm_client.complete(prompt)
+    cb = CircuitBreaker(failure_threshold=5, recovery_timeout_s=30)
+
+    @cb.guard("payment-service")
+    async def call_payment():
+        ...
 """
 
 from __future__ import annotations
@@ -20,178 +22,220 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import wraps
 from typing import Any, Callable, Coroutine
 
 from xagent.infra.logging import get_logger
 
-logger = get_logger("xagent.circuit")
+logger = get_logger("xagent.circuit_breaker")
 
 
 class CircuitState(str, Enum):
-    CLOSED = "closed"  # 正常通行
-    OPEN = "open"  # 熔断（拒绝请求）
-    HALF_OPEN = "half_open"  # 探测恢复
-
-
-class CircuitOpenError(Exception):
-    """熔断器开启时抛出。"""
-
-    def __init__(self, service: str, retry_after: float):
-        self.service = service
-        self.retry_after = retry_after
-        super().__init__(
-            f"Circuit open for '{service}', retry after {retry_after:.1f}s"
-        )
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
 
 
 @dataclass
 class CircuitStats:
-    """熔断器统计。"""
+    """断路器统计。"""
 
     total_calls: int = 0
-    successful_calls: int = 0
-    failed_calls: int = 0
-    rejected_calls: int = 0
+    total_failures: int = 0
+    total_successes: int = 0
+    consecutive_failures: int = 0
     last_failure_time: float = 0.0
     last_state_change: float = field(default_factory=time.time)
 
 
-@dataclass
-class CircuitConfig:
-    """熔断器配置。"""
-
-    failure_threshold: int = 5  # 连续失败次数触发熔断
-    recovery_timeout: float = 30.0  # 熔断后等待恢复时间（秒）
-    half_open_max_calls: int = 3  # 半开状态最大探测次数
-    success_threshold: int = 2  # 半开状态连续成功次数恢复
-
-
 class CircuitBreaker:
-    """单服务熔断器。"""
+    """断路器。"""
 
-    def __init__(self, name: str, config: CircuitConfig):
-        self.name = name
-        self.config = config
-        self.state = CircuitState.CLOSED
-        self.stats = CircuitStats()
-        self._consecutive_failures = 0
-        self._half_open_successes = 0
-        self._half_open_calls = 0
-        self._lock = asyncio.Lock()
-
-    async def call(self, fn: Callable[..., Coroutine], *args: Any, **kwargs: Any) -> Any:
-        """通过熔断器调用函数。"""
-        async with self._lock:
-            self._check_state_transition()
-
-            if self.state == CircuitState.OPEN:
-                self.stats.rejected_calls += 1
-                retry_after = self._time_until_retry()
-                raise CircuitOpenError(self.name, retry_after)
-
-            if self.state == CircuitState.HALF_OPEN:
-                if self._half_open_calls >= self.config.half_open_max_calls:
-                    self.stats.rejected_calls += 1
-                    raise CircuitOpenError(self.name, 1.0)
-                self._half_open_calls += 1
-
-        # 执行调用（锁外）
-        self.stats.total_calls += 1
-        try:
-            result = await fn(*args, **kwargs)
-            await self._on_success()
-            return result
-        except Exception as exc:
-            await self._on_failure()
-            raise exc
-
-    async def _on_success(self) -> None:
-        async with self._lock:
-            self.stats.successful_calls += 1
-            self._consecutive_failures = 0
-
-            if self.state == CircuitState.HALF_OPEN:
-                self._half_open_successes += 1
-                if self._half_open_successes >= self.config.success_threshold:
-                    self._transition_to(CircuitState.CLOSED)
-
-    async def _on_failure(self) -> None:
-        async with self._lock:
-            self.stats.failed_calls += 1
-            self.stats.last_failure_time = time.time()
-            self._consecutive_failures += 1
-
-            if self.state == CircuitState.HALF_OPEN:
-                self._transition_to(CircuitState.OPEN)
-            elif self._consecutive_failures >= self.config.failure_threshold:
-                self._transition_to(CircuitState.OPEN)
-
-    def _check_state_transition(self) -> None:
-        """检查是否需要状态转换（OPEN → HALF_OPEN）。"""
-        if self.state == CircuitState.OPEN:
-            elapsed = time.time() - self.stats.last_state_change
-            if elapsed >= self.config.recovery_timeout:
-                self._transition_to(CircuitState.HALF_OPEN)
-
-    def _transition_to(self, new_state: CircuitState) -> None:
-        old = self.state
-        self.state = new_state
-        self.stats.last_state_change = time.time()
-
-        if new_state == CircuitState.HALF_OPEN:
-            self._half_open_successes = 0
-            self._half_open_calls = 0
-        elif new_state == CircuitState.CLOSED:
-            self._consecutive_failures = 0
-
-        logger.info(
-            "circuit '%s': %s → %s", self.name, old.value, new_state.value
-        )
-
-    def _time_until_retry(self) -> float:
-        elapsed = time.time() - self.stats.last_state_change
-        return max(0, self.config.recovery_timeout - elapsed)
-
-
-class CircuitBreakerRegistry:
-    """熔断器注册表。"""
-
-    def __init__(self):
-        self._breakers: dict[str, CircuitBreaker] = {}
-
-    def get(self, name: str, config: CircuitConfig | None = None) -> CircuitBreaker:
-        if name not in self._breakers:
-            self._breakers[name] = CircuitBreaker(name, config or CircuitConfig())
-        return self._breakers[name]
-
-    def protect(
+    def __init__(
         self,
-        name: str,
         failure_threshold: int = 5,
-        recovery_timeout: float = 30.0,
-    ) -> Callable:
-        """装饰器：保护函数。"""
-        config = CircuitConfig(
-            failure_threshold=failure_threshold,
-            recovery_timeout=recovery_timeout,
-        )
+        failure_rate_threshold: float = 0.5,
+        recovery_timeout_s: float = 30.0,
+        half_open_max_calls: int = 3,
+        window_size: int = 20,
+    ):
+        self.failure_threshold = failure_threshold
+        self.failure_rate_threshold = failure_rate_threshold
+        self.recovery_timeout_s = recovery_timeout_s
+        self.half_open_max_calls = half_open_max_calls
+        self.window_size = window_size
 
-        def decorator(fn: Callable[..., Coroutine]) -> Callable:
-            breaker = self.get(name, config)
+        self._circuits: dict[str, _Circuit] = {}
 
-            @wraps(fn)
+    def _get_circuit(self, name: str) -> _Circuit:
+        if name not in self._circuits:
+            self._circuits[name] = _Circuit(
+                name=name,
+                failure_threshold=self.failure_threshold,
+                failure_rate_threshold=self.failure_rate_threshold,
+                recovery_timeout_s=self.recovery_timeout_s,
+                half_open_max_calls=self.half_open_max_calls,
+                window_size=self.window_size,
+            )
+        return self._circuits[name]
+
+    def guard(self, name: str):
+        """装饰器：保护异步函数。"""
+
+        def decorator(fn: Callable[..., Coroutine[Any, Any, Any]]):
             async def wrapper(*args: Any, **kwargs: Any) -> Any:
-                return await breaker.call(fn, *args, **kwargs)
+                circuit = self._get_circuit(name)
+                return await circuit.call(fn, *args, **kwargs)
 
+            wrapper.__name__ = fn.__name__
             return wrapper
 
         return decorator
 
-    @property
-    def states(self) -> dict[str, str]:
-        return {name: cb.state.value for name, cb in self._breakers.items()}
+    async def call(self, name: str, fn: Callable[..., Coroutine[Any, Any, Any]], *args: Any, **kwargs: Any) -> Any:
+        """直接调用。"""
+        circuit = self._get_circuit(name)
+        return await circuit.call(fn, *args, **kwargs)
+
+    def get_state(self, name: str) -> CircuitState:
+        """获取断路器状态。"""
+        return self._get_circuit(name).state
+
+    def get_stats(self, name: str) -> dict[str, Any]:
+        """获取统计信息。"""
+        circuit = self._get_circuit(name)
+        return {
+            "name": name,
+            "state": circuit.state.value,
+            "total_calls": circuit.stats.total_calls,
+            "total_failures": circuit.stats.total_failures,
+            "consecutive_failures": circuit.stats.consecutive_failures,
+        }
+
+    def reset(self, name: str) -> None:
+        """手动重置。"""
+        if name in self._circuits:
+            self._circuits[name].reset()
+
+    def list_circuits(self) -> list[dict[str, Any]]:
+        """列出所有断路器。"""
+        return [self.get_stats(name) for name in self._circuits]
 
 
-# 全局单例
-circuit_breaker = CircuitBreakerRegistry()
+class CircuitOpenError(Exception):
+    """断路器打开异常。"""
+
+    def __init__(self, name: str, retry_after_s: float):
+        self.name = name
+        self.retry_after_s = retry_after_s
+        super().__init__(f"Circuit '{name}' is OPEN, retry after {retry_after_s:.1f}s")
+
+
+class _Circuit:
+    """单个断路器实例。"""
+
+    def __init__(
+        self,
+        name: str,
+        failure_threshold: int,
+        failure_rate_threshold: float,
+        recovery_timeout_s: float,
+        half_open_max_calls: int,
+        window_size: int,
+    ):
+        self.name = name
+        self.failure_threshold = failure_threshold
+        self.failure_rate_threshold = failure_rate_threshold
+        self.recovery_timeout_s = recovery_timeout_s
+        self.half_open_max_calls = half_open_max_calls
+        self.window_size = window_size
+
+        self.state = CircuitState.CLOSED
+        self.stats = CircuitStats()
+        self._results: list[bool] = []  # True=success
+        self._half_open_calls = 0
+
+    async def call(self, fn: Callable[..., Coroutine[Any, Any, Any]], *args: Any, **kwargs: Any) -> Any:
+        """执行调用。"""
+        self._check_state_transition()
+
+        if self.state == CircuitState.OPEN:
+            retry_after = self.recovery_timeout_s - (time.time() - self.stats.last_failure_time)
+            raise CircuitOpenError(self.name, max(0, retry_after))
+
+        if self.state == CircuitState.HALF_OPEN:
+            if self._half_open_calls >= self.half_open_max_calls:
+                raise CircuitOpenError(self.name, 1.0)
+            self._half_open_calls += 1
+
+        self.stats.total_calls += 1
+
+        try:
+            result = await fn(*args, **kwargs)
+            self._on_success()
+            return result
+        except Exception as exc:
+            self._on_failure()
+            raise
+
+    def _on_success(self) -> None:
+        self.stats.total_successes += 1
+        self.stats.consecutive_failures = 0
+        self._results.append(True)
+        self._trim_window()
+
+        if self.state == CircuitState.HALF_OPEN:
+            # 半开成功 → 关闭
+            self._transition(CircuitState.CLOSED)
+            self._half_open_calls = 0
+
+    def _on_failure(self) -> None:
+        self.stats.total_failures += 1
+        self.stats.consecutive_failures += 1
+        self.stats.last_failure_time = time.time()
+        self._results.append(False)
+        self._trim_window()
+
+        if self.state == CircuitState.HALF_OPEN:
+            # 半开失败 → 重新打开
+            self._transition(CircuitState.OPEN)
+            self._half_open_calls = 0
+            return
+
+        # 检查是否需要打开
+        if self.stats.consecutive_failures >= self.failure_threshold:
+            self._transition(CircuitState.OPEN)
+        elif len(self._results) >= self.window_size:
+            failure_rate = self._results.count(False) / len(self._results)
+            if failure_rate >= self.failure_rate_threshold:
+                self._transition(CircuitState.OPEN)
+
+    def _check_state_transition(self) -> None:
+        """检查 OPEN → HALF_OPEN 转换。"""
+        if self.state == CircuitState.OPEN:
+            elapsed = time.time() - self.stats.last_failure_time
+            if elapsed >= self.recovery_timeout_s:
+                self._transition(CircuitState.HALF_OPEN)
+                self._half_open_calls = 0
+
+    def _transition(self, new_state: CircuitState) -> None:
+        old = self.state
+        self.state = new_state
+        self.stats.last_state_change = time.time()
+        if new_state == CircuitState.CLOSED:
+            self._results.clear()
+            self.stats.consecutive_failures = 0
+        logger.info("circuit [%s]: %s → %s", self.name, old.value, new_state.value)
+
+    def _trim_window(self) -> None:
+        if len(self._results) > self.window_size:
+            self._results = self._results[-self.window_size:]
+
+    def reset(self) -> None:
+        self.state = CircuitState.CLOSED
+        self.stats = CircuitStats()
+        self._results.clear()
+        self._half_open_calls = 0
+
+
+# 全局实例
+circuit_breaker = CircuitBreaker()

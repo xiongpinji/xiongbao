@@ -2,122 +2,105 @@
  * 本地存储 Hook（零依赖）。
  *
  * 功能：
- * - useLocalStorage：响应式 localStorage 读写
- * - 自动 JSON 序列化/反序列化
+ * - useLocalStorage：状态与 localStorage 双向同步
+ * - JSON 序列化/反序列化
  * - 跨标签页同步（storage 事件）
- * - SSR 安全
+ * - 过期时间
  *
  * 用法：
- *   const [value, setValue, remove] = useLocalStorage("key", defaultValue);
- *   setValue({ name: "test" }); // 自动 JSON.stringify
+ *   const [value, setValue, remove] = useLocalStorage("theme", "dark");
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+interface StorageMeta<T> {
+  value: T;
+  expires?: number; // 过期时间戳
+}
 
 type SetValue<T> = (value: T | ((prev: T) => T)) => void;
 
-/**
- * 响应式 localStorage Hook。
- */
 export function useLocalStorage<T>(
   key: string,
   initialValue: T,
+  options: { ttlMs?: number; serialize?: (v: T) => string; deserialize?: (s: string) => T } = {},
 ): [T, SetValue<T>, () => void] {
-  // 读取初始值
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
+  const { ttlMs, serialize = JSON.stringify, deserialize = JSON.parse } = options;
+
+  const readValue = useCallback((): T => {
     try {
-      const item = window.localStorage.getItem(key);
-      return item ? (JSON.parse(item) as T) : initialValue;
+      const raw = localStorage.getItem(key);
+      if (raw === null) return initialValue;
+
+      const meta: StorageMeta<T> = deserialize(raw);
+
+      // 检查过期
+      if (meta.expires && Date.now() > meta.expires) {
+        localStorage.removeItem(key);
+        return initialValue;
+      }
+
+      return meta.value !== undefined ? meta.value : (meta as unknown as T);
     } catch {
       return initialValue;
     }
-  });
+  }, [key, initialValue, deserialize]);
 
-  // 写入
+  const [storedValue, setStoredValue] = useState<T>(readValue);
+  const keyRef = useRef(key);
+  keyRef.current = key;
+
   const setValue: SetValue<T> = useCallback(
     (value) => {
       setStoredValue((prev) => {
-        const nextValue = value instanceof Function ? value(prev) : value;
+        const newValue = value instanceof Function ? value(prev) : value;
         try {
-          window.localStorage.setItem(key, JSON.stringify(nextValue));
-        } catch {
-          // 存储已满或不可用，静默失败
+          const meta: StorageMeta<T> = {
+            value: newValue,
+            expires: ttlMs ? Date.now() + ttlMs : undefined,
+          };
+          localStorage.setItem(keyRef.current, serialize(meta));
+        } catch (e) {
+          console.warn(`useLocalStorage: failed to write key="${keyRef.current}"`, e);
         }
-        return nextValue;
+        return newValue;
       });
     },
-    [key],
+    [serialize, ttlMs],
   );
 
-  // 删除
   const remove = useCallback(() => {
     try {
-      window.localStorage.removeItem(key);
+      localStorage.removeItem(keyRef.current);
       setStoredValue(initialValue);
     } catch {
-      // 静默失败
+      // ignore
     }
-  }, [key, initialValue]);
+  }, [initialValue]);
 
   // 跨标签页同步
   useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key !== key) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== keyRef.current) return;
+      if (e.newValue === null) {
+        setStoredValue(initialValue);
+        return;
+      }
       try {
-        setStoredValue(e.newValue ? (JSON.parse(e.newValue) as T) : initialValue);
+        const meta: StorageMeta<T> = deserialize(e.newValue);
+        if (meta.expires && Date.now() > meta.expires) {
+          setStoredValue(initialValue);
+        } else {
+          setStoredValue(meta.value !== undefined ? meta.value : (meta as unknown as T));
+        }
       } catch {
-        // 解析失败忽略
+        setStoredValue(initialValue);
       }
     };
 
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [key, initialValue]);
-
-  return [storedValue, setValue, remove];
-}
-
-/**
- * sessionStorage 版本（会话级别）。
- */
-export function useSessionStorage<T>(
-  key: string,
-  initialValue: T,
-): [T, SetValue<T>, () => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
-    try {
-      const item = window.sessionStorage.getItem(key);
-      return item ? (JSON.parse(item) as T) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
-
-  const setValue: SetValue<T> = useCallback(
-    (value) => {
-      setStoredValue((prev) => {
-        const nextValue = value instanceof Function ? value(prev) : value;
-        try {
-          window.sessionStorage.setItem(key, JSON.stringify(nextValue));
-        } catch {
-          // 静默失败
-        }
-        return nextValue;
-      });
-    },
-    [key],
-  );
-
-  const remove = useCallback(() => {
-    try {
-      window.sessionStorage.removeItem(key);
-      setStoredValue(initialValue);
-    } catch {
-      // 静默失败
-    }
-  }, [key, initialValue]);
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [initialValue, deserialize]);
 
   return [storedValue, setValue, remove];
 }
