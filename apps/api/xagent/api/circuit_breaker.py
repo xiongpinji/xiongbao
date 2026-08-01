@@ -1,17 +1,17 @@
-"""服务熔断器：防止级联故障（Circuit Breaker 模式）。
+"""熔断器：防止级联故障。
 
-三态模型：
-- CLOSED（正常）：请求正常通过
-- OPEN（熔断）：连续失败达阈值 → 快速失败，不再调用下游
-- HALF_OPEN（探测）：冷却期后放行少量请求探测恢复
+功能：
+- 三态：CLOSED → OPEN → HALF_OPEN → CLOSED
+- 失败率阈值触发熔断
+- 半开状态探测恢复
+- 按服务名隔离
 
 用法：
-    from xagent.api.circuit_breaker import CircuitBreaker
-    breaker = CircuitBreaker(name="llm", failure_threshold=5, recovery_timeout=30)
+    from xagent.api.circuit_breaker import circuit_breaker
 
-    @breaker.protect
-    async def call_llm(prompt: str):
-        ...
+    @circuit_breaker.protect("llm_api", failure_threshold=5, recovery_timeout=30)
+    async def call_llm(prompt: str) -> str:
+        return await llm_client.complete(prompt)
 """
 
 from __future__ import annotations
@@ -21,17 +21,28 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Coroutine
 
 from xagent.infra.logging import get_logger
 
-logger = get_logger("xagent.breaker")
+logger = get_logger("xagent.circuit")
 
 
 class CircuitState(str, Enum):
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
+    CLOSED = "closed"  # 正常通行
+    OPEN = "open"  # 熔断（拒绝请求）
+    HALF_OPEN = "half_open"  # 探测恢复
+
+
+class CircuitOpenError(Exception):
+    """熔断器开启时抛出。"""
+
+    def __init__(self, service: str, retry_after: float):
+        self.service = service
+        self.retry_after = retry_after
+        super().__init__(
+            f"Circuit open for '{service}', retry after {retry_after:.1f}s"
+        )
 
 
 @dataclass
@@ -39,125 +50,148 @@ class CircuitStats:
     """熔断器统计。"""
 
     total_calls: int = 0
-    total_failures: int = 0
-    total_successes: int = 0
-    consecutive_failures: int = 0
+    successful_calls: int = 0
+    failed_calls: int = 0
+    rejected_calls: int = 0
     last_failure_time: float = 0.0
     last_state_change: float = field(default_factory=time.time)
 
 
-class CircuitBreaker:
-    """熔断器实例。"""
+@dataclass
+class CircuitConfig:
+    """熔断器配置。"""
 
-    def __init__(
+    failure_threshold: int = 5  # 连续失败次数触发熔断
+    recovery_timeout: float = 30.0  # 熔断后等待恢复时间（秒）
+    half_open_max_calls: int = 3  # 半开状态最大探测次数
+    success_threshold: int = 2  # 半开状态连续成功次数恢复
+
+
+class CircuitBreaker:
+    """单服务熔断器。"""
+
+    def __init__(self, name: str, config: CircuitConfig):
+        self.name = name
+        self.config = config
+        self.state = CircuitState.CLOSED
+        self.stats = CircuitStats()
+        self._consecutive_failures = 0
+        self._half_open_successes = 0
+        self._half_open_calls = 0
+        self._lock = asyncio.Lock()
+
+    async def call(self, fn: Callable[..., Coroutine], *args: Any, **kwargs: Any) -> Any:
+        """通过熔断器调用函数。"""
+        async with self._lock:
+            self._check_state_transition()
+
+            if self.state == CircuitState.OPEN:
+                self.stats.rejected_calls += 1
+                retry_after = self._time_until_retry()
+                raise CircuitOpenError(self.name, retry_after)
+
+            if self.state == CircuitState.HALF_OPEN:
+                if self._half_open_calls >= self.config.half_open_max_calls:
+                    self.stats.rejected_calls += 1
+                    raise CircuitOpenError(self.name, 1.0)
+                self._half_open_calls += 1
+
+        # 执行调用（锁外）
+        self.stats.total_calls += 1
+        try:
+            result = await fn(*args, **kwargs)
+            await self._on_success()
+            return result
+        except Exception as exc:
+            await self._on_failure()
+            raise exc
+
+    async def _on_success(self) -> None:
+        async with self._lock:
+            self.stats.successful_calls += 1
+            self._consecutive_failures = 0
+
+            if self.state == CircuitState.HALF_OPEN:
+                self._half_open_successes += 1
+                if self._half_open_successes >= self.config.success_threshold:
+                    self._transition_to(CircuitState.CLOSED)
+
+    async def _on_failure(self) -> None:
+        async with self._lock:
+            self.stats.failed_calls += 1
+            self.stats.last_failure_time = time.time()
+            self._consecutive_failures += 1
+
+            if self.state == CircuitState.HALF_OPEN:
+                self._transition_to(CircuitState.OPEN)
+            elif self._consecutive_failures >= self.config.failure_threshold:
+                self._transition_to(CircuitState.OPEN)
+
+    def _check_state_transition(self) -> None:
+        """检查是否需要状态转换（OPEN → HALF_OPEN）。"""
+        if self.state == CircuitState.OPEN:
+            elapsed = time.time() - self.stats.last_state_change
+            if elapsed >= self.config.recovery_timeout:
+                self._transition_to(CircuitState.HALF_OPEN)
+
+    def _transition_to(self, new_state: CircuitState) -> None:
+        old = self.state
+        self.state = new_state
+        self.stats.last_state_change = time.time()
+
+        if new_state == CircuitState.HALF_OPEN:
+            self._half_open_successes = 0
+            self._half_open_calls = 0
+        elif new_state == CircuitState.CLOSED:
+            self._consecutive_failures = 0
+
+        logger.info(
+            "circuit '%s': %s → %s", self.name, old.value, new_state.value
+        )
+
+    def _time_until_retry(self) -> float:
+        elapsed = time.time() - self.stats.last_state_change
+        return max(0, self.config.recovery_timeout - elapsed)
+
+
+class CircuitBreakerRegistry:
+    """熔断器注册表。"""
+
+    def __init__(self):
+        self._breakers: dict[str, CircuitBreaker] = {}
+
+    def get(self, name: str, config: CircuitConfig | None = None) -> CircuitBreaker:
+        if name not in self._breakers:
+            self._breakers[name] = CircuitBreaker(name, config or CircuitConfig())
+        return self._breakers[name]
+
+    def protect(
         self,
-        name: str = "default",
+        name: str,
         failure_threshold: int = 5,
         recovery_timeout: float = 30.0,
-        half_open_max_calls: int = 3,
-    ):
-        self.name = name
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.half_open_max_calls = half_open_max_calls
+    ) -> Callable:
+        """装饰器：保护函数。"""
+        config = CircuitConfig(
+            failure_threshold=failure_threshold,
+            recovery_timeout=recovery_timeout,
+        )
 
-        self._state = CircuitState.CLOSED
-        self._stats = CircuitStats()
-        self._half_open_calls = 0
+        def decorator(fn: Callable[..., Coroutine]) -> Callable:
+            breaker = self.get(name, config)
 
-    @property
-    def state(self) -> CircuitState:
-        """当前状态（含自动转换逻辑）。"""
-        if self._state == CircuitState.OPEN:
-            # 冷却期到 → 转为 HALF_OPEN
-            if time.time() - self._stats.last_failure_time >= self.recovery_timeout:
-                self._transition(CircuitState.HALF_OPEN)
-                self._half_open_calls = 0
-        return self._state
+            @wraps(fn)
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                return await breaker.call(fn, *args, **kwargs)
 
-    def _transition(self, new_state: CircuitState):
-        old = self._state
-        self._state = new_state
-        self._stats.last_state_change = time.time()
-        logger.info("circuit_transition", breaker=self.name, from_state=old.value, to_state=new_state.value)
+            return wrapper
 
-    def record_success(self):
-        """记录成功。"""
-        self._stats.total_calls += 1
-        self._stats.total_successes += 1
-        self._stats.consecutive_failures = 0
-
-        if self._state == CircuitState.HALF_OPEN:
-            self._half_open_calls += 1
-            if self._half_open_calls >= self.half_open_max_calls:
-                self._transition(CircuitState.CLOSED)
-
-    def record_failure(self):
-        """记录失败。"""
-        self._stats.total_calls += 1
-        self._stats.total_failures += 1
-        self._stats.consecutive_failures += 1
-        self._stats.last_failure_time = time.time()
-
-        if self._state == CircuitState.HALF_OPEN:
-            # 探测失败 → 重新熔断
-            self._transition(CircuitState.OPEN)
-        elif self._stats.consecutive_failures >= self.failure_threshold:
-            self._transition(CircuitState.OPEN)
-
-    def protect(self, fn: Callable) -> Callable:
-        """装饰器：保护异步函数。"""
-
-        @wraps(fn)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            state = self.state  # 触发自动转换
-
-            if state == CircuitState.OPEN:
-                raise CircuitOpenError(
-                    f"熔断器 [{self.name}] 已开启，{self.recovery_timeout}s 后重试"
-                )
-
-            try:
-                result = await fn(*args, **kwargs)
-                self.record_success()
-                return result
-            except Exception as e:
-                self.record_failure()
-                raise
-
-        return wrapper
+        return decorator
 
     @property
-    def stats(self) -> dict:
-        return {
-            "name": self.name,
-            "state": self.state.value,
-            "total_calls": self._stats.total_calls,
-            "total_failures": self._stats.total_failures,
-            "consecutive_failures": self._stats.consecutive_failures,
-            "failure_threshold": self.failure_threshold,
-            "recovery_timeout": self.recovery_timeout,
-        }
+    def states(self) -> dict[str, str]:
+        return {name: cb.state.value for name, cb in self._breakers.items()}
 
 
-class CircuitOpenError(Exception):
-    """熔断器开启时抛出。"""
-
-    pass
-
-
-# ─── 预置熔断器实例 ───
-
-_breakers: dict[str, CircuitBreaker] = {}
-
-
-def get_breaker(name: str, **kwargs) -> CircuitBreaker:
-    """获取或创建命名熔断器。"""
-    if name not in _breakers:
-        _breakers[name] = CircuitBreaker(name=name, **kwargs)
-    return _breakers[name]
-
-
-def all_breaker_stats() -> list[dict]:
-    """所有熔断器状态。"""
-    return [b.stats for b in _breakers.values()]
+# 全局单例
+circuit_breaker = CircuitBreakerRegistry()
