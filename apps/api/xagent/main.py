@@ -162,6 +162,10 @@ def create_app() -> FastAPI:
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(RequestContextMiddleware)
 
+    # ETag 响应缓存（GET 条件请求 304）
+    from xagent.api.response_cache import ResponseCacheMiddleware
+    app.add_middleware(ResponseCacheMiddleware, cache_ttl=60)
+
     # 路由挂载
     app.include_router(system.router)
     app.include_router(api_v1)
@@ -169,6 +173,10 @@ def create_app() -> FastAPI:
     # WebSocket 实时通信
     from xagent.api.ws import router as ws_router
     app.include_router(ws_router)
+
+    # 增强健康检查（/health/live, /health/ready, /health/deep）
+    from xagent.api.health import router as health_router
+    app.include_router(health_router)
 
     # API 版本发现
     @app.get("/api/versions", tags=["system"], summary="可用 API 版本")
