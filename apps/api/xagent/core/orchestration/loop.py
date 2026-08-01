@@ -156,11 +156,10 @@ async def _auto_extract_skill(
     try:
         from xagent.core.skills import get_skill_store
 
-        # 提取使用过的工具列表
+        # 提取使用过的工具列表（工具名在 e.tool 字段）
         tools_used = [
-            e.content.split("(")[0].strip()
-            for e in events
-            if e.kind == StepKind.tool_call and e.content
+            e.tool for e in events
+            if e.kind == StepKind.tool_call and e.tool
         ]
         store = get_skill_store()
         await store.auto_extract(

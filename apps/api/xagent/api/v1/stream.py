@@ -42,6 +42,7 @@ class StreamRunIn(BaseModel):
     capabilities: list[str] = Field(default_factory=list)
     conversation_id: str | None = None
     mode: str = Field(default="full-auto", description="Permission mode: suggest | auto-edit | full-auto")
+    strategy: str = Field(default="react", description="Execution strategy: react | plan-execute")
 
 
 def _build_input_payload(goal: str, role: str | None, caps: list[str]) -> dict:
@@ -98,12 +99,32 @@ _AGENT_RUN_TIMEOUT = 600
 async def _event_stream(
     goal: str, principal: Principal, role: str | None, caps: list[str],
     conversation_id: str | None = None, request: Request | None = None,
-    mode: str = "full-auto",
+    mode: str = "full-auto", strategy: str = "react",
 ) -> AsyncGenerator[bytes, None]:
     """跑 agent 并把事件逐条以 SSE 实时推送（step 级流式）。"""
     run_id = uuid.uuid4().hex
     resolved_conv_id = conversation_id or uuid.uuid4().hex
-    yield _sse("started", {"goal": goal, "run_id": run_id, "conversation_id": resolved_conv_id})
+    yield _sse("started", {"goal": goal, "run_id": run_id, "conversation_id": resolved_conv_id, "strategy": strategy})
+
+    # Plan-and-Execute 模式：先生成计划并推送给前端
+    if strategy == "plan-execute":
+        try:
+            from xagent.adapters.llm import get_llm_client
+            from xagent.core.orchestration.plan_execute import generate_plan
+            llm = get_llm_client()
+            from xagent.core.tools import get_registry
+            tool_names = list(get_registry().list_names())
+            plan = await generate_plan(goal, tool_names, llm)
+            yield _sse("plan", {
+                "steps": [{"id": s.id, "description": s.description, "tool_hint": s.tool_hint, "depends_on": s.depends_on} for s in plan.steps],
+                "total": len(plan.steps),
+            })
+            # 将计划注入目标上下文
+            plan_ctx = "\n".join(f"{s.id}. {s.description}" for s in plan.steps)
+            goal = f"{goal}\n\n[执行计划]\n{plan_ctx}\n请严格按计划逐步执行。"
+        except Exception as exc:
+            logger.debug("plan_generate_failed", error=str(exc))
+            yield _sse("plan", {"steps": [], "total": 0, "error": str(exc)})
 
     queue: asyncio.Queue = asyncio.Queue()
     done = object()
@@ -312,7 +333,7 @@ async def stream_run(
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> StreamingResponse:
     return StreamingResponse(
-        _event_stream(body.goal, principal, body.role, body.capabilities, body.conversation_id, request, body.mode),
+        _event_stream(body.goal, principal, body.role, body.capabilities, body.conversation_id, request, body.mode, body.strategy),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

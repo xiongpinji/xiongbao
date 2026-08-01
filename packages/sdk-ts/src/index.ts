@@ -199,4 +199,82 @@ export class XAgentClient {
   async ready() {
     return (await this.http.get("/ready")).data;
   }
+
+  // ---- Skills ----
+  async listSkills() {
+    return (await this.http.get("/skills")).data;
+  }
+
+  async skillStats() {
+    return (await this.http.get("/skills/stats")).data;
+  }
+
+  // ---- Workflow Templates ----
+  async listTemplates() {
+    return (await this.http.get("/workflows/templates/list")).data;
+  }
+
+  async saveTemplate(body: { name: string; nodes: unknown[]; edges: unknown[]; template_id?: string }) {
+    return (await this.http.post("/workflows/templates/save", body)).data;
+  }
+
+  async loadTemplate(templateId: string) {
+    return (await this.http.get(`/workflows/templates/${templateId}`)).data;
+  }
+
+  async deleteTemplate(templateId: string) {
+    return (await this.http.delete(`/workflows/templates/${templateId}`)).data;
+  }
+
+  // ---- MCP ----
+  async mcpServers() {
+    return (await this.http.get("/mcp/servers")).data;
+  }
+
+  // ---- Streaming (SSE) ----
+  async *streamRun(body: { goal: string; mode?: string; strategy?: string }): AsyncGenerator<{ event: string; data: unknown }> {
+    const resp = await fetch(`${this.http.defaults.baseURL}/stream/agents/run`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.http.defaults.headers.common.Authorization
+          ? { Authorization: this.http.defaults.headers.common.Authorization as string }
+          : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error(`Stream failed: ${resp.status}`);
+    const reader = resp.body?.getReader();
+    if (!reader) throw new Error("No response body");
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            yield parsed;
+          } catch { /* skip malformed */ }
+        }
+      }
+    }
+  }
+
+  // ---- Tenants ----
+  async tenantInfo() {
+    return (await this.http.get("/tenants/info")).data;
+  }
+
+  async listUsers() {
+    return (await this.http.get("/tenants/users")).data;
+  }
+
+  async createApiKey(body: { name: string; scopes?: string[] }) {
+    return (await this.http.post("/tenants/api-keys", body)).data;
+  }
 }

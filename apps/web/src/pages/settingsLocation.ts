@@ -11,6 +11,7 @@ const VALID_SECTIONS: SettingsSection[] = [
   "commands",
   "index",
   "usage",
+  "team",
   "onboarding",
 ];
 

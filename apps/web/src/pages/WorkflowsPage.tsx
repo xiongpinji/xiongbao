@@ -2,7 +2,7 @@
  * 工作流可视化编排页面 — 拖拽式编辑器
  * 支持：自定义节点 / 拖拽添加 / 连线=依赖 / 节点配置 / 模板 / 执行
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactFlow, {
   Background, Controls, MiniMap, ReactFlowProvider,
@@ -10,8 +10,9 @@ import ReactFlow, {
   type Connection, type Node, type Edge, MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Play } from "lucide-react";
+import { Play, Save, Trash2 } from "lucide-react";
 import { runWorkflow, type WorkflowView } from "../api";
+import { api } from "../api/client";
 import { useShellActions } from "../shell/useShellStore";
 import { wfNodeTypes, kindToRfType, WF_NODE_META, type WfNodeData, type WfNodeKind } from "../components/workflow/WorkflowNodes";
 import WorkflowPalette from "../components/workflow/WorkflowPalette";
@@ -97,6 +98,8 @@ function WorkflowsInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastView, setLastView] = useState<WorkflowView | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [savedTemplates, setSavedTemplates] = useState<{ template_id: string; name: string; version: number }[]>([]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges(eds => addEdge({ ...conn, ...defaultEdge }, eds));
@@ -153,6 +156,50 @@ function WorkflowsInner() {
     if (tn.length) { setNodes(tn); setEdges(te); setSelectedNode(null); }
   }
 
+  // ─── 保存/加载模板 ───
+  const refreshTemplates = useCallback(async () => {
+    try {
+      const resp = await api.get("/workflows/templates/list");
+      setSavedTemplates(resp.data.templates.map((t: { template_id: string; name: string; version: number }) => ({ template_id: t.template_id, name: t.name, version: t.version })));
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { refreshTemplates(); }, [refreshTemplates]);
+
+  async function saveTemplate() {
+    try {
+      const resp = await api.post("/workflows/templates/save", {
+        name, nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+        edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })),
+        template_id: templateId,
+      });
+      setTemplateId(resp.data.template.template_id);
+      setError(null);
+      refreshTemplates();
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "保存失败"); }
+  }
+
+  async function loadTemplate(tid: string) {
+    try {
+      const resp = await api.get(`/workflows/templates/${tid}`);
+      const tpl = resp.data.template;
+      setName(tpl.name);
+      setTemplateId(tpl.template_id);
+      setNodes(tpl.nodes);
+      setEdges(tpl.edges.map((e: { id: string; source: string; target: string }) => ({ ...e, ...defaultEdge })));
+      setSelectedNode(null);
+      setError(null);
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "加载失败"); }
+  }
+
+  async function deleteTemplate(tid: string) {
+    try {
+      await api.delete(`/workflows/templates/${tid}`);
+      if (templateId === tid) setTemplateId(null);
+      refreshTemplates();
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "删除失败"); }
+  }
+
   // ─── 从画布提取步骤 → 提交后端 ───
   function extractSteps() {
     // 构建依赖图：edge.source → edge.target 意味着 target depends_on source
@@ -196,6 +243,23 @@ function WorkflowsInner() {
           <input className="field h-9 w-48 rounded-xl py-1.5 text-sm" value={name}
             onChange={e => setName(e.target.value)} placeholder="工作流名称" />
           <div className="ml-auto flex items-center gap-2">
+            {savedTemplates.length > 0 && (
+              <select className="field h-9 rounded-xl px-3 text-sm" defaultValue=""
+                onChange={e => { if (e.target.value) loadTemplate(e.target.value); e.target.value = ""; }}>
+                <option value="" disabled>打开...</option>
+                {savedTemplates.map(t => <option key={t.template_id} value={t.template_id}>{t.name} (v{t.version})</option>)}
+              </select>
+            )}
+            <button onClick={saveTemplate}
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-sm text-neutral-300 transition hover:border-[#d6ad62]/40 hover:text-[#d6ad62]">
+              <Save size={14} /> 保存
+            </button>
+            {templateId && (
+              <button onClick={() => deleteTemplate(templateId)}
+                className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-sm text-neutral-400 transition hover:border-red-500/40 hover:text-red-400">
+                <Trash2 size={14} />
+              </button>
+            )}
             <select className="field h-9 rounded-xl px-3 text-sm" defaultValue=""
               onChange={e => { if (e.target.value) applyTemplate(e.target.value); e.target.value = ""; }}>
               <option value="" disabled>模板...</option>

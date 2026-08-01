@@ -11,6 +11,7 @@ import {
   Settings2,
   SlidersHorizontal,
   Sparkles,
+  Users,
 } from "lucide-react";
 import ConversationalCommand from "../chat/ConversationalCommand";
 
@@ -24,6 +25,7 @@ export type SettingsSection =
   | "commands"
   | "index"
   | "usage"
+  | "team"
   | "onboarding";
 
 const sections: { id: SettingsSection; label: string; description: string; icon: typeof Settings2 }[] = [
@@ -36,6 +38,7 @@ const sections: { id: SettingsSection; label: string; description: string; icon:
   { id: "commands", label: "命令", description: "Slash 命令与快捷执行入口", icon: Command },
   { id: "index", label: "索引库", description: "知识库、记忆检索和候选发现", icon: Database },
   { id: "usage", label: "使用统计", description: "运行、产物与资源使用数据", icon: BarChart3 },
+  { id: "team", label: "团队管理", description: "用户、角色与 API Key 管理", icon: Users },
   { id: "onboarding", label: "引导", description: "快速上手和工作区初始化", icon: Rocket },
 ];
 

@@ -235,12 +235,17 @@ class SkillStore:
     ) -> Skill | None:
         """从成功的复杂任务中自动提炼技能。
 
-        条件：步数 >= MIN_STEPS_FOR_EXTRACTION 且回答有实质内容。
+        条件：步数 >= MIN_STEPS_FOR_EXTRACTION 且（回答有实质内容 或 使用了多个工具）。
         使用 LLM 生成技能摘要（若可用），否则用规则提取。
         """
         if steps_count < MIN_STEPS_FOR_EXTRACTION:
+            logger.debug("skill_extract_skip", reason="too_few_steps", steps=steps_count)
             return None
-        if len(answer) < MIN_ANSWER_LEN_FOR_EXTRACTION:
+        # 工具型任务可能回答很短，但工具调用多也说明复杂度足够
+        tools_count = len(tools_used or [])
+        if len(answer) < MIN_ANSWER_LEN_FOR_EXTRACTION and tools_count < 3:
+            logger.debug("skill_extract_skip", reason="insufficient_content",
+                         answer_len=len(answer), tools=tools_count)
             return None
 
         # 检查是否已有高度相似的技能（避免重复）

@@ -809,3 +809,62 @@ async def deny(
         detail={"run_id": run_id, "step_id": step_id},
     )
     return view
+
+
+# ─── 工作流模板 CRUD ───
+
+class TemplateSaveIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=128)
+    nodes: list[dict] = Field(default_factory=list)
+    edges: list[dict] = Field(default_factory=list)
+    template_id: str | None = None
+
+
+@router.get("/templates/list", summary="列出已保存的工作流模板")
+async def list_templates(principal: Principal = Depends(require_permission("workflow", "read"))) -> dict:
+    from xagent.core.workflow_templates import get_template_store
+    store = get_template_store()
+    templates = [t.to_view() for t in store.list(principal.tenant_id)]
+    return {"templates": templates, "count": len(templates)}
+
+
+@router.post("/templates/save", summary="保存工作流模板")
+async def save_template(
+    body: TemplateSaveIn,
+    principal: Principal = Depends(require_permission("workflow", "write")),
+) -> dict:
+    from xagent.core.workflow_templates import get_template_store
+    store = get_template_store()
+    tpl = store.save(
+        tenant_id=principal.tenant_id,
+        name=body.name,
+        nodes=body.nodes,
+        edges=body.edges,
+        template_id=body.template_id,
+    )
+    return {"template": tpl.to_view()}
+
+
+@router.get("/templates/{template_id}", summary="加载工作流模板")
+async def load_template(
+    template_id: str,
+    principal: Principal = Depends(require_permission("workflow", "read")),
+) -> dict:
+    from xagent.core.workflow_templates import get_template_store
+    store = get_template_store()
+    tpl = store.get(template_id, principal.tenant_id)
+    if not tpl:
+        raise HTTPException(404, "模板不存在")
+    return {"template": tpl.to_view()}
+
+
+@router.delete("/templates/{template_id}", summary="删除工作流模板")
+async def delete_template(
+    template_id: str,
+    principal: Principal = Depends(require_permission("workflow", "write")),
+) -> dict:
+    from xagent.core.workflow_templates import get_template_store
+    store = get_template_store()
+    if not store.delete(template_id, principal.tenant_id):
+        raise HTTPException(404, "模板不存在")
+    return {"deleted": template_id}

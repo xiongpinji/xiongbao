@@ -1,3 +1,189 @@
+"""X-Agent CLI — 命令行管理工具。
+
+用法：
+    xagent serve          启动 API 服务
+    xagent run "目标"     直接运行 Agent 任务
+    xagent skills list    列出技能
+    xagent mcp status     MCP Server 状态
+    xagent health         健康检查
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import sys
+
+
+def _serve(args: argparse.Namespace) -> None:
+    """启动 uvicorn 服务。"""
+    import uvicorn
+
+    uvicorn.run(
+        "xagent.main:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level="info",
+    )
+
+
+def _run(args: argparse.Namespace) -> None:
+    """通过 API 运行 Agent 任务。"""
+    import httpx
+
+    base = f"http://{args.host}:{args.port}/api/v1"
+    # 登录
+    if args.token:
+        token = args.token
+    else:
+        resp = httpx.post(f"{base}/auth/login", json={"username": args.user, "password": args.password})
+        if resp.status_code != 200:
+            print(f"登录失败: {resp.text}", file=sys.stderr)
+            sys.exit(1)
+        token = resp.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    if args.stream:
+        # SSE 流式
+        body = {"goal": args.goal, "mode": "full-auto", "strategy": args.strategy}
+        with httpx.stream("POST", f"{base}/stream/agents/run", json=body, headers=headers, timeout=300) as r:
+            for line in r.iter_lines():
+                if line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    event = data.get("event", "")
+                    if event == "step":
+                        step = data.get("data", {})
+                        print(f"  [{step.get('step', '?')}] {step.get('kind', '')} {step.get('tool', '')}")
+                    elif event == "done":
+                        answer = data.get("data", {}).get("final_answer", "")
+                        print(f"\n✓ 完成: {answer[:200]}")
+                    elif event == "error":
+                        print(f"\n✗ 错误: {data.get('data', {})}", file=sys.stderr)
+    else:
+        # 同步
+        resp = httpx.post(f"{base}/agents/run", json={"goal": args.goal}, headers=headers, timeout=300)
+        if resp.status_code != 200:
+            print(f"执行失败: {resp.text}", file=sys.stderr)
+            sys.exit(1)
+        result = resp.json()
+        print(f"Run ID: {result.get('run_id', '?')}")
+        print(f"Steps:  {result.get('steps', 0)}")
+        print(f"Answer: {result.get('final_answer', '')}")
+
+
+def _skills(args: argparse.Namespace) -> None:
+    """技能管理。"""
+    import httpx
+
+    base = f"http://{args.host}:{args.port}/api/v1"
+    token = _get_token(args, base)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    if args.skills_cmd == "list":
+        resp = httpx.get(f"{base}/skills", headers=headers)
+        data = resp.json()
+        for s in data.get("skills", []):
+            print(f"  [{s['skill_id']}] {s['name']} (v{s['version']}, source={s['source']})")
+        print(f"\n共 {data.get('count', 0)} 个技能")
+    elif args.skills_cmd == "stats":
+        resp = httpx.get(f"{base}/skills/stats", headers=headers)
+        print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+
+
+def _mcp(args: argparse.Namespace) -> None:
+    """MCP Server 状态。"""
+    import httpx
+
+    base = f"http://{args.host}:{args.port}/api/v1"
+    token = _get_token(args, base)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = httpx.get(f"{base}/mcp/servers", headers=headers)
+    data = resp.json()
+    for srv in data.get("servers", []):
+        status = "✓" if srv.get("connected") else "✗"
+        print(f"  {status} {srv['name']} ({srv.get('tool_count', 0)} tools)")
+    print(f"\n共 {data.get('total_tools', 0)} 个工具")
+
+
+def _health(args: argparse.Namespace) -> None:
+    """健康检查。"""
+    import httpx
+
+    base = f"http://{args.host}:{args.port}"
+    try:
+        resp = httpx.get(f"{base}/health", timeout=5)
+        print(f"Health: {resp.json()}")
+        resp2 = httpx.get(f"{base}/ready", timeout=5)
+        print(f"Ready:  {resp2.json()}")
+    except Exception as e:
+        print(f"服务不可达: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _get_token(args: argparse.Namespace, base: str) -> str:
+    if args.token:
+        return args.token
+    import httpx
+    resp = httpx.post(f"{base}/auth/login", json={"username": args.user, "password": args.password})
+    if resp.status_code != 200:
+        print(f"登录失败: {resp.text}", file=sys.stderr)
+        sys.exit(1)
+    return resp.json()["access_token"]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="xagent", description="X-Agent CLI")
+    parser.add_argument("--host", default="127.0.0.1", help="API host")
+    parser.add_argument("--port", type=int, default=8000, help="API port")
+    parser.add_argument("--token", default="", help="JWT token (跳过登录)")
+    parser.add_argument("--user", default="admin", help="用户名")
+    parser.add_argument("--password", default="admin", help="密码")
+
+    sub = parser.add_subparsers(dest="command")
+
+    # serve
+    p_serve = sub.add_parser("serve", help="启动 API 服务")
+    p_serve.add_argument("--reload", action="store_true", help="开发热重载")
+
+    # run
+    p_run = sub.add_parser("run", help="运行 Agent 任务")
+    p_run.add_argument("goal", help="任务目标")
+    p_run.add_argument("--stream", action="store_true", help="SSE 流式输出")
+    p_run.add_argument("--strategy", default="react", choices=["react", "plan-execute"])
+
+    # skills
+    p_skills = sub.add_parser("skills", help="技能管理")
+    skills_sub = p_skills.add_subparsers(dest="skills_cmd")
+    skills_sub.add_parser("list", help="列出技能")
+    skills_sub.add_parser("stats", help="技能统计")
+
+    # mcp
+    sub.add_parser("mcp", help="MCP Server 状态")
+
+    # health
+    sub.add_parser("health", help="健康检查")
+
+    args = parser.parse_args()
+
+    if args.command == "serve":
+        _serve(args)
+    elif args.command == "run":
+        _run(args)
+    elif args.command == "skills":
+        _skills(args)
+    elif args.command == "mcp":
+        _mcp(args)
+    elif args.command == "health":
+        _health(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
 """命令行入口：``xagent <command>``。
 
 命令：

@@ -10,6 +10,7 @@ import OnboardingSettings from "../components/settings/OnboardingSettings";
 import PluginSettings from "../components/settings/PluginSettings";
 import SettingsLayout from "../components/settings/SettingsLayout";
 import SkillsSettings from "../components/settings/SkillsSettings";
+import TeamSettings from "../components/settings/TeamSettings";
 import UsageStatsSettings from "../components/settings/UsageStatsSettings";
 import { resolveSettingsLocation } from "./settingsLocation";
 
@@ -43,6 +44,7 @@ export default function SettingsPage() {
       {location.section === "commands" && <CommandsSettings />}
       {location.section === "index" && <IndexSettings initialTab={location.tab} />}
       {location.section === "usage" && <UsageStatsSettings />}
+      {location.section === "team" && <TeamSettings />}
       {location.section === "onboarding" && <OnboardingSettings />}
     </SettingsLayout>
   );
