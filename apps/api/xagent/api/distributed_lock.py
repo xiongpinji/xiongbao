@@ -1,21 +1,18 @@
 """分布式锁：基于内存的互斥锁管理。
 
 功能：
-- 异步锁（asyncio.Lock 封装）
+- 命名锁（按资源粒度）
 - 自动过期（防死锁）
-- 锁持有者标识
-- 上下文管理器 + 装饰器
+- 可重入
+- 等待超时
 
 用法：
-    from xagent.api.distributed_lock import lock_manager
+    from xagent.api.distributed_lock import LockManager
 
-    # 上下文管理器
-    async with lock_manager.acquire("resource:123", timeout=30):
-        do_exclusive_work()
-
-    # 装饰器
-    @lock_manager.lock("task:{task_id}")
-    async def process_task(task_id: str): ...
+    locks = LockManager()
+    async with locks.acquire("resource:123", timeout_s=10):
+        # 临界区
+        ...
 """
 
 from __future__ import annotations
@@ -25,8 +22,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from functools import wraps
-from typing import Any, AsyncGenerator, Callable
+from typing import Any, AsyncGenerator
 
 from xagent.infra.logging import get_logger
 
@@ -37,146 +33,163 @@ logger = get_logger("xagent.lock")
 class LockInfo:
     """锁信息。"""
 
-    key: str
+    name: str
     owner: str
-    acquired_at: float
-    timeout: float  # 秒
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    @property
-    def is_expired(self) -> bool:
-        return time.time() - self.acquired_at > self.timeout
+    acquired_at: float = field(default_factory=time.time)
+    expires_at: float = 0.0
+    reentrant_count: int = 1
 
 
 class LockManager:
-    """异步锁管理器。
+    """分布式锁管理器（内存实现）。"""
 
-    注意：这是进程内锁，适用于单实例部署。
-    多实例需替换为 Redis 分布式锁。
-    """
-
-    def __init__(self, default_timeout: float = 30.0):
+    def __init__(self, default_ttl_s: float = 30.0):
         self._locks: dict[str, LockInfo] = {}
-        self._default_timeout = default_timeout
-        self._stats = {"acquired": 0, "released": 0, "timeouts": 0, "contentions": 0}
+        self._waiters: dict[str, list[asyncio.Future]] = {}
+        self._mu = asyncio.Lock()
+        self._default_ttl_s = default_ttl_s
+
+        # 统计
+        self._total_acquired = 0
+        self._total_timeouts = 0
+        self._total_contentions = 0
 
     @asynccontextmanager
     async def acquire(
         self,
-        key: str,
-        timeout: float | None = None,
+        name: str,
+        timeout_s: float = 10.0,
+        ttl_s: float | None = None,
         owner: str | None = None,
-        wait_timeout: float = 10.0,
     ) -> AsyncGenerator[str, None]:
         """获取锁（上下文管理器）。
 
         Args:
-            key: 锁标识
-            timeout: 锁自动过期时间（秒）
-            owner: 持有者标识
-            wait_timeout: 等待获取锁的超时（秒）
+            name: 锁名称
+            timeout_s: 等待超时
+            ttl_s: 锁过期时间
+            owner: 持有者标识（默认自动生成）
 
         Yields:
             owner ID
+
+        Raises:
+            TimeoutError: 等待超时
         """
-        effective_timeout = timeout or self._default_timeout
-        effective_owner = owner or str(uuid.uuid4())[:8]
+        owner_id = owner or str(uuid.uuid4())[:8]
+        ttl = ttl_s or self._default_ttl_s
 
-        # 检查过期锁
-        if key in self._locks and self._locks[key].is_expired:
-            logger.warning("lock expired, force releasing: %s", key)
-            self._locks[key].lock.release()
-            del self._locks[key]
-            self._stats["timeouts"] += 1
-
-        # 获取或创建锁
-        if key not in self._locks:
-            self._locks[key] = LockInfo(
-                key=key,
-                owner=effective_owner,
-                acquired_at=time.time(),
-                timeout=effective_timeout,
-            )
-
-        lock_info = self._locks[key]
-
-        # 等待获取
-        if lock_info.lock.locked():
-            self._stats["contentions"] += 1
+        acquired = await self._try_acquire(name, owner_id, ttl, timeout_s)
+        if not acquired:
+            self._total_timeouts += 1
+            raise TimeoutError(f"Failed to acquire lock '{name}' within {timeout_s}s")
 
         try:
-            await asyncio.wait_for(lock_info.lock.acquire(), timeout=wait_timeout)
-        except asyncio.TimeoutError:
-            logger.warning("lock acquisition timeout: %s", key)
-            raise TimeoutError(f"Failed to acquire lock '{key}' within {wait_timeout}s")
-
-        # 更新持有者信息
-        lock_info.owner = effective_owner
-        lock_info.acquired_at = time.time()
-        lock_info.timeout = effective_timeout
-        self._stats["acquired"] += 1
-
-        logger.debug("lock acquired: %s by %s", key, effective_owner)
-
-        try:
-            yield effective_owner
+            yield owner_id
         finally:
-            lock_info.lock.release()
-            self._stats["released"] += 1
-            # 如果没有其他等待者，清理
-            if not lock_info.lock.locked():
-                del self._locks[key]
-            logger.debug("lock released: %s", key)
+            await self._release(name, owner_id)
 
-    def lock(self, key_template: str, timeout: float | None = None):
-        """锁装饰器。
+    async def _try_acquire(self, name: str, owner: str, ttl: float, timeout_s: float) -> bool:
+        """尝试获取锁。"""
+        deadline = time.time() + timeout_s
 
-        key_template 支持格式化：@lock("task:{task_id}")
-        """
+        while True:
+            async with self._mu:
+                existing = self._locks.get(name)
 
-        def decorator(fn: Callable) -> Callable:
-            @wraps(fn)
-            async def wrapper(*args: Any, **kwargs: Any) -> Any:
-                # 解析 key
-                try:
-                    key = key_template.format(*args, **kwargs)
-                except (KeyError, IndexError):
-                    key = key_template
+                # 锁不存在或已过期
+                if existing is None or time.time() > existing.expires_at:
+                    self._locks[name] = LockInfo(
+                        name=name,
+                        owner=owner,
+                        expires_at=time.time() + ttl,
+                    )
+                    self._total_acquired += 1
+                    return True
 
-                async with self.acquire(key, timeout=timeout):
-                    return await fn(*args, **kwargs)
+                # 可重入
+                if existing.owner == owner:
+                    existing.reentrant_count += 1
+                    existing.expires_at = time.time() + ttl
+                    return True
 
-            return wrapper
+                # 锁被占用
+                self._total_contentions += 1
 
-        return decorator
+            # 检查超时
+            if time.time() >= deadline:
+                return False
 
-    def is_locked(self, key: str) -> bool:
-        """检查锁是否被持有。"""
-        info = self._locks.get(key)
-        if info is None:
-            return False
-        if info.is_expired:
-            return False
-        return info.lock.locked()
+            # 等待释放
+            loop = asyncio.get_event_loop()
+            future: asyncio.Future = loop.create_future()
+            if name not in self._waiters:
+                self._waiters[name] = []
+            self._waiters[name].append(future)
 
-    def get_lock_info(self, key: str) -> dict | None:
-        """获取锁信息。"""
-        info = self._locks.get(key)
-        if info is None:
-            return None
+            try:
+                wait_time = min(deadline - time.time(), 0.5)
+                await asyncio.wait_for(future, timeout=wait_time)
+            except asyncio.TimeoutError:
+                pass
+            finally:
+                if name in self._waiters:
+                    try:
+                        self._waiters[name].remove(future)
+                    except ValueError:
+                        pass
+
+    async def _release(self, name: str, owner: str) -> None:
+        """释放锁。"""
+        async with self._mu:
+            existing = self._locks.get(name)
+            if existing is None or existing.owner != owner:
+                return
+
+            existing.reentrant_count -= 1
+            if existing.reentrant_count > 0:
+                return
+
+            del self._locks[name]
+
+        # 通知等待者
+        waiters = self._waiters.pop(name, [])
+        for future in waiters:
+            if not future.done():
+                future.set_result(True)
+
+    async def is_locked(self, name: str) -> bool:
+        """检查锁状态。"""
+        async with self._mu:
+            existing = self._locks.get(name)
+            if existing is None:
+                return False
+            if time.time() > existing.expires_at:
+                del self._locks[name]
+                return False
+            return True
+
+    def get_stats(self) -> dict[str, Any]:
+        """获取统计。"""
         return {
-            "key": info.key,
-            "owner": info.owner,
-            "acquired_at": info.acquired_at,
-            "timeout": info.timeout,
-            "is_expired": info.is_expired,
-            "locked": info.lock.locked(),
+            "active_locks": len(self._locks),
+            "total_acquired": self._total_acquired,
+            "total_timeouts": self._total_timeouts,
+            "total_contentions": self._total_contentions,
         }
 
-    @property
-    def stats(self) -> dict:
-        return {**self._stats, "active_locks": len(self._locks)}
+    async def force_release(self, name: str) -> bool:
+        """强制释放（管理用途）。"""
+        async with self._mu:
+            if name in self._locks:
+                del self._locks[name]
+                waiters = self._waiters.pop(name, [])
+                for f in waiters:
+                    if not f.done():
+                        f.set_result(True)
+                return True
+            return False
 
 
-# 全局单例
-lock_manager = LockManager(default_timeout=30.0)
+# 全局实例
+lock_manager = LockManager()

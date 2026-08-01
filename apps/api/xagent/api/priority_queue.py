@@ -1,27 +1,28 @@
-"""请求优先级队列：按优先级调度异步任务。
+"""请求优先级队列：按优先级调度请求处理。
 
 功能：
-- 多级优先级（critical > high > normal > low）
-- 同优先级 FIFO
+- 多级优先级（critical/high/normal/low/background）
 - 并发控制
-- 队列状态监控
+- 公平调度（同优先级 FIFO）
+- 队列深度监控
 
 用法：
-    from xagent.api.priority_queue import PriorityQueueManager, Priority
+    from xagent.api.priority_queue import PriorityQueueMiddleware
 
-    pq = PriorityQueueManager(max_concurrent=3)
-    await pq.submit(my_task, priority=Priority.HIGH, args=(arg1,))
+    app.add_middleware(PriorityQueueMiddleware, max_concurrent=20)
 """
 
 from __future__ import annotations
 
 import asyncio
-import heapq
 import time
-import uuid
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Callable, Coroutine
+from typing import Any
+
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from xagent.infra.logging import get_logger
 
@@ -29,121 +30,151 @@ logger = get_logger("xagent.priority_queue")
 
 
 class Priority(IntEnum):
-    """优先级（数值越小越优先）。"""
+    """请求优先级。"""
 
     CRITICAL = 0
     HIGH = 1
     NORMAL = 2
     LOW = 3
+    BACKGROUND = 4
 
 
-@dataclass(order=True)
-class PriorityItem:
-    """优先级队列项。"""
+@dataclass
+class QueuedRequest:
+    """排队中的请求。"""
 
-    priority: int
-    sequence: int  # 同优先级 FIFO
-    task_id: str = field(compare=False)
-    fn: Callable = field(compare=False)
-    args: tuple = field(compare=False, default=())
-    kwargs: dict = field(compare=False, default_factory=dict)
-    future: asyncio.Future = field(compare=False, default=None)
-    enqueued_at: float = field(compare=False, default_factory=time.time)
+    priority: Priority
+    future: asyncio.Future
+    path: str
+    enqueued_at: float = field(default_factory=time.time)
+    sequence: int = 0  # 同优先级排序
 
 
-class PriorityQueueManager:
-    """优先级任务队列。"""
+class RequestPriorityQueue:
+    """请求优先级队列。"""
 
-    def __init__(self, max_concurrent: int = 5):
-        self._queue: list[PriorityItem] = []
-        self._semaphore = asyncio.Semaphore(max_concurrent)
+    def __init__(self, max_concurrent: int = 20, max_queue_size: int = 200):
+        self._max_concurrent = max_concurrent
+        self._max_queue_size = max_queue_size
+        self._active = 0
+        self._queue: list[QueuedRequest] = []
         self._sequence = 0
-        self._running = False
-        self._worker_task: asyncio.Task | None = None
-        self._stats = {"submitted": 0, "completed": 0, "failed": 0}
+        self._lock = asyncio.Lock()
 
-    async def start(self) -> None:
-        """启动队列处理器。"""
-        if self._running:
+        # 统计
+        self._total_enqueued = 0
+        self._total_rejected = 0
+        self._total_processed = 0
+
+    async def acquire(self, priority: Priority, path: str) -> bool:
+        """获取执行槽位。返回 True 表示可执行。"""
+        async with self._lock:
+            if self._active < self._max_concurrent:
+                self._active += 1
+                return True
+
+            # 队列已满
+            if len(self._queue) >= self._max_queue_size:
+                self._total_rejected += 1
+                return False
+
+            # 入队等待
+            loop = asyncio.get_event_loop()
+            future: asyncio.Future = loop.create_future()
+            self._sequence += 1
+            self._queue.append(QueuedRequest(
+                priority=priority,
+                future=future,
+                path=path,
+                sequence=self._sequence,
+            ))
+            self._total_enqueued += 1
+
+        # 等待槽位
+        await future
+        return True
+
+    async def release(self) -> None:
+        """释放执行槽位。"""
+        async with self._lock:
+            self._active -= 1
+            self._total_processed += 1
+            self._try_dequeue()
+
+    def _try_dequeue(self) -> None:
+        """尝试出队。"""
+        if not self._queue or self._active >= self._max_concurrent:
             return
-        self._running = True
-        self._worker_task = asyncio.create_task(self._process_loop())
-        logger.info("priority queue started (max_concurrent=%d)", self._semaphore._value)
 
-    async def stop(self) -> None:
-        """停止队列。"""
-        self._running = False
-        if self._worker_task:
-            self._worker_task.cancel()
-            try:
-                await self._worker_task
-            except asyncio.CancelledError:
-                pass
+        # 按优先级+序列号排序
+        self._queue.sort(key=lambda r: (r.priority, r.sequence))
+        item = self._queue.pop(0)
+        self._active += 1
 
-    async def submit(
-        self,
-        fn: Callable[..., Coroutine],
-        *,
-        priority: Priority = Priority.NORMAL,
-        args: tuple = (),
-        kwargs: dict | None = None,
-    ) -> str:
-        """提交任务到队列。"""
-        task_id = str(uuid.uuid4())[:8]
-        loop = asyncio.get_event_loop()
-        future = loop.create_future()
+        if not item.future.done():
+            item.future.set_result(True)
 
-        item = PriorityItem(
-            priority=priority.value,
-            sequence=self._sequence,
-            task_id=task_id,
-            fn=fn,
-            args=args,
-            kwargs=kwargs or {},
-            future=future,
-        )
-        self._sequence += 1
-
-        heapq.heappush(self._queue, item)
-        self._stats["submitted"] += 1
-
-        logger.debug(
-            "task submitted: %s (priority=%s, queue_size=%d)",
-            task_id,
-            priority.name,
-            len(self._queue),
-        )
-
-        return task_id
-
-    async def _process_loop(self) -> None:
-        """主处理循环。"""
-        while self._running:
-            if not self._queue:
-                await asyncio.sleep(0.05)
-                continue
-
-            item = heapq.heappop(self._queue)
-            asyncio.create_task(self._execute(item))
-
-    async def _execute(self, item: PriorityItem) -> None:
-        """执行单个任务。"""
-        async with self._semaphore:
-            try:
-                result = await item.fn(*item.args, **item.kwargs)
-                if not item.future.done():
-                    item.future.set_result(result)
-                self._stats["completed"] += 1
-            except Exception as exc:
-                if not item.future.done():
-                    item.future.set_exception(exc)
-                self._stats["failed"] += 1
-                logger.warning("task failed: %s - %s", item.task_id, exc)
-
-    @property
-    def stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
+        """获取队列统计。"""
         return {
-            **self._stats,
-            "queue_size": len(self._queue),
-            "running": self._running,
+            "active": self._active,
+            "queued": len(self._queue),
+            "max_concurrent": self._max_concurrent,
+            "total_enqueued": self._total_enqueued,
+            "total_rejected": self._total_rejected,
+            "total_processed": self._total_processed,
         }
+
+
+# 全局队列
+request_priority_queue = RequestPriorityQueue()
+
+
+def _extract_priority(request: Request) -> Priority:
+    """从请求中提取优先级。"""
+    header = request.headers.get("x-priority", "normal").lower()
+    mapping = {
+        "critical": Priority.CRITICAL,
+        "high": Priority.HIGH,
+        "normal": Priority.NORMAL,
+        "low": Priority.LOW,
+        "background": Priority.BACKGROUND,
+    }
+    return mapping.get(header, Priority.NORMAL)
+
+
+class PriorityQueueMiddleware(BaseHTTPMiddleware):
+    """优先级队列中间件。"""
+
+    def __init__(
+        self,
+        app,
+        max_concurrent: int = 20,
+        max_queue_size: int = 200,
+        exclude_prefixes: list[str] | None = None,
+    ):
+        super().__init__(app)
+        self.queue = RequestPriorityQueue(max_concurrent, max_queue_size)
+        self.exclude_prefixes = exclude_prefixes or ["/health", "/ws"]
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        path = request.url.path
+        if any(path.startswith(p) for p in self.exclude_prefixes):
+            return await call_next(request)
+
+        priority = _extract_priority(request)
+        acquired = await self.queue.acquire(priority, path)
+
+        if not acquired:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "queue_full", "detail": "Server at capacity, try again later"},
+                headers={"Retry-After": "10"},
+            )
+
+        try:
+            response = await call_next(request)
+            response.headers["X-Queue-Active"] = str(self.queue._active)
+            return response
+        finally:
+            await self.queue.release()

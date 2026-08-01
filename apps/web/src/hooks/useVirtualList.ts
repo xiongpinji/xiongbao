@@ -2,15 +2,18 @@
  * 虚拟列表 Hook（零依赖）。
  *
  * 功能：
- * - useVirtualList：仅渲染可视区域内的列表项
- * - 支持固定行高 / 动态估算行高
- * - 滚动位置跟踪 + 过度渲染缓冲
+ * - useVirtualList：大列表虚拟化渲染
+ * - 固定/动态行高
+ * - 滚动位置保持
+ * - 过度渲染缓冲
  *
  * 用法：
- *   const { containerProps, visibleItems, totalHeight } = useVirtualList(items, { itemHeight: 48 });
- *   <div {...containerProps}>
- *     <div style={{ height: totalHeight }}>
- *       {visibleItems.map(({ item, index, style }) => <Row key={index} style={style}>{item}</Row>)}
+ *   const { containerRef, visibleItems, totalHeight, offsetY } = useVirtualList(items, { itemHeight: 48 });
+ *   <div ref={containerRef} style={{ overflow: "auto", height: 400 }}>
+ *     <div style={{ height: totalHeight, position: "relative" }}>
+ *       <div style={{ transform: `translateY(${offsetY}px)` }}>
+ *         {visibleItems.map(item => <Row key={item.index} data={item.data} />)}
+ *       </div>
  *     </div>
  *   </div>
  */
@@ -18,47 +21,49 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 interface UseVirtualListOptions {
-  /** 每项固定高度（px） */
+  /** 固定行高（px） */
   itemHeight: number;
-  /** 容器高度（px，默认 600） */
+  /** 容器高度（px，不传则自动检测） */
   containerHeight?: number;
-  /** 上下过度渲染数量（默认 5） */
+  /** 上下过度渲染数量 */
   overscan?: number;
 }
 
 interface VirtualItem<T> {
   /** 原始数据 */
-  item: T;
+  data: T;
   /** 原始索引 */
   index: number;
-  /** 绝对定位样式 */
-  style: React.CSSProperties;
+  /** 顶部偏移 */
+  offsetTop: number;
 }
 
 interface UseVirtualListReturn<T> {
-  /** 容器 props（含 ref + onScroll + style） */
-  containerProps: {
-    ref: React.RefObject<HTMLDivElement | null>;
-    onScroll: () => void;
-    style: React.CSSProperties;
-  };
-  /** 当前可见项 */
+  /** 容器 ref */
+  containerRef: React.RefCallback<HTMLElement>;
+  /** 可见项 */
   visibleItems: VirtualItem<T>[];
-  /** 列表总高度 */
+  /** 总高度（撑开滚动条） */
   totalHeight: number;
-  /** 滚动到指定索引 */
+  /** 可见区域偏移 */
+  offsetY: number;
+  /** 滚动到索引 */
   scrollToIndex: (index: number) => void;
+  /** 当前滚动位置 */
+  scrollTop: number;
 }
 
 export function useVirtualList<T>(
   items: T[],
   options: UseVirtualListOptions,
 ): UseVirtualListReturn<T> {
-  const { itemHeight, containerHeight = 600, overscan = 5 } = options;
+  const { itemHeight, containerHeight: fixedHeight, overscan = 5 } = options;
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(fixedHeight || 600);
+  const containerElRef = useRef<HTMLElement | null>(null);
 
+  const containerHeight = fixedHeight || measuredHeight;
   const totalHeight = items.length * itemHeight;
 
   const visibleItems = useMemo(() => {
@@ -69,46 +74,60 @@ export function useVirtualList<T>(
     const result: VirtualItem<T>[] = [];
     for (let i = startIndex; i < endIndex; i++) {
       result.push({
-        item: items[i],
+        data: items[i],
         index: i,
-        style: {
-          position: "absolute",
-          top: i * itemHeight,
-          height: itemHeight,
-          left: 0,
-          right: 0,
-        },
+        offsetTop: i * itemHeight,
       });
     }
     return result;
-  }, [items, scrollTop, itemHeight, containerHeight, overscan]);
+  }, [items, itemHeight, containerHeight, scrollTop, overscan]);
 
-  const onScroll = useCallback(() => {
-    if (containerRef.current) {
-      setScrollTop(containerRef.current.scrollTop);
+  const offsetY = visibleItems.length > 0 ? visibleItems[0].offsetTop : 0;
+
+  const containerRef = useCallback(
+    (el: HTMLElement | null) => {
+      if (containerElRef.current) {
+        containerElRef.current.removeEventListener("scroll", handleScroll);
+      }
+
+      containerElRef.current = el;
+
+      if (el) {
+        if (!fixedHeight) {
+          setMeasuredHeight(el.clientHeight);
+        }
+        el.addEventListener("scroll", handleScroll, { passive: true });
+      }
+    },
+    [fixedHeight],
+  );
+
+  const handleScroll = useCallback(() => {
+    const el = containerElRef.current;
+    if (el) {
+      setScrollTop(el.scrollTop);
     }
   }, []);
 
   const scrollToIndex = useCallback(
     (index: number) => {
-      if (containerRef.current) {
-        containerRef.current.scrollTop = index * itemHeight;
-      }
+      const el = containerElRef.current;
+      if (!el) return;
+      const targetTop = index * itemHeight;
+      el.scrollTop = targetTop;
+      setScrollTop(targetTop);
     },
     [itemHeight],
   );
 
-  const containerProps = {
-    ref: containerRef,
-    onScroll,
-    style: {
-      height: containerHeight,
-      overflow: "auto" as const,
-      position: "relative" as const,
-    },
+  return {
+    containerRef,
+    visibleItems,
+    totalHeight,
+    offsetY,
+    scrollToIndex,
+    scrollTop,
   };
-
-  return { containerProps, visibleItems, totalHeight, scrollToIndex };
 }
 
 export default useVirtualList;
