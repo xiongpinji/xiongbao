@@ -1,94 +1,95 @@
 /**
- * 防抖 / 节流 Hooks（零依赖）。
+ * 防抖 Hook（零依赖）。
  *
- * - useDebounce：延迟执行（搜索输入）
- * - useThrottle：固定频率执行（滚动事件）
- * - useDebouncedValue：值防抖
+ * 功能：
+ * - useDebounce：值防抖
+ * - useDebouncedCallback：函数防抖
+ * - 支持 leading/trailing
  *
  * 用法：
- *   const debouncedSearch = useDebounce(searchFn, 300);
- *   const throttledScroll = useThrottle(onScroll, 100);
- *   const debouncedQuery = useDebouncedValue(query, 500);
+ *   const debouncedValue = useDebounce(searchText, 300);
+ *   const debouncedSearch = useDebouncedCallback(search, 500);
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * 防抖函数：延迟 ms 后执行，期间重复调用重置计时。
- */
-export function useDebounce<T extends (...args: any[]) => any>(
-  fn: T,
-  delay: number = 300,
-): (...args: Parameters<T>) => void {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return useCallback(
-    (...args: Parameters<T>) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        fnRef.current(...args);
-      }, delay);
-    },
-    [delay],
-  );
-}
-
-/**
- * 节流函数：每 ms 毫秒最多执行一次。
- */
-export function useThrottle<T extends (...args: any[]) => any>(
-  fn: T,
-  interval: number = 100,
-): (...args: Parameters<T>) => void {
-  const lastRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return useCallback(
-    (...args: Parameters<T>) => {
-      const now = Date.now();
-      const remaining = interval - (now - lastRef.current);
-
-      if (remaining <= 0) {
-        lastRef.current = now;
-        fnRef.current(...args);
-      } else if (!timerRef.current) {
-        timerRef.current = setTimeout(() => {
-          lastRef.current = Date.now();
-          timerRef.current = null;
-          fnRef.current(...args);
-        }, remaining);
-      }
-    },
-    [interval],
-  );
-}
-
-/**
- * 值防抖：返回延迟更新后的值。
- */
-export function useDebouncedValue<T>(value: T, delay: number = 300): T {
+/** 值防抖：延迟更新值。 */
+export function useDebounce<T>(value: T, delayMs: number = 300): T {
   const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
+    const timer = setTimeout(() => setDebounced(value), delayMs);
     return () => clearTimeout(timer);
-  }, [value, delay]);
+  }, [value, delayMs]);
 
   return debounced;
 }
+
+interface UseDebouncedCallbackOptions {
+  /** 延迟（ms） */
+  delayMs?: number;
+  /** 前沿触发 */
+  leading?: boolean;
+  /** 尾部触发（默认 true） */
+  trailing?: boolean;
+}
+
+/** 函数防抖。 */
+export function useDebouncedCallback<A extends any[]>(
+  fn: (...args: A) => void,
+  options: UseDebouncedCallbackOptions | number = {},
+): ((...args: A) => void) & { cancel: () => void; flush: () => void } {
+  const opts = typeof options === "number" ? { delayMs: options } : options;
+  const { delayMs = 300, leading = false, trailing = true } = opts;
+
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  const timerRef = useRef<number>(0);
+  const argsRef = useRef<A | null>(null);
+  const leadingCalledRef = useRef(false);
+
+  const cancel = useCallback(() => {
+    clearTimeout(timerRef.current);
+    timerRef.current = 0;
+    argsRef.current = null;
+    leadingCalledRef.current = false;
+  }, []);
+
+  const flush = useCallback(() => {
+    if (argsRef.current && trailing) {
+      fnRef.current(...argsRef.current);
+    }
+    cancel();
+  }, [trailing, cancel]);
+
+  const debounced = useCallback(
+    (...args: A) => {
+      argsRef.current = args;
+      clearTimeout(timerRef.current);
+
+      // leading edge
+      if (leading && !leadingCalledRef.current) {
+        leadingCalledRef.current = true;
+        fnRef.current(...args);
+      }
+
+      timerRef.current = window.setTimeout(() => {
+        if (trailing && !(leading && leadingCalledRef.current)) {
+          fnRef.current(...(argsRef.current || args));
+        }
+        leadingCalledRef.current = false;
+        argsRef.current = null;
+      }, delayMs);
+    },
+    [delayMs, leading, trailing],
+  ) as ((...args: A) => void) & { cancel: () => void; flush: () => void };
+
+  debounced.cancel = cancel;
+  debounced.flush = flush;
+
+  useEffect(() => cancel, [cancel]);
+
+  return debounced;
+}
+
+export default useDebounce;
