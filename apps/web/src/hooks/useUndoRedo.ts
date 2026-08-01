@@ -1,122 +1,97 @@
 /**
- * 撤销/重做 Hook（零依赖）。
+ * 撤销重做 Hook（零依赖）。
  *
  * 功能：
- * - useUndoRedo：状态历史栈管理
- * - 支持 undo / redo / 跳转
- * - 可配置最大历史深度
- * - 批量操作合并
+ * - useUndoRedo：状态撤销/重做
+ * - 历史记录栈
+ * - 可配置最大历史
  *
  * 用法：
- *   const { state, set, undo, redo, canUndo, canRedo } = useUndoRedo(initialState, {
- *     maxHistory: 50,
- *   });
+ *   const { state, set, undo, redo, canUndo, canRedo } = useUndoRedo(initialValue);
  */
 
 import { useCallback, useRef, useState } from "react";
-
-interface UseUndoRedoOptions {
-  /** 最大历史记录数（默认 100） */
-  maxHistory?: number;
-  /** 状态变更回调 */
-  onChange?: (state: any) => void;
-}
 
 interface UseUndoRedoReturn<T> {
   /** 当前状态 */
   state: T;
   /** 设置新状态（推入历史） */
-  set: (newState: T | ((prev: T) => T)) => void;
+  set: (value: T | ((prev: T) => T)) => void;
   /** 撤销 */
   undo: () => void;
   /** 重做 */
   redo: () => void;
-  /** 是否可以撤销 */
+  /** 重置 */
+  reset: (value?: T) => void;
+  /** 是否可撤销 */
   canUndo: boolean;
-  /** 是否可以重做 */
+  /** 是否可重做 */
   canRedo: boolean;
-  /** 重置到初始状态 */
-  reset: (newInitial?: T) => void;
-  /** 历史深度 */
+  /** 历史长度 */
   historyLength: number;
-  /** 当前位置 */
-  position: number;
 }
 
 export function useUndoRedo<T>(
-  initialState: T,
-  options: UseUndoRedoOptions = {},
+  initialValue: T,
+  options: { maxHistory?: number } = {},
 ): UseUndoRedoReturn<T> {
-  const { maxHistory = 100, onChange } = options;
+  const { maxHistory = 50 } = options;
 
-  const [history, setHistory] = useState<T[]>([initialState]);
-  const [position, setPosition] = useState(0);
-  const optionsRef = useRef({ maxHistory, onChange });
-  optionsRef.current = { maxHistory, onChange };
+  const [state, setState] = useState<T>(initialValue);
+  const pastRef = useRef<T[]>([]);
+  const futureRef = useRef<T[]>([]);
+  const [, forceRender] = useState(0);
 
-  const state = history[position];
+  const rerender = useCallback(() => forceRender((n) => n + 1), []);
 
   const set = useCallback(
-    (newState: T | ((prev: T) => T)) => {
-      setHistory((prev) => {
-        const current = prev[position];
-        const resolved =
-          typeof newState === "function"
-            ? (newState as (prev: T) => T)(current)
-            : newState;
+    (value: T | ((prev: T) => T)) => {
+      setState((prev) => {
+        const next = value instanceof Function ? value(prev) : value;
+        if (next === prev) return prev;
 
-        // 截断 redo 栈
-        const truncated = prev.slice(0, position + 1);
-        const next = [...truncated, resolved];
-
-        // 限制历史深度
-        if (next.length > optionsRef.current.maxHistory) {
-          next.shift();
-          setPosition(next.length - 1);
-        } else {
-          setPosition(next.length - 1);
+        pastRef.current.push(prev);
+        if (pastRef.current.length > maxHistory) {
+          pastRef.current = pastRef.current.slice(-maxHistory);
         }
-
-        optionsRef.current.onChange?.(resolved);
+        futureRef.current = [];
+        rerender();
         return next;
       });
     },
-    [position],
+    [maxHistory, rerender],
   );
 
   const undo = useCallback(() => {
-    setPosition((prev) => {
-      if (prev <= 0) return prev;
-      const newPos = prev - 1;
-      setHistory((h) => {
-        optionsRef.current.onChange?.(h[newPos]);
-        return h;
-      });
-      return newPos;
+    if (pastRef.current.length === 0) return;
+
+    setState((current) => {
+      const previous = pastRef.current.pop()!;
+      futureRef.current.push(current);
+      rerender();
+      return previous;
     });
-  }, []);
+  }, [rerender]);
 
   const redo = useCallback(() => {
-    setPosition((prev) => {
-      setHistory((h) => {
-        if (prev >= h.length - 1) return h;
-        const newPos = prev + 1;
-        optionsRef.current.onChange?.(h[newPos]);
-        // 需要在外部更新 position
-        return h;
-      });
-      return Math.min(prev + 1, history.length - 1);
+    if (futureRef.current.length === 0) return;
+
+    setState((current) => {
+      const next = futureRef.current.pop()!;
+      pastRef.current.push(current);
+      rerender();
+      return next;
     });
-  }, [history.length]);
+  }, [rerender]);
 
   const reset = useCallback(
-    (newInitial?: T) => {
-      const init = newInitial ?? initialState;
-      setHistory([init]);
-      setPosition(0);
-      optionsRef.current.onChange?.(init);
+    (value?: T) => {
+      pastRef.current = [];
+      futureRef.current = [];
+      setState(value ?? initialValue);
+      rerender();
     },
-    [initialState],
+    [initialValue, rerender],
   );
 
   return {
@@ -124,11 +99,10 @@ export function useUndoRedo<T>(
     set,
     undo,
     redo,
-    canUndo: position > 0,
-    canRedo: position < history.length - 1,
     reset,
-    historyLength: history.length,
-    position,
+    canUndo: pastRef.current.length > 0,
+    canRedo: futureRef.current.length > 0,
+    historyLength: pastRef.current.length,
   };
 }
 
