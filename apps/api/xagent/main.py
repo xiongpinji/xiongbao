@@ -89,13 +89,55 @@ async def lifespan(app: FastAPI):
     logger.info("shutdown")
 
 
+# OpenAPI 标签元数据
+TAG_METADATA = [
+    {"name": "system", "description": "系统探针与元信息"},
+    {"name": "auth", "description": "认证与令牌管理"},
+    {"name": "agents", "description": "Agent 角色与对话"},
+    {"name": "stream", "description": "SSE 流式对话"},
+    {"name": "tasks", "description": "后台任务管理"},
+    {"name": "runs", "description": "Run Console 执行记录"},
+    {"name": "workflows", "description": "工作流编排与执行"},
+    {"name": "skills", "description": "Skill 自进化管理"},
+    {"name": "knowledge", "description": "RAG 知识库"},
+    {"name": "memory", "description": "对话记忆"},
+    {"name": "mcp", "description": "MCP 工具网关"},
+    {"name": "automation", "description": "定时任务与 Webhook"},
+    {"name": "creative-studio", "description": "短剧工厂 / 创意画布"},
+    {"name": "canvas", "description": "自由画布节点"},
+    {"name": "editor", "description": "剧本编辑器"},
+    {"name": "spine", "description": "Spine 动画"},
+    {"name": "billing", "description": "计量计费"},
+    {"name": "audit", "description": "审计日志"},
+    {"name": "tenants", "description": "租户管理"},
+    {"name": "open-source", "description": "开源发现"},
+    {"name": "marketplace", "description": "插件/技能市场"},
+]
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
         version=__version__,
-        description="X-Agent — 面向企业的自主智能体框架（开源重构版）",
+        description=(
+            "X-Agent — 面向企业的自主智能体框架（开源重构版）\n\n"
+            "## 快速开始\n"
+            "1. `POST /api/v1/auth/login` 获取 token\n"
+            "2. 请求头携带 `Authorization: Bearer <token>`\n"
+            "3. 浏览各模块端点\n\n"
+            "## 版本策略\n"
+            "- 当前稳定版: `/api/v1`\n"
+            "- 破坏性变更发布新版本 `/api/v2`，旧版保留 6 个月\n"
+            "- `GET /api/versions` 查询可用版本\n"
+        ),
         lifespan=lifespan,
+        openapi_tags=TAG_METADATA,
+        contact={"name": "X-Agent Team", "url": "https://github.com/xiongpinji/xiongbao"},
+        license_info={"name": "Apache-2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0"},
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
     )
 
     # 全局异常处理：防止未捕获异常导致连接中断
@@ -123,6 +165,17 @@ def create_app() -> FastAPI:
     # 路由挂载
     app.include_router(system.router)
     app.include_router(api_v1)
+
+    # API 版本发现
+    @app.get("/api/versions", tags=["system"], summary="可用 API 版本")
+    async def _api_versions() -> dict:
+        return {
+            "current": "v1",
+            "supported": ["v1"],
+            "deprecated": [],
+            "base_url": "/api/v1",
+            "docs": "/docs",
+        }
 
     # Prometheus 指标端点
     from fastapi import Response

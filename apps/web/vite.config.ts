@@ -23,6 +23,20 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: true,
+    sourcemap: false,
+    target: "es2020",
+    minify: "terser",
+    terserOptions: {
+      compress: { drop_console: true, drop_debugger: true },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+          ui: ["axios"],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500,
   },
 });

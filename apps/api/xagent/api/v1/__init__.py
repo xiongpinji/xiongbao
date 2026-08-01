@@ -12,6 +12,7 @@ from xagent.api.v1 import (
     creative_studio,
     editor,
     knowledge,
+    marketplace,
     mcp,
     memory,
     open_source,
@@ -46,5 +47,6 @@ api_v1.include_router(mcp.router)
 api_v1.include_router(skills.router)
 api_v1.include_router(tenants.router)
 api_v1.include_router(knowledge.router)
+api_v1.include_router(marketplace.router)
 
 __all__ = ["api_v1"]
