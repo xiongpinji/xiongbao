@@ -12,11 +12,12 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from xagent.core.orchestration import run_agent
+from xagent.core.orchestration.conversation import get_conversation_manager
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_sessionmaker
@@ -39,6 +40,8 @@ class StreamRunIn(BaseModel):
     goal: str = Field(..., min_length=1)
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    conversation_id: str | None = None
+    mode: str = Field(default="full-auto", description="Permission mode: suggest | auto-edit | full-auto")
 
 
 def _build_input_payload(goal: str, role: str | None, caps: list[str]) -> dict:
@@ -88,12 +91,19 @@ def _build_stream_delivery_summary(result: dict) -> dict:
     }
 
 
+# Agent 运行最大超时（秒）—— 对标 Codex 云端沙箱 10min 限制
+_AGENT_RUN_TIMEOUT = 600
+
+
 async def _event_stream(
-    goal: str, principal: Principal, role: str | None, caps: list[str]
+    goal: str, principal: Principal, role: str | None, caps: list[str],
+    conversation_id: str | None = None, request: Request | None = None,
+    mode: str = "full-auto",
 ) -> AsyncGenerator[bytes, None]:
     """跑 agent 并把事件逐条以 SSE 实时推送（step 级流式）。"""
     run_id = uuid.uuid4().hex
-    yield _sse("started", {"goal": goal, "run_id": run_id})
+    resolved_conv_id = conversation_id or uuid.uuid4().hex
+    yield _sse("started", {"goal": goal, "run_id": run_id, "conversation_id": resolved_conv_id})
 
     queue: asyncio.Queue = asyncio.Queue()
     done = object()
@@ -117,14 +127,19 @@ async def _event_stream(
         result = None
         try:
             async with get_sessionmaker()() as session:
-                result = await run_agent(
-                    goal,
-                    principal=principal,
-                    role_name=role,
-                    capabilities=set(caps) or None,
-                    on_event=on_event,
-                    session=session,
-                    run_id=run_id,
+                result = await asyncio.wait_for(
+                    run_agent(
+                        goal,
+                        principal=principal,
+                        role_name=role,
+                        capabilities=set(caps) or None,
+                        on_event=on_event,
+                        session=session,
+                        run_id=run_id,
+                        conversation_id=resolved_conv_id,
+                        permission_mode=mode,
+                    ),
+                    timeout=_AGENT_RUN_TIMEOUT,
                 )
                 result_payload = result.to_dict()
                 delivery_summary = _build_stream_delivery_summary(result_payload)
@@ -197,6 +212,9 @@ async def _event_stream(
                     else:
                         raise
                 await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
+        except asyncio.TimeoutError:
+            failure_error = f"Agent 运行超时（>{_AGENT_RUN_TIMEOUT}s），已自动终止。"
+            await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         except Exception as exc:
             if result is not None and _is_runtime_persistence_schema_mismatch(exc):
                 await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
@@ -257,9 +275,23 @@ async def _event_stream(
             await queue.put(done)
 
     task = asyncio.create_task(_run())
+    heartbeat_interval = 15  # 每 15s 发一次心跳防代理超时
+    last_heartbeat = asyncio.get_running_loop().time()
     try:
         while True:
-            item = await queue.get()
+            # 检测客户端断连（对标 Codex 沙箱中断机制）
+            if request and await request.is_disconnected():
+                logger.info("sse_client_disconnected", run_id=run_id)
+                break
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                # SSE 心跳：防止 nginx/负载均衡器超时断开
+                now = asyncio.get_running_loop().time()
+                if now - last_heartbeat >= heartbeat_interval:
+                    yield b": heartbeat\n\n"
+                    last_heartbeat = now
+                continue
             if item is done:
                 break
             yield item
@@ -276,10 +308,63 @@ def _sse(event: str, data: dict) -> bytes:
 @router.post("/agents/run", summary="Agent 运行 SSE 流")
 async def stream_run(
     body: StreamRunIn,
+    request: Request,
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> StreamingResponse:
     return StreamingResponse(
-        _event_stream(body.goal, principal, body.role, body.capabilities),
+        _event_stream(body.goal, principal, body.role, body.capabilities, body.conversation_id, request, body.mode),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/conversations", summary="列出对话历史")
+async def list_conversations(
+    principal: Principal = Depends(require_permission("agent", "execute")),
+):
+    from xagent.core.orchestration.conversation import load_conversations_from_db
+
+    async with get_sessionmaker()() as session:
+        conversations = await load_conversations_from_db(session, principal.tenant_id)
+    # 合并内存缓存中未持久化的新会话
+    mgr = get_conversation_manager()
+    cached = mgr.list_sessions(principal.tenant_id)
+    db_ids = {c["conversation_id"] for c in conversations}
+    for c in cached:
+        if c["conversation_id"] not in db_ids:
+            conversations.append(c)
+    conversations.sort(key=lambda x: x.get("last_active", 0), reverse=True)
+    return {"conversations": conversations[:50]}
+
+
+@router.get("/conversations/{conversation_id}/messages", summary="加载对话消息")
+async def get_conversation_messages(
+    conversation_id: str,
+    principal: Principal = Depends(require_permission("agent", "execute")),
+):
+    from xagent.core.orchestration.conversation import load_messages_from_db
+
+    async with get_sessionmaker()() as session:
+        messages = await load_messages_from_db(session, conversation_id)
+    # 如果 DB 无数据，尝试内存缓存
+    if not messages:
+        mgr = get_conversation_manager()
+        sess = mgr.get(conversation_id)
+        if sess:
+            messages = [{"role": m.role, "content": m.content} for m in sess.messages]
+    return {"messages": messages}
+
+
+@router.delete("/conversations/{conversation_id}", summary="删除对话")
+async def delete_conversation(
+    conversation_id: str,
+    principal: Principal = Depends(require_permission("agent", "execute")),
+):
+    from xagent.core.orchestration.conversation import delete_conversation_from_db
+
+    mgr = get_conversation_manager()
+    mgr.delete(conversation_id)
+    async with get_sessionmaker()() as session:
+        await delete_conversation_from_db(session, conversation_id)
+        await session.commit()
+    return {"deleted": True}

@@ -60,3 +60,39 @@ async def search(
             for h in hits
         ]
     }
+
+
+@router.post("/fts", summary="全文关键词检索（跨会话记忆召回）")
+async def fts_search(
+    body: SearchRequest,
+    principal: Principal = Depends(require_permission("memory", "read")),
+) -> dict:
+    """对标 Hermes FTS5 跨会话记忆检索：在历史对话消息中做关键词搜索。"""
+    from xagent.infra.db import get_sessionmaker
+
+    try:
+        async with get_sessionmaker()() as session:
+            from sqlalchemy import text as sa_text
+
+            # 使用 SQLite LIKE 做全文搜索（兼容无 FTS5 扩展环境）
+            pattern = f"%{body.query}%"
+            result = await session.execute(
+                sa_text(
+                    "SELECT conversation_id, role, content FROM conversation_messages "
+                    "WHERE content LIKE :pattern ORDER BY id DESC LIMIT :limit"
+                ),
+                {"pattern": pattern, "limit": body.top_k * 2},
+            )
+            rows = result.fetchall()
+            hits = [
+                {
+                    "conversation_id": r[0],
+                    "role": r[1],
+                    "text": r[2][:500],
+                    "score": 1.0 - (i * 0.05),  # 简单排序权重
+                }
+                for i, r in enumerate(rows)
+            ]
+    except Exception:
+        hits = []
+    return {"hits": hits[:body.top_k], "engine": "fts_like"}

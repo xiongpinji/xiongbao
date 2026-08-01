@@ -1,56 +1,74 @@
-import { Bell, CircleHelp, Command, Edit3, Eye, FileText, Gem, Grid2X2, Wrench } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { PanelLeftOpen, PanelRight, Zap } from "lucide-react";
+import { getLLMConfig } from "../../api";
+import { useEffect, useState } from "react";
 
-export default function TopBar() {
-  const menuItems = [
-    { label: "文件", icon: FileText },
-    { label: "编辑", icon: Edit3 },
-    { label: "视图", icon: Eye },
-    { label: "帮助", icon: CircleHelp },
-    { label: "工具", icon: Wrench },
-  ];
+const PAGE_TITLES: Record<string, string> = {
+  "/chat": "对话",
+  "/home": "对话",
+  "/agents": "智能体",
+  "/goal-board": "目标看板",
+  "/professional": "工作流",
+  "/settings": "设置",
+  "/billing": "计费",
+  "/audit": "审计",
+  "/memory": "记忆库",
+  "/open-source": "开源发现",
+  "/editor": "剪辑台",
+};
+
+export default function TopBar({
+  onToggleSidebar,
+  onToggleContext,
+  contextOpen,
+}: {
+  onToggleSidebar: () => void;
+  onToggleContext: () => void;
+  contextOpen: boolean;
+}) {
+  const location = useLocation();
+  const [model, setModel] = useState("");
+
+  useEffect(() => {
+    getLLMConfig()
+      .then((cfg) => setModel(cfg.default_model))
+      .catch(() => {});
+  }, []);
+
+  const title = PAGE_TITLES[location.pathname] ?? "X-Agent";
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.07] bg-black/56 px-5 text-neutral-300 backdrop-blur-2xl">
-      <div className="text-sm font-semibold text-white md:hidden">X-Agent</div>
-      <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-hidden md:flex">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.label}
-              type="button"
-              className="xagent-nav-item flex shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 text-sm"
-            >
-              <Icon size={15} className="text-neutral-600" strokeWidth={1.8} />
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
+    <header className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.06] bg-[#111111] px-3">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          title="切换侧边栏"
+          onClick={onToggleSidebar}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
+        >
+          <PanelLeftOpen size={16} />
+        </button>
+        <span className="text-sm font-medium text-neutral-200">{title}</span>
+      </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <button className="xagent-chip hidden items-center gap-2 px-3 py-1.5 text-sm font-semibold sm:flex">
-          <Gem size={15} className="text-violet-400" fill="currentColor" />
-          Pro
-        </button>
-        <button className="xagent-chip relative hidden h-9 w-9 items-center justify-center p-0 sm:flex">
-          <Bell size={16} />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#d6ad62]" />
-        </button>
-        <button className="xagent-chip border-[#8a6a32]/35 bg-[#171108]/75 px-3 py-1.5 text-[#f2d99c]">
-          就绪
-        </button>
-        <div className="hidden items-center gap-2 text-sm text-neutral-400 md:flex">
-          <span>SESSION</span>
-          <span className="font-mono text-neutral-200">
-            {new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+      <div className="flex items-center gap-1.5">
+        {model && (
+          <span className="flex items-center gap-1.5 rounded-md border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-neutral-400">
+            <Zap size={11} className="text-amber-400" />
+            {model}
           </span>
-        </div>
-        <button className="xagent-chip hidden h-8 w-8 items-center justify-center p-0 sm:flex">
-          <Command size={16} />
-        </button>
-        <button className="xagent-chip flex h-8 w-8 items-center justify-center p-0">
-          <Grid2X2 size={16} />
+        )}
+        <button
+          type="button"
+          title="上下文面板"
+          onClick={onToggleContext}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
+            contextOpen
+              ? "bg-white/[0.08] text-white"
+              : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"
+          }`}
+        >
+          <PanelRight size={16} />
         </button>
       </div>
     </header>

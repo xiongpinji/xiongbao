@@ -6,10 +6,12 @@ from xagent.api.v1 import (
     agents,
     audit,
     auth,
+    automation,
     billing,
     canvas,
     creative_studio,
     editor,
+    mcp,
     memory,
     open_source,
     runs,
@@ -36,5 +38,7 @@ api_v1.include_router(open_source.router)
 api_v1.include_router(billing.router)
 api_v1.include_router(audit.router)
 api_v1.include_router(system.router)
+api_v1.include_router(automation.router)
+api_v1.include_router(mcp.router)
 
 __all__ = ["api_v1"]

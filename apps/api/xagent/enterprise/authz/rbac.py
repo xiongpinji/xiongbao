@@ -41,6 +41,7 @@ _BUILTIN_POLICY: dict[str, dict[str, set[str]]] = {
         "open_source": {"read"},
         "billing": {"read"},
         "audit": {"read"},
+        "system": {"read", "manage"},
     },
     "viewer": {
         "agent": {"read"},
@@ -52,6 +53,7 @@ _BUILTIN_POLICY: dict[str, dict[str, set[str]]] = {
         "open_source": {"read"},
         "billing": {"read"},
         "audit": {"read"},
+        "system": {"read"},
     },
 }
 

@@ -11,8 +11,13 @@ from __future__ import annotations
 
 from enum import Enum
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import BaseModel, Field
+
+# 项目根目录（xagent/），.env 在此；不依赖 CWD
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+_ENV_FILE = _PROJECT_ROOT / ".env"
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_JWT_SECRETS = {
@@ -174,7 +179,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="XAGENT_",
         env_nested_delimiter="__",
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )

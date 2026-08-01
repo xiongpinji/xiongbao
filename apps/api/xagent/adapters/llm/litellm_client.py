@@ -3,14 +3,27 @@
 两种工作方式：
 - proxy_url 非空：走 LiteLLM Proxy（推荐 full 模式，路由/限流/虚拟 key 在 proxy 侧）。
 - proxy_url 为空：进程内直连 litellm.acompletion，provider key 从 settings/环境读取。
+
+支持流式（stream=True）逐 token 输出。
 """
 
 from __future__ import annotations
 
+import json as _json
+from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from typing import Any
 
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message, ToolCall
 from xagent.infra.settings import LLMSettings
+
+
+@dataclass
+class StreamChunk:
+    """流式输出的单个 chunk。"""
+    delta_content: str = ""
+    tool_call_deltas: list[dict[str, Any]] = field(default_factory=list)
+    finished: bool = False
 
 
 class LiteLLMClient(LLMClient):
@@ -106,7 +119,7 @@ class LiteLLMClient(LLMClient):
 
         target_model = model or self.effective_model
         payload = [
-            {"role": m.role, "content": m.content}
+            {"role": m.role, "content": m.content or ""}
             for m in messages
         ]
         call_kwargs = self._call_kwargs(target_model)
@@ -140,6 +153,64 @@ class LiteLLMClient(LLMClient):
             tool_calls=tool_calls,
             raw=dict(resp) if isinstance(resp, dict) else {},
         )
+
+    async def stream_with_tools(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]],
+        *,
+        model: str | None = None,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """流式带工具补全，逐 chunk 产出。"""
+        import litellm
+
+        target_model = model or self.effective_model
+        payload = [{"role": m.role, "content": m.content or ""} for m in messages]
+        call_kwargs = self._call_kwargs(target_model)
+        call_kwargs.update(temperature=temperature, stream=True, **kwargs)
+        call_kwargs["tools"] = tools
+        call_kwargs["tool_choice"] = "auto"
+
+        resp = await litellm.acompletion(messages=payload, **call_kwargs)
+        async for chunk in resp:
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            delta = choices[0].get("delta") or {}
+            finish = choices[0].get("finish_reason")
+            yield StreamChunk(
+                delta_content=delta.get("content") or "",
+                tool_call_deltas=delta.get("tool_calls") or [],
+                finished=finish is not None,
+            )
+
+    async def stream_complete(
+        self,
+        messages: list[Message],
+        *,
+        model: str | None = None,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """纯文本流式输出，逐 token yield 字符串。"""
+        import litellm
+
+        target_model = model or self.effective_model
+        payload = [{"role": m.role, "content": m.content or ""} for m in messages]
+        call_kwargs = self._call_kwargs(target_model)
+        call_kwargs.update(temperature=temperature, stream=True, **kwargs)
+
+        resp = await litellm.acompletion(messages=payload, **call_kwargs)
+        async for chunk in resp:
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            delta = choices[0].get("delta") or {}
+            content = delta.get("content") or ""
+            if content:
+                yield content
 
     async def health(self) -> bool:
         # proxy / ollama / 任意直连 key 任一可用

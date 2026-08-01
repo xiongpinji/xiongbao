@@ -102,6 +102,11 @@ def _build_registry() -> MediaProviderRegistry:
                 default_model=cfg.openai_image_model,
             ),
         )
+    else:
+        # 无 OpenAI key 时使用免费 Pollinations 文生图
+        from xagent.domains.creative_studio.media.image_providers import PollinationsProvider
+
+        registry.register(MediaKind.image, PollinationsProvider())
 
     # 视频 provider
     from xagent.domains.creative_studio.media.video_providers import (

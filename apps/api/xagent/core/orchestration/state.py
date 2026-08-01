@@ -55,6 +55,7 @@ class StepKind(str, Enum):  # noqa: UP042  (兼容 py3.11)
     tool_result = "tool_result"
     final = "final"
     error = "error"
+    token = "token"        # 流式逐 token 输出
 
 
 @dataclass
@@ -87,6 +88,7 @@ class AgentRun:
     final_answer: str
     steps: int
     events: list[StepEvent] = field(default_factory=list)
+    conversation_id: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -96,6 +98,7 @@ class AgentRun:
             "tenant_id": self.tenant_id,
             "final_answer": self.final_answer,
             "steps": self.steps,
+            "conversation_id": self.conversation_id,
             "events": [
                 {"kind": e.kind.value, "tool": e.tool, "step": e.step, "content": e.content}
                 for e in self.events

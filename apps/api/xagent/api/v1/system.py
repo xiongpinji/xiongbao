@@ -1,13 +1,15 @@
-"""系统能力概览路由：让前端设置页能读取当前可用的工具、MCP、命令等只读信息。"""
+"""系统能力概览路由：让前端设置页能读取当前可用的工具、MCP、命令等只读信息，以及 LLM 模型配置。"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 
 from xagent.adapters.mcp import get_mcp_manager
 from xagent.adapters.tools import get_tool_registry
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
+from xagent.infra.settings import get_settings
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -30,12 +32,12 @@ async def capabilities(
 
     mcp_servers = [
         {
-            "name": getattr(srv, "name", "unknown"),
-            "kind": getattr(srv, "transport", "stdio"),
-            "endpoint": getattr(srv, "endpoint", "") or getattr(srv, "command", ""),
-            "enabled": getattr(srv, "enabled", False),
+            "name": srv.name,
+            "kind": srv.transport,
+            "endpoint": srv.url or srv.command,
+            "enabled": srv.enabled,
         }
-        for srv in mcp.servers
+        for srv in mcp.servers.values()
     ]
 
     return {
@@ -59,4 +61,96 @@ async def capabilities(
             "运行画布触发真实 WorkflowEngine",
             "在剪辑节点 / 导出节点完成短剧产出",
         ],
+    }
+
+
+# ---- LLM 模型配置 ----
+
+
+class LLMConfigOut(BaseModel):
+    """LLM 配置输出（脱敏）。"""
+    default_model: str
+    fallback_models: list[str]
+    proxy_url: str
+    has_proxy_api_key: bool
+    ollama_base_url: str
+    ollama_model: str
+    request_timeout_seconds: int
+    has_openai_key: bool
+    has_anthropic_key: bool
+    has_deepseek_key: bool
+
+
+class LLMConfigIn(BaseModel):
+    """LLM 配置输入（部分更新）。"""
+    default_model: str | None = None
+    fallback_models: list[str] | None = None
+    proxy_url: str | None = None
+    proxy_api_key: str | None = None
+    ollama_base_url: str | None = None
+    ollama_model: str | None = None
+    request_timeout_seconds: int | None = None
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    deepseek_api_key: str | None = None
+
+
+@router.get("/llm-config", summary="读取当前 LLM 模型配置（脱敏）")
+async def get_llm_config(
+    principal: Principal = Depends(require_permission("system", "read")),
+) -> dict:
+    cfg = get_settings().llm
+    return LLMConfigOut(
+        default_model=cfg.default_model,
+        fallback_models=cfg.fallback_models,
+        proxy_url=cfg.proxy_url,
+        has_proxy_api_key=bool(cfg.proxy_api_key),
+        ollama_base_url=cfg.ollama_base_url,
+        ollama_model=cfg.ollama_model,
+        request_timeout_seconds=cfg.request_timeout_seconds,
+        has_openai_key=bool(cfg.openai_api_key),
+        has_anthropic_key=bool(cfg.anthropic_api_key),
+        has_deepseek_key=bool(cfg.deepseek_api_key),
+    ).model_dump()
+
+
+@router.put("/llm-config", summary="更新 LLM 模型配置（运行时生效）")
+async def update_llm_config(
+    body: LLMConfigIn,
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
+    cfg = get_settings().llm
+    if body.default_model is not None:
+        cfg.default_model = body.default_model
+    if body.fallback_models is not None:
+        cfg.fallback_models = body.fallback_models
+    if body.proxy_url is not None:
+        cfg.proxy_url = body.proxy_url
+    if body.proxy_api_key is not None:
+        cfg.proxy_api_key = body.proxy_api_key
+    if body.ollama_base_url is not None:
+        cfg.ollama_base_url = body.ollama_base_url
+    if body.ollama_model is not None:
+        cfg.ollama_model = body.ollama_model
+    if body.request_timeout_seconds is not None:
+        cfg.request_timeout_seconds = body.request_timeout_seconds
+    if body.openai_api_key is not None:
+        cfg.openai_api_key = body.openai_api_key
+    if body.anthropic_api_key is not None:
+        cfg.anthropic_api_key = body.anthropic_api_key
+    if body.deepseek_api_key is not None:
+        cfg.deepseek_api_key = body.deepseek_api_key
+
+    # 重置 LLM 客户端缓存，使新配置生效
+    from xagent.adapters.llm.factory import reset_llm_client
+    reset_llm_client()
+
+    return {
+        "status": "ok",
+        "default_model": cfg.default_model,
+        "fallback_models": cfg.fallback_models,
+        "proxy_url": cfg.proxy_url,
+        "ollama_base_url": cfg.ollama_base_url,
+        "ollama_model": cfg.ollama_model,
+        "request_timeout_seconds": cfg.request_timeout_seconds,
     }

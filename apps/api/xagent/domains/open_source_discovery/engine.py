@@ -154,14 +154,19 @@ def score_candidate(query: str, c: Candidate) -> ScoredCandidate:
 
 class DiscoveryEngine:
     def __init__(self, providers: list[Provider] | None = None) -> None:
-        # 默认含 mock（离线兜底）；真实源按可用性加入
-        from xagent.domains.open_source_discovery.providers import NpmProvider, PyPIProvider
+        # 真实源优先；Mock 仅作最终兜底
+        from xagent.domains.open_source_discovery.providers import (
+            DuckDuckGoProvider,
+            NpmProvider,
+            PyPIProvider,
+        )
 
         self._providers: list[Provider] = providers or [
-            MockProvider(),
+            DuckDuckGoProvider(),
             GitHubProvider(),
             PyPIProvider(),
             NpmProvider(),
+            MockProvider(),  # 离线兜底，所有真实源失败时保底
         ]
 
     async def discover(self, query: str, *, limit: int = 10) -> list[ScoredCandidate]:

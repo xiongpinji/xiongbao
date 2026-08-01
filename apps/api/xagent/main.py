@@ -45,10 +45,18 @@ async def lifespan(app: FastAPI):
         version=__version__,
         mode=settings.mode.value,
     )
+    # 自动建表（SQLite 开发模式，生产用 alembic）
+    import xagent.infra.models  # noqa: F401  确保所有 ORM 模型注册
+    async with db.get_engine().begin() as conn:
+        await conn.run_sync(db.Base.metadata.create_all)
     # 启动 MCP 管理器（无 server 时安全空转）
     await get_mcp_manager().start()
+    # 启动定时调度器
+    from xagent.core.scheduler import get_scheduler
+    await get_scheduler().start()
     yield
     # ---- shutdown ----
+    await get_scheduler().stop()
     await get_mcp_manager().stop()
     await db.dispose_engine()
     logger.info("shutdown")

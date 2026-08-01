@@ -1,7 +1,8 @@
-"""图像生成 provider：OpenAI 兼容（gpt-image-2 / DALL·E-3）+ 通用 HTTP。
+"""图像生成 provider：OpenAI 兼容（gpt-image-2 / DALL·E-3）+ Pollinations(免费) + 通用 HTTP。
 
 gpt-image-2 / DALL·E 是同步返回（非任务轮询）：submit 直接拿结果，poll 返回缓存。
 文生图 + 图生图（edits）均支持。通过 OpenAI 兼容端点，可指向 OpenAI 官方或代理。
+Pollinations.ai 免费文生图，无需 API key。
 """
 
 from __future__ import annotations
@@ -137,4 +138,98 @@ class OpenAIImageProvider:
             ModelCard("dall-e-3", "DALL·E 3", MediaKind.image,
                       [GenerationMode.text_to_image], self.name, "OpenAI 文生图",
                       resolutions=["1024x1024", "1792x1024", "1024x1792"]),
+        ]
+
+
+@dataclass
+class PollinationsProvider:
+    """免费文生图（pollinations.ai），无需 API key。
+
+    通过 URL 生成图像：https://image.pollinations.ai/prompt/{prompt}
+    支持 width/height/seed/nologo 参数。
+    """
+
+    name: str = "pollinations"
+    base_url: str = "https://image.pollinations.ai"
+    supported_kinds: set = field(default_factory=lambda: {MediaKind.image})
+    supported_modes: set = field(default_factory=lambda: {GenerationMode.text_to_image})
+    _results: dict = field(default_factory=dict)
+
+    async def submit(self, req: GenerationRequest) -> GenerationTask:
+        import uuid
+        from urllib.parse import quote
+
+        try:
+            # 解析分辨率
+            width, height = 1024, 1024
+            if req.resolution:
+                parts = req.resolution.lower().split("x")
+                if len(parts) == 2:
+                    width, height = int(parts[0]), int(parts[1])
+
+            params = f"width={width}&height={height}&nologo=true"
+            if req.seed is not None:
+                params += f"&seed={req.seed}"
+            # 添加负面提示词
+            if req.negative_prompt:
+                params += f"&negative={quote(req.negative_prompt)}"
+
+            image_url = f"{self.base_url}/prompt/{quote(req.prompt)}?{params}"
+
+            # 验证 URL 可访问（HEAD 请求）
+            import httpx
+
+            async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+                resp = await client.get(image_url, headers={"Accept": "image/*"})
+                if resp.status_code == 200 and len(resp.content) > 1000:
+                    # 图片生成成功，保存到本地
+                    import os
+                    out_dir = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.dirname(
+                            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        ))),
+                        "data", "storage", "images",
+                    )
+                    os.makedirs(out_dir, exist_ok=True)
+                    fname = f"{uuid.uuid4().hex[:12]}.png"
+                    fpath = os.path.join(out_dir, fname)
+                    with open(fpath, "wb") as f:
+                        f.write(resp.content)
+                    outputs = [f"local://images/{fname}"]
+                    task_id = f"pollinations-{uuid.uuid4().hex[:8]}"
+                    task = GenerationTask(
+                        task_id=task_id, provider=self.name,
+                        status="succeeded", outputs=outputs,
+                    )
+                else:
+                    # 返回 URL 作为产物（用户可直接访问）
+                    task_id = f"pollinations-{uuid.uuid4().hex[:8]}"
+                    task = GenerationTask(
+                        task_id=task_id, provider=self.name,
+                        status="succeeded", outputs=[image_url],
+                    )
+        except Exception as exc:
+            task = GenerationTask(
+                task_id="pollinations-err", provider=self.name,
+                status="failed", error=f"{type(exc).__name__}: {exc}",
+            )
+        self._results[task.task_id] = task
+        return task
+
+    async def poll(self, task_id: str) -> GenerationTask:
+        return self._results.get(
+            task_id, GenerationTask(task_id=task_id, provider=self.name,
+                                    status="failed", error="未知任务")
+        )
+
+    def list_models(self, kind: MediaKind | None = None) -> list[ModelCard]:
+        if kind not in (None, MediaKind.image):
+            return []
+        return [
+            ModelCard(
+                "pollinations-flux", "免费文生图 (Pollinations)", MediaKind.image,
+                [GenerationMode.text_to_image], self.name,
+                "免费 AI 文生图，无需 API key，基于 FLUX 模型",
+                resolutions=["1024x1024", "1024x1536", "1536x1024", "720x1280"],
+            ),
         ]

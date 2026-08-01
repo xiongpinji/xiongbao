@@ -44,6 +44,8 @@ async def run_agent(
     on_event: Any = None,
     session: Any = None,
     run_id: str | None = None,
+    conversation_id: str | None = None,
+    permission_mode: str = "full-auto",
 ) -> AgentRun:
     """运行一次 agent 任务。DeerFlow(opt-in) > LangGraph > 内置循环。"""
     if _has_deerflow():
@@ -64,7 +66,8 @@ async def run_agent(
     return await run_agent_builtin(
         goal, principal=principal, role_name=role_name,
         capabilities=capabilities, model=model, on_event=on_event,
-        session=session, run_id=run_id,
+        session=session, run_id=run_id, conversation_id=conversation_id,
+        permission_mode=permission_mode,
     )
 
 

@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/client";
-import AmbientAurora from "../components/effects/AmbientAurora";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -32,9 +31,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="xagent-app-bg relative flex min-h-screen items-center justify-center overflow-hidden p-6 text-neutral-100">
-      <AmbientAurora />
-      <div className="xagent-surface xagent-metal-border relative z-10 w-full max-w-md p-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-6 text-neutral-100">
+      <div className="w-full max-w-sm rounded-xl border border-white/[0.08] bg-[#141414] p-8">
         <div className="mb-7 flex items-center gap-3">
           <div className="xagent-brand-logo h-12 w-12">
             <img src="/assets/xiongbao-logo.png" alt="熊宝智能体系统" />

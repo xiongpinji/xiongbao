@@ -26,8 +26,10 @@ class QdrantVectorStore(VectorStore):
                 url=cfg.qdrant_url, api_key=cfg.qdrant_api_key or None
             )
         else:
-            # 内存模式：进程内向量库，无需外部服务
-            self._client = AsyncQdrantClient(location=":memory:")
+            # 本地磁盘模式：数据持久化到项目目录（重启不丢失）
+            from pathlib import Path
+            db_path = str(Path(__file__).resolve().parents[4] / "data" / "qdrant")
+            self._client = AsyncQdrantClient(path=db_path)
         self._ready = False
 
     async def ensure_collection(self) -> None:

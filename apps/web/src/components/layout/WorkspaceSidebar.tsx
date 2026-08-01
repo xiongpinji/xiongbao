@@ -3,241 +3,214 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bot,
   CreditCard,
+  Grid2X2,
   MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings,
   ShieldCheck,
+  Target,
 } from "lucide-react";
 import { useShellActions, useShellNavigation } from "../../shell/useShellStore";
-
-const settingsShortcuts = [
-  { label: "常规", section: "general" },
-  { label: "模型设置", section: "models" },
-  { label: "技能", section: "skills" },
-  { label: "索引库", section: "index" },
-  { label: "使用统计", section: "usage" },
-] as const;
 
 export default function WorkspaceSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const location = useLocation();
   const navigation = useShellNavigation();
   const { resetChatSession, setCommandPaletteOpen } = useShellActions();
 
-  const goalBoardItem = navigation.find((item) => item.taskId === "goal-board");
-  const workflowItem = navigation.find((item) => item.taskId === "workflows");
-  const settingsItem = navigation.find((item) => item.taskId === "settings");
-  const sessions = navigation.filter((item) => item.taskId !== "settings");
+  const sessions = navigation.filter(
+    (item) => !["settings", "goal-board", "workflows", "agents"].includes(item.taskId),
+  );
 
   if (collapsed) {
     return (
-      <button
-        type="button"
-        title="展开工作区"
-        onClick={onToggle}
-        className="flex h-screen w-9 shrink-0 items-start justify-center border-r border-white/[0.07] bg-black/50 pt-4 text-neutral-500 backdrop-blur-2xl hover:text-white"
-      >
-        <PanelLeftOpen size={18} />
-      </button>
+      <div className="flex h-full w-[52px] shrink-0 flex-col items-center border-r border-white/[0.06] bg-[#111111] py-3">
+        <button
+          type="button"
+          title="展开侧边栏"
+          onClick={onToggle}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
+        >
+          <PanelLeftOpen size={17} />
+        </button>
+        <div className="mt-4 flex flex-col items-center gap-1">
+          <Link
+            to="/chat"
+            onClick={resetChatSession}
+            title="新建对话"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <MessageSquarePlus size={17} />
+          </Link>
+          <button
+            type="button"
+            title="搜索"
+            onClick={() => setCommandPaletteOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <Search size={17} />
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <aside className="flex h-screen w-80 shrink-0 flex-col border-r border-white/[0.07] bg-black/62 text-neutral-200 backdrop-blur-2xl">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="xagent-brand-logo h-10 w-10">
-            <img src="/assets/xiongbao-logo.png" alt="熊宝智能体系统" />
+    <aside className="flex h-full w-[264px] shrink-0 flex-col border-r border-white/[0.06] bg-[#111111]">
+      {/* 顶部 */}
+      <div className="flex items-center justify-between px-3 py-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <div className="h-7 w-7 overflow-hidden rounded-lg">
+            <img src="/assets/xiongbao-logo.png" alt="X-Agent" className="h-full w-full object-cover" />
           </div>
-          <div className="min-w-0 flex-1 pr-2">
-            <div className="truncate text-sm font-semibold text-white">熊宝智能体系统</div>
-            <div className="truncate text-[11px] leading-4 text-neutral-500">Xiongbao Agent System</div>
-          </div>
+          <span className="text-sm font-semibold text-white">X-Agent</span>
         </div>
         <button
           type="button"
-          title="折叠工作区"
+          title="折叠侧边栏"
           onClick={onToggle}
-          className="rounded-lg p-2 text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
         >
-          <PanelLeftClose size={17} />
+          <PanelLeftClose size={16} />
         </button>
       </div>
 
-      <div className="space-y-2 border-y border-white/[0.07] p-3">
+      {/* 新建对话 */}
+      <div className="px-3 pb-2">
         <Link
           to="/chat"
-          onClick={() => resetChatSession()}
-          className="gold-button flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left"
+          onClick={resetChatSession}
+          className="flex w-full items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.08]"
         >
-          <span className="flex items-center gap-2"><MessageSquarePlus size={16} />新建会话</span>
-          <span className="rounded-md bg-black/20 px-2 py-0.5 text-xs text-[#fff0bf]">Ctrl+N</span>
+          <MessageSquarePlus size={16} className="text-neutral-400" />
+          新建对话
+          <kbd className="ml-auto rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-neutral-500">⌘N</kbd>
         </Link>
+      </div>
+
+      {/* 搜索 */}
+      <div className="px-3 pb-3">
         <button
           type="button"
           onClick={() => setCommandPaletteOpen(true)}
-          className="xagent-nav-item flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-500 transition hover:bg-white/[0.05] hover:text-neutral-300"
         >
-          <span className="flex items-center gap-2"><Search size={15} />搜索</span>
-          <span className="text-xs text-neutral-600">Ctrl+K</span>
+          <Search size={15} />
+          搜索...
+          <kbd className="ml-auto rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-neutral-600">⌘K</kbd>
         </button>
-        {goalBoardItem && (
-          <PrimarySurfaceLink
-            to={goalBoardItem.preferredRoute}
-            label={goalBoardItem.title}
-            subtitle={goalBoardItem.subtitle}
-            active={goalBoardItem.active}
-          />
-        )}
-        {workflowItem && (
-          <PrimarySurfaceLink
-            to={workflowItem.preferredRoute}
-            label={workflowItem.title}
-            subtitle={workflowItem.subtitle}
-            active={workflowItem.active}
-          />
-        )}
-        <Link
-          to="/agents"
-          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-            location.pathname === "/agents" ? "xagent-nav-active" : "xagent-nav-item"
-          }`}
-        >
-          <Bot size={15} />智能体角色
-        </Link>
       </div>
 
-      <div className="xagent-scrollbar flex-1 overflow-auto p-3">
-        <div className="mb-2 flex items-center justify-between px-1 text-xs font-medium text-neutral-500">
-          <span>会话</span>
-          <span>Today</span>
+      {/* 导航 */}
+      <nav className="space-y-0.5 border-b border-white/[0.06] px-3 pb-3">
+        <NavItem to="/goal-board" icon={Target} label="目标看板" active={location.pathname === "/goal-board"} />
+        <NavItem to="/professional?mode=workflow" icon={Grid2X2} label="工作流" active={location.pathname === "/professional"} />
+        <NavItem to="/agents" icon={Bot} label="智能体" active={location.pathname === "/agents"} />
+      </nav>
+
+      {/* 会话历史 */}
+      <div className="xagent-scrollbar min-h-0 flex-1 overflow-auto px-3 py-3">
+        <div className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-neutral-600">
+          最近对话
         </div>
-        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.018]">
-          {sessions.map((project) => (
+        <div className="space-y-0.5">
+          {sessions.map((item) => (
             <Link
-              key={project.taskId}
-              to={project.preferredRoute}
-              className={`block border-b border-white/[0.055] px-4 py-3 text-sm transition last:border-b-0 hover:bg-white/[0.045] ${
-                project.active ? "bg-white/[0.055] text-white" : "text-neutral-300"
+              key={item.taskId}
+              to={item.preferredRoute}
+              className={`block truncate rounded-lg px-3 py-2 text-sm transition ${
+                item.active
+                  ? "bg-white/[0.08] text-white"
+                  : "text-neutral-400 hover:bg-white/[0.05] hover:text-neutral-200"
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="truncate font-medium">{project.title}</div>
-                <span className="shrink-0 text-xs text-neutral-500">{project.badge ?? "Surface"}</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-neutral-600">{project.subtitle}</span>
-                <span className="shrink-0 text-[#d6ad62]">{project.active ? "当前" : "可切换"}</span>
-              </div>
+              {item.title}
             </Link>
           ))}
-        </div>
-        <div className="mt-4 rounded-2xl border border-dashed border-white/[0.08] bg-black/18 p-4 text-sm leading-6 text-neutral-500">
-          Goal Board、工作流与对话会在统一 shell 中保留最近上下文，右侧 Context 同步显示当前 surface。
+          {sessions.length === 0 && (
+            <div className="px-3 py-4 text-center text-xs text-neutral-600">暂无对话记录</div>
+          )}
         </div>
       </div>
 
-      <UserRow settingsRoute={settingsItem?.preferredRoute ?? "/settings"} />
+      {/* 底部用户 */}
+      <UserFooter />
     </aside>
   );
 }
 
-function PrimarySurfaceLink({
-  to,
-  label,
-  subtitle,
-  active,
-}: {
-  to: string;
-  label: string;
-  subtitle: string;
-  active: boolean;
-}) {
+function NavItem({ to, icon: Icon, label, active }: { to: string; icon: typeof Bot; label: string; active: boolean }) {
   return (
     <Link
       to={to}
-      className={`block rounded-2xl px-3 py-2.5 text-left transition ${
-        active ? "xagent-nav-active" : "xagent-nav-item"
+      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
+        active
+          ? "bg-white/[0.08] font-medium text-white"
+          : "text-neutral-400 hover:bg-white/[0.05] hover:text-neutral-200"
       }`}
     >
-      <div className="text-sm font-medium">{label}</div>
-      <div className="mt-1 text-xs text-neutral-500">{subtitle}</div>
+      <Icon size={16} />
+      {label}
     </Link>
   );
 }
 
-function UserRow({ settingsRoute }: { settingsRoute: string }) {
+function UserFooter() {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
-    function handler(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
+    const handler = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative border-t border-white/[0.07] p-3">
-      <div className="xagent-surface-subtle flex items-center justify-between px-3 py-2">
-        <div>
-          <div className="text-sm font-semibold text-white">Xiongpinji</div>
-          <div className="text-xs text-neutral-500">当前用户</div>
+    <div ref={rootRef} className="relative border-t border-white/[0.06] p-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-white/[0.05]"
+      >
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-orange-600/20 text-xs font-bold text-amber-300">
+          X
         </div>
-        <button
-          type="button"
-          title="设置"
-          onClick={() => setOpen((value) => !value)}
-          className={`rounded-lg p-2 transition-colors ${open ? "bg-[#21180c] text-[#f1c96f]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"}`}
-        >
-          <Settings size={17} />
-        </button>
-      </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-white">Xiongpinji</div>
+          <div className="text-[11px] text-neutral-600">Pro 计划</div>
+        </div>
+        <Settings size={15} className="shrink-0 text-neutral-600" />
+      </button>
 
       {open && (
-        <div className="xagent-surface absolute bottom-16 left-3 z-30 w-60 p-1">
-          {settingsShortcuts.map((item) => (
-            <button
-              key={item.section}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                navigate(`/settings?section=${item.section}`);
-              }}
-              className="block w-full rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/[0.06] hover:text-white"
-            >
-              {item.label}
-            </button>
-          ))}
-          <div className="my-1 h-px bg-neutral-800" />
-          <Link
-            to="/billing"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/[0.06] hover:text-white"
-          >
-            <CreditCard size={14} />计费与用量
-          </Link>
-          <Link
-            to="/audit"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/[0.06] hover:text-white"
-          >
-            <ShieldCheck size={14} />审计日志
-          </Link>
-          <div className="my-1 h-px bg-neutral-800" />
-          <Link
-            to={settingsRoute}
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white hover:bg-white/[0.06]"
-          >
-            打开设置中心
-          </Link>
+        <div className="absolute bottom-14 left-3 z-50 w-56 rounded-xl border border-white/[0.08] bg-[#1a1a1a] p-1.5 shadow-2xl">
+          <MenuBtn onClick={() => { setOpen(false); navigate("/settings?section=general"); }}>设置</MenuBtn>
+          <MenuBtn onClick={() => { setOpen(false); navigate("/settings?section=models"); }}>模型配置</MenuBtn>
+          <MenuBtn onClick={() => { setOpen(false); navigate("/billing"); }}>
+            <CreditCard size={14} className="mr-2" />计费与用量
+          </MenuBtn>
+          <MenuBtn onClick={() => { setOpen(false); navigate("/audit"); }}>
+            <ShieldCheck size={14} className="mr-2" />审计日志
+          </MenuBtn>
         </div>
       )}
     </div>
+  );
+}
+
+function MenuBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-neutral-300 transition hover:bg-white/[0.06] hover:text-white"
+    >
+      {children}
+    </button>
   );
 }

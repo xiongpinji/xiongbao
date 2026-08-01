@@ -1,273 +1,540 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUp, Bot, CheckCircle2, FileText, Plus, UserRound } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  ArrowUp, Bot, CheckCircle2, ChevronDown, ChevronRight, Code2,
+  FileText, Globe, Loader2, Square, Terminal, UserRound, XCircle,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
-import { readAgentRunStream } from "../api/chatStream";
+import { readAgentRunStream, type StepInfo } from "../api/chatStream";
 import { getToken } from "../api/client";
 import { useShellActions, useShellStore } from "../shell/useShellStore";
+import { MarkdownRenderer, CollapsibleSection } from "../components/chat/MarkdownRenderer";
+import ConversationSidebar from "../components/chat/ConversationSidebar";
+
+/* ================================================================== */
+/*  类型                                                               */
+/* ================================================================== */
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  runId?: string;
+  run?: AgentRun;
+  steps?: StepInfo[];
+  streaming?: boolean;
+}
+
+/* ================================================================== */
+/*  主页面                                                             */
+/* ================================================================== */
 
 export default function ChatPage() {
   const { appendActivity, syncRunTask } = useShellActions();
-  const chatSessionVersion = useShellStore((state) => state.chatSessionVersion);
-  const chatSessionKey = useShellStore((state) => state.chatSessionKey);
+  const chatSessionVersion = useShellStore((s) => s.chatSessionVersion);
+  const chatSessionKey = useShellStore((s) => s.chatSessionKey);
+
   const [goal, setGoal] = useState("");
-  const [submittedGoal, setSubmittedGoal] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [run, setRun] = useState<AgentRun | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
-  const [streamText, setStreamText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [steps, setSteps] = useState<StepInfo[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(
+    () => localStorage.getItem("xagent_conversation_id")
+  );
+  const [streamingText, setStreamingText] = useState("");
+  const [completedSegments, setCompletedSegments] = useState<string[]>([]);
+  const [sidebarKey, setSidebarKey] = useState(0);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // 持久化 conversationId
+  useEffect(() => {
+    if (conversationId) localStorage.setItem("xagent_conversation_id", conversationId);
+    else localStorage.removeItem("xagent_conversation_id");
+  }, [conversationId]);
 
   useEffect(() => {
-    setGoal("");
-    setSubmittedGoal("");
-    setLoading(false);
-    setRun(null);
-    setRunId(null);
-    setStreamText("");
-    setError(null);
+    setGoal(""); setMessages([]); setLoading(false);
+    setError(null); setConversationId(null); setSteps([]); setStreamingText("");
+    setCompletedSegments([]);
   }, [chatSessionVersion, chatSessionKey]);
 
-  async function submit() {
-    const nextGoal = goal.trim();
-    if (!nextGoal) return;
-    setSubmittedGoal(nextGoal);
-    setLoading(true);
-    setError(null);
-    setStreamText("");
-    setRun(null);
-    setRunId(null);
-    appendActivity({
-      taskId: "chat",
-      title: "提交对话任务",
-      detail: nextGoal,
-      tone: "info",
-    });
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading, steps, streamingText]);
 
-    // 优先走 SSE 流式，失败回退普通 run
+  // 页面加载时恢复当前会话消息
+  useEffect(() => {
+    if (!conversationId) return;
+    const token = getToken();
+    fetch(`/api/v1/stream/conversations/${conversationId}/messages`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.messages?.length) {
+          setMessages(data.messages.map((m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 切换会话：加载历史消息
+  const handleSelectConversation = useCallback(async (id: string) => {
+    setConversationId(id);
+    setSteps([]);
+    setStreamingText("");
+    setError(null);
+    setMessages([]);
+    try {
+      const token = getToken();
+      const resp = await fetch(`/api/v1/stream/conversations/${id}/messages`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data?.messages?.length) {
+          setMessages(data.messages.map((m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })));
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // 新对话
+  const handleNewConversation = useCallback(() => {
+    setConversationId(null);
+    setMessages([]);
+    setSteps([]);
+    setStreamingText("");
+    setError(null);
+    setGoal("");
+    setSidebarKey((k) => k + 1);
+  }, []);
+
+  // 停止当前 SSE 流
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
+  const submit = useCallback(async () => {
+    const nextGoal = goal.trim();
+    if (!nextGoal || loading) return;
+    setGoal("");
+    setError(null);
+    setSteps([]);
+    setStreamingText("");
+    setCompletedSegments([]);
+    setMessages((prev) => [...prev, { role: "user", content: nextGoal }]);
+    setLoading(true);
+    appendActivity({ taskId: "chat", title: "提交任务", detail: nextGoal, tone: "info" });
+
     try {
       await runSSE(nextGoal);
-    } catch {
-      try {
-        const nextRun = await runAgent({ goal: nextGoal });
-        setError(null);
-        setRun(nextRun);
-        setRunId(nextRun.run_id);
-        syncRunTask(nextRun.run_id, { source: "chat" });
-        appendActivity({
-          taskId: "chat",
-          title: "Agent 已返回结果",
-          detail: `运行 ${nextRun.run_id}`,
-          tone: "success",
-        });
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setMessages((prev) => [...prev, { role: "assistant", content: "（已停止）" }]);
+      } else {
+        try {
+          const nextRun = await runAgent({ goal: nextGoal });
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun },
+          ]);
+          syncRunTask(nextRun.run_id, { source: "chat" });
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
       }
     } finally {
       setLoading(false);
+      setStreamingText("");
+      setCompletedSegments([]);
+      abortRef.current = null;
     }
-  }
+  }, [goal, loading, conversationId]);
 
-  async function runSSE(nextGoal: string) {
+  async function runSSE(nextGoal: string): Promise<void> {
     const token = getToken();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const resp = await fetch("/api/v1/stream/agents/run", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ goal: nextGoal }),
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined }),
+      signal: controller.signal,
     });
     if (!resp.ok || !resp.body) throw new Error(`SSE ${resp.status}`);
 
+    let result = "";
+    let sseRunId = "";
+    const collectedSteps: StepInfo[] = [];
+    let tokenBuf = "";
+    const segments: string[] = [];
+
     await readAgentRunStream(resp, {
-      onFinalAnswer: setStreamText,
+      onStarted: (convId) => setConversationId(convId),
+      onToken: (t) => {
+        tokenBuf += t;
+        setStreamingText(tokenBuf);
+      },
+      onFinalAnswer: (text) => {
+        result = text;
+        if (!tokenBuf) setStreamingText(text);
+      },
       onError: setError,
+      onStep: (step) => {
+        collectedSteps.push(step);
+        setSteps([...collectedSteps]);
+        if (step.kind === "tool_call") {
+          if (tokenBuf.trim()) {
+            segments.push(tokenBuf.trim());
+            setCompletedSegments([...segments]);
+          }
+          tokenBuf = "";
+          setStreamingText("");
+        }
+      },
       onDone: (nextRunId) => {
-        setRunId(nextRunId);
+        sseRunId = nextRunId;
         syncRunTask(nextRunId, { source: "chat" });
-        appendActivity({
-          taskId: "chat",
-          title: "流式任务完成",
-          detail: `运行 ${nextRunId}`,
-          tone: "success",
-        });
+        appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
       },
     });
+
+    // 最终回答优先用 result，否则用累积的 segments + token
+    let finalContent = result || [...segments, tokenBuf].filter(Boolean).join("\n\n");
+    if (!finalContent && collectedSteps.length > 0) {
+      const toolCallCount = collectedSteps.filter((s) => s.kind === "tool_call").length;
+      finalContent = `任务已执行完成（共 ${toolCallCount} 次工具调用），但模型未生成文字总结。请尝试换一种方式提问。`;
+    }
+    if (sseRunId || finalContent) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps] },
+      ]);
+    }
+  }
+
+  const isEmpty = messages.length === 0 && !loading && !error;
+
+  return (
+    <div className="flex h-full">
+      {/* 对话历史侧栏 */}
+      <ConversationSidebar
+        key={sidebarKey}
+        activeId={conversationId}
+        onSelect={handleSelectConversation}
+        onNew={handleNewConversation}
+      />
+
+      {/* 主聊天区 */}
+      <div className="flex min-w-0 flex-1 flex-col">
+      {/* 消息区 */}
+      <div ref={scrollRef} className="xagent-scrollbar min-h-0 flex-1 overflow-auto">
+        {isEmpty ? (
+          <EmptyState onPick={(t) => { setGoal(t); textareaRef.current?.focus(); }} />
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-1 px-4 py-6">
+            {messages.map((msg, i) => (
+              <MessageBlock key={i} msg={msg} />
+            ))}
+
+            {/* 实时执行状态 */}
+            {loading && (
+              <div className="py-4">
+                {steps.length > 0 && <ToolExecutionPanel steps={steps} live />}
+                <div className="mt-3 flex items-center gap-3 text-sm text-neutral-500">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.05]">
+                    <Loader2 size={14} className="animate-spin text-neutral-400" />
+                  </div>
+                  {steps.length > 0 ? "正在整合结果..." : "正在思考..."}
+                </div>
+                {/* 流式文本预览（含已完成 segments） */}
+                {(() => {
+                  const displayText = [...completedSegments, streamingText].filter(Boolean).join("\n\n");
+                  return displayText ? (
+                    <div className="mt-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4">
+                      <MarkdownRenderer content={displayText} />
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
+            {error && (
+              <div className="my-3 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                <XCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
+                <span className="text-sm text-red-400">{error}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 输入区 */}
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#111111] px-4 py-3">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-end gap-2 rounded-xl border border-white/[0.08] bg-[#1a1a1a] px-4 py-3 transition focus-within:border-white/[0.15]">
+            <textarea
+              ref={textareaRef}
+              className="max-h-40 min-h-[24px] flex-1 resize-none bg-transparent text-sm leading-6 text-neutral-100 outline-none placeholder:text-neutral-600"
+              placeholder="描述一个任务或提出一个问题..."
+              rows={1}
+              value={goal}
+              onChange={(e) => {
+                setGoal(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); }
+              }}
+            />
+            {loading ? (
+              <button
+                type="button"
+                onClick={handleStop}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/90 text-white transition hover:bg-red-400"
+                title="停止生成"
+              >
+                <Square size={14} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!goal.trim()}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-black transition hover:bg-neutral-200 disabled:opacity-30"
+                title="发送 (Enter)"
+              >
+                <ArrowUp size={16} />
+              </button>
+            )}
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-neutral-700">
+            <span>Enter 发送</span>
+            <span>Shift+Enter 换行</span>
+            <span>支持代码执行 · 文件操作 · 网页抓取 · 图像生成</span>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  空态                                                               */
+/* ================================================================== */
+
+function EmptyState({ onPick }: { onPick: (text: string) => void }) {
+  const suggestions = [
+    { icon: <Code2 size={16} />, text: "写一个 Python 脚本计算斐波那契数列前 20 项并执行" },
+    { icon: <Terminal size={16} />, text: "查看当前系统环境信息（Python版本、操作系统、目录）" },
+    { icon: <Globe size={16} />, text: "抓取 Hacker News 首页标题并总结热点" },
+    { icon: <FileText size={16} />, text: "创建一个 FastAPI 项目骨架（main.py + requirements.txt）" },
+  ];
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-4">
+      <div className="mb-10 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04]">
+          <Bot size={26} className="text-neutral-400" />
+        </div>
+        <h1 className="text-xl font-semibold text-white">有什么可以帮你的？</h1>
+        <p className="mt-2 text-sm text-neutral-500">
+          描述目标，熊宝会规划步骤、调用工具、逐步执行并交付结果。
+        </p>
+      </div>
+      <div className="grid w-full max-w-xl gap-2.5">
+        {suggestions.map((s) => (
+          <button
+            key={s.text}
+            type="button"
+            onClick={() => onPick(s.text)}
+            className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3.5 text-left text-sm text-neutral-400 transition hover:border-white/[0.12] hover:bg-white/[0.04] hover:text-neutral-200"
+          >
+            <span className="text-neutral-600">{s.icon}</span>
+            {s.text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  工具执行面板（Codex 风格）                                          */
+/* ================================================================== */
+
+const TOOL_ICONS: Record<string, string> = {
+  python_exec: "🐍",
+  shell_exec: "⚡",
+  web_fetch: "🌐",
+  file_write: "📝",
+  file_read: "📖",
+  file_list: "📂",
+  memory_write: "🧠",
+  memory_search: "🔍",
+};
+
+function ToolExecutionPanel({ steps, live = false }: { steps: StepInfo[]; live?: boolean }) {
+  // 将 steps 配对为 (call, result) 组
+  const groups: { call: StepInfo; result?: StepInfo }[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (steps[i].kind === "tool_call") {
+      const result = steps[i + 1]?.kind === "tool_result" ? steps[i + 1] : undefined;
+      groups.push({ call: steps[i], result });
+      if (result) i++;
+    }
   }
 
   return (
-    <div className="xagent-page mx-auto flex h-full max-w-5xl flex-col px-4 py-4 md:px-6">
-      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.07] pb-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">AI 工作区</div>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white">对话</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-neutral-500">
-            输入、输出和运行记录在同一条会话流里，像 Codex 一样连续推进任务。
-          </p>
-        </div>
-        <Link
-          to="/professional?mode=workflow"
-          className="gold-button hidden md:inline-flex"
-        >
-          转为工作流
-        </Link>
-      </header>
-
-      <section className="xagent-scrollbar min-h-0 flex-1 space-y-5 overflow-auto py-5">
-        {!submittedGoal && !streamText && !run && !error && (
-          <div className="xagent-chat-empty-state relative flex h-full min-h-[480px] flex-col items-center justify-center text-center">
-            <div className="absolute h-[25rem] w-[25rem] rounded-full border border-[#d6ad62]/10 shadow-[0_0_150px_rgba(216,174,97,0.08)]" />
-            <div className="absolute h-64 w-64 rounded-full border border-[#c92d2d]/10" />
-            <div className="xagent-hero-mascot-frame relative">
-              <img
-                src="/assets/xiongbao-mascot.png"
-                alt="熊宝儿"
-                className="xagent-hero-mascot"
-              />
-            </div>
-            <h2 className="relative text-3xl font-semibold tracking-tight text-white md:text-5xl">
-              您好，我是 <span className="text-[#f1c96f]">熊宝儿</span>
-            </h2>
-            <p className="mt-3 text-lg font-medium text-neutral-100">今天想要构建什么？</p>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-500">
-              直接描述目标，熊宝会把任务拆成可执行步骤，并在需要时进入工作流、短剧工厂或剪辑工作台。
-            </p>
-          </div>
-        )}
-
-        {submittedGoal && (
-          <MessageRow icon={<UserRound size={18} />} title="你" align="right">
-            {submittedGoal}
-          </MessageRow>
-        )}
-
-        {(loading || streamText || run || error || runId) && (
-          <MessageRow icon={<Bot size={18} />} title="熊宝">
-            {loading && !streamText && !run && !error && (
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-[#d6ad62]" />
-                正在分析任务并调用 Agent...
-              </div>
-            )}
-            {error && <div className="text-sm leading-6 text-red-300">{error}</div>}
-            {streamText && <div className="whitespace-pre-wrap text-sm leading-7 text-neutral-200">{streamText}</div>}
-            {run && (
-              <div className="space-y-4">
-                <div className="whitespace-pre-wrap text-sm leading-7 text-neutral-200">{run.final_answer}</div>
-                <details className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-                  <summary className="cursor-pointer text-sm font-medium text-neutral-300">
-                    事件序列（{run.events.length}）
-                  </summary>
-                  <ol className="mt-3 space-y-2 text-xs text-neutral-500">
-                    {run.events.map((event, index) => (
-                      <li key={`${event.step}-${index}`} className="flex gap-2">
-                        <span className="text-[#d6ad62]">[{event.step}]</span>
-                        <span>{event.kind}{event.tool ? ` · ${event.tool}` : ""}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </details>
-              </div>
-            )}
-            {runId && (
-              <Link
-                to={`/runs/${encodeURIComponent(runId)}`}
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.045] px-3 py-2 text-sm text-neutral-200 transition hover:border-[#d6ad62]/50 hover:text-white"
-              >
-                <FileText size={15} />
-                查看运行详情
-              </Link>
-            )}
-          </MessageRow>
-        )}
-      </section>
-
-      <footer className="shrink-0 pb-2">
-        <div className="xagent-command-shell xagent-sheen">
-          <textarea
-            className="block min-h-28 w-full resize-none rounded-t-[22px] border-0 bg-transparent px-5 py-4 text-sm leading-6 text-neutral-100 outline-none placeholder:text-neutral-600"
-            placeholder="描述一个任务或提出一个问题..."
-            value={goal}
-            onChange={(event) => setGoal(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                event.preventDefault();
-                void submit();
-              }
-            }}
-          />
-          <div className="flex items-center justify-between border-t border-white/[0.08] px-4 py-3">
-            <div className="flex items-center gap-2">
-              <button className="xagent-chip inline-flex items-center gap-2 rounded-xl">
-                <Plus size={15} />
-                添加上下文
-              </button>
-              <button className="xagent-chip rounded-xl">
-                Auto
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={loading || !goal.trim()}
-              className="xagent-send-button h-11 w-11"
-              title="运行 Agent"
-            >
-              {loading ? <CheckCircle2 size={18} className="animate-pulse" /> : <ArrowUp size={20} />}
-            </button>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap justify-center gap-2 text-sm text-neutral-400">
-          {["写一个函数", "修复 Bug", "添加测试", "构建工作流", "生成分镜"].map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => setGoal(prompt)}
-              className="xagent-chip"
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      </footer>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+        <Terminal size={12} />
+        <span>执行过程</span>
+        {live && <Loader2 size={11} className="animate-spin text-neutral-600" />}
+        <span className="text-neutral-700">({groups.length} 步)</span>
+      </div>
+      {groups.map((g, i) => (
+        <ToolCard key={i} call={g.call} result={g.result} />
+      ))}
     </div>
   );
 }
 
-function MessageRow({
-  icon,
-  title,
-  align = "left",
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  align?: "left" | "right";
-  children: ReactNode;
-}) {
+function ToolCard({ call, result }: { call: StepInfo; result?: StepInfo }) {
+  const [open, setOpen] = useState(false);
+  const toolName = call.tool || "tool";
+  const icon = TOOL_ICONS[toolName] || "🔧";
+  const args = call.content != null
+    ? (typeof call.content === "string" ? call.content : JSON.stringify(call.content, null, 2))
+    : "";
+  const output = result?.content != null
+    ? (typeof result.content === "string" ? result.content : JSON.stringify(result.content, null, 2))
+    : "";
+  const isError = output.startsWith("[错误]") || output.includes("失败");
+  const isRunning = !result;
+
   return (
-    <div className={`flex gap-3 ${align === "right" ? "justify-end" : "justify-start"}`}>
-      {align === "left" && <Avatar>{icon}</Avatar>}
-      <div className={`max-w-[760px] ${align === "right" ? "items-end" : "items-start"} flex flex-col`}>
-        <div className="mb-2 text-xs font-medium text-neutral-500">{title}</div>
-        <div
-          className={`rounded-[22px] border px-5 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] ${
-            align === "right" ? "xagent-message-user" : "xagent-message-assistant"
-          }`}
-        >
-          <div className="whitespace-pre-wrap text-sm leading-7">{children}</div>
+    <div className={`overflow-hidden rounded-lg border ${
+      isError ? "border-red-500/20 bg-red-500/[0.03]"
+      : isRunning ? "border-blue-500/20 bg-blue-500/[0.02]"
+      : "border-white/[0.06] bg-white/[0.015]"
+    }`}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left"
+      >
+        {open ? <ChevronDown size={12} className="text-neutral-600" /> : <ChevronRight size={12} className="text-neutral-600" />}
+        <span className="text-sm">{icon}</span>
+        <code className="text-xs font-medium text-neutral-300">{toolName}</code>
+        <span className="flex-1 truncate text-[11px] text-neutral-600">
+          {args.slice(0, 80)}
+        </span>
+        {isRunning ? (
+          <Loader2 size={12} className="animate-spin text-blue-400" />
+        ) : isError ? (
+          <XCircle size={12} className="text-red-400" />
+        ) : (
+          <CheckCircle2 size={12} className="text-green-400/70" />
+        )}
+      </button>
+      {open && (
+        <div className="border-t border-white/[0.04] px-3 py-2">
+          {args && (
+            <div className="mb-2">
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-neutral-600">输入</div>
+              <pre className="max-h-32 overflow-auto rounded bg-black/30 p-2 text-[11px] leading-5 text-neutral-400">
+                {args.slice(0, 1000)}
+              </pre>
+            </div>
+          )}
+          {output && (
+            <div>
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-neutral-600">输出</div>
+              <pre className={`max-h-48 overflow-auto rounded bg-black/30 p-2 text-[11px] leading-5 ${
+                isError ? "text-red-400/80" : "text-green-300/70"
+              }`}>
+                {output.slice(0, 2000)}
+                {output.length > 2000 && "\n... (已截断)"}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  消息块                                                             */
+/* ================================================================== */
+
+function MessageBlock({ msg }: { msg: ChatMessage }) {
+  if (msg.role === "user") {
+    return (
+      <div className="flex justify-end py-2">
+        <div className="flex items-start gap-3">
+          <div className="max-w-[85%] rounded-2xl bg-white/[0.08] px-4 py-3 text-sm leading-7 text-neutral-100">
+            <div className="whitespace-pre-wrap">{msg.content}</div>
+          </div>
+          <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
+            <UserRound size={14} className="text-neutral-400" />
+          </div>
         </div>
       </div>
-      {align === "right" && <Avatar>{icon}</Avatar>}
-    </div>
-  );
-}
+    );
+  }
 
-function Avatar({ children }: { children: ReactNode }) {
+  // Assistant message
   return (
-    <div className="xagent-icon-tile mt-6 h-9 w-9 rounded-2xl">
-      {children}
+    <div className="py-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.05]">
+          <Bot size={14} className="text-neutral-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* 工具执行记录（折叠） */}
+          {msg.steps && msg.steps.length > 0 && (
+            <CollapsibleSection
+              title="执行过程"
+              icon={<Terminal size={12} />}
+              badge={`${msg.steps.filter((s) => s.kind === "tool_call").length} 次工具调用`}
+            >
+              <ToolExecutionPanel steps={msg.steps} />
+            </CollapsibleSection>
+          )}
+
+          {/* Markdown 渲染的最终回答 */}
+          <div className="mt-1">
+            <MarkdownRenderer content={msg.content} />
+          </div>
+
+          {/* 运行详情链接 */}
+          {msg.runId && (
+            <Link
+              to={`/runs/${encodeURIComponent(msg.runId)}`}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-2.5 py-1.5 text-xs text-neutral-500 transition hover:border-white/[0.12] hover:text-neutral-300"
+            >
+              <FileText size={12} />
+              查看运行详情
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

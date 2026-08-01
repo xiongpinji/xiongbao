@@ -52,9 +52,13 @@ class ToolRegistry:
 @lru_cache
 def get_tool_registry() -> ToolRegistry:
     from xagent.adapters.tools.builtin import builtin_tools
+    from xagent.adapters.tools.codex_tools import codex_tools
+    from xagent.adapters.tools.power_tools import power_tools
 
     registry = ToolRegistry()
     registry.register_many(builtin_tools())
+    registry.register_many(power_tools())
+    registry.register_many(codex_tools())
     # 注册浏览器工具（stub 降级时也注册，调用会返回明确提示）
     try:
         from xagent.adapters.browser.tools import browser_tools

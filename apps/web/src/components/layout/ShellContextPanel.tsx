@@ -1,4 +1,4 @@
-import { Activity, CheckCircle2, ChevronRight, Clock3, PanelRight, Sparkles } from "lucide-react";
+import { Activity, CheckCircle2, ChevronRight, Clock3, PanelRightClose, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import ConversationalCommand from "../chat/ConversationalCommand";
 import { useShellDerivedState } from "../../shell/useShellStore";
@@ -7,124 +7,114 @@ function formatTime(timestamp: number) {
   return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
-function statusLabel(status: string) {
-  if (status === "running") return "运行中";
-  if (status === "attention") return "待处理";
-  return "就绪";
-}
-
 function statusTone(status: string) {
   if (status === "running") return "bg-amber-400";
   if (status === "attention") return "bg-red-400";
   return "bg-emerald-400";
 }
 
-export default function ShellContextPanel() {
+export default function ShellContextPanel({ onClose }: { onClose: () => void }) {
   const { session, currentContext, recentTasks, activeTaskActivity } = useShellDerivedState();
   const relatedTasks = recentTasks.slice(0, 4);
 
   return (
-    <aside className="hidden h-full w-[320px] shrink-0 flex-col border-l border-white/[0.07] bg-black/62 text-neutral-200 shadow-[inset_1px_0_0_rgba(255,255,255,0.03)] backdrop-blur-2xl xl:flex">
-      <div className="flex h-12 items-center justify-between border-b border-white/[0.07] px-5">
-        <div className="flex items-center gap-2">
-          <PanelRight size={17} className="text-[#d6ad62]" />
-          <span className="text-sm font-semibold text-white">Context</span>
-        </div>
-        <span className="rounded-full border border-[#8a6a32]/35 bg-[#171108]/70 px-2.5 py-1 text-xs font-medium text-[#f2d99c]">
-          {statusLabel(currentContext?.status ?? "ready")}
-        </span>
+    <aside className="flex h-full w-[300px] shrink-0 flex-col border-l border-white/[0.06] bg-[#111111]">
+      <div className="flex h-11 items-center justify-between border-b border-white/[0.06] px-4">
+        <span className="text-sm font-medium text-neutral-200">上下文</span>
+        <button
+          type="button"
+          title="关闭面板"
+          onClick={onClose}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition hover:bg-white/[0.06] hover:text-white"
+        >
+          <PanelRightClose size={15} />
+        </button>
       </div>
 
-      <div className="xagent-scrollbar min-h-0 flex-1 overflow-auto px-5 py-4">
+      <div className="xagent-scrollbar min-h-0 flex-1 overflow-auto px-4 py-4">
+        {/* 当前会话 */}
         <section>
-          <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.16em] text-neutral-500">
-            <span>Session</span>
-            <span>{formatTime(session.startedAt)}</span>
+          <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-neutral-600">
+            会话 · {formatTime(session.startedAt)}
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-white">{session.label}</div>
-                <div className="mt-1 text-xs text-neutral-500">{session.currentProject}</div>
-              </div>
-              <span className="rounded-full bg-black/30 px-2 py-1 text-xs text-neutral-400">
-                {formatTime(session.startedAt)}
-              </span>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5">
+            <div className="text-sm font-medium text-white">{session.label}</div>
+            <div className="mt-1 text-xs text-neutral-500">{session.currentProject}</div>
+            <div className="mt-3 rounded-lg border border-white/[0.05] bg-black/20 p-2.5">
+              <div className="text-[11px] text-neutral-600">当前上下文</div>
+              <div className="mt-1 text-sm text-neutral-200">{currentContext?.title ?? "工作区"}</div>
+              <div className="mt-0.5 text-xs text-neutral-500">{currentContext?.subtitle ?? "等待任务上下文"}</div>
             </div>
-            <div className="rounded-xl border border-white/[0.055] bg-black/22 p-3">
-              <div className="text-xs text-neutral-500">Current file</div>
-              <div className="mt-2 text-sm font-semibold text-white">{currentContext?.title ?? "工作区"}</div>
-              <div className="mt-1 text-xs leading-5 text-neutral-500">{currentContext?.subtitle ?? "等待当前任务上下文"}</div>
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
-              <span className={`h-2 w-2 rounded-full ${statusTone(currentContext?.status ?? "ready")}`} />
-              {statusLabel(currentContext?.status ?? "ready")}
+            <div className="mt-2.5 flex items-center gap-1.5 text-xs text-neutral-500">
+              <span className={`h-1.5 w-1.5 rounded-full ${statusTone(currentContext?.status ?? "ready")}`} />
+              {currentContext?.status === "running" ? "运行中" : "就绪"}
             </div>
           </div>
         </section>
 
-        <section className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-            <Sparkles size={13} className="text-[#d6ad62]" />
-            Relevant sessions
+        {/* 相关会话 */}
+        <section className="mt-5">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-600">
+            <Sparkles size={11} />
+            相关会话
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {relatedTasks.map((task) => (
               <Link
                 key={task.id}
                 to={task.route}
-                className="group block rounded-xl border border-transparent px-3 py-2.5 transition hover:border-white/[0.07] hover:bg-white/[0.04]"
+                className="group flex items-center gap-2 rounded-lg px-2.5 py-2 transition hover:bg-white/[0.04]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-white">{task.title}</div>
-                    <div className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">{task.subtitle}</div>
-                  </div>
-                  <ChevronRight size={15} className="mt-1 shrink-0 text-neutral-700 transition group-hover:text-[#f1c96f]" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-neutral-300 group-hover:text-white">{task.title}</div>
+                  <div className="truncate text-xs text-neutral-600">{task.subtitle}</div>
                 </div>
+                <ChevronRight size={13} className="shrink-0 text-neutral-700 group-hover:text-neutral-400" />
               </Link>
             ))}
             {relatedTasks.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-white/[0.08] p-4 text-sm text-neutral-500">
-                暂无相关会话。
+              <div className="rounded-lg border border-dashed border-white/[0.06] px-3 py-4 text-center text-xs text-neutral-600">
+                暂无相关会话
               </div>
             )}
           </div>
         </section>
 
-        <section className="mt-6">
+        {/* 上下文助手 */}
+        <section className="mt-5">
           <ConversationalCommand
             compact
             title="上下文助手"
             context={currentContext?.title ?? "当前工作区"}
-            placeholder="继续追问、总结当前页，或要求生成下一步..."
-            initialAssistantMessage="我会根据当前页面上下文回答，并把你的意图转成下一步操作。"
-            suggestions={["总结当前页", "下一步该做什么", "转成工作流任务"]}
+            placeholder="追问或生成下一步..."
+            initialAssistantMessage="我会根据当前页面上下文回答。"
+            suggestions={["总结当前页", "下一步", "转成工作流"]}
           />
         </section>
 
-        <section className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-            <Activity size={13} className="text-[#d6ad62]" />
-            Past actions
+        {/* 最近动作 */}
+        <section className="mt-5">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-neutral-600">
+            <Activity size={11} />
+            最近动作
           </div>
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {activeTaskActivity.map((item) => (
-              <div key={item.id} className="flex gap-3 rounded-xl border border-white/[0.045] bg-black/16 p-3">
-                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+              <div key={item.id} className="flex gap-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] p-2.5">
+                <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-500" />
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                  <div className="flex items-center gap-2 text-sm text-neutral-300">
                     <span className="truncate">{item.title}</span>
-                    <span className="shrink-0 text-xs text-neutral-600">{formatTime(item.timestamp)}</span>
+                    <span className="shrink-0 text-[10px] text-neutral-600">{formatTime(item.timestamp)}</span>
                   </div>
-                  <div className="mt-1 text-xs leading-5 text-neutral-500">{item.detail}</div>
+                  <div className="mt-0.5 text-xs text-neutral-600">{item.detail}</div>
                 </div>
               </div>
             ))}
             {activeTaskActivity.length === 0 && (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] py-8 text-sm text-neutral-500">
-                <Clock3 size={15} />
-                No actions yet.
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/[0.06] py-6 text-xs text-neutral-600">
+                <Clock3 size={13} />
+                暂无动作
               </div>
             )}
           </div>
