@@ -166,6 +166,14 @@ def create_app() -> FastAPI:
     from xagent.api.response_cache import ResponseCacheMiddleware
     app.add_middleware(ResponseCacheMiddleware, cache_ttl=60)
 
+    # 链路追踪（X-Trace-ID 贯穿）
+    from xagent.api.trace import TraceMiddleware
+    app.add_middleware(TraceMiddleware)
+
+    # 幂等性保障（Idempotency-Key 防重复提交）
+    from xagent.api.idempotency import IdempotencyMiddleware
+    app.add_middleware(IdempotencyMiddleware)
+
     # 路由挂载
     app.include_router(system.router)
     app.include_router(api_v1)
