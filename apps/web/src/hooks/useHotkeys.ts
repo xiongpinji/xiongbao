@@ -1,37 +1,33 @@
 /**
- * 快捷键绑定 Hook（零依赖）。
+ * 键盘快捷键 Hook（零依赖）。
  *
  * 功能：
- * - useHotkeys：全局/局部键盘快捷键绑定
- * - 支持组合键（Ctrl+S, Shift+Enter）
- * - 输入框内自动忽略（可配置）
- * - 多快捷键同时注册
+ * - useHotkeys：注册全局/局部键盘快捷键
+ * - 支持组合键（Ctrl+Shift+K）
+ * - 支持序列键（g then i）
+ * - 输入框中忽略
  *
  * 用法：
- *   useHotkeys([
- *     { keys: "ctrl+s", handler: (e) => save(), preventDefault: true },
- *     { keys: "escape", handler: () => close() },
- *   ]);
+ *   useHotkeys("ctrl+k", () => openPalette());
+ *   useHotkeys(["ctrl+s", "ctrl+shift+s"], (e) => save(e));
  */
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
-interface HotkeyBinding {
-  /** 快捷键描述（如 "ctrl+s", "shift+enter", "escape"） */
-  keys: string;
-  /** 触发回调 */
-  handler: (event: KeyboardEvent) => void;
-  /** 是否阻止默认行为（默认 false） */
-  preventDefault?: boolean;
-  /** 是否阻止冒泡（默认 false） */
-  stopPropagation?: boolean;
-  /** 是否在输入框中也触发（默认 false） */
-  allowInInput?: boolean;
-  /** 是否启用（默认 true） */
+type HotkeyHandler = (event: KeyboardEvent) => void;
+
+interface UseHotkeysOptions {
+  /** 是否启用 */
   enabled?: boolean;
+  /** 在 input/textarea 中也触发 */
+  enableInInputs?: boolean;
+  /** 是否阻止默认行为 */
+  preventDefault?: boolean;
+  /** 作用域元素（不传则全局） */
+  scopeRef?: React.RefObject<HTMLElement | null>;
 }
 
-interface ParsedKeys {
+interface ParsedHotkey {
   ctrl: boolean;
   shift: boolean;
   alt: boolean;
@@ -39,74 +35,125 @@ interface ParsedKeys {
   key: string;
 }
 
-/** 解析快捷键字符串 */
-function parseKeys(keys: string): ParsedKeys {
-  const parts = keys.toLowerCase().split("+").map((p) => p.trim());
+function parseHotkey(combo: string): ParsedHotkey {
+  const parts = combo.toLowerCase().split("+").map((p) => p.trim());
   return {
     ctrl: parts.includes("ctrl") || parts.includes("control"),
     shift: parts.includes("shift"),
-    alt: parts.includes("alt"),
+    alt: parts.includes("alt") || parts.includes("option"),
     meta: parts.includes("meta") || parts.includes("cmd") || parts.includes("command"),
-    key: parts.filter(
-      (p) => !["ctrl", "control", "shift", "alt", "meta", "cmd", "command"].includes(p),
-    )[0] || "",
+    key: parts.filter((p) => !["ctrl", "control", "shift", "alt", "option", "meta", "cmd", "command"].includes(p))[0] || "",
   };
 }
 
-/** 判断是否在输入元素中 */
-function isInputElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName.toLowerCase();
+function matchesEvent(parsed: ParsedHotkey, e: KeyboardEvent): boolean {
+  const key = e.key.toLowerCase();
+  const keyMatches = key === parsed.key || (parsed.key === "escape" && key === "esc");
+
   return (
-    tag === "input" ||
-    tag === "textarea" ||
-    tag === "select" ||
-    target.isContentEditable
+    keyMatches &&
+    e.ctrlKey === parsed.ctrl &&
+    e.shiftKey === parsed.shift &&
+    e.altKey === parsed.alt &&
+    e.metaKey === parsed.meta
   );
 }
 
-/** 匹配键盘事件 */
-function matchEvent(event: KeyboardEvent, parsed: ParsedKeys): boolean {
-  const eventKey = event.key.toLowerCase();
-  const keyMatch =
-    parsed.key === eventKey ||
-    (parsed.key === "space" && eventKey === " ") ||
-    (parsed.key === "esc" && eventKey === "escape");
-
-  return (
-    keyMatch &&
-    event.ctrlKey === parsed.ctrl &&
-    event.shiftKey === parsed.shift &&
-    event.altKey === parsed.alt &&
-    event.metaKey === parsed.meta
-  );
+function isInputElement(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
 }
 
-export function useHotkeys(bindings: HotkeyBinding[]): void {
-  const bindingsRef = useRef(bindings);
-  bindingsRef.current = bindings;
+export function useHotkeys(
+  keys: string | string[],
+  handler: HotkeyHandler,
+  options: UseHotkeysOptions = {},
+): void {
+  const { enabled = true, enableInInputs = false, preventDefault = true, scopeRef } = options;
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const inInput = isInputElement(event.target);
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
 
-      for (const binding of bindingsRef.current) {
-        if (binding.enabled === false) continue;
-        if (inInput && !binding.allowInInput) continue;
+  const parsedKeysRef = useRef<ParsedHotkey[]>([]);
+  parsedKeysRef.current = (Array.isArray(keys) ? keys : [keys]).map(parseHotkey);
 
-        const parsed = parseKeys(binding.keys);
-        if (matchEvent(event, parsed)) {
-          if (binding.preventDefault) event.preventDefault();
-          if (binding.stopPropagation) event.stopPropagation();
-          binding.handler(event);
-          break; // 第一个匹配即停止
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!enabled) return;
+      if (!enableInInputs && isInputElement(e.target)) return;
+
+      for (const parsed of parsedKeysRef.current) {
+        if (matchesEvent(parsed, e)) {
+          if (preventDefault) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          handlerRef.current(e);
+          return;
         }
       }
+    },
+    [enabled, enableInInputs, preventDefault],
+  );
+
+  useEffect(() => {
+    const target = scopeRef?.current || document;
+    target.addEventListener("keydown", handleKeyDown as EventListener);
+    return () => {
+      target.removeEventListener("keydown", handleKeyDown as EventListener);
+    };
+  }, [handleKeyDown, scopeRef]);
+}
+
+/** 序列键 Hook：按顺序按下多个键触发（如 g → i）。 */
+export function useKeySequence(
+  sequence: string[],
+  handler: () => void,
+  options: { timeout?: number; enabled?: boolean } = {},
+): void {
+  const { timeout = 1000, enabled = true } = options;
+  const bufferRef = useRef<string[]>([]);
+  const timerRef = useRef<number>(0);
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (isInputElement(e.target)) return;
+
+      bufferRef.current.push(e.key.toLowerCase());
+      clearTimeout(timerRef.current);
+
+      // 检查是否匹配序列
+      const buf = bufferRef.current;
+      const seq = sequence.map((s) => s.toLowerCase());
+
+      if (buf.length === seq.length && buf.every((k, i) => k === seq[i])) {
+        bufferRef.current = [];
+        handlerRef.current();
+        return;
+      }
+
+      // 不匹配前缀则重置
+      if (!seq.slice(0, buf.length).every((k, i) => k === buf[i])) {
+        bufferRef.current = [];
+      }
+
+      // 超时重置
+      timerRef.current = window.setTimeout(() => {
+        bufferRef.current = [];
+      }, timeout);
     };
 
-    document.addEventListener("keydown", handleKeyDown, true);
-    return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, []);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      clearTimeout(timerRef.current);
+    };
+  }, [sequence, timeout, enabled]);
 }
 
 export default useHotkeys;
