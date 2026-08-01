@@ -1,24 +1,19 @@
 /**
- * 全屏控制 Hook（零依赖）。
+ * 全屏 Hook（零依赖）。
  *
  * 功能：
- * - useFullscreen：元素全屏切换
- * - 全屏状态检测
- * - 全屏变化回调
- * - 兼容各浏览器前缀
+ * - useFullscreen：元素全屏控制
+ * - 全屏状态监听
+ * - 进入/退出/切换
  *
  * 用法：
- *   const { ref, isFullscreen, toggle, enter, exit } = useFullscreen();
- *   <div ref={ref}>
- *     <button onClick={toggle}>{isFullscreen ? "退出" : "全屏"}</button>
- *   </div>
+ *   const { ref, isFullscreen, enter, exit, toggle } = useFullscreen();
+ *   <div ref={ref}><button onClick={toggle}>全屏</button></div>
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseFullscreenOptions {
-  /** 全屏变化回调 */
-  onChange?: (isFullscreen: boolean) => void;
   /** 进入全屏回调 */
   onEnter?: () => void;
   /** 退出全屏回调 */
@@ -30,64 +25,58 @@ interface UseFullscreenReturn {
   ref: React.RefObject<HTMLElement | null>;
   /** 是否全屏 */
   isFullscreen: boolean;
-  /** 是否支持全屏 */
-  isSupported: boolean;
   /** 进入全屏 */
   enter: () => Promise<void>;
   /** 退出全屏 */
   exit: () => Promise<void>;
   /** 切换 */
   toggle: () => Promise<void>;
+  /** 是否支持 */
+  isSupported: boolean;
 }
 
-export function useFullscreen(
-  options: UseFullscreenOptions = {},
-): UseFullscreenReturn {
-  const { onChange, onEnter, onExit } = options;
+export function useFullscreen(options: UseFullscreenOptions = {}): UseFullscreenReturn {
+  const { onEnter, onExit } = options;
 
   const ref = useRef<HTMLElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const callbacksRef = useRef({ onEnter, onExit });
+  callbacksRef.current = { onEnter, onExit };
 
   const isSupported =
     typeof document !== "undefined" &&
-    !!(
-      document.documentElement.requestFullscreen ||
-      (document.documentElement as any).webkitRequestFullscreen ||
-      (document.documentElement as any).mozRequestFullScreen
-    );
+    !!(document.documentElement.requestFullscreen || (document.documentElement as any).webkitRequestFullscreen);
 
   useEffect(() => {
-    const handler = () => {
+    const handleChange = () => {
       const active = !!document.fullscreenElement;
       setIsFullscreen(active);
-      onChange?.(active);
       if (active) {
-        onEnter?.();
+        callbacksRef.current.onEnter?.();
       } else {
-        onExit?.();
+        callbacksRef.current.onExit?.();
       }
     };
 
-    document.addEventListener("fullscreenchange", handler);
-    document.addEventListener("webkitfullscreenchange", handler);
+    document.addEventListener("fullscreenchange", handleChange);
+    document.addEventListener("webkitfullscreenchange", handleChange);
+
     return () => {
-      document.removeEventListener("fullscreenchange", handler);
-      document.removeEventListener("webkitfullscreenchange", handler);
+      document.removeEventListener("fullscreenchange", handleChange);
+      document.removeEventListener("webkitfullscreenchange", handleChange);
     };
-  }, [onChange, onEnter, onExit]);
+  }, []);
 
   const enter = useCallback(async () => {
-    const element = ref.current || document.documentElement;
+    const el = ref.current || document.documentElement;
     try {
-      if (element.requestFullscreen) {
-        await element.requestFullscreen();
-      } else if ((element as any).webkitRequestFullscreen) {
-        (element as any).webkitRequestFullscreen();
-      } else if ((element as any).mozRequestFullScreen) {
-        (element as any).mozRequestFullScreen();
+      if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else if ((el as any).webkitRequestFullscreen) {
+        (el as any).webkitRequestFullscreen();
       }
-    } catch {
-      // 全屏请求被拒绝
+    } catch (e) {
+      console.warn("useFullscreen: enter failed", e);
     }
   }, []);
 
@@ -96,10 +85,10 @@ export function useFullscreen(
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       } else if ((document as any).webkitFullscreenElement) {
-        (document as any).webkitExitFullscreen();
+        await (document as any).webkitExitFullscreen();
       }
-    } catch {
-      // 静默失败
+    } catch (e) {
+      console.warn("useFullscreen: exit failed", e);
     }
   }, []);
 
@@ -111,7 +100,7 @@ export function useFullscreen(
     }
   }, [isFullscreen, enter, exit]);
 
-  return { ref, isFullscreen, isSupported, enter, exit, toggle };
+  return { ref, isFullscreen, enter, exit, toggle, isSupported };
 }
 
 export default useFullscreen;
