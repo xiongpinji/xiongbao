@@ -15,10 +15,12 @@ from xagent.api.v1 import (
     memory,
     open_source,
     runs,
+    skills,
     spine,
     stream,
     system,
     tasks,
+    tenants,
     workflows,
 )
 
@@ -40,5 +42,7 @@ api_v1.include_router(audit.router)
 api_v1.include_router(system.router)
 api_v1.include_router(automation.router)
 api_v1.include_router(mcp.router)
+api_v1.include_router(skills.router)
+api_v1.include_router(tenants.router)
 
 __all__ = ["api_v1"]

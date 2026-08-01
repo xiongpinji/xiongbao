@@ -86,9 +86,21 @@ export const runAgent = (body: {
   capabilities?: string[];
 }) => api.post<AgentRun>("/agents/run", body).then((r) => r.data);
 
+export interface WorkflowStepInput {
+  id: string;
+  name: string;
+  role?: string;
+  goal: string;
+  depends_on?: string[];
+  approver_role?: string;
+  approval_message?: string;
+  compensation_role?: string;
+  compensation_goal?: string;
+}
+
 export const runWorkflow = (body: {
   name: string;
-  steps: { id: string; name: string; role?: string; goal: string }[];
+  steps: WorkflowStepInput[];
 }) => api.post<WorkflowView>("/workflows", body).then((r) => r.data);
 
 export const listWorkflows = () =>
@@ -498,12 +510,37 @@ export interface SkillView {
   success_count: number;
   success_rate: number;
   tags: string[];
+  version: number;
+  retired: boolean;
+  source: string;
+  source_task: string;
+  system_prompt_hint: string;
+  steps: { tool: string; order?: number }[];
+  history: { version: number; description: string; changed_at: number; change_reason: string }[];
+  is_active: boolean;
 }
 
-export const listSkills = () => api.get<{ skills: SkillView[] }>("/skills").then((r) => r.data.skills);
-export const createSkill = (body: { name: string; description?: string; trigger_pattern?: string; tags?: string[] }) =>
+export interface SkillStats {
+  total: number;
+  active: number;
+  retired: number;
+  auto_extracted: number;
+  evolved: number;
+  total_uses: number;
+  avg_success_rate: number;
+}
+
+export const listSkills = (includeRetired = false) =>
+  api.get<{ skills: SkillView[] }>("/skills", { params: { include_retired: includeRetired } }).then((r) => r.data.skills);
+export const skillStats = () => api.get<SkillStats>("/skills/stats").then((r) => r.data);
+export const createSkill = (body: { name: string; description?: string; trigger_pattern?: string; tags?: string[]; system_prompt_hint?: string; steps?: unknown[] }) =>
   api.post<SkillView>("/skills", body).then((r) => r.data);
 export const deleteSkill = (id: string) => api.delete(`/skills/${id}`).then((r) => r.data);
+export const evolveSkill = (id: string, body: { description?: string; system_prompt_hint?: string; trigger_pattern?: string; steps?: unknown[]; change_reason?: string }) =>
+  api.put(`/skills/${id}/evolve`, body).then((r) => r.data);
+export const retireSkill = (id: string) => api.post(`/skills/${id}/retire`).then((r) => r.data);
+export const restoreSkill = (id: string) => api.post(`/skills/${id}/restore`).then((r) => r.data);
+export const retireLowPerformers = () => api.post("/skills/retire-low-performers").then((r) => r.data);
 
 // ---- 定时调度 ----
 export interface ScheduledJobView {

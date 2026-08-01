@@ -22,6 +22,7 @@ from xagent.api.security_middleware import RateLimitMiddleware, SecurityHeadersM
 from xagent.api.v1 import api_v1
 from xagent.infra import db
 from xagent.infra.logging import configure_logging, get_logger
+from xagent.infra.metrics import MetricsMiddleware, metrics_response
 from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.app")
@@ -58,6 +59,9 @@ async def lifespan(app: FastAPI):
     # ---- shutdown ----
     await get_scheduler().stop()
     await get_mcp_manager().stop()
+    # 刷新追踪缓冲
+    from xagent.infra.tracing import flush_traces
+    flush_traces()
     await db.dispose_engine()
     logger.info("shutdown")
 
@@ -81,11 +85,18 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RateLimitMiddleware, max_requests=120, window_seconds=60)
+    app.add_middleware(MetricsMiddleware)
     app.add_middleware(RequestContextMiddleware)
 
     # 路由挂载
     app.include_router(system.router)
     app.include_router(api_v1)
+
+    # Prometheus 指标端点
+    from fastapi import Response
+    @app.get("/metrics", include_in_schema=False)
+    async def _metrics() -> Response:
+        return metrics_response()
 
     return app
 

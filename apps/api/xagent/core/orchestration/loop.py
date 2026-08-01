@@ -143,6 +143,37 @@ async def _save_to_memory(goal: str, answer: str, tenant_id: str) -> None:
         pass
 
 
+async def _auto_extract_skill(
+    goal: str, answer: str, steps_count: int, events: list[StepEvent]
+) -> None:
+    """任务完成后自动提炼可复用技能（Skill 自进化核心）。
+
+    触发条件：
+    - 任务步数 >= 3（复杂任务）
+    - 回答有实质内容
+    - 无已有高效技能覆盖此场景
+    """
+    try:
+        from xagent.core.skills import get_skill_store
+
+        # 提取使用过的工具列表
+        tools_used = [
+            e.content.split("(")[0].strip()
+            for e in events
+            if e.kind == StepKind.tool_call and e.content
+        ]
+        store = get_skill_store()
+        await store.auto_extract(
+            goal=goal,
+            answer=answer,
+            steps_count=steps_count,
+            tools_used=tools_used or None,
+        )
+    except Exception as _sk_exc:  # noqa: S110  技能提炼失败不影响主流程
+        from xagent.infra.logging import get_logger as _gl
+        _gl("xagent.skills").debug("auto_extract_failed", error=str(_sk_exc))
+
+
 def _build_system_prompt(role_system: str, tool_specs: list[dict[str, Any]]) -> str:
     lines = [role_system, "", "你可以使用以下工具："]
     for s in tool_specs:
@@ -773,6 +804,8 @@ async def run_agent(
         pass
     # ── 自动写入记忆库 ──
     await _save_to_memory(goal, state.final_answer, principal.tenant_id)
+    # ── 自动技能提炼（Skill 自进化） ──
+    await _auto_extract_skill(goal, state.final_answer, state.step, events)
 
     return AgentRun(
         run_id=resolved_run_id,

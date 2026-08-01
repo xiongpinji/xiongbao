@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -164,8 +165,20 @@ class MCPManager:
 
         if srv.transport == "stdio" and srv.command:
             env = {**os.environ, **srv.env}
+            command = srv.command
+            args = list(srv.args)
+            # Windows: .cmd/.bat/.ps1 文件需要通过 cmd.exe /c 执行
+            if sys.platform == "win32" and (
+                command.endswith((".cmd", ".bat", ".ps1"))
+                or command.lower() in ("npx", "npm", "node", "npx.cmd", "npm.cmd")
+                or "\\nodejs\\" in command.lower()
+            ):
+                # 提取裸命令名 (cmd.exe 会从 PATH 查找)
+                bare = Path(command).stem  # npx.ps1 -> npx, npx.cmd -> npx
+                args = ["/c", bare] + args
+                command = "cmd.exe"
             params = StdioServerParameters(
-                command=srv.command, args=srv.args, env=env
+                command=command, args=args, env=env
             )
             try:
                 async with stdio_client(params) as (read, write):
