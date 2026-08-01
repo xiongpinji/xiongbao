@@ -16,6 +16,7 @@ const GoalBoardPage = lazy(() => import("./pages/GoalBoardPage"));
 const RunPage = lazy(() => import("./pages/RunPage"));
 const BillingPage = lazy(() => import("./pages/BillingPage"));
 const AuditPage = lazy(() => import("./pages/AuditPage"));
+const SupervisorPage = lazy(() => import("./pages/SupervisorPage"));
 
 function PageFallback() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/home" element={<ChatPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/supervisor" element={<SupervisorPage />} />
           <Route path="/goal-board" element={<GoalBoardPage />} />
           <Route path="/professional" element={<ProfessionalModePage />} />
           <Route path="/workflows" element={<ProfessionalRedirect mode="workflow" />} />

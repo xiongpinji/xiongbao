@@ -160,6 +160,13 @@ services:
       sh -c "python -m alembic upgrade head &&
              (python -m xagent.cli warmup || true) &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:8000/health',timeout=5); exit(0 if r.status_code==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
 
   # X-Agent Celery worker（后台长任务）
   worker:
@@ -204,7 +211,37 @@ services:
     ports:
       - "3000:80"
 
+  # Prometheus 指标采集 + 告警
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../grafana/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../grafana/alert-rules.yml:/etc/prometheus/rules/xagent-alerts.yml:ro
+      - promdata:/prometheus
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Grafana 可视化仪表盘
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ../grafana/xagent-dashboard.json:/var/lib/grafana/dashboards/xagent-overview.json:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redisdata:
   qdrantdata:
+  promdata:
+  grafanadata:
