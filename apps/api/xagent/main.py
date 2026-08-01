@@ -166,6 +166,10 @@ def create_app() -> FastAPI:
     app.include_router(system.router)
     app.include_router(api_v1)
 
+    # WebSocket 实时通信
+    from xagent.api.ws import router as ws_router
+    app.include_router(ws_router)
+
     # API 版本发现
     @app.get("/api/versions", tags=["system"], summary="可用 API 版本")
     async def _api_versions() -> dict:

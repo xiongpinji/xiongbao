@@ -10,6 +10,7 @@ from xagent.api.v1 import (
     billing,
     canvas,
     creative_studio,
+    data_io,
     editor,
     knowledge,
     marketplace,
@@ -48,5 +49,6 @@ api_v1.include_router(skills.router)
 api_v1.include_router(tenants.router)
 api_v1.include_router(knowledge.router)
 api_v1.include_router(marketplace.router)
+api_v1.include_router(data_io.router)
 
 __all__ = ["api_v1"]
