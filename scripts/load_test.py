@@ -28,7 +28,7 @@ async def single_request(client: httpx.AsyncClient, url: str, path: str) -> floa
 
 
 async def run_load_test(url: str, n: int, concurrency: int) -> None:
-    paths = ["/health", "/api/v1/skills/stats", "/api/v1/mcp/servers", "/perf"]
+    paths = ["/health", "/perf", "/metrics", "/health"]
     sem = asyncio.Semaphore(concurrency)
     latencies: list[float] = []
 

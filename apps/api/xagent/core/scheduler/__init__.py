@@ -152,7 +152,8 @@ class Scheduler:
             self._task = None
 
     async def _loop(self) -> None:
-        """主调度循环：每 30s 检查一次到期任务。"""
+        """主调度循环：每 30s 检查一次到期任务。启动后延迟 60s 再执行。"""
+        await asyncio.sleep(60)  # 避免启动时与主应用竞争资源
         while self._running:
             try:
                 now = time.time()
@@ -173,22 +174,39 @@ class Scheduler:
             await asyncio.sleep(30)
 
     async def _execute_job(self, job: ScheduledJob) -> None:
-        """执行单个定时任务。"""
+        """执行单个定时任务（隔离在线程池中，避免破坏主事件循环）。"""
+        import concurrent.futures
+
         from xagent.core.orchestration import run_agent
         from xagent.enterprise.auth.principal import Principal
 
         logger.info("job_executing", job_id=job.job_id, name=job.name)
+
+        def _run_in_thread() -> str:
+            import asyncio as _aio
+
+            async def _inner() -> str:
+                principal = Principal(
+                    user_id=job.owner_id or "scheduler",
+                    tenant_id=job.tenant_id or "default",
+                    roles=frozenset({"admin"}),
+                )
+                result = await _aio.wait_for(
+                    run_agent(job.goal, principal=principal, role_name=job.role),
+                    timeout=300,
+                )
+                return str(result.to_dict().get("final_answer") or "")[:500]
+
+            loop = _aio.new_event_loop()
+            try:
+                return loop.run_until_complete(_inner())
+            finally:
+                loop.close()
+
         try:
-            principal = Principal(
-                user_id=job.owner_id or "scheduler",
-                tenant_id=job.tenant_id or "default",
-                roles=frozenset({"admin"}),
-            )
-            result = await asyncio.wait_for(
-                run_agent(job.goal, principal=principal, role_name=job.role),
-                timeout=300,
-            )
-            job.last_result = str(result.to_dict().get("final_answer") or "")[:500]
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                job.last_result = await loop.run_in_executor(pool, _run_in_thread)
             logger.info("job_succeeded", job_id=job.job_id)
         except Exception as exc:
             job.last_result = f"ERROR: {exc}"[:500]

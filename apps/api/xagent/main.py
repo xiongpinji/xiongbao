@@ -98,6 +98,15 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # 全局异常处理：防止未捕获异常导致连接中断
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+
+    @app.exception_handler(Exception)
+    async def _global_exc_handler(request: Request, exc: Exception) -> JSONResponse:  # noqa: ARG001
+        logger.error("unhandled_exception", path=request.url.path, error=str(exc))
+        return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+
     # CORS（生产禁止通配符，已在 settings.validate_for_production 校验）
     app.add_middleware(
         CORSMiddleware,
@@ -107,7 +116,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware, max_requests=120, window_seconds=60)
+    app.add_middleware(RateLimitMiddleware, max_requests=300, window_seconds=60)
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(RequestContextMiddleware)
 

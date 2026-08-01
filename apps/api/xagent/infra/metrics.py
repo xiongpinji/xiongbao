@@ -92,7 +92,10 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/metrics":
             return await call_next(request)
 
-        ACTIVE_CONNECTIONS.inc()
+        try:
+            ACTIVE_CONNECTIONS.inc()
+        except Exception:  # noqa: S110
+            pass
         start = time.perf_counter()
         try:
             response = await call_next(request)
@@ -102,11 +105,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             raise
         finally:
             duration = time.perf_counter() - start
-            # 归一化路径（避免高基数）
-            path = _normalize_path(request.url.path)
-            REQUEST_COUNT.labels(method=request.method, path=path, status=status_code).inc()
-            REQUEST_LATENCY.labels(method=request.method, path=path).observe(duration)
-            ACTIVE_CONNECTIONS.dec()
+            try:
+                path = _normalize_path(request.url.path)
+                REQUEST_COUNT.labels(method=request.method, path=path, status=status_code).inc()
+                REQUEST_LATENCY.labels(method=request.method, path=path).observe(duration)
+                ACTIVE_CONNECTIONS.dec()
+            except Exception:  # noqa: S110
+                pass
 
         return response
 
