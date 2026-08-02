@@ -10,6 +10,7 @@ mock LLM 返回普通文本 -> 第一步即 final，循环安全收敛。
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -27,10 +28,45 @@ from xagent.core.agents import get_role_registry
 from xagent.core.orchestration.conversation import get_conversation_manager
 from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, StepKind
 from xagent.enterprise.auth.principal import Principal
+from xagent.infra.logging import get_logger
+
+logger = get_logger("xagent.loop")
 
 MAX_STEPS = 40
 _AGENT_RUN_TIMEOUT = 600  # 10 分钟
 _WORKSPACE = Path(os.environ.get("XAGENT_WORKSPACE", Path.home() / "xagent_workspace"))
+
+# ── LLM 调用重试配置（对标 Codex 的自动重试 + 指数退避） ──
+_LLM_MAX_RETRIES = 3
+_LLM_RETRY_BASE_DELAY = 2.0  # 秒
+_LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", "overloaded", "503", "429")
+
+
+async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
+    """LLM 调用包装器：失败时指数退避重试。
+
+    coro_factory: 无参函数，每次调用返回新的 coroutine。
+    """
+    last_exc = None
+    for attempt in range(_LLM_MAX_RETRIES):
+        try:
+            return await coro_factory()
+        except Exception as exc:
+            last_exc = exc
+            err_str = str(exc).lower()
+            is_retryable = any(k in err_str for k in _LLM_RETRYABLE_ERRORS)
+            if not is_retryable or attempt == _LLM_MAX_RETRIES - 1:
+                raise
+            delay = _LLM_RETRY_BASE_DELAY * (2 ** attempt)
+            logger.warning(
+                "llm_retry",
+                attempt=attempt + 1,
+                delay=delay,
+                error=str(exc)[:200],
+                description=description,
+            )
+            await asyncio.sleep(delay)
+    raise last_exc  # type: ignore[misc]
 
 # ── 编辑类工具：触发验证闭环 ──
 _EDIT_TOOLS = {"file_edit", "file_write"}
@@ -73,6 +109,7 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
 
     Codex-aligned: prevents context window overflow on long tasks.
     Keeps system + last N messages intact, compresses middle history.
+    保护 tool_call_id 配对完整性：不会在 assistant+tool 消息对中间截断。
     """
     # Only compress if messages exceed threshold
     if len(messages) <= 20:
@@ -85,6 +122,19 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
     end_idx = len(messages) - keep_tail
 
     if end_idx <= start_idx + 4:  # not enough to compress
+        return messages
+
+    # ── 保护 tool_call_id 完整性：调整截断点，不在 tool 消息中间截断 ──
+    # 如果 end_idx 指向 tool role 消息，向前回退到对应的 assistant 消息之前
+    while end_idx > start_idx and messages[end_idx].role == "tool":
+        end_idx -= 1
+    # 如果回退后指向 assistant 消息且其后紧跟 tool，再回退一步
+    if end_idx > start_idx and messages[end_idx].role == "assistant":
+        # 检查后面是否紧跟 tool 消息
+        if end_idx + 1 < len(messages) and messages[end_idx + 1].role == "tool":
+            end_idx -= 1
+
+    if end_idx <= start_idx + 2:
         return messages
 
     # Build summary of middle section
@@ -800,6 +850,9 @@ async def run_agent(
         # ── 自反思标志（任务完成前质量检查，只触发一次） ──
         _did_reflect = False
 
+        # ── 工具结果缓存：file_read 同文件不重复读（编辑后失效） ──
+        _file_read_cache: dict[str, str] = {}
+
         try:
             while not state.finished and state.step < MAX_STEPS:
               state.step += 1
@@ -877,15 +930,24 @@ async def run_agent(
 
                       if _use_parallel:
                           # ══ 并行路径：asyncio.gather 并发执行只读工具 ══
-                          import asyncio as _aio
 
                           async def _exec_one(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
                               """Execute single tool, return (name, id, result_text)."""
                               if not role.can_use(tc_name):
                                   return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
+                              # ── file_read 缓存：同文件不重复读取 ──
+                              if tc_name == "file_read":
+                                  _cache_key = tc_args.get("path", "")
+                                  if _cache_key and _cache_key in _file_read_cache:
+                                      return (tc_name, tc_id, _file_read_cache[_cache_key])
                               r = await tools.call(tc_name, tc_args, ctx)
                               if r.ok:
                                   txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
+                                  # 缓存 file_read 结果
+                                  if tc_name == "file_read":
+                                      _ck = tc_args.get("path", "")
+                                      if _ck:
+                                          _file_read_cache[_ck] = txt
                               else:
                                   txt = f"[错误] {r.error}"
                               return (tc_name, tc_id, txt)
@@ -895,7 +957,7 @@ async def run_agent(
                               await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step))
 
                           # 并发执行
-                          _results = await _aio.gather(
+                          _results = await asyncio.gather(
                               *[_exec_one(n, i, a) for n, i, a in _parsed_calls],
                               return_exceptions=True,
                           )
@@ -921,6 +983,22 @@ async def run_agent(
                               # ── Git 隔离：首次编辑时创建分支 ──
                               if tc_name in _EDIT_TOOLS and _work_branch is None:
                                   _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
+                              # ── 编辑前上下文注入：文件未读过时自动补读 ──
+                              if tc_name in _EDIT_TOOLS:
+                                  _edit_path = tc_args.get("path", "")
+                                  if _edit_path and _edit_path not in _file_read_cache:
+                                      try:
+                                          _pre_read = await tools.call("file_read", {"path": _edit_path}, ctx)
+                                          if _pre_read.ok:
+                                              _pre_txt = _pre_read.output if isinstance(_pre_read.output, str) else json.dumps(_pre_read.output, ensure_ascii=False)
+                                              _file_read_cache[_edit_path] = _pre_txt
+                                              # 注入文件内容到上下文（截断保护）
+                                              state.messages.append(Message(
+                                                  role="user",
+                                                  content=f"[系统] 编辑前自动读取文件 {_edit_path}：\n{_pre_txt[:2000]}",
+                                              ))
+                                      except Exception:  # noqa: S110
+                                          pass
                               if not role.can_use(tc_name):
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
                                   _consecutive_errors += 1
@@ -943,6 +1021,9 @@ async def run_agent(
                                   _fp = tc_args.get("path", "")
                                   if _fp and _fp not in _changed_files:
                                       _changed_files.append(_fp)
+                                  # 编辑后使缓存失效
+                                  if _fp:
+                                      _file_read_cache.pop(_fp, None)
                               await _emit(
                                   StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                               )
@@ -1030,8 +1111,9 @@ async def run_agent(
 
               elif use_native_tools:
                   # ── 非流式原生工具路径（回退） ──
-                  resp = await llm.complete_with_tools(
-                      state.messages, specs, model=target_model
+                  resp = await _llm_call_with_retry(
+                      lambda: llm.complete_with_tools(state.messages, specs, model=target_model),
+                      description="complete_with_tools",
                   )
                   # Token 用量追踪
                   state.total_prompt_tokens += resp.prompt_tokens
@@ -1041,52 +1123,88 @@ async def run_agent(
                           Message(role="assistant", content=resp.content)
                       )
                       _had_edit_ns = False
-                      for tc in resp.tool_calls:
-                          await _emit(
-                              StepEvent(
-                                  kind=StepKind.tool_call,
-                                  tool=tc.name,
-                                  content=tc.args,
-                                  step=state.step,
-                              )
-                          )
-                          # Git 隔离
-                          if tc.name in _EDIT_TOOLS and _work_branch is None:
-                              _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
-                          if not role.can_use(tc.name):
-                              result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
-                              _consecutive_errors += 1
-                          else:
-                              result = await tools.call(tc.name, tc.args, ctx)
-                              if result.ok:
-                                  result_text = (
-                                      json.dumps(result.output, ensure_ascii=False)
-                                      if not isinstance(result.output, str)
-                                      else result.output
-                                  )
-                                  _consecutive_errors = 0
+
+                      # ── 并行执行策略（同流式路径） ──
+                      _ns_has_edit = any(tc.name in _EDIT_TOOLS for tc in resp.tool_calls)
+                      _ns_use_parallel = len(resp.tool_calls) > 1 and not _ns_has_edit
+
+                      if _ns_use_parallel:
+                          # 并行路径
+                          async def _exec_one_ns(tc) -> tuple:
+                              if not role.can_use(tc.name):
+                                  return (tc.name, tc.id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}")
+                              if tc.name == "file_read":
+                                  _ck = tc.args.get("path", "")
+                                  if _ck and _ck in _file_read_cache:
+                                      return (tc.name, tc.id, _file_read_cache[_ck])
+                              r = await tools.call(tc.name, tc.args, ctx)
+                              if r.ok:
+                                  txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
+                                  if tc.name == "file_read":
+                                      _ck2 = tc.args.get("path", "")
+                                      if _ck2:
+                                          _file_read_cache[_ck2] = txt
                               else:
-                                  result_text = f"[错误] {result.error}"
+                                  txt = f"[错误] {r.error}"
+                              return (tc.name, tc.id, txt)
+
+                          for tc in resp.tool_calls:
+                              await _emit(StepEvent(kind=StepKind.tool_call, tool=tc.name, content=tc.args, step=state.step))
+                          _ns_results = await asyncio.gather(
+                              *[_exec_one_ns(tc) for tc in resp.tool_calls],
+                              return_exceptions=True,
+                          )
+                          for tc, _res in zip(resp.tool_calls, _ns_results):
+                              if isinstance(_res, Exception):
+                                  result_text = f"[错误] {type(_res).__name__}: {_res}"
                                   _consecutive_errors += 1
-                          if tc.name in _EDIT_TOOLS:
-                              _had_edit_ns = True
-                              _edit_count += 1
-                              _fp = tc.args.get("path", "")
-                              if _fp and _fp not in _changed_files:
-                                  _changed_files.append(_fp)
-                          await _emit(
-                              StepEvent(
-                                  kind=StepKind.tool_result,
-                                  tool=tc.name,
-                                  content=result_text,
-                                  step=state.step,
+                              else:
+                                  _, _, result_text = _res
+                                  if result_text.startswith("[错误]") or result_text.startswith("[拒绝]"):
+                                      _consecutive_errors += 1
+                                  else:
+                                      _consecutive_errors = 0
+                              await _emit(StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step))
+                              _stored = _truncate_tool_output(result_text, tc.name)
+                              state.messages.append(Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name))
+                      else:
+                          # 顺序路径（含编辑工具）
+                          for tc in resp.tool_calls:
+                              await _emit(
+                                  StepEvent(kind=StepKind.tool_call, tool=tc.name, content=tc.args, step=state.step)
                               )
-                          )
-                          # 原生 tool role + 智能截断
-                          _stored = _truncate_tool_output(result_text, tc.name)
-                          state.messages.append(
-                              Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
-                          )
+                              if tc.name in _EDIT_TOOLS and _work_branch is None:
+                                  _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
+                              if not role.can_use(tc.name):
+                                  result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
+                                  _consecutive_errors += 1
+                              else:
+                                  result = await tools.call(tc.name, tc.args, ctx)
+                                  if result.ok:
+                                      result_text = (
+                                          json.dumps(result.output, ensure_ascii=False)
+                                          if not isinstance(result.output, str)
+                                          else result.output
+                                      )
+                                      _consecutive_errors = 0
+                                  else:
+                                      result_text = f"[错误] {result.error}"
+                                      _consecutive_errors += 1
+                              if tc.name in _EDIT_TOOLS:
+                                  _had_edit_ns = True
+                                  _edit_count += 1
+                                  _fp = tc.args.get("path", "")
+                                  if _fp and _fp not in _changed_files:
+                                      _changed_files.append(_fp)
+                                  if _fp:
+                                      _file_read_cache.pop(_fp, None)
+                              await _emit(
+                                  StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step)
+                              )
+                              _stored = _truncate_tool_output(result_text, tc.name)
+                              state.messages.append(
+                                  Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
+                              )
                       # 验证闭环
                       if _had_edit_ns and _edit_count % 2 == 0:
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
@@ -1147,7 +1265,10 @@ async def run_agent(
 
               else:
                   # ── 提示工程路径（mock / 不支持工具） ──
-                  resp = await llm.complete(state.messages, model=target_model)
+                  resp = await _llm_call_with_retry(
+                      lambda: llm.complete(state.messages, model=target_model),
+                      description="complete",
+                  )
                   state.total_prompt_tokens += resp.prompt_tokens
                   state.total_completion_tokens += resp.completion_tokens
                   await _emit(
@@ -1207,6 +1328,24 @@ async def run_agent(
                 await _emit(
                     StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
                 )
+        except asyncio.CancelledError:
+            # ── Graceful 取消：用户中断时保存部分结果 + 清理 git ──
+            if not state.final_answer:
+                state.final_answer = (
+                    f"任务被用户中断（已执行 {state.step} 步）。\n\n"
+                    "已完成的工作已保存，可以继续对话让我完成剩余部分。"
+                )
+            # 保存 checkpoint 以便恢复
+            try:
+                from xagent.core.orchestration.checkpoint import save_checkpoint
+                save_checkpoint(
+                    conv_session.conversation_id, resolved_run_id, state.step,
+                    [{"role": m.role, "content": m.content[:500]} for m in state.messages[-20:]],
+                    _changed_files, goal,
+                )
+            except Exception:  # noqa: S110
+                pass
+            await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
             # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
             if not state.final_answer:
