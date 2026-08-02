@@ -430,6 +430,8 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
     { icon: <Terminal size={16} />, text: "查看当前系统环境信息（Python版本、操作系统、目录）" },
     { icon: <Globe size={16} />, text: "抓取 Hacker News 首页标题并总结热点" },
     { icon: <FileText size={16} />, text: "创建一个 FastAPI 项目骨架（main.py + requirements.txt）" },
+    { icon: <Code2 size={16} />, text: "分析当前项目的依赖关系并生成架构图" },
+    { icon: <Terminal size={16} />, text: "运行测试并修复失败的用例" },
   ];
 
   return (

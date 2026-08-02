@@ -185,9 +185,22 @@ def _format_tool_result(tool_name: str, result_text: str, args: dict) -> str:
             _err_summary = "\n".join(_lines[-5:]) if len(_lines) > 5 else result_text
             return f"[命令执行出错]\n{_err_summary}"
         return result_text
-    # code_search 结果：已经有匹配数信息
+    # code_search 结果：添加匹配数 + 文件列表摘要
     if tool_name == "code_search":
-        return result_text
+        _lines = result_text.strip().split("\n")
+        _match_count = len([l for l in _lines if l.strip()])
+        # 提取涉及的文件（假设格式为 "file:line:content" 或类似）
+        _files = set()
+        for l in _lines[:50]:
+            if ":" in l:
+                _f = l.split(":")[0].strip()
+                if _f and not _f.startswith(" "):
+                    _files.add(_f)
+        _file_list = ", ".join(list(_files)[:5])
+        _header = f"[搜索结果: {_match_count} 条匹配]"
+        if _file_list:
+            _header += f" | 涉及文件: {_file_list}"
+        return f"{_header}\n{result_text}"
     # JSON 结果：尝试提取摘要
     if result_text.strip().startswith("{") or result_text.strip().startswith("["):
         try:
@@ -1181,6 +1194,7 @@ async def run_agent(
         _tool_fail: int = 0
         _tool_success_by_type: dict[str, int] = {}  # tool_name -> success_count
         _tool_fail_by_type: dict[str, int] = {}  # tool_name -> fail_count
+        _tool_time_by_type: dict[str, list[float]] = {}  # tool_name -> [elapsed_times]
 
         # ── 重复错误检测：同错误 3 次提前终止 ──
         _error_signatures: dict[str, int] = {}  # error_sig -> count
@@ -1397,6 +1411,10 @@ async def run_agent(
                               _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
                               r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_tool_timeout)
                               _elapsed = time.perf_counter() - _t0
+                              # 工具耗时统计
+                              if tc_name not in _tool_time_by_type:
+                                  _tool_time_by_type[tc_name] = []
+                              _tool_time_by_type[tc_name].append(_elapsed)
                               if _elapsed > _SLOW_TOOL_THRESHOLD:
                                   logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
                               if r.ok:
@@ -2101,6 +2119,16 @@ async def run_agent(
             if _fail_tools:
                 _fail_str = ", ".join(f"{t}({f}次失败)" for t, f in _fail_tools[:3])
                 _summary_parts.append(f"⚠️ 失败分布: {_fail_str}")
+            # 工具耗时统计（显示平均耗时最高的）
+            _avg_times = []
+            for _tn, _times in _tool_time_by_type.items():
+                if _times:
+                    _avg = sum(_times) / len(_times)
+                    _avg_times.append((_tn, _avg, len(_times)))
+            if _avg_times:
+                _avg_times.sort(key=lambda x: -x[1])
+                _time_str = ", ".join(f"{t}(平均{a:.1f}s×{c})" for t, a, c in _avg_times[:3])
+                _summary_parts.append(f"⏱️ 耗时分析: {_time_str}")
         # diff 统计
         if _changed_files:
             try:
