@@ -29,7 +29,20 @@ from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, Ste
 from xagent.enterprise.auth.principal import Principal
 
 MAX_STEPS = 40
+_AGENT_RUN_TIMEOUT = 600  # 10 分钟
 _WORKSPACE = Path(os.environ.get("XAGENT_WORKSPACE", Path.home() / "xagent_workspace"))
+
+# ── 编辑类工具：触发验证闭环 ──
+_EDIT_TOOLS = {"file_edit", "file_write"}
+# ── 验证命令探测优先级 ──
+_VERIFY_COMMANDS = [
+    ("pyproject.toml", "python -m pytest --tb=short -q"),
+    ("pytest.ini", "python -m pytest --tb=short -q"),
+    ("package.json", "npx tsc --noEmit"),
+    ("tsconfig.json", "npx tsc --noEmit"),
+    ("Cargo.toml", "cargo check"),
+    ("go.mod", "go build ./..."),
+]
 
 
 def _load_agents_md() -> str:
@@ -107,6 +120,169 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
         pass
 
     return messages
+
+
+# ═══════════════════════════════════════════════════════════
+#  项目结构感知（任务启动时自动探测）
+# ═══════════════════════════════════════════════════════════
+
+
+def _detect_project_context(workspace: Path) -> str:
+    """探测项目结构，返回注入 system prompt 的上下文摘要。
+
+    Codex 对齐：进入 repo 先建立结构认知，避免盲打。
+    """
+    lines: list[str] = []
+
+    # 1. 探测项目类型
+    markers = {
+        "pyproject.toml": "Python (pyproject)",
+        "setup.py": "Python (setup.py)",
+        "package.json": "Node.js/TypeScript",
+        "Cargo.toml": "Rust",
+        "go.mod": "Go",
+        "pom.xml": "Java (Maven)",
+        "build.gradle": "Java (Gradle)",
+    }
+    project_type = "Unknown"
+    for marker, label in markers.items():
+        if (workspace / marker).is_file():
+            project_type = label
+            break
+    lines.append(f"项目类型: {project_type}")
+    lines.append(f"工作目录: {workspace}")
+
+    # 2. 顶层目录结构（最多 2 层，排除噪音）
+    _SKIP = {"node_modules", ".git", "__pycache__", ".venv", "venv", "dist", "build", ".next", ".ruff_cache", ".pytest_cache", ".worktrees", ".codegraph"}
+    tree_lines: list[str] = []
+    try:
+        for item in sorted(workspace.iterdir()):
+            if item.name in _SKIP or item.name.startswith("."):
+                continue
+            prefix = "📂" if item.is_dir() else "📄"
+            tree_lines.append(f"  {prefix} {item.name}")
+            if item.is_dir():
+                try:
+                    for sub in sorted(item.iterdir())[:8]:
+                        if sub.name in _SKIP or sub.name.startswith("."):
+                            continue
+                        sub_prefix = "📂" if sub.is_dir() else "📄"
+                        tree_lines.append(f"    {sub_prefix} {sub.name}")
+                except OSError:
+                    pass
+            if len(tree_lines) > 40:
+                tree_lines.append("  ... (截断)")
+                break
+    except OSError:
+        pass
+    if tree_lines:
+        lines.append("项目结构:")
+        lines.extend(tree_lines)
+
+    # 3. 探测验证命令
+    verify_cmd = _detect_verify_command(workspace)
+    if verify_cmd:
+        lines.append(f"建议验证命令: {verify_cmd}")
+
+    return "\n".join(lines)
+
+
+def _detect_verify_command(workspace: Path) -> str | None:
+    """探测项目可用的验证命令。"""
+    for marker, cmd in _VERIFY_COMMANDS:
+        if (workspace / marker).is_file():
+            return cmd
+    return None
+
+
+# ═══════════════════════════════════════════════════════════
+#  Git 事务隔离（多文件编辑保护）
+# ═══════════════════════════════════════════════════════════
+
+
+def _git_create_work_branch(workspace: Path, run_id: str) -> str | None:
+    """创建临时工作分支，返回分支名。失败返回 None。"""
+    import shutil as _shutil
+    import subprocess as _sp
+
+    git = _shutil.which("git")
+    if not git:
+        return None
+    branch = f"xagent/run-{run_id[:8]}"
+    try:
+        # 确保在 git 仓库中
+        rc = _sp.run([git, "rev-parse", "--is-inside-work-tree"],
+                     cwd=str(workspace), capture_output=True, timeout=5)
+        if rc.returncode != 0:
+            return None
+        _sp.run([git, "checkout", "-b", branch],
+                cwd=str(workspace), capture_output=True, timeout=10)
+        return branch
+    except Exception:
+        return None
+
+
+def _git_rollback(workspace: Path, branch: str) -> None:
+    """回滚到工作分支创建前的状态。"""
+    import shutil as _shutil
+    import subprocess as _sp
+
+    git = _shutil.which("git")
+    if not git:
+        return
+    try:
+        _sp.run([git, "checkout", "--", "."],
+                cwd=str(workspace), capture_output=True, timeout=10)
+        _sp.run([git, "clean", "-fd"],
+                cwd=str(workspace), capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
+def _git_cleanup_branch(workspace: Path, branch: str) -> None:
+    """任务成功后清理临时分支（切回原分支并删除）。"""
+    import shutil as _shutil
+    import subprocess as _sp
+
+    git = _shutil.which("git")
+    if not git:
+        return
+    try:
+        # 获取之前的分支
+        rc = _sp.run([git, "reflog", "show", "--format=%gs", "-1"],
+                     cwd=str(workspace), capture_output=True, text=True, timeout=5)
+        prev = "main"
+        if rc.stdout.strip():
+            # reflog 格式: "checkout: moving from X to Y"
+            parts = rc.stdout.strip().split(" from ")
+            if len(parts) == 2:
+                prev = parts[1].split(" to ")[0]
+        _sp.run([git, "checkout", prev],
+                cwd=str(workspace), capture_output=True, timeout=10)
+        _sp.run([git, "branch", "-D", branch],
+                cwd=str(workspace), capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
+# ═══════════════════════════════════════════════════════════
+#  验证闭环（编辑后自动验证）
+# ═══════════════════════════════════════════════════════════
+
+
+async def _run_verification(workspace: Path, ctx) -> tuple[bool, str]:
+    """执行项目验证命令，返回 (passed, output)。"""
+    from xagent.adapters.tools import get_tool_registry
+
+    verify_cmd = _detect_verify_command(workspace)
+    if not verify_cmd:
+        return True, "(无可用验证命令，跳过)"
+
+    tools = get_tool_registry()
+    result = await tools.call("shell_exec", {"command": verify_cmd, "timeout": 60}, ctx)
+    output = result.output if result.ok else (result.error or "")
+    passed = result.ok and "error" not in output.lower()[:200]
+    return passed, output[:2000]
 
 
 async def _retrieve_relevant_memories(goal: str, tenant_id: str) -> str:
@@ -212,7 +388,7 @@ def _is_tool_echo(text: str) -> bool:
         return False
     if t.startswith("工具 ") and "结果：" in t[:80]:
         return True
-    if t.startswith("[参考数据"):
+    if t.startswith("[参考数据") or t.startswith("[错误]"):
         return True
     if t.startswith("{") and '"total_count"' in t[:200]:
         return True
@@ -254,10 +430,9 @@ def _detect_final_answer(content: str, state: AgentState) -> bool:
     has_final_evidence = any(e in text for e in _FINAL_EVIDENCE)
 
     # ── 信号 4：工具调用历史 — 如果之前有工具调用，纯文本更可能是中间态 ──
-    # 检查消息历史中是否有工具结果（说明之前在执行工具）
     recent_tool_results = sum(
         1 for m in state.messages[-10:]
-        if m.role == "user" and m.content.startswith("[参考数据")
+        if m.role == "tool"
     )
     has_recent_tools = recent_tool_results > 0
 
@@ -362,6 +537,12 @@ def _tool_system_prompt_native(role_system: str, tool_specs: list[dict[str, Any]
         "2. **禁止原样复述工具返回的原始结果**。你必须对工具结果进行分析、总结、提炼，用你自己的语言回答用户。",
         "3. 如果工具未能获取有效信息，基于已有信息合理推断并给出建议。",
         "4. 最终回答应该是结构化的分析/方案/总结，而不是工具日志的复制粘贴。",
+        "",
+        "## 验证与自恢复（核心）",
+        "1. **编辑后验证**：每次用 file_edit/file_write 修改代码后，必须用 shell_exec 运行验证（测试/类型检查/编译）确认修改正确。",
+        "2. **错误自恢复**：工具调用失败时，读取错误信息→分析原因→修改方案→重试。不要直接放弃。",
+        "3. **多文件编辑**：修改多个文件时，先用 file_list/code_search 确认文件存在，再逐个修改，最后统一验证。",
+        "4. **项目感知**：开始任务前，先用 file_list 查看项目结构，用 file_read 读取关键文件（入口/配置），建立上下文后再动手。",
     ]
     return "\n".join(lines)
 
@@ -385,7 +566,7 @@ async def _handle_prompt_tool_action(
     else:
         result = await tools.call(tool_name, args, ctx)
         result_text = (
-            json.dumps(result.output, ensure_ascii=False)
+            (json.dumps(result.output, ensure_ascii=False) if not isinstance(result.output, str) else result.output)
             if result.ok
             else f"[错误] {result.error}"
         )
@@ -397,8 +578,10 @@ async def _handle_prompt_tool_action(
             step=state.step,
         )
     )
+    # 原生 tool role（提示工程路径无 tool_call_id，用合成 ID）
+    tc_id = f"prompt_{state.step}_{tool_name}"
     state.messages.append(
-        Message(role="user", content=f"[参考数据 | {tool_name}]\n{result_text}")
+        Message(role="tool", content=result_text, tool_call_id=tc_id, name=tool_name)
     )
 
 
@@ -483,6 +666,10 @@ async def run_agent(
     agents_md = _load_agents_md()
     if agents_md:
         system += f"\n\n## 项目指令 (AGENTS.md)\n{agents_md}"
+    # 注入项目结构感知（Codex 对齐：先建立结构认知）
+    project_ctx = _detect_project_context(_WORKSPACE)
+    if project_ctx:
+        system += f"\n\n## 项目环境\n{project_ctx}"
     # 注入权限模式说明（Codex 对齐）
     _MODE_DESC = {
         "suggest": "\n\n## 权限模式: suggest\n你只能建议代码修改，不能直接执行文件写入或 shell 命令。输出建议让用户确认。",
@@ -505,6 +692,14 @@ async def run_agent(
         _run_start = time.perf_counter()
         # 判断是否支持流式
         can_stream = isinstance(llm, LiteLLMClient) and use_native_tools
+
+        # ── Git 事务隔离：创建临时工作分支 ──
+        _work_branch: str | None = None
+        _edit_count = 0  # 跟踪编辑次数，首次编辑时创建分支
+
+        # ── 错误自恢复计数器 ──
+        _consecutive_errors = 0
+        _MAX_CONSECUTIVE_ERRORS = 3
 
         try:
             while not state.finished and state.step < MAX_STEPS:
@@ -546,9 +741,11 @@ async def run_agent(
                   # 流结束：判断是工具调用还是最终回答
                   if tool_calls_buf:
                       state.messages.append(Message(role="assistant", content=content_buf or ""))
+                      _had_edit = False
                       for _idx in sorted(tool_calls_buf.keys()):
                           tc_raw = tool_calls_buf[_idx]
                           tc_name = tc_raw["name"]
+                          tc_id = tc_raw["id"] or f"call_{state.step}_{_idx}"
                           try:
                               tc_args = json.loads(tc_raw["arguments"] or "{}")
                           except Exception:
@@ -556,26 +753,56 @@ async def run_agent(
                           await _emit(
                               StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step)
                           )
+                          # ── Git 隔离：首次编辑时创建分支 ──
+                          if tc_name in _EDIT_TOOLS and _work_branch is None:
+                              _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
                           if not role.can_use(tc_name):
                               result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
+                              _consecutive_errors += 1
                           else:
                               result = await tools.call(tc_name, tc_args, ctx)
-                              result_text = (
-                                  json.dumps(result.output, ensure_ascii=False)
-                                  if result.ok
-                                  else f"[错误] {result.error}"
-                              )
+                              if result.ok:
+                                  result_text = (
+                                      json.dumps(result.output, ensure_ascii=False)
+                                      if not isinstance(result.output, str)
+                                      else result.output
+                                  )
+                                  _consecutive_errors = 0
+                              else:
+                                  result_text = f"[错误] {result.error}"
+                                  _consecutive_errors += 1
+                          if tc_name in _EDIT_TOOLS:
+                              _had_edit = True
+                              _edit_count += 1
                           await _emit(
                               StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                           )
+                          # ── 原生 tool role message（Codex 对齐） ──
                           state.messages.append(
-                              Message(role="user", content=(
-                                  f"[参考数据 | {tc_name}]\n"
-                                  f"以下是工具返回的原始数据，仅供你内部参考。"
-                                  f"你的回答中禁止出现此格式，必须用你自己的语言综合分析。\n"
-                                  f"---\n{result_text}\n---"
-                              ))
+                              Message(role="tool", content=result_text, tool_call_id=tc_id, name=tc_name)
                           )
+                      # ── 验证闭环：编辑后自动跑验证 ──
+                      if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
+                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx)
+                          if not v_passed:
+                              state.messages.append(Message(
+                                  role="user",
+                                  content=(
+                                      f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
+                                      "请分析错误原因并修复。"
+                                  ),
+                              ))
+                      # ── 错误自恢复：连续失败过多时注入分析指令 ──
+                      if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
+                          state.messages.append(Message(
+                              role="user",
+                              content=(
+                                  "[系统] 你已连续 " + str(_consecutive_errors) + " 次工具调用失败。"
+                                  "请停下来分析失败原因，换一种方案重试。"
+                                  "常见原因：路径错误、参数格式不对、文件不存在。"
+                              ),
+                          ))
+                          _consecutive_errors = 0
                       continue
                   else:
                       # 纯内容 → 判断是最终回答还是中间规划
@@ -624,6 +851,7 @@ async def run_agent(
                       state.messages.append(
                           Message(role="assistant", content=resp.content)
                       )
+                      _had_edit_ns = False
                       for tc in resp.tool_calls:
                           await _emit(
                               StepEvent(
@@ -633,15 +861,27 @@ async def run_agent(
                                   step=state.step,
                               )
                           )
+                          # Git 隔离
+                          if tc.name in _EDIT_TOOLS and _work_branch is None:
+                              _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
                           if not role.can_use(tc.name):
                               result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
+                              _consecutive_errors += 1
                           else:
                               result = await tools.call(tc.name, tc.args, ctx)
-                              result_text = (
-                                  json.dumps(result.output, ensure_ascii=False)
-                                  if result.ok
-                                  else f"[错误] {result.error}"
-                              )
+                              if result.ok:
+                                  result_text = (
+                                      json.dumps(result.output, ensure_ascii=False)
+                                      if not isinstance(result.output, str)
+                                      else result.output
+                                  )
+                                  _consecutive_errors = 0
+                              else:
+                                  result_text = f"[错误] {result.error}"
+                                  _consecutive_errors += 1
+                          if tc.name in _EDIT_TOOLS:
+                              _had_edit_ns = True
+                              _edit_count += 1
                           await _emit(
                               StepEvent(
                                   kind=StepKind.tool_result,
@@ -650,14 +890,31 @@ async def run_agent(
                                   step=state.step,
                               )
                           )
+                          # 原生 tool role
                           state.messages.append(
-                              Message(role="user", content=(
-                                  f"[参考数据 | {tc.name}]\n"
-                                  f"以下是工具返回的原始数据，仅供你内部参考。"
-                                  f"你的回答中禁止出现此格式，必须用你自己的语言综合分析。\n"
-                                  f"---\n{result_text}\n---"
-                              ))
+                              Message(role="tool", content=result_text, tool_call_id=tc.id, name=tc.name)
                           )
+                      # 验证闭环
+                      if _had_edit_ns and _edit_count % 2 == 0:
+                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx)
+                          if not v_passed:
+                              state.messages.append(Message(
+                                  role="user",
+                                  content=(
+                                      f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
+                                      "请分析错误原因并修复。"
+                                  ),
+                              ))
+                      # 错误自恢复
+                      if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
+                          state.messages.append(Message(
+                              role="user",
+                              content=(
+                                  "[系统] 你已连续 " + str(_consecutive_errors) + " 次工具调用失败。"
+                                  "请停下来分析失败原因，换一种方案重试。"
+                              ),
+                          ))
+                          _consecutive_errors = 0
                       continue
 
                   await _emit(
@@ -761,9 +1018,7 @@ async def run_agent(
                 # 从消息历史中提取最后的工具结果作为回答
                 tool_results = [
                     m.content for m in state.messages
-                    if m.role == "user" and (
-                        m.content.startswith("工具") or m.content.startswith("[参考数据")
-                    )
+                    if m.role == "tool" and m.content and not m.content.startswith("[错误]")
                 ]
                 if tool_results:
                     state.final_answer = (
@@ -777,6 +1032,9 @@ async def run_agent(
                     StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
                 )
         span.set_output(state.final_answer)
+        # ── Git 清理：任务完成后清理临时分支 ──
+        if _work_branch:
+            _git_cleanup_branch(_WORKSPACE, _work_branch)
         # Prometheus 指标
         try:
             from xagent.adapters.observability.metrics import agent_run_seconds, agent_runs

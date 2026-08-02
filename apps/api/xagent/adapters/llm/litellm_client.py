@@ -118,10 +118,7 @@ class LiteLLMClient(LLMClient):
         import litellm
 
         target_model = model or self.effective_model
-        payload = [
-            {"role": m.role, "content": m.content or ""}
-            for m in messages
-        ]
+        payload = self._serialize_messages(messages)
         call_kwargs = self._call_kwargs(target_model)
         call_kwargs.update(temperature=temperature, **kwargs)
         if max_tokens:
@@ -167,7 +164,7 @@ class LiteLLMClient(LLMClient):
         import litellm
 
         target_model = model or self.effective_model
-        payload = [{"role": m.role, "content": m.content or ""} for m in messages]
+        payload = self._serialize_messages(messages)
         call_kwargs = self._call_kwargs(target_model)
         call_kwargs.update(temperature=temperature, stream=True, **kwargs)
         call_kwargs["tools"] = tools
@@ -198,7 +195,7 @@ class LiteLLMClient(LLMClient):
         import litellm
 
         target_model = model or self.effective_model
-        payload = [{"role": m.role, "content": m.content or ""} for m in messages]
+        payload = self._serialize_messages(messages)
         call_kwargs = self._call_kwargs(target_model)
         call_kwargs.update(temperature=temperature, stream=True, **kwargs)
 
@@ -211,6 +208,19 @@ class LiteLLMClient(LLMClient):
             content = delta.get("content") or ""
             if content:
                 yield content
+
+    @staticmethod
+    def _serialize_messages(messages: list[Message]) -> list[dict[str, Any]]:
+        """将 Message 列表序列化为 OpenAI API 格式，支持原生 tool role。"""
+        payload: list[dict[str, Any]] = []
+        for m in messages:
+            entry: dict[str, Any] = {"role": m.role, "content": m.content or ""}
+            if m.role == "tool":
+                entry["tool_call_id"] = m.tool_call_id or ""
+                if m.name:
+                    entry["name"] = m.name
+            payload.append(entry)
+        return payload
 
     async def health(self) -> bool:
         # proxy / ollama / 任意直连 key 任一可用

@@ -384,8 +384,27 @@ const TOOL_ICONS: Record<string, string> = {
   file_write: "📝",
   file_read: "📖",
   file_list: "📂",
+  file_edit: "✏️",
+  git: "🔀",
+  code_search: "🔍",
   memory_write: "🧠",
-  memory_search: "🔍",
+  memory_search: "🔎",
+  skill_exec: "🚀",
+};
+
+/** 工具友好名称 */
+const TOOL_LABELS: Record<string, string> = {
+  python_exec: "执行 Python",
+  shell_exec: "执行命令",
+  web_fetch: "拓取网页",
+  file_write: "写入文件",
+  file_read: "读取文件",
+  file_list: "列出目录",
+  file_edit: "编辑文件",
+  git: "Git 操作",
+  code_search: "搜索代码",
+  memory_write: "写入记忆",
+  memory_search: "检索记忆",
 };
 
 function ToolExecutionPanel({ steps, live = false }: { steps: StepInfo[]; live?: boolean }) {
@@ -399,25 +418,31 @@ function ToolExecutionPanel({ steps, live = false }: { steps: StepInfo[]; live?:
     }
   }
 
+  const successCount = groups.filter((g) => g.result && !String(g.result.content ?? "").startsWith("[错误]")).length;
+  const errorCount = groups.filter((g) => g.result && String(g.result.content ?? "").startsWith("[错误]")).length;
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
         <Terminal size={12} />
         <span>执行过程</span>
         {live && <Loader2 size={11} className="animate-spin text-neutral-600" />}
-        <span className="text-neutral-700">({groups.length} 步)</span>
+        <span className="text-neutral-700">
+          ({groups.length} 步{successCount > 0 && <span className="text-green-500/70"> ✓{successCount}</span>}{errorCount > 0 && <span className="text-red-400/70"> ✗{errorCount}</span>})
+        </span>
       </div>
       {groups.map((g, i) => (
-        <ToolCard key={i} call={g.call} result={g.result} />
+        <ToolCard key={i} call={g.call} result={g.result} index={i + 1} />
       ))}
     </div>
   );
 }
 
-function ToolCard({ call, result }: { call: StepInfo; result?: StepInfo }) {
+function ToolCard({ call, result, index }: { call: StepInfo; result?: StepInfo; index: number }) {
   const [open, setOpen] = useState(false);
   const toolName = call.tool || "tool";
   const icon = TOOL_ICONS[toolName] || "🔧";
+  const label = TOOL_LABELS[toolName] || toolName;
   const args = call.content != null
     ? (typeof call.content === "string" ? call.content : JSON.stringify(call.content, null, 2))
     : "";
@@ -426,6 +451,24 @@ function ToolCard({ call, result }: { call: StepInfo; result?: StepInfo }) {
     : "";
   const isError = output.startsWith("[错误]") || output.includes("失败");
   const isRunning = !result;
+
+  // file_edit 的 diff 摘要
+  let diffSummary = "";
+  if (toolName === "file_edit" && call.content && typeof call.content === "object") {
+    const c = call.content as Record<string, unknown>;
+    const path = String(c.path ?? "").split("/").pop() || "";
+    diffSummary = path ? `✏️ ${path}` : "";
+  } else if ((toolName === "file_write" || toolName === "file_read") && call.content && typeof call.content === "object") {
+    const c = call.content as Record<string, unknown>;
+    const path = String(c.path ?? "").split("/").pop() || "";
+    diffSummary = path ? `${icon} ${path}` : "";
+  } else if (toolName === "shell_exec" && call.content && typeof call.content === "object") {
+    const c = call.content as Record<string, unknown>;
+    diffSummary = String(c.command ?? "").slice(0, 60);
+  } else if (toolName === "code_search" && call.content && typeof call.content === "object") {
+    const c = call.content as Record<string, unknown>;
+    diffSummary = `/${String(c.pattern ?? "")}/`;
+  }
 
   return (
     <div className={`overflow-hidden rounded-lg border ${
@@ -440,9 +483,9 @@ function ToolCard({ call, result }: { call: StepInfo; result?: StepInfo }) {
       >
         {open ? <ChevronDown size={12} className="text-neutral-600" /> : <ChevronRight size={12} className="text-neutral-600" />}
         <span className="text-sm">{icon}</span>
-        <code className="text-xs font-medium text-neutral-300">{toolName}</code>
+        <span className="text-xs font-medium text-neutral-300">{label}</span>
         <span className="flex-1 truncate text-[11px] text-neutral-600">
-          {args.slice(0, 80)}
+          {diffSummary || args.slice(0, 80)}
         </span>
         {isRunning ? (
           <Loader2 size={12} className="animate-spin text-blue-400" />
@@ -454,7 +497,35 @@ function ToolCard({ call, result }: { call: StepInfo; result?: StepInfo }) {
       </button>
       {open && (
         <div className="border-t border-white/[0.04] px-3 py-2">
-          {args && (
+          {/* file_edit diff 视图 */}
+          {toolName === "file_edit" && call.content && typeof call.content === "object" && (() => {
+            const c = call.content as Record<string, unknown>;
+            const oldText = String(c.old_text ?? "");
+            const newText = String(c.new_text ?? "");
+            if (!oldText && !newText) return null;
+            return (
+              <div className="mb-2 overflow-hidden rounded bg-black/40 text-[11px] leading-5">
+                {oldText && (
+                  <div className="border-b border-white/[0.04] px-2 py-1">
+                    {oldText.split("\n").slice(0, 8).map((line, li) => (
+                      <div key={li} className="text-red-400/70"><span className="mr-2 select-none text-red-500/50">-</span>{line}</div>
+                    ))}
+                    {oldText.split("\n").length > 8 && <div className="text-neutral-600">  ... ({oldText.split("\n").length - 8} more)</div>}
+                  </div>
+                )}
+                {newText && (
+                  <div className="px-2 py-1">
+                    {newText.split("\n").slice(0, 8).map((line, li) => (
+                      <div key={li} className="text-green-400/70"><span className="mr-2 select-none text-green-500/50">+</span>{line}</div>
+                    ))}
+                    {newText.split("\n").length > 8 && <div className="text-neutral-600">  ... ({newText.split("\n").length - 8} more)</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {/* 普通输入/输出 */}
+          {toolName !== "file_edit" && args && (
             <div className="mb-2">
               <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-neutral-600">输入</div>
               <pre className="max-h-32 overflow-auto rounded bg-black/30 p-2 text-[11px] leading-5 text-neutral-400">
