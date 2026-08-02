@@ -1018,6 +1018,11 @@ async def run_agent(
         _tool_call_history: list[str] = []  # 最近 10 次工具名
         _loop_detected: bool = False
 
+        # ── 执行统计：工具调用次数/成功率 ──
+        _tool_stats: dict[str, int] = {}  # tool_name -> call_count
+        _tool_success: int = 0
+        _tool_fail: int = 0
+
         # ── 错误分类恢复：追踪最后一次错误信息 ──
         _last_error_text: str = ""
         _last_error_tool: str = ""
@@ -1156,9 +1161,12 @@ async def run_agent(
                               tc_args = {}
                           _parsed_calls.append((tc_name, tc_id, tc_args))
 
-                      # ── 并行执行策略：多个只读工具并发，编辑工具顺序 ──
-                      _has_edit_call = any(n in _EDIT_TOOLS for n, _, _ in _parsed_calls)
-                      _use_parallel = len(_parsed_calls) > 1 and not _has_edit_call
+                      # ── 并行执行策略：多工具并发（编辑不同文件也可并行） ──
+                      _edit_calls = [(n, a) for n, _, a in _parsed_calls if n in _EDIT_TOOLS]
+                      _edit_paths = [a.get("path", "") for _, a in _edit_calls]
+                      # 只有当编辑工具目标文件都不同时才允许并行
+                      _edits_safe = len(_edit_paths) == len(set(_edit_paths))  # 无重复文件
+                      _use_parallel = len(_parsed_calls) > 1 and (not _edit_calls or _edits_safe)
 
                       if _use_parallel:
                           # ══ 并行路径：asyncio.gather 并发执行只读工具 ══
@@ -1192,8 +1200,12 @@ async def run_agent(
                                       _ck = tc_args.get("path", "")
                                       if _ck:
                                           _file_read_cache[_ck] = txt
+                                  _tool_success += 1
                               else:
                                   txt = f"[错误] {r.error}"
+                                  _tool_fail += 1
+                              # 统计工具调用次数
+                              _tool_stats[tc_name] = _tool_stats.get(tc_name, 0) + 1
                               # 记录去重缓存
                               _recent_tool_calls[_dedup_key] = txt
                               return (tc_name, tc_id, txt)
@@ -1449,9 +1461,11 @@ async def run_agent(
                       )
                       _had_edit_ns = False
 
-                      # ── 并行执行策略（同流式路径） ──
-                      _ns_has_edit = any(tc.name in _EDIT_TOOLS for tc in resp.tool_calls)
-                      _ns_use_parallel = len(resp.tool_calls) > 1 and not _ns_has_edit
+                      # ── 并行执行策略（同流式路径：编辑不同文件可并行） ──
+                      _ns_edit_calls = [tc for tc in resp.tool_calls if tc.name in _EDIT_TOOLS]
+                      _ns_edit_paths = [tc.args.get("path", "") for tc in _ns_edit_calls]
+                      _ns_edits_safe = len(_ns_edit_paths) == len(set(_ns_edit_paths))
+                      _ns_use_parallel = len(resp.tool_calls) > 1 and (not _ns_edit_calls or _ns_edits_safe)
 
                       if _ns_use_parallel:
                           # 并行路径
@@ -1760,6 +1774,37 @@ async def run_agent(
     await _save_to_memory(goal, state.final_answer, principal.tenant_id)
     # ── 自动技能提炼（Skill 自进化） ──
     await _auto_extract_skill(goal, state.final_answer, state.step, events)
+
+    # ── 任务完成摘要增强：添加 diff 统计 + 执行统计 ──
+    if state.final_answer:
+        _summary_parts = []
+        # 执行统计
+        _total_calls = _tool_success + _tool_fail
+        if _total_calls > 0:
+            _success_rate = int(_tool_success / _total_calls * 100)
+            _top_tools = sorted(_tool_stats.items(), key=lambda x: -x[1])[:3]
+            _tools_str = ", ".join(f"{t}({c})" for t, c in _top_tools)
+            _summary_parts.append(f"📈 执行统计: {_total_calls} 次工具调用, 成功率 {_success_rate}%, 常用: {_tools_str}")
+        # diff 统计
+        if _changed_files:
+            try:
+                import subprocess as _sp
+                _diff_stat = _sp.run(
+                    ["git", "diff", "--stat", "HEAD"],
+                    cwd=str(_WORKSPACE), capture_output=True, text=True, timeout=10
+                )
+                if _diff_stat.returncode == 0 and _diff_stat.stdout.strip():
+                    _stat_line = _diff_stat.stdout.strip().split("\n")[-1]
+                    _summary_parts.append(f"📊 变更统计: {_stat_line}")
+            except Exception:  # noqa: S110
+                pass
+        if _summary_parts:
+            state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
+
+    # ── 资源清理：释放缓存内存 ──
+    _file_read_cache.clear()
+    _recent_tool_calls.clear()
+    _tool_call_history.clear()
 
     return AgentRun(
         run_id=resolved_run_id,
