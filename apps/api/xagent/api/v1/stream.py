@@ -132,17 +132,15 @@ async def _event_stream(
     started_at = datetime.now(UTC)
 
     async def on_event(ev) -> None:
-        await queue.put(
-            _sse(
-                ev.kind.value,
-                {
-                    "kind": ev.kind.value,
-                    "step": ev.step,
-                    "tool": ev.tool,
-                    "content": ev.content,
-                },
-            )
-        )
+        _payload = {
+            "kind": ev.kind.value,
+            "step": ev.step,
+            "tool": ev.tool,
+            "content": ev.content,
+        }
+        if getattr(ev, 'trace_id', ''):
+            _payload["trace_id"] = ev.trace_id
+        await queue.put(_sse(ev.kind.value, _payload))
 
     async def _run():
         result = None
