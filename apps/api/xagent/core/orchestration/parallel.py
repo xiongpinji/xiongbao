@@ -153,3 +153,58 @@ async def run_parallel_agents(
         summary=summary,
         total_duration_ms=total_ms,
     )
+
+
+# ═══════════════════════════════════════════════════════════
+#  自动任务分解（对标 Codex 多文件并行编辑）
+# ═══════════════════════════════════════════════════════════
+
+
+async def auto_decompose_and_run(
+    goal: str,
+    principal: Principal,
+    *,
+    on_event=None,
+) -> ParallelRunResult | None:
+    """智能判断是否应并行执行，如果是则自动分解并并行执行。
+
+    返回 None 表示不适合并行（应由单 Agent 顺序执行）。
+    """
+    import re as _re
+
+    # 判断是否含多个独立子任务
+    # 信号：数字列表、1) 2) 3)、多个“并”“同时”“分别”
+    has_numbered = bool(_re.search(r'[1-9][)\.]\s', goal))
+    has_parallel_words = any(w in goal for w in ("分别", "并行", "同时", "各自"))
+    has_multi_sep = goal.count("、") >= 3 or goal.count("；") >= 2
+
+    if not (has_numbered or has_parallel_words or has_multi_sep):
+        return None  # 不适合并行
+
+    # 用 LLM 分解任务
+    from xagent.adapters.llm import get_llm_client, Message
+
+    llm = get_llm_client()
+    decompose_prompt = (
+        "将以下任务分解为 2-5 个可以独立并行执行的子任务。"
+        "每个子任务必须是完整的、可独立执行的。"
+        "输出格式：每行一个子任务，不要编号。\n\n"
+        f"任务：{goal}"
+    )
+    try:
+        resp = await llm.complete([Message(role="user", content=decompose_prompt)])
+        lines = [
+            l.strip().lstrip("0123456789.-) ")
+            for l in (resp.content or "").splitlines()
+            if l.strip() and len(l.strip()) > 5
+        ]
+        if len(lines) < 2:
+            return None  # 分解失败，回退单 Agent
+        sub_tasks = [SubTask(goal=line) for line in lines[:MAX_PARALLEL_AGENTS]]
+    except Exception:
+        return None
+
+    logger.info("auto_decompose", count=len(sub_tasks), goal=goal[:80])
+    return await run_parallel_agents(
+        sub_tasks, principal, coordinator_goal=goal, on_event=on_event
+    )

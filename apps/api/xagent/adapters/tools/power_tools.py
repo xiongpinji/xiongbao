@@ -27,6 +27,24 @@ _MAX_OUTPUT = 4000  # 输出截断长度（工具结果给 LLM 看的上限）
 _TIMEOUT = 30  # python_exec 命令超时秒数
 _SHELL_TIMEOUT = 120  # shell_exec 超时（安装依赖等耗时操作）
 
+# ── 沙箱安全：危险命令黑名单（对标 Codex 沙箱隔离） ──
+_DANGEROUS_PATTERNS = (
+    "rm -rf /", "rm -rf ~", "del /s /q c:\\", "format c:",
+    "rd /s /q c:\\", "shutdown", "reboot", "mkfs",
+    "dd if=", "> /dev/sda", "chmod -R 777 /",
+    "Remove-Item -Recurse -Force C:\\", "Remove-Item -Recurse -Force ~",
+    "curl | sh", "wget | sh", "iwr | iex",
+)
+
+
+def _is_dangerous_command(cmd: str) -> str | None:
+    """检测危险命令，返回拦截原因或 None。"""
+    cmd_lower = cmd.lower().strip()
+    for pattern in _DANGEROUS_PATTERNS:
+        if pattern in cmd_lower:
+            return f"安全拦截：检测到危险操作 '{pattern}'"
+    return None
+
 
 def _truncate(text: str) -> str:
     if len(text) > _MAX_OUTPUT:
@@ -166,6 +184,11 @@ class ShellExecTool:
         command = args.get("command", "")
         if not command.strip():
             return ToolResult(ok=False, error="command 不能为空")
+
+        # ── 沙箱安全：危险命令拦截 ──
+        danger = _is_dangerous_command(command)
+        if danger:
+            return ToolResult(ok=False, error=danger)
 
         cwd = args.get("working_dir") or str(_WORKSPACE)
         timeout = min(int(args.get("timeout") or _SHELL_TIMEOUT), 300)

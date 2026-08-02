@@ -807,6 +807,18 @@ async def run_agent(
                       state.messages, llm, target_model
                   )
 
+              # ── 断点续传：每 5 步保存 checkpoint ──
+              try:
+                  from xagent.core.orchestration.checkpoint import save_checkpoint, should_checkpoint
+                  if should_checkpoint(state.step):
+                      save_checkpoint(
+                          conv_session.conversation_id, resolved_run_id, state.step,
+                          [{"role": m.role, "content": m.content[:500]} for m in state.messages],
+                          _changed_files, goal,
+                      )
+              except Exception:  # noqa: S110
+                  pass
+
               if can_stream:
                   # ── 流式路径：逐 token 推送 ──
                   content_buf = ""
@@ -948,6 +960,9 @@ async def run_agent(
                   resp = await llm.complete_with_tools(
                       state.messages, specs, model=target_model
                   )
+                  # Token 用量追踪
+                  state.total_prompt_tokens += resp.prompt_tokens
+                  state.total_completion_tokens += resp.completion_tokens
                   if resp.tool_calls:
                       state.messages.append(
                           Message(role="assistant", content=resp.content)
@@ -1060,6 +1075,8 @@ async def run_agent(
               else:
                   # ── 提示工程路径（mock / 不支持工具） ──
                   resp = await llm.complete(state.messages, model=target_model)
+                  state.total_prompt_tokens += resp.prompt_tokens
+                  state.total_completion_tokens += resp.completion_tokens
                   await _emit(
                       StepEvent(kind=StepKind.reason, content=resp.content, step=state.step)
                   )
@@ -1160,6 +1177,12 @@ async def run_agent(
     # ── 保存对话历史 ──
     conv_session.add_user(goal)
     conv_session.add_assistant(state.final_answer)
+    # ── 清理 checkpoint（任务成功完成） ──
+    try:
+        from xagent.core.orchestration.checkpoint import clear_checkpoints
+        clear_checkpoints(conv_session.conversation_id)
+    except Exception:  # noqa: S110
+        pass
     # ── 持久化到 DB ──
     try:
         from xagent.core.orchestration.conversation import persist_conversation, persist_message
@@ -1186,4 +1209,6 @@ async def run_agent(
         steps=state.step,
         events=events,
         conversation_id=conv_session.conversation_id,
+        prompt_tokens=state.total_prompt_tokens,
+        completion_tokens=state.total_completion_tokens,
     )
