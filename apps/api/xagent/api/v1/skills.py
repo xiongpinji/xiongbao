@@ -6,7 +6,7 @@ Agent 在任务执行中会自动提炼技能，此接口用于人工查看/干�
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from xagent.core.skills import get_skill_store
@@ -45,7 +45,7 @@ async def get_skill(
     store = get_skill_store()
     skill = store.get(skill_id)
     if not skill:
-        return {"error": f"skill '{skill_id}' not found"}
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     return skill.to_dict()
 
 
@@ -106,7 +106,7 @@ async def evolve_skill(
         change_reason=body.change_reason,
     )
     if not skill:
-        return {"error": f"skill '{skill_id}' not found"}
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     return {"evolved": True, "skill": skill.to_dict()}
 
 
@@ -121,7 +121,7 @@ async def retire_skill(
     store = get_skill_store()
     skill = store.get(skill_id)
     if not skill:
-        return {"error": f"skill '{skill_id}' not found"}
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     skill.retired = True
     store._persist(skill)
     return {"retired": True, "skill_id": skill_id}
@@ -133,6 +133,8 @@ async def restore_skill(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    if not store.get(skill_id):
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     ok = store.restore_skill(skill_id)
     return {"restored": ok, "skill_id": skill_id}
 
@@ -156,7 +158,9 @@ async def delete_skill(
 ):
     store = get_skill_store()
     deleted = store.delete(skill_id)
-    return {"deleted": deleted, "skill_id": skill_id}
+    if not deleted:
+        raise HTTPException(404, f"skill '{skill_id}' not found")
+    return {"deleted": True, "skill_id": skill_id}
 
 
 # ─── 匹配测试 ───

@@ -8,6 +8,7 @@
 from xagent.domains.open_source_discovery.engine import (
     DiscoveryEngine,
     discover_and_rank,
+    discover_and_rank_with_meta,
     get_discovery_engine,
     reset_discovery_engine,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "ScoredCandidate",
     "DiscoveryEngine",
     "discover_and_rank",
+    "discover_and_rank_with_meta",
     "get_discovery_engine",
     "reset_discovery_engine",
 ]

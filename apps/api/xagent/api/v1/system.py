@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -9,9 +11,33 @@ from xagent.adapters.mcp import get_mcp_manager
 from xagent.adapters.tools import get_tool_registry
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
+from xagent.infra.logging import get_logger
 from xagent.infra.settings import get_settings
 
 router = APIRouter(prefix="/system", tags=["system"])
+logger = get_logger("xagent.api.system")
+
+
+class ClientErrorIn(BaseModel):
+    """前端 ErrorBoundary 上报的客户端异常。"""
+
+    message: str = Field(default="", max_length=2000)
+    stack: str = Field(default="", max_length=2000)
+    componentStack: str = Field(default="", max_length=2000)
+    url: str = Field(default="", max_length=500)
+    timestamp: int = 0
+
+
+@router.post("/client-errors", summary="前端异常上报（免鉴权，供 ErrorBoundary 使用）")
+async def report_client_error(body: ClientErrorIn) -> dict:
+    # 免鉴权：前端崩溃时可能无法携带有效 token，上报不能被 401 阻断
+    logger.warning(
+        "client_error_reported",
+        message=body.message[:500],
+        url=body.url,
+        component_stack=body.componentStack[:300],
+    )
+    return {"received": True}
 
 
 @router.get("/capabilities", summary="工作台只读能力概览")
@@ -66,6 +92,60 @@ async def capabilities(
 
 # ---- LLM 模型配置 ----
 
+# 运行时 LLM 配置覆盖持久化文件（PUT /llm-config 写入，GET/启动时回读）。
+# 避免"PUT 回显新值、重启后丢失"的假成功。
+_LLM_OVERRIDES_PATH = (
+    Path(__file__).resolve().parents[4] / "data" / "llm_config_overrides.json"
+)
+# 允许通过 API 覆盖的 LLM 字段白名单
+_LLM_OVERRIDABLE_FIELDS = (
+    "default_model",
+    "fallback_models",
+    "proxy_url",
+    "proxy_api_key",
+    "ollama_base_url",
+    "ollama_model",
+    "request_timeout_seconds",
+    "openai_api_key",
+    "anthropic_api_key",
+    "deepseek_api_key",
+)
+
+
+def _load_llm_overrides() -> dict:
+    try:
+        if _LLM_OVERRIDES_PATH.is_file():
+            import json
+
+            data = json.loads(_LLM_OVERRIDES_PATH.read_text(encoding="utf-8"))
+            return {k: v for k, v in data.items() if k in _LLM_OVERRIDABLE_FIELDS}
+    except Exception as exc:  # noqa: BLE001  覆盖文件损坏不阻断启动
+        logger.warning("llm_overrides_load_failed", error=str(exc))
+    return {}
+
+
+def _apply_llm_overrides() -> dict:
+    """把持久化的覆盖值应用到当前 settings（幂等），返回应用的覆盖。"""
+    overrides = _load_llm_overrides()
+    if overrides:
+        cfg = get_settings().llm
+        for key, value in overrides.items():
+            setattr(cfg, key, value)
+    return overrides
+
+
+def _save_llm_overrides(overrides: dict) -> None:
+    import json
+
+    _LLM_OVERRIDES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _LLM_OVERRIDES_PATH.write_text(
+        json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+# 模块导入时（即 app 创建时）恢复上次持久化的覆盖，保证重启后配置仍生效
+_apply_llm_overrides()
+
 
 class LLMConfigOut(BaseModel):
     """LLM 配置输出（脱敏）。"""
@@ -99,6 +179,8 @@ class LLMConfigIn(BaseModel):
 async def get_llm_config(
     principal: Principal = Depends(require_permission("system", "read")),
 ) -> dict:
+    # 先应用持久化覆盖（幂等），保证重启后 / 多实例下读到的是生效值
+    _apply_llm_overrides()
     cfg = get_settings().llm
     return LLMConfigOut(
         default_model=cfg.default_model,
@@ -120,26 +202,47 @@ async def update_llm_config(
     principal: Principal = Depends(require_permission("system", "manage")),
 ) -> dict:
     cfg = get_settings().llm
+    changed: dict = {}
     if body.default_model is not None:
         cfg.default_model = body.default_model
+        changed["default_model"] = body.default_model
     if body.fallback_models is not None:
         cfg.fallback_models = body.fallback_models
+        changed["fallback_models"] = body.fallback_models
     if body.proxy_url is not None:
         cfg.proxy_url = body.proxy_url
+        changed["proxy_url"] = body.proxy_url
     if body.proxy_api_key is not None:
         cfg.proxy_api_key = body.proxy_api_key
+        changed["proxy_api_key"] = body.proxy_api_key
     if body.ollama_base_url is not None:
         cfg.ollama_base_url = body.ollama_base_url
+        changed["ollama_base_url"] = body.ollama_base_url
     if body.ollama_model is not None:
         cfg.ollama_model = body.ollama_model
+        changed["ollama_model"] = body.ollama_model
     if body.request_timeout_seconds is not None:
         cfg.request_timeout_seconds = body.request_timeout_seconds
+        changed["request_timeout_seconds"] = body.request_timeout_seconds
     if body.openai_api_key is not None:
         cfg.openai_api_key = body.openai_api_key
+        changed["openai_api_key"] = body.openai_api_key
     if body.anthropic_api_key is not None:
         cfg.anthropic_api_key = body.anthropic_api_key
+        changed["anthropic_api_key"] = body.anthropic_api_key
     if body.deepseek_api_key is not None:
         cfg.deepseek_api_key = body.deepseek_api_key
+        changed["deepseek_api_key"] = body.deepseek_api_key
+
+    # 持久化覆盖到磁盘（与已有覆盖合并），重启后仍生效
+    overrides = _load_llm_overrides()
+    overrides.update(changed)
+    try:
+        _save_llm_overrides(overrides)
+        persisted = True
+    except Exception as exc:  # noqa: BLE001
+        logger.error("llm_overrides_save_failed", error=str(exc))
+        persisted = False
 
     # 重置 LLM 客户端缓存，使新配置生效
     from xagent.adapters.llm.factory import reset_llm_client
@@ -147,6 +250,7 @@ async def update_llm_config(
 
     return {
         "status": "ok",
+        "persisted": persisted,
         "default_model": cfg.default_model,
         "fallback_models": cfg.fallback_models,
         "proxy_url": cfg.proxy_url,

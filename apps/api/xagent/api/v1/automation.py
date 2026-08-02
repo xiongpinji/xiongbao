@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from xagent.core.orchestration.parallel import SubTask, run_parallel_agents
 from xagent.core.orchestration.supervisor import run_supervisor
 from xagent.core.scheduler import get_scheduler
-from xagent.core.skills import get_skill_store
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 
@@ -66,60 +65,8 @@ async def supervisor_run(
 
 
 # ─── 技能系统 ───
-
-
-class SkillCreateIn(BaseModel):
-    name: str = Field(..., min_length=1)
-    description: str = ""
-    trigger_pattern: str = ""
-    steps: list[dict] = Field(default_factory=list)
-    system_prompt_hint: str = ""
-    tags: list[str] = Field(default_factory=list)
-
-
-@router.get("/skills", summary="列出所有技能")
-async def list_skills(
-    principal: Principal = Depends(require_permission("agent", "execute")),
-):
-    store = get_skill_store()
-    return {"skills": [s.to_dict() for s in store.list_all()]}
-
-
-@router.post("/skills", summary="创建技能")
-async def create_skill(
-    body: SkillCreateIn,
-    principal: Principal = Depends(require_permission("agent", "execute")),
-):
-    store = get_skill_store()
-    skill = store.create_skill(
-        name=body.name,
-        description=body.description,
-        trigger_pattern=body.trigger_pattern,
-        steps=body.steps,
-        system_prompt_hint=body.system_prompt_hint,
-        tags=body.tags,
-    )
-    return skill.to_dict()
-
-
-@router.delete("/skills/{skill_id}", summary="删除技能")
-async def delete_skill(
-    skill_id: str,
-    principal: Principal = Depends(require_permission("agent", "execute")),
-):
-    store = get_skill_store()
-    deleted = store.delete(skill_id)
-    return {"deleted": deleted}
-
-
-@router.get("/skills/match", summary="匹配技能")
-async def match_skills(
-    goal: str,
-    principal: Principal = Depends(require_permission("agent", "execute")),
-):
-    store = get_skill_store()
-    matched = store.match(goal)
-    return {"matched": [s.to_dict() for s in matched]}
+# 技能的 CRUD/匹配路由由 skills.py 统一提供（含 404 处理与 system:read/manage 权限），
+# 此处不再重复注册，避免路由 shadow（先注册者胜）。
 
 
 # ─── 定时调度 ───

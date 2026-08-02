@@ -117,6 +117,9 @@ class KnowledgeBase:
                     "tenant_id": tenant_id,
                     "chunk_index": i,
                     "source": source,
+                    # 知识库专属标记：与会话记忆共用向量集合，检索时按此过滤，
+                    # 避免知识库搜索返回会话记忆内容
+                    "kind": "knowledge",
                 },
             )
             for i, chunk in enumerate(chunks)
@@ -154,12 +157,13 @@ class KnowledgeBase:
     async def search(
         self, query: str, tenant_id: str, *, top_k: int = 5,
     ) -> list[dict[str, Any]]:
-        """语义检索知识库。"""
+        """语义检索知识库（只返回入库文档，不返回会话记忆）。"""
         from xagent.adapters.memory import get_vector_store
 
         store = get_vector_store()
-        hits = await store.search(query, top_k=top_k, tenant_id=tenant_id)
-        return [
+        # 向量集合与会话记忆共用：多拉取后过滤，只保留知识库文档 chunks
+        hits = await store.search(query, top_k=top_k * 4, tenant_id=tenant_id)
+        results = [
             {
                 "text": h.text,
                 "score": h.score,
@@ -168,10 +172,32 @@ class KnowledgeBase:
                 "chunk_index": h.metadata.get("chunk_index", 0),
             }
             for h in hits
+            if h.metadata.get("doc_id")
         ]
+        return results[:top_k]
 
     def list_docs(self, tenant_id: str) -> list[Document]:
         return [d for d in self._docs.values() if d.tenant_id == tenant_id]
+
+    async def alist_docs(self, tenant_id: str) -> list[Document]:
+        """列出文档（先从 SQLite 持久层合并，保证重启后/跨进程不丢）。"""
+        try:
+            from xagent.core.persistence import load_documents
+
+            for d in await load_documents(tenant_id):
+                if d["doc_id"] not in self._docs:
+                    self._docs[d["doc_id"]] = Document(
+                        doc_id=d["doc_id"],
+                        title=d["title"],
+                        tenant_id=d["tenant_id"],
+                        source=d["source"],
+                        chunk_count=d["chunk_count"],
+                        tags=d["tags"],
+                        created_at=d["created_at"],
+                    )
+        except Exception:  # noqa: S110  持久层不可用时退回内存列表
+            pass
+        return self.list_docs(tenant_id)
 
     def get_doc(self, doc_id: str, tenant_id: str) -> Document | None:
         doc = self._docs.get(doc_id)

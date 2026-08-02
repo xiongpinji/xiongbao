@@ -26,11 +26,14 @@ def _h(token: str) -> dict:
 
 
 async def test_null_image_text_to_image() -> None:
+    # 注意：registry 的图像默认 provider 已从 NullProvider 漂移为 PollinationsProvider
+    # （registry.py: 无 OpenAI key 时注册免费在线服务，需联网，输出 local:// 或远程 URL，
+    # 不含 mode 字符串）。本测试目的是验证 Null 降级路径的占位产物契约，
+    # 因此直接针对 registry.null（NullProvider）断言，保证离线确定性。
     reg = get_media_registry()
-    task = await reg.generate(
+    task = await reg.null.submit(
         GenerationRequest(kind=MediaKind.image, prompt="夕阳海滩",
                           mode=GenerationMode.text_to_image),
-        wait=False,
     )
     assert task.status == "succeeded"
     assert task.outputs
@@ -38,12 +41,12 @@ async def test_null_image_text_to_image() -> None:
 
 
 async def test_null_image_to_image() -> None:
+    # 同上：直接验证 NullProvider 的 image_to_image 占位产物。
     reg = get_media_registry()
-    task = await reg.generate(
+    task = await reg.null.submit(
         GenerationRequest(kind=MediaKind.image, prompt="加滤镜",
                           mode=GenerationMode.image_to_image,
                           reference_images=["ref.png"]),
-        wait=False,
     )
     assert task.status == "succeeded"
     assert "image_to_image" in task.outputs[0]

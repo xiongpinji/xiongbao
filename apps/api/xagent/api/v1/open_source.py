@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from xagent.domains.open_source_discovery import discover_and_rank
+from xagent.domains.open_source_discovery import discover_and_rank_with_meta
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
@@ -23,16 +23,23 @@ async def discover(
     body: DiscoverIn,
     principal: Principal = Depends(require_permission("open_source", "read")),
 ) -> dict:
-    results = await discover_and_rank(body.query, limit=body.limit)
+    results, meta = await discover_and_rank_with_meta(body.query, limit=body.limit)
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
         action="open_source.discover",
         resource="open_source",
-        detail={"query": body.query, "count": len(results)},
+        detail={"query": body.query, "count": len(results), "degraded": meta["degraded"]},
     )
     return {
         "query": body.query,
+        # 降级标识：为 True 时结果含 mock 示例数据，前端必须提示用户
+        "degraded": meta["degraded"],
+        "degraded_reason": meta["degraded_reason"] or None,
+        "providers": {
+            "ok": meta["providers_ok"],
+            "failed": meta["providers_failed"],
+        },
         "results": [
             {
                 "name": s.candidate.name,

@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import shutil
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from xagent.adapters.mcp import get_mcp_manager
@@ -15,6 +17,46 @@ from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
+
+
+def _validate_server_config(body: "MCPServerIn") -> None:
+    """显式校验服务器配置，拒绝必然失败的假成功。"""
+    if body.transport == "stdio":
+        if not body.command:
+            raise HTTPException(400, "stdio 传输必须提供 command")
+        # 命令必须真实存在（PATH 或有效路径），否则连接必然失败
+        if not shutil.which(body.command):
+            raise HTTPException(400, f"stdio 命令不存在或不可执行: '{body.command}'")
+    elif body.transport in ("sse", "streamable_http"):
+        if not body.url:
+            raise HTTPException(400, f"{body.transport} 传输必须提供 url")
+    else:
+        raise HTTPException(400, f"不支持的 transport: '{body.transport}'")
+
+
+def _server_view(mgr, name: str) -> dict:
+    """获取单个 server 的列表视图（含 connected / tools_count）。"""
+    for srv in mgr.list_servers():
+        if srv["name"] == name:
+            return srv
+    return {}
+
+
+def _honest_connection(mgr, name: str, conn: dict) -> dict:
+    """把 manager 的连接结果修正为与事实一致：
+
+    manager 内部会吞掉 stdio/sse 连接异常并返回 ok=True + tools_discovered=0，
+    这里用 connected 标志与工具总数校验，失败则明确报错，并补充 tools_count
+    （与 GET /mcp/servers 的 tools_count 口径一致，避免"重连后 0 vs 3"矛盾）。
+    """
+    view = _server_view(mgr, name)
+    conn["tools_count"] = len([
+        t for t in mgr.discovered_tools() if t["server"] == name
+    ])
+    if conn.get("ok") and not view.get("connected", False):
+        conn["ok"] = False
+        conn["error"] = "连接失败：无法建立会话或发现工具（详见服务端日志）"
+    return conn
 
 
 # ─── Server 管理 ───
@@ -43,6 +85,7 @@ async def add_server(
     body: MCPServerIn,
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
+    _validate_server_config(body)
     mgr = get_mcp_manager()
     cfg = MCPServerConfig(
         name=body.name,
@@ -58,7 +101,7 @@ async def add_server(
     result = {"status": "added", "name": body.name}
     if body.enabled:
         conn = await mgr.connect_server(body.name)
-        result["connection"] = conn
+        result["connection"] = _honest_connection(mgr, body.name, conn)
     return result
 
 
@@ -78,8 +121,10 @@ async def connect_server(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     mgr = get_mcp_manager()
+    if name not in mgr.servers:
+        raise HTTPException(404, f"server '{name}' 不存在")
     result = await mgr.connect_server(name)
-    return result
+    return _honest_connection(mgr, name, result)
 
 
 # ─── 工具查询 ───

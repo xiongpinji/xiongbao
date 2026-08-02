@@ -52,7 +52,11 @@ class _ToolJsonLLM(LLMClient):
                 content='{"action":"tool","tool":"echo","args":{"text":"pong"}}',
                 model="test",
             )
-        assert any("工具 echo 结果" in m.content and "pong" in m.content for m in messages)
+        # loop.py 当前实现把工具结果以 role="tool" 消息追加（内容为原始结果 '"pong"'），
+        # 不再是旧的 user 消息"工具 echo 结果：..."包装。整合失败时 loop 会降级为
+        # "工具已执行完成，但模型整合结果时出错…原始结果"——该 fallback 文案诚实且合理，
+        # 因此这里按现行消息结构断言，验证工具结果确实回传给模型后才给出 final。
+        assert any(m.role == "tool" and "pong" in m.content for m in messages)
         return LLMResponse(
             content='{"action":"final","answer":"done"}',
             model="test",
@@ -74,15 +78,21 @@ async def test_run_agent_prompt_tool_action_awaits_tool_result(monkeypatch) -> N
 
     assert llm.calls == 2
     assert run.final_answer == "done"
-    assert [event.kind for event in run.events] == [
+    # loop.py 现在每次迭代会额外发 progress 事件（SSE 进度推送，合理漂移），
+    # 过滤后断言核心事件序列
+    kinds = [e.kind for e in run.events if e.kind != StepKind.progress]
+    assert kinds == [
         StepKind.reason,
         StepKind.tool_call,
         StepKind.tool_result,
         StepKind.reason,
         StepKind.final,
     ]
-    assert run.events[1].tool == "echo"
-    assert run.events[2].content == '"pong"'
+    tool_events = [e for e in run.events if e.kind == StepKind.tool_call]
+    result_events = [e for e in run.events if e.kind == StepKind.tool_result]
+    assert tool_events[0].tool == "echo"
+    # echo 工具返回 str 时 loop 直接透传（不再 json.dumps 包装）
+    assert result_events[0].content == 'pong'
 
 
 def test_audit_chain_integrity() -> None:

@@ -74,20 +74,14 @@ async def export_audit(
     limit: int = 500,
     principal: Principal = Depends(require_permission("audit", "read")),
 ):
-    from xagent.infra.db import get_sessionmaker
-    from sqlalchemy import text
+    # 与 /audit/export 读取同一数据源（企业审计哈希链），避免两处审计源不一致
+    from xagent.enterprise.audit import get_audit_log
 
-    async with get_sessionmaker()() as session:
-        try:
-            result = await session.execute(
-                text("SELECT * FROM audit_log ORDER BY created_at DESC LIMIT :lim"),
-                {"lim": limit},
-            )
-            rows = [dict(r._mapping) for r in result.fetchall()]
-        except Exception:
-            rows = []
+    log = get_audit_log()
+    events = log.list(principal.tenant_id)
+    records = [e.to_dict() for e in events[-limit:]]
 
-    content = json.dumps({"exported_at": time.time(), "count": len(rows), "records": rows}, ensure_ascii=False, indent=2, default=str)
+    content = json.dumps({"exported_at": time.time(), "count": len(records), "records": records}, ensure_ascii=False, indent=2, default=str)
     return StreamingResponse(
         io.BytesIO(content.encode()),
         media_type="application/json",

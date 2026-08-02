@@ -128,9 +128,25 @@ async def add_transition(
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
     tl = _check_tenant(timeline_id, principal)
+    # 转场必须挂在真实存在的片段上，拒绝空/幽灵 clip_id
+    if not body.clip_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "clip_id 不能为空")
+    if not any(c.id == body.clip_id for c in tl.clips):
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"片段不存在于该时间线: {body.clip_id}",
+        )
+    try:
+        transition_type = TransitionType(body.type)
+    except ValueError:
+        valid = ", ".join(t.value for t in TransitionType)
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"不支持的转场类型: '{body.type}'（可选: {valid}）",
+        ) from None
     tl.add_transition(Transition(
         clip_id=body.clip_id,
-        type=TransitionType(body.type),
+        type=transition_type,
         duration=body.duration,
     ))
     return tl.to_dict()

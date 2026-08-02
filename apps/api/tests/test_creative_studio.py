@@ -609,6 +609,15 @@ async def test_creative_production_runtime_persists_to_db_after_memory_clear(
 async def test_creative_media_task_exposes_delivery_summary_via_runs(
     db_client: AsyncClient,
 ) -> None:
+    # 测试确定性：图像默认 provider 已漂移为 Pollinations（需联网，provider 名为
+    # 'pollinations'），本用例验证的是 delivery 契约而非 provider 选择，
+    # 故显式将图像 provider 替换为 NullProvider（离线确定，provider 名为 'null'）。
+    from xagent.domains.creative_studio.media import get_media_registry
+    from xagent.domains.creative_studio.media.base import MediaKind
+
+    reg = get_media_registry()
+    reg.register(MediaKind.image, reg.null)
+
     token = create_access_token(user_id="u-media", tenant_id="tenant-1", roles=["member"])
     generate_resp = await db_client.post(
         "/api/v1/creative-studio/media/generate",
