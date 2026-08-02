@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [completedSegments, setCompletedSegments] = useState<string[]>([]);
   const [sidebarKey, setSidebarKey] = useState(0);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
+  const [execProgress, setExecProgress] = useState<{ percent: number; step: number; maxSteps: number } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -208,8 +209,12 @@ export default function ChatPage() {
       onDone: (nextRunId, usage) => {
         sseRunId = nextRunId;
         if (usage) setTokenUsage(usage);
+        setExecProgress(null);
         syncRunTask(nextRunId, { source: "chat" });
         appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
+      },
+      onProgress: (percent, step, maxSteps) => {
+        setExecProgress({ percent, step, maxSteps });
       },
     });
 
@@ -332,6 +337,11 @@ export default function ChatPage() {
             {tokenUsage && (
               <span className="text-neutral-500 tabular-nums">
                 ↑{tokenUsage.promptTokens.toLocaleString()} ↓{tokenUsage.completionTokens.toLocaleString()} tokens
+              </span>
+            )}
+            {execProgress && (
+              <span className="text-blue-500 tabular-nums animate-pulse">
+                ⚙️ 步骤 {execProgress.step}/{execProgress.maxSteps} ({execProgress.percent}%)
               </span>
             )}
           </div>

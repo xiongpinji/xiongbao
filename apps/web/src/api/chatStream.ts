@@ -17,6 +17,7 @@ export interface AgentRunStreamHandlers {
   onStep?: (step: StepInfo) => void;
   onStarted?: (conversationId: string) => void;
   onToken?: (token: string) => void;
+  onProgress?: (percent: number, step: number, maxSteps: number) => void;
 }
 
 interface SseEvent {
@@ -75,6 +76,12 @@ function applySseEvent(
   // 流式 token 事件
   if (kind === "token" && typeof event.data.content === "string") {
     handlers.onToken?.(event.data.content);
+  }
+
+  // 执行进度事件
+  if (kind === "progress" && event.data.content) {
+    const p = event.data.content as Record<string, number>;
+    handlers.onProgress?.(p.percent ?? 0, p.step ?? 0, p.max_steps ?? 0);
   }
 
   const error = event.data.error;

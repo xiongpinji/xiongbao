@@ -56,6 +56,7 @@ class StepKind(str, Enum):  # noqa: UP042  (兼容 py3.11)
     final = "final"
     error = "error"
     token = "token"        # 流式逐 token 输出
+    progress = "progress"  # 执行进度估算
 
 
 @dataclass

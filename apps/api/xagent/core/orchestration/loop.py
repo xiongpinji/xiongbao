@@ -75,6 +75,72 @@ async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
             await asyncio.sleep(delay)
     raise last_exc  # type: ignore[misc]
 
+
+def _categorize_error(result_text: str, tool_name: str) -> str:
+    """错误分类：根据错误内容和工具名返回分类恢复建议。"""
+    text_lower = result_text.lower()
+    if "not found" in text_lower or "no such file" in text_lower or "不存在" in text_lower:
+        return (
+            "[恢复策略] 文件/路径不存在。\n"
+            "1. 用 file_list 确认目录结构\n"
+            "2. 用 code_search 搜索文件名\n"
+            "3. 检查路径是否使用了绝对路径"
+        )
+    if "permission" in text_lower or "拒绝" in result_text or "denied" in text_lower:
+        return (
+            "[恢复策略] 权限不足。\n"
+            "1. 检查文件是否只读\n"
+            "2. 尝试写入工作目录内的路径"
+        )
+    if "syntax" in text_lower or "parse" in text_lower or "unexpected" in text_lower:
+        return (
+            "[恢复策略] 语法错误。\n"
+            "1. 先 file_read 查看文件当前内容\n"
+            "2. 确认 old_text 与文件实际内容完全一致\n"
+            "3. 注意缩进、空格、换行符差异"
+        )
+    if "timeout" in text_lower or "超时" in result_text:
+        return (
+            "[恢复策略] 执行超时。\n"
+            "1. 简化命令或拆分任务\n"
+            "2. 避免全量构建/测试，改用增量"
+        )
+    if tool_name in ("file_edit",) and "text not found" in text_lower:
+        return (
+            "[恢复策略] file_edit 匹配失败。\n"
+            "1. 先 file_read 读取文件最新内容\n"
+            "2. 从文件内容中复制精确的 old_text\n"
+            "3. 注意行尾空白和换行符差异"
+        )
+    return (
+        "[恢复策略] 工具调用失败。\n"
+        "1. 检查参数格式是否正确\n"
+        "2. 换一种工具或方法尝试\n"
+        "3. 如果多次失败，考虑跳过此步骤"
+    )
+
+
+def _format_tool_result(tool_name: str, result_text: str, args: dict) -> str:
+    """工具结果结构化：帮助模型更好理解输出。"""
+    # 对于成功结果，添加元数据头
+    if result_text.startswith("[错误]") or result_text.startswith("[拒绝]"):
+        return result_text  # 错误结果不加工
+    # file_read 结果：添加文件信息头
+    if tool_name == "file_read" and len(result_text) > 100:
+        path = args.get("path", "unknown")
+        lines = result_text.count("\n") + 1
+        return f"[文件: {path} | {lines} 行]\n{result_text}"
+    # shell_exec 结果：已经有 [exit: N] 标记
+    if tool_name == "shell_exec":
+        return result_text
+    # code_search 结果：已经有匹配数信息
+    if tool_name == "code_search":
+        return result_text
+    # 其他工具：添加成功标记
+    if len(result_text) > 50:
+        return f"[{tool_name} 执行成功]\n{result_text}"
+    return result_text
+
 # ── 编辑类工具：触发验证闭环 ──
 _EDIT_TOOLS = {"file_edit", "file_write"}
 # ── 验证命令探测优先级 ──
@@ -869,9 +935,24 @@ async def run_agent(
         # ── 工具调用去重：同工具+同参数连续调用跳过 ──
         _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
 
+        # ── 错误分类恢复：追踪最后一次错误信息 ──
+        _last_error_text: str = ""
+        _last_error_tool: str = ""
+
+        # ── 会话级决策记忆：跨步骤记住关键决策 ──
+        _session_decisions: list[str] = []  # 记录关键决策（最多 10 条）
+
         try:
             while not state.finished and state.step < _effective_max_steps:
               state.step += 1
+
+              # ── 执行进度估算：每步发射进度事件 ──
+              _progress_pct = min(int(state.step / _effective_max_steps * 100), 95)
+              await _emit(StepEvent(
+                  kind=StepKind.progress,
+                  content={"percent": _progress_pct, "step": state.step, "max_steps": _effective_max_steps},
+                  step=state.step,
+              ))
 
               # 上下文压缩：每 10 步检查一次，或估算 token 超预算时触发
               _est_tokens = sum(len(m.content or "") for m in state.messages) // _CHARS_PER_TOKEN
@@ -879,6 +960,13 @@ async def run_agent(
                   state.messages = await _compress_context(
                       state.messages, llm, target_model
                   )
+                  # ── 会话级决策记忆：压缩后注入决策摘要（防丢失） ──
+                  if _session_decisions:
+                      _dec_summary = "\n".join(_session_decisions[-10:])
+                      state.messages.insert(1, Message(
+                          role="user",
+                          content=f"[系统] 历史决策记录（压缩后保留）：\n{_dec_summary}",
+                      ))
 
               # ── 断点续传：每 5 步保存 checkpoint ──
               try:
@@ -1011,7 +1099,7 @@ async def run_agent(
                                   else:
                                       _consecutive_errors = 0
                               await _emit(StepEvent(kind=StepKind.tool_result, tool=_p_name, content=result_text, step=state.step))
-                              _stored = _truncate_tool_output(result_text, _p_name)
+                              _stored = _truncate_tool_output(_format_tool_result(_p_name, result_text, _p_args), _p_name)
                               state.messages.append(Message(role="tool", content=_stored, tool_call_id=_p_id, name=_p_name))
                       else:
                           # ══ 顺序路径：含编辑工具时逐个执行 ══
@@ -1053,6 +1141,23 @@ async def run_agent(
                                   else:
                                       result_text = f"[错误] {result.error}"
                                       _consecutive_errors += 1
+                                      _last_error_text = result_text
+                                      _last_error_tool = tc_name
+                                      # ── file_edit 失败智能重试：自动补读文件内容 ──
+                                      if tc_name == "file_edit" and "text not found" in result_text.lower():
+                                          _fail_path = tc_args.get("path", "")
+                                          if _fail_path:
+                                              try:
+                                                  _retry_read = await asyncio.wait_for(
+                                                      tools.call("file_read", {"path": _fail_path}, ctx),
+                                                      timeout=30,
+                                                  )
+                                                  if _retry_read.ok:
+                                                      _retry_txt = _retry_read.output if isinstance(_retry_read.output, str) else json.dumps(_retry_read.output, ensure_ascii=False)
+                                                      _file_read_cache[_fail_path] = _retry_txt
+                                                      result_text += f"\n[系统已自动读取文件] 以下是 {_fail_path} 的当前内容，请从中复制精确的 old_text 重试：\n{_retry_txt[:2000]}"
+                                              except Exception:  # noqa: S110
+                                                  pass
                               if tc_name in _EDIT_TOOLS:
                                   _had_edit = True
                                   _edit_count += 1
@@ -1061,11 +1166,14 @@ async def run_agent(
                                       _changed_files.append(_fp)
                                   if _fp:
                                       _file_read_cache.pop(_fp, None)
+                                  # ── 会话级决策记忆：记录关键编辑决策 ──
+                                  if _fp and len(_session_decisions) < 10:
+                                      _session_decisions.append(f"step{state.step}: {tc_name} -> {_fp}")
                               await _emit(
                                   StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                               )
                               # ── 原生 tool role + 智能截断（Codex 对齐） ──
-                              _stored = _truncate_tool_output(result_text, tc_name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc_name, result_text, tc_args), tc_name)
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
                               )
@@ -1080,14 +1188,15 @@ async def run_agent(
                                       "请分析错误原因并修复。"
                                   ),
                               ))
-                      # ── 错误自恢复：连续失败过多时注入分析指令 ──
+                      # ── 错误分类恢复：连续失败过多时注入分类分析指令 ──
                       if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
+                          _recovery = _categorize_error(_last_error_text, _last_error_tool)
                           state.messages.append(Message(
                               role="user",
                               content=(
-                                  "[系统] 你已连续 " + str(_consecutive_errors) + " 次工具调用失败。"
-                                  "请停下来分析失败原因，换一种方案重试。"
-                                  "常见原因：路径错误、参数格式不对、文件不存在。"
+                                  f"[系统] 你已连续 {_consecutive_errors} 次工具调用失败。\n"
+                                  f"最后错误：{_last_error_text[:300]}\n"
+                                  f"{_recovery}"
                               ),
                           ))
                           _consecutive_errors = 0
@@ -1202,7 +1311,7 @@ async def run_agent(
                                   else:
                                       _consecutive_errors = 0
                               await _emit(StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step))
-                              _stored = _truncate_tool_output(result_text, tc.name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name)
                               state.messages.append(Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name))
                       else:
                           # 顺序路径（含编辑工具）
@@ -1227,6 +1336,8 @@ async def run_agent(
                                   else:
                                       result_text = f"[错误] {result.error}"
                                       _consecutive_errors += 1
+                                      _last_error_text = result_text
+                                      _last_error_tool = tc.name
                               if tc.name in _EDIT_TOOLS:
                                   _had_edit_ns = True
                                   _edit_count += 1
@@ -1235,10 +1346,13 @@ async def run_agent(
                                       _changed_files.append(_fp)
                                   if _fp:
                                       _file_read_cache.pop(_fp, None)
+                                  # ── 会话级决策记忆：记录关键编辑决策 ──
+                                  if _fp and len(_session_decisions) < 10:
+                                      _session_decisions.append(f"step{state.step}: {tc.name} -> {_fp}")
                               await _emit(
                                   StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step)
                               )
-                              _stored = _truncate_tool_output(result_text, tc.name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name)
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
                               )
@@ -1253,13 +1367,15 @@ async def run_agent(
                                       "请分析错误原因并修复。"
                                   ),
                               ))
-                      # 错误自恢复
+                      # 错误分类恢复
                       if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
+                          _recovery = _categorize_error(_last_error_text, _last_error_tool)
                           state.messages.append(Message(
                               role="user",
                               content=(
-                                  "[系统] 你已连续 " + str(_consecutive_errors) + " 次工具调用失败。"
-                                  "请停下来分析失败原因，换一种方案重试。"
+                                  f"[系统] 你已连续 {_consecutive_errors} 次工具调用失败。\n"
+                                  f"最后错误：{_last_error_text[:300]}\n"
+                                  f"{_recovery}"
                               ),
                           ))
                           _consecutive_errors = 0
