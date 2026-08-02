@@ -268,6 +268,14 @@ export default function ChatPage() {
                   <span className="text-neutral-600">·</span>
                   <CurrentActionText steps={steps} />
                 </div>
+                {/* 骨架屏加载效果：无步骤且无流式文本时显示 */}
+                {steps.length === 0 && !streamingText && completedSegments.length === 0 && (
+                  <div className="mt-4 space-y-2 animate-pulse">
+                    <div className="h-3 w-3/4 bg-neutral-800 rounded" />
+                    <div className="h-3 w-1/2 bg-neutral-800 rounded" />
+                    <div className="h-3 w-2/3 bg-neutral-800 rounded" />
+                  </div>
+                )}
                 {/* 流式文本预览（含已完成 segments） */}
                 {(() => {
                   const displayText = [...completedSegments, streamingText].filter(Boolean).join("\n\n");

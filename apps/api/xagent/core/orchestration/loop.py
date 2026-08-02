@@ -58,6 +58,9 @@ _TOOL_TIMEOUTS = {
 }
 _DEFAULT_TOOL_TIMEOUT = 60
 
+# ── 并行执行限流：最大并发工具数 ──
+_MAX_CONCURRENT_TOOLS = 5
+
 # ── Token 预算：超过此值触发主动压缩 ──
 _TOKEN_BUDGET = 100_000  # 估算上下文 token 上限
 _CHARS_PER_TOKEN = 4  # 粗略估算比例
@@ -1071,6 +1074,15 @@ async def run_agent(
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
         span.set_input(goal)
         _run_start = time.perf_counter()
+        # ── 执行日志：任务开始 ──
+        logger.info(
+            "task_start",
+            goal=goal[:100],
+            role=role.name,
+            task_type=_task_type,
+            is_complex=_is_complex,
+            max_steps=_effective_max_steps,
+        )
         # 判断是否支持流式
         can_stream = isinstance(llm, LiteLLMClient) and use_native_tools
 
@@ -1251,9 +1263,15 @@ async def run_agent(
                       _use_parallel = len(_parsed_calls) > 1 and (not _edit_calls or _edits_safe)
 
                       if _use_parallel:
-                          # ══ 并行路径：asyncio.gather 并发执行只读工具 ══
+                          # ══ 并行路径：asyncio.gather 并发执行（带限流） ══
+                          _semaphore = asyncio.Semaphore(_MAX_CONCURRENT_TOOLS)
 
                           async def _exec_one(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
+                              """Execute single tool, return (name, id, result_text)."""
+                              async with _semaphore:  # 限流保护
+                                  return await _exec_one_inner(tc_name, tc_id, tc_args)
+
+                          async def _exec_one_inner(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
                               """Execute single tool, return (name, id, result_text)."""
                               if not role.can_use(tc_name):
                                   return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
@@ -1801,6 +1819,17 @@ async def run_agent(
             except Exception:  # noqa: S110
                 pass
             await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+        except MemoryError:
+            # ── 优雅降级：内存不足时清理缓存并继续 ──
+            logger.warning("memory_pressure", step=state.step)
+            _file_read_cache.clear()
+            _recent_tool_calls.clear()
+            if not state.final_answer:
+                state.final_answer = (
+                    "任务执行过程中遇到内存压力，已清理缓存。\n\n"
+                    f"已完成 {state.step} 步，建议简化任务或分批执行。"
+                )
+            await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
             # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
             if not state.final_answer:
@@ -1892,6 +1921,19 @@ async def run_agent(
                 pass
         if _summary_parts:
             state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
+
+    # ── 执行日志：任务完成 ──
+    _run_elapsed = time.perf_counter() - _run_start
+    logger.info(
+        "task_complete",
+        run_id=resolved_run_id,
+        steps=state.step,
+        elapsed_sec=round(_run_elapsed, 1),
+        tool_calls=_tool_success + _tool_fail,
+        success_rate=round(_tool_success / max(_tool_success + _tool_fail, 1) * 100),
+        files_changed=len(_changed_files),
+        model_degraded=_model_degraded,
+    )
 
     # ── 资源清理：释放缓存内存 ──
     _file_read_cache.clear()
