@@ -257,7 +257,9 @@ export default function ChatPage() {
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.05]">
                     <Loader2 size={14} className="animate-spin text-neutral-400" />
                   </div>
-                  {steps.length > 0 ? "正在整合结果..." : "正在思考..."}
+                  <ElapsedTimer />
+                  <span className="text-neutral-600">·</span>
+                  <CurrentActionText steps={steps} />
                 </div>
                 {/* 流式文本预览（含已完成 segments） */}
                 {(() => {
@@ -331,6 +333,41 @@ export default function ChatPage() {
       </div>
     </div>
   );
+}
+
+/* ================================================================== */
+/*  耗时计时器 + 当前动作状态                                          */
+/* ================================================================== */
+
+function ElapsedTimer() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const mm = Math.floor(elapsed / 60);
+  const ss = elapsed % 60;
+  return (
+    <span className="tabular-nums text-neutral-500">
+      {mm > 0 ? `${mm}m ${ss}s` : `${ss}s`}
+    </span>
+  );
+}
+
+function CurrentActionText({ steps }: { steps: StepInfo[] }) {
+  const lastToolCall = [...steps].reverse().find((s) => s.kind === "tool_call");
+  const lastToolResult = [...steps].reverse().find((s) => s.kind === "tool_result");
+  // 如果最后一个 tool_call 没有对应的 result，说明正在执行
+  const isExecuting = lastToolCall && (!lastToolResult || steps.indexOf(lastToolResult) < steps.indexOf(lastToolCall));
+  if (isExecuting && lastToolCall?.tool) {
+    const label = TOOL_LABELS[lastToolCall.tool] || lastToolCall.tool;
+    return <span className="text-blue-400/80">正在{label}...</span>;
+  }
+  if (steps.length > 0) {
+    return <span className="text-neutral-500">正在整合结果...</span>;
+  }
+  return <span className="text-neutral-500">正在思考...</span>;
 }
 
 /* ================================================================== */

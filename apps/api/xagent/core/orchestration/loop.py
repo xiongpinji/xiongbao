@@ -128,9 +128,9 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
 
 
 def _detect_project_context(workspace: Path) -> str:
-    """探测项目结构，返回注入 system prompt 的上下文摘要。
+    """探测项目结构 + 读取关键配置内容，返回注入 system prompt 的上下文摘要。
 
-    Codex 对齐：进入 repo 先建立结构认知，避免盲打。
+    Codex 对齐：进入 repo 先建立结构认知 + 读取关键文件，避免盲打。
     """
     lines: list[str] = []
 
@@ -179,10 +179,29 @@ def _detect_project_context(workspace: Path) -> str:
         lines.append("项目结构:")
         lines.extend(tree_lines)
 
-    # 3. 探测验证命令
+    # 3. 读取关键配置文件内容（让模型知道依赖/脚本/入口）
+    _KEY_FILES = [
+        "package.json", "pyproject.toml", "tsconfig.json",
+        "Cargo.toml", "go.mod", "Makefile",
+    ]
+    for kf in _KEY_FILES:
+        kf_path = workspace / kf
+        if kf_path.is_file():
+            try:
+                content = kf_path.read_text(encoding="utf-8", errors="replace")
+                # 只保留前 800 字符（避免注入过多）
+                lines.append(f"\n--- {kf} (摘要) ---")
+                lines.append(content[:800])
+                if len(content) > 800:
+                    lines.append("... (截断)")
+            except OSError:
+                pass
+            break  # 只读第一个匹配的配置文件
+
+    # 4. 探测验证命令
     verify_cmd = _detect_verify_command(workspace)
     if verify_cmd:
-        lines.append(f"建议验证命令: {verify_cmd}")
+        lines.append(f"\n建议验证命令: {verify_cmd}")
 
     return "\n".join(lines)
 
@@ -270,19 +289,77 @@ def _git_cleanup_branch(workspace: Path, branch: str) -> None:
 # ═══════════════════════════════════════════════════════════
 
 
-async def _run_verification(workspace: Path, ctx) -> tuple[bool, str]:
-    """执行项目验证命令，返回 (passed, output)。"""
+async def _run_verification(workspace: Path, ctx, changed_files: list[str] | None = None) -> tuple[bool, str]:
+    """执行项目验证命令，返回 (passed, output)。
+
+    智能验证：如果有 changed_files，尝试只跑相关测试。
+    """
     from xagent.adapters.tools import get_tool_registry
 
+    # 智能验证：根据修改文件选择验证命令
     verify_cmd = _detect_verify_command(workspace)
     if not verify_cmd:
         return True, "(无可用验证命令，跳过)"
+
+    # 如果修改了 Python 文件，尝试只跑相关测试
+    if changed_files and "pytest" in verify_cmd:
+        py_files = [f for f in changed_files if f.endswith(".py")]
+        if py_files:
+            # 尝试找对应的 test 文件
+            test_targets = []
+            for f in py_files[:3]:  # 最多 3 个
+                p = Path(f)
+                test_name = f"test_{p.name}"
+                test_path = p.parent / test_name
+                if test_path.exists():
+                    test_targets.append(str(test_path))
+                # 也尝试 tests/ 目录
+                alt = workspace / "tests" / test_name
+                if alt.exists():
+                    test_targets.append(str(alt))
+            if test_targets:
+                verify_cmd = f"python -m pytest {' '.join(test_targets)} --tb=short -q"
 
     tools = get_tool_registry()
     result = await tools.call("shell_exec", {"command": verify_cmd, "timeout": 60}, ctx)
     output = result.output if result.ok else (result.error or "")
     passed = result.ok and "error" not in output.lower()[:200]
     return passed, output[:2000]
+
+
+# ═══════════════════════════════════════════════════════════
+#  工具结果智能截断
+# ═══════════════════════════════════════════════════════════
+
+_MAX_TOOL_OUTPUT = 4000  # 工具结果最大字符数
+
+
+def _truncate_tool_output(text: str, tool_name: str) -> str:
+    """智能截断工具输出：保留头尾，中间截断。
+
+    不同工具不同策略：
+    - code_search: 保留前 N 条结果
+    - shell_exec: 保留头 + 尾（错误通常在尾部）
+    - file_read: 保留前 N 行
+    """
+    if len(text) <= _MAX_TOOL_OUTPUT:
+        return text
+
+    if tool_name == "shell_exec":
+        # 保留头部 1500 + 尾部 2000（错误信息通常在尾部）
+        head = text[:1500]
+        tail = text[-2000:]
+        return f"{head}\n\n... [中间 {len(text) - 3500} 字符已截断] ...\n\n{tail}"
+    elif tool_name == "code_search":
+        # 保留前 N 条结果
+        lines = text.split("\n")
+        kept = lines[:60]
+        return "\n".join(kept) + f"\n... [共 {len(lines)} 行，已截断]"
+    else:
+        # 通用：头部 + 尾部
+        head = text[:2000]
+        tail = text[-1500:]
+        return f"{head}\n\n... [中间 {len(text) - 3500} 字符已截断] ...\n\n{tail}"
 
 
 async def _retrieve_relevant_memories(goal: str, tenant_id: str) -> str:
@@ -687,6 +764,22 @@ async def run_agent(
         pass
     state.messages.insert(0, Message(role="system", content=system))
 
+    # ── 任务规划阶段：复杂任务先分解再执行（Codex 对齐） ──
+    _is_complex = (
+        len(goal) > 100
+        or goal.count("、") >= 2
+        or bool(re.search(r'[1-9][)\.]', goal))
+        or any(w in goal for w in ("并且", "同时", "然后", "接着", "分别"))
+    )
+    if _is_complex:
+        state.messages.append(Message(
+            role="user",
+            content=(
+                "[系统] 这是一个复杂多步骤任务。请先在内心规划执行步骤（不要输出给用户），"
+                "然后立即开始执行第一步。每完成一步后立即执行下一步，直到全部完成。"
+            ),
+        ))
+
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
         span.set_input(goal)
         _run_start = time.perf_counter()
@@ -696,6 +789,9 @@ async def run_agent(
         # ── Git 事务隔离：创建临时工作分支 ──
         _work_branch: str | None = None
         _edit_count = 0  # 跟踪编辑次数，首次编辑时创建分支
+
+        # ── 文件变更追踪（任务结束时生成 diff 摘要） ──
+        _changed_files: list[str] = []
 
         # ── 错误自恢复计数器 ──
         _consecutive_errors = 0
@@ -774,16 +870,21 @@ async def run_agent(
                           if tc_name in _EDIT_TOOLS:
                               _had_edit = True
                               _edit_count += 1
+                              # 追踪变更文件
+                              _fp = tc_args.get("path", "")
+                              if _fp and _fp not in _changed_files:
+                                  _changed_files.append(_fp)
                           await _emit(
                               StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                           )
-                          # ── 原生 tool role message（Codex 对齐） ──
+                          # ── 原生 tool role + 智能截断（Codex 对齐） ──
+                          _stored = _truncate_tool_output(result_text, tc_name)
                           state.messages.append(
-                              Message(role="tool", content=result_text, tool_call_id=tc_id, name=tc_name)
+                              Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
                           )
                       # ── 验证闭环：编辑后自动跑验证 ──
                       if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
-                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx)
+                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
                           if not v_passed:
                               state.messages.append(Message(
                                   role="user",
@@ -882,6 +983,9 @@ async def run_agent(
                           if tc.name in _EDIT_TOOLS:
                               _had_edit_ns = True
                               _edit_count += 1
+                              _fp = tc.args.get("path", "")
+                              if _fp and _fp not in _changed_files:
+                                  _changed_files.append(_fp)
                           await _emit(
                               StepEvent(
                                   kind=StepKind.tool_result,
@@ -890,13 +994,14 @@ async def run_agent(
                                   step=state.step,
                               )
                           )
-                          # 原生 tool role
+                          # 原生 tool role + 智能截断
+                          _stored = _truncate_tool_output(result_text, tc.name)
                           state.messages.append(
-                              Message(role="tool", content=result_text, tool_call_id=tc.id, name=tc.name)
+                              Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
                           )
                       # 验证闭环
                       if _had_edit_ns and _edit_count % 2 == 0:
-                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx)
+                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
                           if not v_passed:
                               state.messages.append(Message(
                                   role="user",
@@ -1035,6 +1140,14 @@ async def run_agent(
         # ── Git 清理：任务完成后清理临时分支 ──
         if _work_branch:
             _git_cleanup_branch(_WORKSPACE, _work_branch)
+        # ── 文件变更摘要：追加到最终回答 ──
+        if _changed_files and state.final_answer:
+            _summary_lines = ["\n\n---\n📝 **文件变更**:"]
+            for _cf in _changed_files[:10]:
+                _summary_lines.append(f"- `{_cf}`")
+            if len(_changed_files) > 10:
+                _summary_lines.append(f"- ... 及其他 {len(_changed_files) - 10} 个文件")
+            state.final_answer += "\n".join(_summary_lines)
         # Prometheus 指标
         try:
             from xagent.adapters.observability.metrics import agent_run_seconds, agent_runs
