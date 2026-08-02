@@ -464,7 +464,25 @@ class FileWriteTool:
             path = _WORKSPACE / path
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8")
+            # ── 原子写入：先写临时文件再 rename（防止崩溃时文件损坏） ──
+            import tempfile as _tf
+            _tmp_fd, _tmp_path = _tf.mkstemp(
+                dir=str(path.parent), suffix=".tmp", prefix=f".{path.name}."
+            )
+            try:
+                with os.fdopen(_tmp_fd, "w", encoding="utf-8") as _f:
+                    _f.write(content)
+                # Windows 上 rename 前必须先删除目标（如果存在）
+                if path.exists():
+                    path.unlink()
+                os.rename(_tmp_path, str(path))
+            except Exception:
+                # 清理临时文件
+                try:
+                    os.unlink(_tmp_path)
+                except OSError:
+                    pass
+                raise
             return ToolResult(ok=True, output=f"已写入 {path}（{len(content)} 字符）")
         except Exception as e:
             return ToolResult(ok=False, error=f"写入失败: {e}")

@@ -41,6 +41,13 @@ _LLM_MAX_RETRIES = 3
 _LLM_RETRY_BASE_DELAY = 2.0  # 秒
 _LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", "overloaded", "503", "429")
 
+# ── 单工具执行超时（防止单个工具卡死整个循环） ──
+_TOOL_TIMEOUT = 180  # 秒（shell_exec 自带 120s，这里做外层保护）
+
+# ── Token 预算：超过此值触发主动压缩 ──
+_TOKEN_BUDGET = 100_000  # 估算上下文 token 上限
+_CHARS_PER_TOKEN = 4  # 粗略估算比例
+
 
 async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
     """LLM 调用包装器：失败时指数退避重试。
@@ -821,6 +828,12 @@ async def run_agent(
         or bool(re.search(r'[1-9][)\.]', goal))
         or any(w in goal for w in ("并且", "同时", "然后", "接着", "分别"))
     )
+    # ── 自适应步数：复杂任务动态提升 MAX_STEPS ──
+    _effective_max_steps = MAX_STEPS
+    if _is_complex:
+        # 复杂任务：根据长度和子任务数动态调整
+        _subtask_count = max(goal.count("、"), len(re.findall(r'[1-9][)\.]', goal)), 1)
+        _effective_max_steps = min(MAX_STEPS + _subtask_count * 5, 80)  # 上限 80
     if _is_complex:
         state.messages.append(Message(
             role="user",
@@ -850,15 +863,19 @@ async def run_agent(
         # ── 自反思标志（任务完成前质量检查，只触发一次） ──
         _did_reflect = False
 
-        # ── 工具结果缓存：file_read 同文件不重复读（编辑后失效） ──
+        # ── 工具结果缓存：file_read 同文件不重复读取（编辑后失效） ──
         _file_read_cache: dict[str, str] = {}
+        
+        # ── 工具调用去重：同工具+同参数连续调用跳过 ──
+        _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
 
         try:
-            while not state.finished and state.step < MAX_STEPS:
+            while not state.finished and state.step < _effective_max_steps:
               state.step += 1
 
-              # 上下文压缩：每 10 步检查一次，防止上下文窗口溢出
-              if state.step % 10 == 0 and len(state.messages) > 20:
+              # 上下文压缩：每 10 步检查一次，或估算 token 超预算时触发
+              _est_tokens = sum(len(m.content or "") for m in state.messages) // _CHARS_PER_TOKEN
+              if (state.step % 10 == 0 and len(state.messages) > 20) or _est_tokens > _TOKEN_BUDGET:
                   state.messages = await _compress_context(
                       state.messages, llm, target_model
                   )
@@ -876,36 +893,52 @@ async def run_agent(
                   pass
 
               if can_stream:
-                  # ── 流式路径：逐 token 推送 ──
+                  # ── 流式路径：逐 token 推送（带重试） ──
                   content_buf = ""
                   tool_calls_buf: dict[int, dict] = {}  # index -> {id, name, arguments}
 
-                  async for chunk in llm.stream_with_tools(
-                      state.messages, specs, model=target_model
-                  ):
-                      # 累积 content
-                      if chunk.delta_content:
-                          content_buf += chunk.delta_content
-                          await _emit(
-                              StepEvent(kind=StepKind.token, content=chunk.delta_content, step=state.step)
-                          )
-                      # 累积 tool_call deltas
-                      for tc_delta in chunk.tool_call_deltas:
-                          idx = tc_delta.get("index", 0)
-                          if idx not in tool_calls_buf:
-                              tool_calls_buf[idx] = {"id": "", "name": "", "arguments": ""}
-                          fn = tc_delta.get("function") or {}
-                          if tc_delta.get("id"):
-                              tool_calls_buf[idx]["id"] = tc_delta["id"]
-                          if fn.get("name"):
-                              tool_calls_buf[idx]["name"] += fn["name"]
-                          if fn.get("arguments"):
-                              tool_calls_buf[idx]["arguments"] += fn["arguments"]
-                      # ── 流式 token 用量追踪 ──
-                      if chunk.prompt_tokens:
-                          state.total_prompt_tokens += chunk.prompt_tokens
-                      if chunk.completion_tokens:
-                          state.total_completion_tokens += chunk.completion_tokens
+                  # 流式重试：流失败时重建连接
+                  _stream_ok = False
+                  for _stream_attempt in range(_LLM_MAX_RETRIES):
+                      try:
+                          content_buf = ""
+                          tool_calls_buf = {}
+                          async for chunk in llm.stream_with_tools(
+                              state.messages, specs, model=target_model
+                          ):
+                              if chunk.delta_content:
+                                  content_buf += chunk.delta_content
+                                  await _emit(
+                                      StepEvent(kind=StepKind.token, content=chunk.delta_content, step=state.step)
+                                  )
+                              for tc_delta in chunk.tool_call_deltas:
+                                  idx = tc_delta.get("index", 0)
+                                  if idx not in tool_calls_buf:
+                                      tool_calls_buf[idx] = {"id": "", "name": "", "arguments": ""}
+                                  fn = tc_delta.get("function") or {}
+                                  if tc_delta.get("id"):
+                                      tool_calls_buf[idx]["id"] = tc_delta["id"]
+                                  if fn.get("name"):
+                                      tool_calls_buf[idx]["name"] += fn["name"]
+                                  if fn.get("arguments"):
+                                      tool_calls_buf[idx]["arguments"] += fn["arguments"]
+                              if chunk.prompt_tokens:
+                                  state.total_prompt_tokens += chunk.prompt_tokens
+                              if chunk.completion_tokens:
+                                  state.total_completion_tokens += chunk.completion_tokens
+                          _stream_ok = True
+                          break
+                      except Exception as _stream_exc:
+                          err_s = str(_stream_exc).lower()
+                          _retryable = any(k in err_s for k in _LLM_RETRYABLE_ERRORS)
+                          if not _retryable or _stream_attempt == _LLM_MAX_RETRIES - 1:
+                              raise
+                          _delay = _LLM_RETRY_BASE_DELAY * (2 ** _stream_attempt)
+                          logger.warning("stream_retry", attempt=_stream_attempt + 1, delay=_delay, error=str(_stream_exc)[:150])
+                          await asyncio.sleep(_delay)
+
+                  if not _stream_ok:
+                      continue
 
                   # 流结束：判断是工具调用还是最终回答
                   if tool_calls_buf:
@@ -935,12 +968,16 @@ async def run_agent(
                               """Execute single tool, return (name, id, result_text)."""
                               if not role.can_use(tc_name):
                                   return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
+                              # ── 工具调用去重：同工具+同参数跳过 ──
+                              _dedup_key = f"{tc_name}:{json.dumps(tc_args, sort_keys=True, ensure_ascii=False)[:200]}"
+                              if _dedup_key in _recent_tool_calls:
+                                  return (tc_name, tc_id, _recent_tool_calls[_dedup_key])
                               # ── file_read 缓存：同文件不重复读取 ──
                               if tc_name == "file_read":
                                   _cache_key = tc_args.get("path", "")
                                   if _cache_key and _cache_key in _file_read_cache:
                                       return (tc_name, tc_id, _file_read_cache[_cache_key])
-                              r = await tools.call(tc_name, tc_args, ctx)
+                              r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
                               if r.ok:
                                   txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
                                   # 缓存 file_read 结果
@@ -950,6 +987,8 @@ async def run_agent(
                                           _file_read_cache[_ck] = txt
                               else:
                                   txt = f"[错误] {r.error}"
+                              # 记录去重缓存
+                              _recent_tool_calls[_dedup_key] = txt
                               return (tc_name, tc_id, txt)
 
                           # 先推送所有 tool_call 事件
@@ -1003,7 +1042,7 @@ async def run_agent(
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
                                   _consecutive_errors += 1
                               else:
-                                  result = await tools.call(tc_name, tc_args, ctx)
+                                  result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
                                   if result.ok:
                                       result_text = (
                                           json.dumps(result.output, ensure_ascii=False)
@@ -1017,11 +1056,9 @@ async def run_agent(
                               if tc_name in _EDIT_TOOLS:
                                   _had_edit = True
                                   _edit_count += 1
-                                  # 追踪变更文件
                                   _fp = tc_args.get("path", "")
                                   if _fp and _fp not in _changed_files:
                                       _changed_files.append(_fp)
-                                  # 编辑后使缓存失效
                                   if _fp:
                                       _file_read_cache.pop(_fp, None)
                               await _emit(
@@ -1068,7 +1105,7 @@ async def run_agent(
                       # ── 防过早终止：智能完成检测 ──
                       # 策略：综合判断是否为真正的最终回答
                       _is_final = _detect_final_answer(content_buf, state)
-                      if not _is_final and state.step < MAX_STEPS - 2:
+                      if not _is_final and state.step < _effective_max_steps - 2:
                           # 不是最终回答 → 注入继续指令
                           state.messages.append(Message(
                               role="user",
@@ -1089,7 +1126,7 @@ async def run_agent(
                           state.final_answer = content_buf
 
                       # ── 自反思：有编辑操作时，完成前做一次质量检查 ──
-                      if _edit_count > 0 and not _did_reflect and state.step < MAX_STEPS - 1:
+                      if _edit_count > 0 and not _did_reflect and state.step < _effective_max_steps - 1:
                           _did_reflect = True
                           state.messages.append(Message(
                               role="user",
@@ -1137,7 +1174,7 @@ async def run_agent(
                                   _ck = tc.args.get("path", "")
                                   if _ck and _ck in _file_read_cache:
                                       return (tc.name, tc.id, _file_read_cache[_ck])
-                              r = await tools.call(tc.name, tc.args, ctx)
+                              r = await asyncio.wait_for(tools.call(tc.name, tc.args, ctx), timeout=_TOOL_TIMEOUT)
                               if r.ok:
                                   txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
                                   if tc.name == "file_read":
@@ -1179,7 +1216,7 @@ async def run_agent(
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
                                   _consecutive_errors += 1
                               else:
-                                  result = await tools.call(tc.name, tc.args, ctx)
+                                  result = await asyncio.wait_for(tools.call(tc.name, tc.args, ctx), timeout=_TOOL_TIMEOUT)
                                   if result.ok:
                                       result_text = (
                                           json.dumps(result.output, ensure_ascii=False)
@@ -1235,7 +1272,7 @@ async def run_agent(
 
                   # 防过早终止（非流式路径）— 智能完成检测
                   _is_final_ns = _detect_final_answer(resp.content, state)
-                  if not _is_final_ns and state.step < MAX_STEPS - 2:
+                  if not _is_final_ns and state.step < _effective_max_steps - 2:
                       state.messages.append(Message(
                           role="user",
                           content=(
