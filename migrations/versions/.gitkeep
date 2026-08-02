@@ -1,4 +1,0 @@
-# Alembic 迁移版本目录
-# 自动生成迁移: alembic revision --autogenerate -m "描述"
-# 执行迁移: alembic upgrade head
-# 回滚: alembic downgrade -1
