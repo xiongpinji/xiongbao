@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from xagent.api.v1.dep_errors import dependency_guard
 from xagent.core.knowledge import get_knowledge_base
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
@@ -31,14 +32,15 @@ async def ingest_document(
     principal: Principal = Depends(require_permission("knowledge", "write")),
 ) -> dict:
     kb = get_knowledge_base()
-    doc = await kb.ingest(
-        text=body.text,
-        title=body.title,
-        tenant_id=principal.tenant_id,
-        source=body.source,
-        content_type=body.content_type,
-        tags=body.tags,
-    )
+    with dependency_guard():
+        doc = await kb.ingest(
+            text=body.text,
+            title=body.title,
+            tenant_id=principal.tenant_id,
+            source=body.source,
+            content_type=body.content_type,
+            tags=body.tags,
+        )
     return {"document": doc.to_dict()}
 
 
@@ -48,7 +50,8 @@ async def search_knowledge(
     principal: Principal = Depends(require_permission("knowledge", "read")),
 ) -> dict:
     kb = get_knowledge_base()
-    results = await kb.search(body.query, principal.tenant_id, top_k=body.top_k)
+    with dependency_guard():
+        results = await kb.search(body.query, principal.tenant_id, top_k=body.top_k)
     return {"results": results, "count": len(results)}
 
 
@@ -57,7 +60,7 @@ async def list_documents(
     principal: Principal = Depends(require_permission("knowledge", "read")),
 ) -> dict:
     kb = get_knowledge_base()
-    docs = [d.to_dict() for d in kb.list_docs(principal.tenant_id)]
+    docs = [d.to_dict() for d in await kb.alist_docs(principal.tenant_id)]
     return {"documents": docs, "count": len(docs)}
 
 

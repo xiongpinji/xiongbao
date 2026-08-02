@@ -86,8 +86,9 @@ class LLMSettings(BaseModel):
 class MemorySettings(BaseModel):
     """记忆 / 向量库。lite 用 Qdrant :memory: 内存模式。"""
 
-    qdrant_url: str = ""                 # 空 => 内存模式 ":memory:"
+    qdrant_url: str = ""                 # 空 => 本地磁盘模式（见 qdrant_local_path）
     qdrant_api_key: str = ""
+    qdrant_local_path: str = ""          # 空 => 默认 apps/data/qdrant；测试可指向临时目录避免独占锁
     collection: str = "xagent_memory"
     embedding_model: str = "text-embedding-3-small"
     embedding_dim: int = 1536
@@ -166,11 +167,24 @@ class SecuritySettings(BaseModel):
     # Keycloak（full/enterprise），lite 用内置 JWT
     keycloak_url: str = ""
     keycloak_realm: str = "xagent"
-    # None = 按模式推断（lite 关、生产开）；显式 True/False 覆盖
+    # None = 安全默认（所有模式含 lite 都开鉴权）；
+    # 显式 False（XAGENT_SECURITY__REQUIRE_AUTH=false）是唯一逃生门，启动时打 warning
     require_auth: bool | None = None
     # OIDC 验签（RS256）：配置 jwks_url 后，Bearer token 走 OIDC 验签而非 HS256
     oidc_jwks_url: str = ""
     oidc_issuer: str = ""
+
+
+class ToolsSettings(BaseModel):
+    """执行类工具安全门禁。
+
+    ``enable_shell`` / ``enable_python_exec`` 默认 False：shell_exec / python_exec
+    工具不注册，即使被直接调用也返回「已被配置禁用」。仅在显式设置
+    XAGENT_TOOLS__ENABLE_SHELL / XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true 时放开。
+    """
+
+    enable_shell: bool = False
+    enable_python_exec: bool = False
 
 
 class Settings(BaseSettings):
@@ -198,6 +212,7 @@ class Settings(BaseSettings):
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     recovery: RecoverySettings = Field(default_factory=RecoverySettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
+    tools: ToolsSettings = Field(default_factory=ToolsSettings)
 
     @property
     def is_lite(self) -> bool:
@@ -209,10 +224,14 @@ class Settings(BaseSettings):
 
     @property
     def auth_required(self) -> bool:
-        """有效鉴权开关：显式设置优先，否则 lite 关、生产开。"""
+        """有效鉴权开关：安全默认全开（含 lite）。
+
+        显式 ``XAGENT_SECURITY__REQUIRE_AUTH=false`` 是唯一逃生门（演示用途），
+        关闭时启动日志打 warning，且匿名 Principal 为空角色（只读公开端点）。
+        """
         if self.security.require_auth is not None:
             return self.security.require_auth
-        return self.is_production
+        return True
 
     def validate_for_production(self) -> list[str]:
         """返回生产模式下的配置问题清单（空列表表示通过）。"""

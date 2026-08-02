@@ -21,11 +21,24 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def test_lite_anonymous_allowed(app_client: AsyncClient) -> None:
-    # lite 默认 require_auth=False -> 匿名可访问
+async def test_lite_anonymous_blocked_by_default(app_client: AsyncClient) -> None:
+    # 安全默认：lite 默认 require_auth=True -> 匿名访问受保护端点 401
     resp = await app_client.get("/api/v1/agents/roles")
-    assert resp.status_code == 200
-    assert "roles" in resp.json()
+    assert resp.status_code == 401
+
+
+async def test_require_auth_escape_hatch_allows_anonymous(app_client: AsyncClient) -> None:
+    # 显式逃生门：require_auth=False 后匿名可访问公开端点（无角色依赖），
+    # 但匿名 Principal 为空角色，受权限保护的端点（如 /agents/roles 需 agent:read）仍 403
+    get_settings().security.require_auth = False
+    try:
+        resp = await app_client.get("/api/v1/auth/me")
+        assert resp.status_code == 200
+        assert resp.json()["is_anonymous"] is True
+        resp = await app_client.get("/api/v1/agents/roles")
+        assert resp.status_code == 403
+    finally:
+        get_settings().security.require_auth = None
 
 
 async def test_require_auth_blocks_anonymous(app_client: AsyncClient, monkeypatch) -> None:
@@ -35,7 +48,7 @@ async def test_require_auth_blocks_anonymous(app_client: AsyncClient, monkeypatc
         resp = await app_client.get("/api/v1/agents/roles")
         assert resp.status_code == 401
     finally:
-        get_settings().security.require_auth = False
+        get_settings().security.require_auth = None
 
 
 async def test_tenant_mismatch_forbidden(app_client: AsyncClient) -> None:

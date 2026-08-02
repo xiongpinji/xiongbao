@@ -3,8 +3,8 @@
 规则：
 - 带 Bearer token：校验 JWT -> Principal。无效 -> 401。
 - 无 token：
-    require_auth=True  -> 401（full/enterprise）
-    require_auth=False -> 匿名 Principal（lite 演示）
+    require_auth=True  -> 401（安全默认，含 lite）
+    require_auth=False -> 匿名 Principal（**空角色**，仅演示；写/执行操作一律 403）
 - 若请求带 X-Tenant-Id 头，必须与 principal.tenant_id 一致，否则 403（防越权）。
 """
 

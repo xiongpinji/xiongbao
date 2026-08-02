@@ -110,6 +110,19 @@ class PythonExecTool:
     )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+        # 安全门禁：默认禁用（XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false），即使被直接
+        # 注册/调用也拒绝执行，对编排循环透明。
+        from xagent.infra.settings import get_settings
+
+        if not get_settings().tools.enable_python_exec:
+            return ToolResult(
+                ok=False,
+                error=(
+                    "python_exec 已被配置禁用：请显式设置 "
+                    "XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true 后重启以启用宿主机 Python 代码执行"
+                ),
+            )
+
         code = args.get("code", "")
         if not code.strip():
             return ToolResult(ok=False, error="code 不能为空")
@@ -181,6 +194,19 @@ class ShellExecTool:
     )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+        # 安全门禁：默认禁用（XAGENT_TOOLS__ENABLE_SHELL=false），即使被直接
+        # 注册/调用也拒绝执行，对编排循环透明。
+        from xagent.infra.settings import get_settings
+
+        if not get_settings().tools.enable_shell:
+            return ToolResult(
+                ok=False,
+                error=(
+                    "shell_exec 已被配置禁用：请显式设置 "
+                    "XAGENT_TOOLS__ENABLE_SHELL=true 后重启以启用宿主机命令执行"
+                ),
+            )
+
         command = args.get("command", "")
         if not command.strip():
             return ToolResult(ok=False, error="command 不能为空")
@@ -525,13 +551,39 @@ class FileListTool:
 
 
 def power_tools() -> list[Tool]:
-    """返回所有实用工具实例。"""
+    """返回所有实用工具实例。
+
+    安全门禁：``shell_exec`` / ``python_exec`` 默认不注册
+    （XAGENT_TOOLS__ENABLE_SHELL / XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false），
+    工具列表喂给 LLM 时直接不可见；仅显式开启时才注册。
+    """
     _WORKSPACE.mkdir(parents=True, exist_ok=True)
-    return [
-        PythonExecTool(),
-        ShellExecTool(),
-        WebFetchTool(),
-        FileReadTool(),
-        FileWriteTool(),
-        FileListTool(),
-    ]
+    from xagent.infra.logging import get_logger
+    from xagent.infra.settings import get_settings
+
+    settings = get_settings()
+    log = get_logger("xagent.tools")
+    tools: list[Tool] = []
+    if settings.tools.enable_python_exec:
+        tools.append(PythonExecTool())
+    else:
+        log.info(
+            "python_exec_disabled",
+            message="python_exec 工具未注册（XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false）",
+        )
+    tools.extend(
+        [
+            WebFetchTool(),
+            FileReadTool(),
+            FileWriteTool(),
+            FileListTool(),
+        ]
+    )
+    if settings.tools.enable_shell:
+        tools.append(ShellExecTool())
+    else:
+        log.info(
+            "shell_exec_disabled",
+            message="shell_exec 工具未注册（XAGENT_TOOLS__ENABLE_SHELL=false）",
+        )
+    return tools

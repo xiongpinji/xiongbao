@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from xagent.enterprise.auth import create_access_token
 from xagent.enterprise.auth.dependencies import get_principal
+from xagent.enterprise.auth.login_rate_limit import get_login_rate_limiter
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.auth.users import get_user_store
 
@@ -37,6 +38,8 @@ class TokenOut(BaseModel):
     user_id: str
     tenant_id: str
     roles: list[str]
+    # True 表示仍在使用默认/初始口令，前端应强制跳转改密
+    must_change_password: bool = False
 
 
 @router.post("/register", summary="注册新用户")
@@ -69,17 +72,40 @@ async def change_password(
 
 
 @router.post("/login", summary="登录签发 JWT")
-async def login(body: LoginIn) -> TokenOut:
+async def login(body: LoginIn, request: Request) -> TokenOut:
+    """登录。
+
+    安全：按 IP+用户名 限流——1 分钟内 5 次失败锁定 60 秒，锁定返回
+    429 + retry_after（防口令爆破）。默认口令账号返回 must_change_password=true。
+    """
+    limiter = get_login_rate_limiter()
+    ip = request.client.host if request.client else "unknown"
+    key = limiter.make_key(ip, body.username)
+
+    locked = limiter.locked_seconds(key)
+    if locked > 0:
+        retry_after = max(1, int(locked + 0.5))
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"error": "login_locked", "retry_after": retry_after},
+            headers={"Retry-After": str(retry_after)},
+        )
+
     store = get_user_store()
     user = store.authenticate(body.username, body.password)
     if user is None:
+        # 记录失败；达到阈值后后续请求会被上面的 locked_seconds 检查拦截
+        limiter.record_failure(key)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户名或密码错误")
+
+    limiter.record_success(key)
     tenant_id = body.tenant_id or user.tenant_id
     token = create_access_token(
         user_id=user.user_id, tenant_id=tenant_id, roles=user.roles
     )
     return TokenOut(
-        access_token=token, user_id=user.user_id, tenant_id=tenant_id, roles=user.roles
+        access_token=token, user_id=user.user_id, tenant_id=tenant_id,
+        roles=user.roles, must_change_password=user.must_change_password,
     )
 
 

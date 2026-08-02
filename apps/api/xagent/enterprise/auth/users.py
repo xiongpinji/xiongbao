@@ -1,7 +1,9 @@
 """内置用户存储 + 密码哈希。
 
 Keycloak（OIDC）为 full/enterprise 目标；未配置时用内置用户表。
-Phase 5：lite 启动默认 admin；生产应接 Keycloak/DB 或显式初始化用户。
+Phase 5：lite 启动默认 admin/admin（**仅本地演示**）：该账号标记
+``must_change_password=True``，首次登录响应会携带该标记，前端应强制改密；
+启动日志打显眼 warning。生产应接 Keycloak/DB 或显式初始化用户。
 本模块同时支持注册/改密（内存 + 可选 DB 持久化）。
 """
 
@@ -27,6 +29,8 @@ class User:
     roles: list[str]
     password_hash: str
     email: str = ""
+    # 使用默认/初始口令登录时为 True，前端应强制跳转改密；改密后自动清除
+    must_change_password: bool = False
 
     def verify(self, plain: str) -> bool:
         return _pwd.verify(plain, self.password_hash)
@@ -61,10 +65,11 @@ class UserStore:
         u = self._users.get(user_id)
         if not u:
             return False
-        # dataclass 不可变字段 —— 重建
+        # dataclass 不可变字段 —— 重建（改密后清除 must_change_password 标记）
         self._users[user_id] = User(
             user_id=u.user_id, tenant_id=u.tenant_id, roles=u.roles,
             password_hash=_pwd.hash(new_password), email=u.email,
+            must_change_password=False,
         )
         return True
 
@@ -73,10 +78,19 @@ class UserStore:
 def get_user_store() -> UserStore:
     store = UserStore()
     if get_settings().is_lite:
+        # 默认口令仅限本地演示：标记强制改密 + 显眼 warning
         store._users["admin"] = User(
-            "admin", ANONYMOUS_TENANT, ["admin"], _pwd.hash("admin")
+            "admin", ANONYMOUS_TENANT, ["admin"], _pwd.hash("admin"),
+            must_change_password=True,
         )
-        logger.info("user_store_init", default_admin=True)
+        logger.warning(
+            "default_admin_credentials_active",
+            message=(
+                "⚠️  安全问题：lite 模式内置默认账号 admin/admin，"
+                "首次登录后必须修改密码（must_change_password=true）；"
+                "请勿在可暴露网络的环境中使用默认口令"
+            ),
+        )
     else:
         logger.info("user_store_init", default_admin=False)
     return store

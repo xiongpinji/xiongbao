@@ -46,6 +46,18 @@ async def lifespan(app: FastAPI):
         version=__version__,
         mode=settings.mode.value,
     )
+    # 安全姿态告警：鉴权被显式关闭（XAGENT_SECURITY__REQUIRE_AUTH=false）时显眼提示
+    if not settings.auth_required:
+        logger.warning(
+            "auth_disabled",
+            message=(
+                "⚠️  安全问题：鉴权已关闭（XAGENT_SECURITY__REQUIRE_AUTH=false），"
+                "所有 API 端点无需凭据即可访问，仅限本地演示，请勿暴露到网络"
+            ),
+        )
+    # 初始化内置用户存储：lite 模式会创建默认 admin/admin 并打安全 warning
+    from xagent.enterprise.auth.users import get_user_store
+    get_user_store()
     # 自动建表（SQLite 开发模式，生产用 alembic）
     import xagent.infra.models  # noqa: F401  确保所有 ORM 模型注册
     async with db.get_engine().begin() as conn:
@@ -157,10 +169,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RateLimitMiddleware, max_requests=300, window_seconds=60)
     app.add_middleware(MetricsMiddleware)
-    app.add_middleware(RequestContextMiddleware)
 
     # ETag 响应缓存（GET 条件请求 304）
     from xagent.api.response_cache import ResponseCacheMiddleware
@@ -173,6 +183,12 @@ def create_app() -> FastAPI:
     # 幂等性保障（Idempotency-Key 防重复提交）
     from xagent.api.idempotency import IdempotencyMiddleware
     app.add_middleware(IdempotencyMiddleware)
+
+    # 安全响应头 + 请求上下文必须最后添加（Starlette 后添加=最外层）：
+    # 缓存/幂等等中间件会重建 Response，若它们在外层会丢掉内侧中间件注入的
+    # X-Content-Type-Options / X-Request-ID 等头。
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestContextMiddleware)
 
     # 路由挂载
     app.include_router(system.router)
