@@ -22,6 +22,7 @@ interface ChatMessage {
   run?: AgentRun;
   steps?: StepInfo[];
   streaming?: boolean;
+  timestamp?: number;  // 发送时间戳
 }
 
 /* ================================================================== */
@@ -135,7 +136,7 @@ export default function ChatPage() {
     setSteps([]);
     setStreamingText("");
     setCompletedSegments([]);
-    setMessages((prev) => [...prev, { role: "user", content: nextGoal }]);
+    setMessages((prev) => [...prev, { role: "user", content: nextGoal, timestamp: Date.now() }]);
     setLoading(true);
     appendActivity({ taskId: "chat", title: "提交任务", detail: nextGoal, tone: "info" });
 
@@ -149,7 +150,7 @@ export default function ChatPage() {
           const nextRun = await runAgent({ goal: nextGoal });
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun },
+            { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun, timestamp: Date.now() },
           ]);
           syncRunTask(nextRun.run_id, { source: "chat" });
         } catch (e: unknown) {
@@ -227,7 +228,7 @@ export default function ChatPage() {
     if (sseRunId || finalContent) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps] },
+        { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps], timestamp: Date.now() },
       ]);
     }
   }
@@ -647,12 +648,17 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function MessageBlock({ msg }: { msg: ChatMessage }) {
+  const timeStr = msg.timestamp
+    ? new Date(msg.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+    : null;
+
   if (msg.role === "user") {
     return (
       <div className="flex justify-end py-2">
         <div className="flex items-start gap-3">
           <div className="max-w-[85%] rounded-2xl bg-white/[0.08] px-4 py-3 text-sm leading-7 text-neutral-100">
             <div className="whitespace-pre-wrap">{msg.content}</div>
+            {timeStr && <div className="mt-1 text-right text-[10px] text-neutral-600">{timeStr}</div>}
           </div>
           <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
             <UserRound size={14} className="text-neutral-400" />
@@ -698,6 +704,7 @@ function MessageBlock({ msg }: { msg: ChatMessage }) {
               </Link>
             )}
             <CopyButton text={msg.content} />
+            {timeStr && <span className="text-[10px] text-neutral-600">{timeStr}</span>}
           </div>
         </div>
       </div>

@@ -1145,6 +1145,8 @@ async def run_agent(
         _tool_stats: dict[str, int] = {}  # tool_name -> call_count
         _tool_success: int = 0
         _tool_fail: int = 0
+        _tool_success_by_type: dict[str, int] = {}  # tool_name -> success_count
+        _tool_fail_by_type: dict[str, int] = {}  # tool_name -> fail_count
 
         # ── 重复错误检测：同错误 3 次提前终止 ──
         _error_signatures: dict[str, int] = {}  # error_sig -> count
@@ -1175,6 +1177,20 @@ async def run_agent(
                   content={"percent": _progress_pct, "step": state.step, "max_steps": _effective_max_steps},
                   step=state.step,
               ))
+
+              # ── 动态步数延展：任务进展良好时自动延长 ──
+              if state.step == _effective_max_steps - 3 and _effective_max_steps < 100:
+                  _total_calls = _tool_success + _tool_fail
+                  _success_rate = _tool_success / max(_total_calls, 1)
+                  # 条件：成功率>70% 且有文件变更（任务在进展）
+                  if _success_rate > 0.7 and len(_changed_files) > 0:
+                      _extension = min(15, _effective_max_steps // 3)
+                      _effective_max_steps += _extension
+                      logger.info("step_extension", new_max=_effective_max_steps, success_rate=round(_success_rate, 2))
+                      state.messages.append(Message(
+                          role="user",
+                          content=f"[系统] 任务进展良好，已自动延长执行限额至 {_effective_max_steps} 步。请继续完成剩余工作。",
+                      ))
 
               # ── 动态上下文注入：每 5 步注入任务进度摘要（复杂任务才注入） ──
               if _is_complex and state.step % 5 == 0 and state.step > 0:
@@ -1357,9 +1373,11 @@ async def run_agent(
                                           _file_read_cache[_ck] = txt
                                           _file_read_cache_time[_ck] = time.time()
                                   _tool_success += 1
+                                  _tool_success_by_type[tc_name] = _tool_success_by_type.get(tc_name, 0) + 1
                               else:
                                   txt = f"[错误] {r.error}"
                                   _tool_fail += 1
+                                  _tool_fail_by_type[tc_name] = _tool_fail_by_type.get(tc_name, 0) + 1
                                   # ── 重复错误检测 ──
                                   _err_sig = f"{tc_name}:{str(r.error)[:80]}"
                                   _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
@@ -1517,6 +1535,12 @@ async def run_agent(
                                   # ── 会话级决策记忆：记录关键编辑决策 ──
                                   if _fp and len(_session_decisions) < 10:
                                       _session_decisions.append(f"step{state.step}: {tc_name} -> {_fp}")
+                                  # ── 编辑差异摘要：计算变更行数 ──
+                                  if tc_name == "file_edit" and result_text and not result_text.startswith("[错误]"):
+                                      _old_lines = (tc_args.get("old_text", "") or "").count("\n") + 1
+                                      _new_lines = (tc_args.get("new_text", "") or "").count("\n") + 1
+                                      _diff_summary = f" [+{_new_lines}/-{_old_lines} 行]"
+                                      result_text = result_text[:200] + _diff_summary
                               await _emit(
                                   StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                               )
@@ -2029,6 +2053,11 @@ async def run_agent(
             _top_tools = sorted(_tool_stats.items(), key=lambda x: -x[1])[:3]
             _tools_str = ", ".join(f"{t}({c})" for t, c in _top_tools)
             _summary_parts.append(f"📈 执行统计: {_total_calls} 次工具调用, 成功率 {_success_rate}%, 常用: {_tools_str}")
+            # 按工具类型成功率（只显示有失败的）
+            _fail_tools = [(t, _tool_fail_by_type.get(t, 0)) for t in _tool_stats if _tool_fail_by_type.get(t, 0) > 0]
+            if _fail_tools:
+                _fail_str = ", ".join(f"{t}({f}次失败)" for t, f in _fail_tools[:3])
+                _summary_parts.append(f"⚠️ 失败分布: {_fail_str}")
         # diff 统计
         if _changed_files:
             try:
