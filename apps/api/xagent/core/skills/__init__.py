@@ -30,6 +30,23 @@ MIN_ANSWER_LEN_FOR_EXTRACTION = 100  # 回答长度 >= 此值才考虑提炼
 RETIRE_THRESHOLD = 0.3            # 成功率低于此值触发降级
 RETIRE_MIN_USES = 5               # 至少使用 N 次后才评估淘汰
 MAX_SKILLS = 100                  # 技能库上限
+# ─── 自动提炼门禁配置（对标 Hermes GEPA：变体须过最小评测门禁才入库） ───
+DEDUP_SIMILARITY_THRESHOLD = 0.5  # 与现有技能 token 相似度 >= 此值视为重复，拒绝入库
+MIN_TRIGGER_KEYWORD_LEN = 2       # 触发关键词最小长度（过短易误匹配）
+
+
+def _tokenize(text: str) -> set[str]:
+    """提取中文词组/英文单词 token 集合，用于相似度去重。"""
+    import re as _re
+    return set(_re.findall(r'[\u4e00-\u9fff]{2,4}|[a-zA-Z]{3,}', text.lower()))
+
+
+def _text_similarity(a: str, b: str) -> float:
+    """token 集合 Jaccard 相似度（0~1）。"""
+    ta, tb = _tokenize(a), _tokenize(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
 
 
 @dataclass
@@ -59,7 +76,7 @@ class Skill:
     # ── 自进化字段 ──
     version: int = 1
     retired: bool = False           # 是否已降级/归档
-    source: str = "manual"          # manual | auto_extracted | evolved
+    source: str = "manual"          # manual | auto_extracted | auto_distilled | evolved
     source_task: str = ""           # 来源任务摘要
     history: list[dict[str, Any]] = field(default_factory=list)  # 版本历史
 
@@ -320,6 +337,150 @@ class SkillStore:
         logger.info("skill_auto_extracted", skill_id=skill.skill_id, name=name, steps=steps_count)
         return skill
 
+    # ─── 自进化：LLM 提炼 + 质量门禁（对标 Hermes GEPA 闭环） ───
+
+    async def distill_candidate(
+        self,
+        goal: str,
+        answer: str,
+        steps_count: int,
+        tools_used: list[str] | None = None,
+        llm: Any | None = None,
+    ) -> dict[str, Any] | None:
+        """由 LLM 把成功任务提炼为候选技能（不入库）。
+
+        无可用 LLM（Mock 降级）或调用/解析失败时静默跳过，返回 None。
+        """
+        if steps_count < MIN_STEPS_FOR_EXTRACTION:
+            logger.debug("skill_distill_skip", reason="too_few_steps", steps=steps_count)
+            return None
+        tools_count = len(tools_used or [])
+        if len(answer) < MIN_ANSWER_LEN_FOR_EXTRACTION and tools_count < 3:
+            logger.debug("skill_distill_skip", reason="insufficient_content",
+                         answer_len=len(answer), tools=tools_count)
+            return None
+
+        if llm is None:
+            try:
+                from xagent.adapters.llm import get_llm_client
+                llm = get_llm_client()
+            except Exception as e:
+                logger.debug("skill_distill_skip", reason="no_llm", error=str(e))
+                return None
+        # Mock 降级客户端产出不了真实提炼结果，视为「无 LLM」静默跳过
+        from xagent.adapters.llm.mock import MockLLMClient
+        if isinstance(llm, MockLLMClient):
+            logger.debug("skill_distill_skip", reason="mock_llm")
+            return None
+
+        import re as _re
+        extract_prompt = (
+            "你是一个技能提炼专家。根据以下任务执行记录，提炼一个可复用的技能模板。\n"
+            "输出严格 JSON 格式（无其他文字）：\n"
+            '{"name": "技能名(简短)", "description": "技能描述", '
+            '"trigger": "触发关键词(|分隔,3-5个,须来自任务目标原文)", '
+            '"hint": "执行提示(给Agent的建议)"}\n\n'
+            f"任务目标: {goal[:300]}\n"
+            f"执行步数: {steps_count}\n"
+            f"使用工具: {', '.join(tools_used or [])}\n"
+            f"最终回答摘要: {answer[:500]}"
+        )
+        try:
+            from xagent.adapters.llm import Message as LLMMessage
+            resp = await llm.complete([LLMMessage(role="user", content=extract_prompt)])
+            raw = (resp.content or "").strip()
+            m = _re.search(r'\{[^{}]+\}', raw, _re.DOTALL)
+            if not m:
+                logger.debug("skill_distill_skip", reason="llm_no_json")
+                return None
+            data = json.loads(m.group())
+        except Exception as e:
+            logger.debug("skill_distill_skip", reason="llm_failed", error=str(e))
+            return None
+
+        return {
+            "name": str(data.get("name", "")).strip(),
+            "description": str(data.get("description", "")).strip(),
+            "trigger_pattern": str(data.get("trigger", "")).strip(),
+            "system_prompt_hint": str(data.get("hint", "")).strip(),
+            "steps": [{"tool": t, "order": i} for i, t in enumerate(tools_used or [])],
+            "source_task": goal[:200],
+        }
+
+    def gate_candidate(self, candidate: dict[str, Any], goal: str) -> tuple[bool, str]:
+        """入库质量门禁（对标 Hermes：变体须过最小评测才入库）。
+
+        检查项：
+        1. 字段完整：name/description/trigger_pattern/system_prompt_hint 均非空
+        2. 触发模式可被匹配器命中：至少一个关键词出现在来源任务目标中
+        3. 去重：与现有技能 token 相似度低于阈值
+        4. 技能库未满
+
+        返回 (是否通过, 失败原因)。
+        """
+        # 1. 字段完整性
+        for key in ("name", "description", "trigger_pattern", "system_prompt_hint"):
+            if not str(candidate.get(key, "")).strip():
+                return False, f"incomplete_field:{key}"
+        # 2. 触发模式可被匹配器命中（与 match() 同一匹配语义）
+        goal_lower = goal.lower()
+        keywords = [
+            kw.strip().lower()
+            for kw in candidate["trigger_pattern"].split("|")
+            if len(kw.strip()) >= MIN_TRIGGER_KEYWORD_LEN
+        ]
+        if not keywords or not any(kw in goal_lower for kw in keywords):
+            return False, "trigger_not_matchable"
+        # 3. 去重（相似度阈值）
+        cand_text = " ".join([
+            candidate["name"], candidate["description"], candidate["trigger_pattern"],
+        ])
+        for s in self._cache.values():
+            if s.retired:
+                continue
+            sim = _text_similarity(cand_text, f"{s.name} {s.description} {s.trigger_pattern}")
+            if sim >= DEDUP_SIMILARITY_THRESHOLD:
+                return False, f"duplicate:{s.skill_id}:sim={sim:.2f}"
+        # 4. 技能库容量
+        if len([s for s in self._cache.values() if not s.retired]) >= MAX_SKILLS:
+            return False, "store_full"
+        return True, ""
+
+    async def auto_distill(
+        self,
+        goal: str,
+        answer: str,
+        steps_count: int,
+        tools_used: list[str] | None = None,
+        llm: Any | None = None,
+    ) -> Skill | None:
+        """任务成功后自动提炼技能：LLM 提炼候选 → 质量门禁 → 入库（source=auto_distilled）。
+
+        对标 Hermes GEPA 闭环：不过门禁的候选记日志丢弃，绝不污染技能库。
+        自动提炼的技能保留人工 evolve/retire 生命周期。
+        """
+        candidate = await self.distill_candidate(
+            goal, answer, steps_count, tools_used, llm=llm
+        )
+        if candidate is None:
+            return None
+        ok, reason = self.gate_candidate(candidate, goal)
+        if not ok:
+            logger.info("skill_gate_reject", reason=reason, name=candidate.get("name", ""))
+            return None
+        skill = self.create_skill(
+            name=candidate["name"],
+            description=candidate["description"],
+            trigger_pattern=candidate["trigger_pattern"],
+            steps=candidate["steps"],
+            system_prompt_hint=candidate["system_prompt_hint"],
+            tags=["auto_distilled"],
+            source="auto_distilled",
+            source_task=candidate["source_task"],
+        )
+        logger.info("skill_auto_distilled", skill_id=skill.skill_id, name=skill.name)
+        return skill
+
     # ─── 自进化：淘汰机制 ───
 
     def _check_retirement(self, skill: Skill) -> None:
@@ -384,6 +545,7 @@ class SkillStore:
             "active": len(active),
             "retired": len(retired),
             "auto_extracted": len([s for s in active if s.source == "auto_extracted"]),
+            "auto_distilled": len([s for s in active if s.source == "auto_distilled"]),
             "evolved": len([s for s in active if s.source == "evolved"]),
             "total_uses": sum(s.use_count for s in self._cache.values()),
             "avg_success_rate": (

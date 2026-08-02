@@ -48,6 +48,42 @@ xagent/
 
 避开 **AGPL**（Skyvern/Daytona）、**ELv2**（Arize Phoenix）、**Source-Available**（n8n/Pipedream）。媒体生成走云端 AI 生成平台 API（LibLib/LibTV 风格），**不自托管 ComfyUI，规避 GPL-3.0 风险**。CI 内置 license-check 门禁。
 
+## 安全默认姿态（Secure by Default）
+
+X-Agent 默认按「最小权限」启动，所有放宽都必须显式配置：
+
+| 默认项 | 行为 | 显式放宽方式 |
+|---|---|---|
+| 鉴权 | **所有模式（含 lite）默认 `require_auth=true`**，匿名 Principal 为空角色（仅只读公开端点） | `XAGENT_SECURITY__REQUIRE_AUTH=false`（唯一逃生门，仅演示用途；关闭时启动日志打 warning） |
+| shell 工具 | **默认禁用**：`shell_exec` 不注册，即使被直接调用也返回「已被配置禁用」 | `XAGENT_TOOLS__ENABLE_SHELL=true` |
+| python_exec 工具 | **默认禁用**：`python_exec` 不注册，即使被直接调用也返回「已被配置禁用」 | `XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true` |
+| CORS | 默认仅 `http://localhost:3000`，生产禁止 `*` | `XAGENT_CORS_ORIGINS` 显式配置 |
+| JWT 密钥 | lite 用内置开发密钥（仅限本地） | 生产必须设置 ≥32 字符的 `XAGENT_SECURITY__JWT_SECRET` |
+
+生产模式（full/enterprise）启动时执行 `validate_for_production()` **硬校验**：CORS 通配符、弱 JWT 密钥、关闭鉴权会直接列入配置问题清单并阻止带病上线。
+
+## 竞品对标路线图（Codex / Hermes）
+
+对标两个方向做「低成本高感知」深化，产品叙事始终收敛于**短剧工厂**护城河：
+
+**对标 OpenAI Codex（AGENTS.md 分层指令）**
+
+- ✅ 已做：仓库根 AGENTS.md 注入系统提示；权限模式（suggest/auto-edit/full-auto）注入；项目结构感知
+- ✅ 已做：`core/instructions` 三层分层指令（用户级 `~/.xagent/AGENTS.md` < 工作区根 < 子目录级就近优先），严格优先级合并
+- 🔄 在做：任务路径自动识别驱动子目录层选择（当前支持显式 `task_paths`）
+- ❌ 不做：云端沙箱托管任务队列（与私有化交付形态冲突）
+
+**对标 Hermes Agent（技能自进化）**
+
+- ✅ 已做：技能生命周期（创建 / evolve / retire / restore / 匹配注入），API 可用
+- ✅ 已做：任务成功后 LLM 自动提炼候选技能（`source=auto_distilled`）+ 入库质量门禁（字段完整 / 触发模式可被匹配器命中 / 相似度去重 / 容量上限），不过门禁记日志丢弃
+- 🔄 在做：技能变体的 pytest 门禁（对标 GEPA：每个变体须过评测才替换现网技能）
+- ❌ 不做：引入 DSPy/GEPA 重依赖做全量提示优化（重框架、离线部署不友好；以轻量门禁 + 成功率淘汰替代）
+
+**产品叙事收敛**：以上对标能力均服务于短剧工厂主场景——分层指令让短剧工作区（剧本 / 分镜 / 素材子目录）各层规则精确生效，技能自进化让「分镜生成」「关键帧批量产出」等成功解法沉淀为可复用技能，越用越强。
+
+沙箱与 SSO 的下一阶段演进见 [`docs/rfc/RFC-001-sandbox-default-secure.md`](docs/rfc/RFC-001-sandbox-default-secure.md) 与 [`docs/rfc/RFC-002-sso-oidc.md`](docs/rfc/RFC-002-sso-oidc.md)。
+
 ## 快速开始（单机）
 
 ### 方式 A：本地模型（零 API 费用，推荐）
