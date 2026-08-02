@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  ArrowUp, Bot, CheckCircle2, ChevronDown, ChevronRight, Code2,
+  ArrowUp, Bot, Check, CheckCircle2, ChevronDown, ChevronRight, Code2, Copy,
   FileText, Globe, Loader2, Square, Terminal, UserRound, XCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -624,6 +624,27 @@ function ToolCard({ call, result, index }: { call: StepInfo; result?: StepInfo; 
 /*  消息块                                                             */
 /* ================================================================== */
 
+/** 复制按钮组件 */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-2.5 py-1.5 text-xs text-neutral-500 transition hover:border-white/[0.12] hover:text-neutral-300"
+      title="复制回答"
+    >
+      {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+      {copied ? "已复制" : "复制"}
+    </button>
+  );
+}
+
 function MessageBlock({ msg }: { msg: ChatMessage }) {
   if (msg.role === "user") {
     return (
@@ -664,16 +685,19 @@ function MessageBlock({ msg }: { msg: ChatMessage }) {
             <MarkdownRenderer content={msg.content} />
           </div>
 
-          {/* 运行详情链接 */}
-          {msg.runId && (
-            <Link
-              to={`/runs/${encodeURIComponent(msg.runId)}`}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-2.5 py-1.5 text-xs text-neutral-500 transition hover:border-white/[0.12] hover:text-neutral-300"
-            >
-              <FileText size={12} />
-              查看运行详情
-            </Link>
-          )}
+          {/* 运行详情链接 + 复制按钮 */}
+          <div className="mt-3 flex items-center gap-2">
+            {msg.runId && (
+              <Link
+                to={`/runs/${encodeURIComponent(msg.runId)}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-2.5 py-1.5 text-xs text-neutral-500 transition hover:border-white/[0.12] hover:text-neutral-300"
+              >
+                <FileText size={12} />
+                查看运行详情
+              </Link>
+            )}
+            <CopyButton text={msg.content} />
+          </div>
         </div>
       </div>
     </div>

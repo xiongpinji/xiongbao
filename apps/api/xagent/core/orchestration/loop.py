@@ -293,11 +293,29 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
     Codex-aligned: prevents context window overflow on long tasks.
     Keeps system + last N messages intact, compresses middle history.
     保护 tool_call_id 配对完整性：不会在 assistant+tool 消息对中间截断。
+    优先级压缩：旧工具结果先截断 → 再 LLM 摘要。
     """
     # Only compress if messages exceed threshold
     if len(messages) <= 20:
         return messages
 
+    # ── 第一阶段：优先级截断（无需 LLM 调用） ──
+    # 对距离末尾 >15 条的 tool 消息，截断到 300 字符（保留摘要）
+    _TRUNCATE_TAIL_KEEP = 15
+    _OLD_TOOL_MAX_CHARS = 300
+    _truncated_any = False
+    for i in range(len(messages) - _TRUNCATE_TAIL_KEEP):
+        m = messages[i]
+        if m.role == "tool" and m.content and len(m.content) > _OLD_TOOL_MAX_CHARS:
+            m.content = m.content[:_OLD_TOOL_MAX_CHARS] + f"\n... [截断: 原 {len(m.content)} 字符]"
+            _truncated_any = True
+
+    # 截断后重新估算 token，如果已低于预算则无需 LLM 压缩
+    _est = sum(len(m.content or "") for m in messages) // 4
+    if _truncated_any and _est < 80_000:
+        return messages
+
+    # ── 第二阶段：LLM 摘要压缩 ──
     # Keep: system (first) + last 10 messages
     system_msg = messages[0] if messages[0].role == "system" else None
     keep_tail = 10
@@ -308,12 +326,9 @@ async def _compress_context(messages: list[Message], llm, model: str | None) -> 
         return messages
 
     # ── 保护 tool_call_id 完整性：调整截断点，不在 tool 消息中间截断 ──
-    # 如果 end_idx 指向 tool role 消息，向前回退到对应的 assistant 消息之前
     while end_idx > start_idx and messages[end_idx].role == "tool":
         end_idx -= 1
-    # 如果回退后指向 assistant 消息且其后紧跟 tool，再回退一步
     if end_idx > start_idx and messages[end_idx].role == "assistant":
-        # 检查后面是否紧跟 tool 消息
         if end_idx + 1 < len(messages) and messages[end_idx + 1].role == "tool":
             end_idx -= 1
 
@@ -1117,6 +1132,10 @@ async def run_agent(
         _tool_success: int = 0
         _tool_fail: int = 0
 
+        # ── 重复错误检测：同错误 3 次提前终止 ──
+        _error_signatures: dict[str, int] = {}  # error_sig -> count
+        _REPEAT_ERROR_LIMIT = 3
+
         # ── 错误分类恢复：追踪最后一次错误信息 ──
         _last_error_text: str = ""
         _last_error_tool: str = ""
@@ -1313,6 +1332,9 @@ async def run_agent(
                               else:
                                   txt = f"[错误] {r.error}"
                                   _tool_fail += 1
+                                  # ── 重复错误检测 ──
+                                  _err_sig = f"{tc_name}:{str(r.error)[:80]}"
+                                  _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
                               # 统计工具调用次数
                               _tool_stats[tc_name] = _tool_stats.get(tc_name, 0) + 1
                               # 记录去重缓存
@@ -1415,6 +1437,9 @@ async def run_agent(
                                           _consecutive_errors += 1
                                           _last_error_text = result_text
                                           _last_error_tool = tc_name
+                                          # ── 重复错误检测 ──
+                                          _err_sig = f"{tc_name}:{str(result.error)[:80]}"
+                                          _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
                                           # ── file_edit 失败智能重试：自动补读文件内容 ──
                                           if tc_name == "file_edit" and "text not found" in result_text.lower():
                                               _fail_path = tc_args.get("path", "")
@@ -1449,6 +1474,24 @@ async def run_agent(
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
                               )
+
+                      # ── 重复错误提前终止：同错误达阈值时停止 ──
+                      _repeat_errors = [sig for sig, cnt in _error_signatures.items() if cnt >= _REPEAT_ERROR_LIMIT]
+                      if _repeat_errors:
+                          _err_detail = _repeat_errors[0].split(":", 1)[-1]
+                          state.final_answer = (
+                              f"任务提前终止：同一错误重复出现 {_REPEAT_ERROR_LIMIT} 次。\n\n"
+                              f"错误详情: {_err_detail}\n\n"
+                              "建议：\n"
+                              "1. 检查环境/依赖是否正确\n"
+                              "2. 简化任务重试\n"
+                              "3. 手动修复该错误后重新发起"
+                          )
+                          state.finished = True
+                          logger.warning("early_termination", error=_repeat_errors[0], step=state.step)
+                          await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+                          break
+
                       # ── 验证闭环：编辑后自动跑验证 + 回滚保护 ──
                       if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
@@ -1641,6 +1684,9 @@ async def run_agent(
                                       _consecutive_errors += 1
                                       _last_error_text = result_text
                                       _last_error_tool = tc.name
+                                      # ── 重复错误检测 ──
+                                      _err_sig = f"{tc.name}:{str(result.error)[:80]}"
+                                      _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
                               if tc.name in _EDIT_TOOLS:
                                   _had_edit_ns = True
                                   _edit_count += 1
@@ -1659,6 +1705,21 @@ async def run_agent(
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
                               )
+
+                      # ── 重复错误提前终止 ──
+                      _repeat_errors = [sig for sig, cnt in _error_signatures.items() if cnt >= _REPEAT_ERROR_LIMIT]
+                      if _repeat_errors:
+                          _err_detail = _repeat_errors[0].split(":", 1)[-1]
+                          state.final_answer = (
+                              f"任务提前终止：同一错误重复出现 {_REPEAT_ERROR_LIMIT} 次。\n\n"
+                              f"错误详情: {_err_detail}\n\n"
+                              "建议：\n1. 检查环境/依赖\n2. 简化任务重试\n3. 手动修复后重新发起"
+                          )
+                          state.finished = True
+                          logger.warning("early_termination", error=_repeat_errors[0], step=state.step)
+                          await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+                          break
+
                       # 验证闭环 + 回滚保护
                       if _had_edit_ns and _edit_count % 2 == 0:
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
@@ -1802,12 +1863,23 @@ async def run_agent(
                     StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
                 )
         except asyncio.CancelledError:
-            # ── Graceful 取消：用户中断时保存部分结果 + 清理 git ──
+            # ── Graceful 取消：用户中断时保存部分结果 + Git Diff 摘要 ──
+            _cancel_parts = [f"任务被用户中断（已执行 {state.step} 步）。"]
+            # 添加 Git Diff 摘要
+            if _changed_files:
+                try:
+                    import subprocess as _sp
+                    _diff = _sp.run(
+                        ["git", "diff", "--stat", "HEAD"],
+                        cwd=str(_WORKSPACE), capture_output=True, text=True, timeout=10
+                    )
+                    if _diff.returncode == 0 and _diff.stdout.strip():
+                        _cancel_parts.append(f"\n已修改文件：\n{_diff.stdout.strip()}")
+                except Exception:  # noqa: S110
+                    _cancel_parts.append(f"\n已修改文件: {', '.join(_changed_files[:10])}")
+            _cancel_parts.append("\n已完成的工作已保存，可以继续对话让我完成剩余部分。")
             if not state.final_answer:
-                state.final_answer = (
-                    f"任务被用户中断（已执行 {state.step} 步）。\n\n"
-                    "已完成的工作已保存，可以继续对话让我完成剩余部分。"
-                )
+                state.final_answer = "\n".join(_cancel_parts)
             # 保存 checkpoint 以便恢复
             try:
                 from xagent.core.orchestration.checkpoint import save_checkpoint
