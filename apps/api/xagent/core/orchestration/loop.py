@@ -86,6 +86,9 @@ async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
             if not is_retryable or attempt == _LLM_MAX_RETRIES - 1:
                 raise
             delay = _LLM_RETRY_BASE_DELAY * (2 ** attempt)
+            # 自适应重试：指数退避 + 随机抖动（防雷群效应）
+            import random as _rnd_retry
+            delay += _rnd_retry.uniform(0, delay * 0.3)
             logger.warning(
                 "llm_retry",
                 attempt=attempt + 1,
@@ -622,16 +625,48 @@ async def _run_verification(workspace: Path, ctx, changed_files: list[str] | Non
 _MAX_TOOL_OUTPUT = 4000  # 工具结果最大字符数
 
 
-def _truncate_tool_output(text: str, tool_name: str) -> str:
+def _truncate_tool_output(text: str, tool_name: str, goal: str = "") -> str:
     """智能截断工具输出：保留头尾，中间截断。
 
     不同工具不同策略：
     - code_search: 保留前 N 条结果
     - shell_exec: 提取关键行（错误/警告/成功）+ 头尾
-    - file_read: 保留前 N 行
+    - file_read: 基于 goal 关键词保留相关行 + 头尾
     """
     if len(text) <= _MAX_TOOL_OUTPUT:
         return text
+
+    if tool_name == "file_read" and goal:
+        # 基于 goal 关键词智能压缩：保留包含关键词的行 + 头尾
+        import re as _re_tr
+        _keywords = [w.lower() for w in _re_tr.findall(r'[\w\u4e00-\u9fff]{2,}', goal)][:8]
+        lines = text.split("\n")
+        _relevant = []
+        for i, l in enumerate(lines):
+            _ll = l.lower()
+            if any(k in _ll for k in _keywords):
+                _relevant.append((i, l))
+        if _relevant and len(_relevant) < len(lines) * 0.6:
+            # 保留相关行 + 上下文各 2 行
+            _keep_indices = set()
+            for idx, _ in _relevant:
+                for j in range(max(0, idx - 2), min(len(lines), idx + 3)):
+                    _keep_indices.add(j)
+            _kept = [lines[i] if i in _keep_indices else None for i in range(len(lines))]
+            # 压缩连续 None
+            _result_lines = []
+            _gap = 0
+            for l in _kept:
+                if l is not None:
+                    if _gap > 0:
+                        _result_lines.append(f"  ... [{_gap} 行省略] ...")
+                    _result_lines.append(l)
+                    _gap = 0
+                else:
+                    _gap += 1
+            _compressed = "\n".join(_result_lines)
+            if len(_compressed) < len(text):
+                return f"[智能压缩: 保留 {len(_keep_indices)}/{len(lines)} 行相关内容]\n{_compressed}"
 
     if tool_name == "shell_exec":
         # 提取关键行：错误/警告/成功指标
@@ -1341,6 +1376,9 @@ async def run_agent(
                                   ))
                               raise
                           _delay = _LLM_RETRY_BASE_DELAY * (2 ** _stream_attempt)
+                          # 自适应重试：指数退避 + 随机抖动
+                          import random as _rnd_stream
+                          _delay += _rnd_stream.uniform(0, _delay * 0.3)
                           logger.warning("stream_retry", attempt=_stream_attempt + 1, delay=_delay, error=str(_stream_exc)[:150])
                           await asyncio.sleep(_delay)
 
@@ -1509,7 +1547,7 @@ async def run_agent(
                                   else:
                                       _consecutive_errors = 0
                               await _emit(StepEvent(kind=StepKind.tool_result, tool=_p_name, content=result_text, step=state.step))
-                              _stored = _truncate_tool_output(_format_tool_result(_p_name, result_text, _p_args), _p_name)
+                              _stored = _truncate_tool_output(_format_tool_result(_p_name, result_text, _p_args), _p_name, goal)
                               state.messages.append(Message(role="tool", content=_stored, tool_call_id=_p_id, name=_p_name))
                       else:
                           # ══ 顺序路径：含编辑工具时逐个执行 ══
@@ -1605,7 +1643,7 @@ async def run_agent(
                                   StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
                               )
                               # ── 原生 tool role + 智能截断（Codex 对齐） ──
-                              _stored = _truncate_tool_output(_format_tool_result(tc_name, result_text, tc_args), tc_name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc_name, result_text, tc_args), tc_name, goal)
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
                               )
@@ -1793,7 +1831,7 @@ async def run_agent(
                                   else:
                                       _consecutive_errors = 0
                               await _emit(StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step))
-                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name, goal)
                               state.messages.append(Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name))
                       else:
                           # 顺序路径（含编辑工具）
@@ -1837,7 +1875,7 @@ async def run_agent(
                               await _emit(
                                   StepEvent(kind=StepKind.tool_result, tool=tc.name, content=result_text, step=state.step)
                               )
-                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name)
+                              _stored = _truncate_tool_output(_format_tool_result(tc.name, result_text, tc.args), tc.name, goal)
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
                               )

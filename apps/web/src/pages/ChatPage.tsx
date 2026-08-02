@@ -98,6 +98,17 @@ export default function ChatPage() {
       .catch(() => {});
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 快捷键：Escape 停止生成，Ctrl+/ 聚焦输入框，页面加载自动聚焦
+  useEffect(() => {
+    textareaRef.current?.focus();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && loading) { handleStop(); }
+      if (e.key === "/" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); textareaRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [loading]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   // 切换会话：加载历史消息
   const handleSelectConversation = useCallback(async (id: string) => {
     setConversationId(id);
@@ -643,6 +654,36 @@ function ToolCard({ call, result, index }: { call: StepInfo; result?: StepInfo; 
 /*  消息块                                                             */
 /* ================================================================== */
 
+/** 长消息折叠组件：超过 500 字自动折叠，点击展开 */
+function CollapsibleMessage({ content }: { content: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = content.slice(0, 400);
+  if (expanded) {
+    return (
+      <div>
+        <MarkdownRenderer content={content} />
+        <button
+          onClick={() => setExpanded(false)}
+          className="mt-2 text-xs text-neutral-500 hover:text-neutral-300 transition"
+        >
+          ▲ 收起
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <MarkdownRenderer content={preview + "..."} />
+      <button
+        onClick={() => setExpanded(true)}
+        className="mt-2 text-xs text-blue-400/80 hover:text-blue-300 transition"
+      >
+        ▼ 展开全文（共 {content.length} 字）
+      </button>
+    </div>
+  );
+}
+
 /** 复制按钮组件 */
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -704,9 +745,13 @@ function MessageBlock({ msg }: { msg: ChatMessage }) {
             </CollapsibleSection>
           )}
 
-          {/* Markdown 渲染的最终回答 */}
+          {/* Markdown 渲染的最终回答（长消息自动折叠） */}
           <div className="mt-1">
-            <MarkdownRenderer content={msg.content} />
+            {msg.content.length > 500 ? (
+              <CollapsibleMessage content={msg.content} />
+            ) : (
+              <MarkdownRenderer content={msg.content} />
+            )}
           </div>
 
           {/* 运行详情链接 + 复制按钮 */}
