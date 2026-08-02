@@ -22,6 +22,18 @@ class SubscriptionORM(Base):
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class TenantUsageORM(Base):
+    """租户用量计数（配额扣减）。与 billing_records（账单流水）分离：
+    运行前配额扣减写本表；运行后结算（真实 tokens）仅写流水，避免重复计数。"""
+
+    __tablename__ = "tenant_usage"
+
+    tenant_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    agent_runs: Mapped[int] = mapped_column(Integer, default=0)
+    media_generations: Mapped[int] = mapped_column(Integer, default=0)
+    tokens: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class BillingRecordORM(Base):
     __tablename__ = "billing_records"
 

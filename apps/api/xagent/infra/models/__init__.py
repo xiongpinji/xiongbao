@@ -3,9 +3,10 @@
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.models.audit import AuditEventORM
-from xagent.infra.models.billing import BillingRecordORM, SubscriptionORM
+from xagent.infra.models.billing import BillingRecordORM, SubscriptionORM, TenantUsageORM
 from xagent.infra.models.conversation import ConversationMessageORM, ConversationORM
 from xagent.infra.models.evidence import EvidenceORM
+from xagent.infra.models.marketplace import MarketEntryORM
 from xagent.infra.models.memory import MemoryMetaORM
 from xagent.infra.models.spine import (
     DeliveryTaskORM,
@@ -24,6 +25,7 @@ __all__ = [
     "AuditEventORM",
     "WorkflowRunORM",
     "MemoryMetaORM",
+    "MarketEntryORM",
     "AgentTaskORM",
     "ArtifactORM",
     "EvidenceORM",
