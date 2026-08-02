@@ -45,6 +45,19 @@ _LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", 
 _TOOL_TIMEOUT = 180  # 秒（shell_exec 自带 120s，这里做外层保护）
 _SLOW_TOOL_THRESHOLD = 30  # 秒：超过此值记录慢工具警告
 
+# ── 按工具类型设置超时（秒） ──
+_TOOL_TIMEOUTS = {
+    "file_read": 30,
+    "file_write": 30,
+    "file_edit": 30,
+    "file_list": 30,
+    "code_search": 60,
+    "shell_exec": 150,
+    "web_fetch": 60,
+    "git": 60,
+}
+_DEFAULT_TOOL_TIMEOUT = 60
+
 # ── Token 预算：超过此值触发主动压缩 ──
 _TOKEN_BUDGET = 100_000  # 估算上下文 token 上限
 _CHARS_PER_TOKEN = 4  # 粗略估算比例
@@ -117,6 +130,31 @@ def _categorize_error(result_text: str, tool_name: str) -> str:
             "2. 从文件内容中复制精确的 old_text\n"
             "3. 注意行尾空白和换行符差异"
         )
+    # ── 新增：更细粒度的错误分类 ──
+    if "connection" in text_lower or "network" in text_lower or "网络" in result_text:
+        return (
+            "[恢复策略] 网络连接失败。\n"
+            "1. 检查 URL 是否正确\n"
+            "2. 稍后重试或换用本地工具"
+        )
+    if "encoding" in text_lower or "decode" in text_lower or "编码" in result_text:
+        return (
+            "[恢复策略] 编码错误。\n"
+            "1. 尝试指定 encoding 参数\n"
+            "2. 使用 errors='replace' 容错读取"
+        )
+    if "memory" in text_lower or "内存" in result_text or "killed" in text_lower:
+        return (
+            "[恢复策略] 内存不足。\n"
+            "1. 减少单次处理的数据量\n"
+            "2. 分批处理大文件"
+        )
+    if "import" in text_lower or "module" in text_lower or "依赖" in result_text:
+        return (
+            "[恢复策略] 依赖缺失。\n"
+            "1. 用 shell_exec 安装缺失依赖\n"
+            "2. 检查虚拟环境是否激活"
+        )
     return (
         "[恢复策略] 工具调用失败。\n"
         "1. 检查参数格式是否正确\n"
@@ -135,12 +173,29 @@ def _format_tool_result(tool_name: str, result_text: str, args: dict) -> str:
         path = args.get("path", "unknown")
         lines = result_text.count("\n") + 1
         return f"[文件: {path} | {lines} 行]\n{result_text}"
-    # shell_exec 结果：已经有 [exit: N] 标记
+    # shell_exec 结果：提取关键信息
     if tool_name == "shell_exec":
+        # 检测常见错误模式
+        if "error" in result_text.lower()[:500] or "traceback" in result_text.lower()[:500]:
+            # 提取错误摘要（最后几行通常包含关键信息）
+            _lines = result_text.strip().split("\n")
+            _err_summary = "\n".join(_lines[-5:]) if len(_lines) > 5 else result_text
+            return f"[命令执行出错]\n{_err_summary}"
         return result_text
     # code_search 结果：已经有匹配数信息
     if tool_name == "code_search":
         return result_text
+    # JSON 结果：尝试提取摘要
+    if result_text.strip().startswith("{") or result_text.strip().startswith("["):
+        try:
+            _data = json.loads(result_text)
+            if isinstance(_data, dict):
+                _keys = list(_data.keys())[:5]
+                return f"[JSON 对象 | 字段: {', '.join(_keys)}]\n{result_text}"
+            elif isinstance(_data, list):
+                return f"[JSON 数组 | {len(_data)} 项]\n{result_text}"
+        except json.JSONDecodeError:
+            pass
     # 其他工具：添加成功标记
     if len(result_text) > 50:
         return f"[{tool_name} 执行成功]\n{result_text}"
@@ -1223,7 +1278,8 @@ async def run_agent(
                                           _file_read_cache.pop(_cache_key, None)
                                           _file_read_cache_time.pop(_cache_key, None)
                               _t0 = time.perf_counter()
-                              r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
+                              _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
+                              r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_tool_timeout)
                               _elapsed = time.perf_counter() - _t0
                               if _elapsed > _SLOW_TOOL_THRESHOLD:
                                   logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
@@ -1324,7 +1380,8 @@ async def run_agent(
                                       _last_error_tool = tc_name
                                   else:
                                       _t0 = time.perf_counter()
-                                      result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
+                                      _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
+                                      result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_tool_timeout)
                                       _elapsed = time.perf_counter() - _t0
                                       if _elapsed > _SLOW_TOOL_THRESHOLD:
                                           logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
