@@ -49,6 +49,10 @@ _SLOW_TOOL_THRESHOLD = 30  # 秒：超过此值记录慢工具警告
 _TOKEN_BUDGET = 100_000  # 估算上下文 token 上限
 _CHARS_PER_TOKEN = 4  # 粗略估算比例
 
+# ── 多模型降级：主模型连续失败 N 次后切换到备用模型 ──
+_FALLBACK_MODEL = os.environ.get("XAGENT_FALLBACK_MODEL", "")  # 空=不降级
+_MODEL_FALLBACK_THRESHOLD = 3  # 连续失败次数阈值
+
 
 async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
     """LLM 调用包装器：失败时指数退避重试。
@@ -373,6 +377,18 @@ def _detect_project_context(workspace: Path) -> str:
     verify_cmd = _detect_verify_command(workspace)
     if verify_cmd:
         lines.append(f"\n建议验证命令: {verify_cmd}")
+
+    # 5. Git 状态感知：当前分支 + 最近提交
+    try:
+        import subprocess as _sp
+        _git_br = _sp.run(["git", "branch", "--show-current"], cwd=str(workspace), capture_output=True, text=True, timeout=5)
+        if _git_br.returncode == 0 and _git_br.stdout.strip():
+            lines.append(f"\nGit 分支: {_git_br.stdout.strip()}")
+        _git_log = _sp.run(["git", "log", "--oneline", "-3"], cwd=str(workspace), capture_output=True, text=True, timeout=5)
+        if _git_log.returncode == 0 and _git_log.stdout.strip():
+            lines.append(f"最近提交:\n{_git_log.stdout.strip()}")
+    except Exception:  # noqa: S110
+        pass
 
     return "\n".join(lines)
 
@@ -998,6 +1014,10 @@ async def run_agent(
         # ── 工具调用去重：同工具+同参数连续调用跳过 ──
         _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
 
+        # ── 工具调用链优化：检测循环模式 ──
+        _tool_call_history: list[str] = []  # 最近 10 次工具名
+        _loop_detected: bool = False
+
         # ── 错误分类恢复：追踪最后一次错误信息 ──
         _last_error_text: str = ""
         _last_error_tool: str = ""
@@ -1007,6 +1027,10 @@ async def run_agent(
 
         # ── 编辑回滚：连续验证失败计数 ──
         _verify_fail_count: int = 0
+
+        # ── 多模型降级：追踪 LLM 调用失败 ──
+        _llm_fail_count: int = 0
+        _model_degraded: bool = False
 
         try:
             while not state.finished and state.step < _effective_max_steps:
@@ -1091,11 +1115,22 @@ async def run_agent(
                               if chunk.completion_tokens:
                                   state.total_completion_tokens += chunk.completion_tokens
                           _stream_ok = True
+                          _llm_fail_count = 0  # 成功后重置降级计数
                           break
                       except Exception as _stream_exc:
                           err_s = str(_stream_exc).lower()
                           _retryable = any(k in err_s for k in _LLM_RETRYABLE_ERRORS)
                           if not _retryable or _stream_attempt == _LLM_MAX_RETRIES - 1:
+                              # ── 多模型降级：连续失败达阈值时切换备用模型 ──
+                              _llm_fail_count += 1
+                              if _llm_fail_count >= _MODEL_FALLBACK_THRESHOLD and _FALLBACK_MODEL and not _model_degraded:
+                                  _model_degraded = True
+                                  target_model = _FALLBACK_MODEL
+                                  logger.warning("Model degraded to fallback: %s", _FALLBACK_MODEL)
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=f"[系统] 主模型连续失败，已切换到备用模型 {_FALLBACK_MODEL}。请继续执行任务。",
+                                  ))
                               raise
                           _delay = _LLM_RETRY_BASE_DELAY * (2 ** _stream_attempt)
                           logger.warning("stream_retry", attempt=_stream_attempt + 1, delay=_delay, error=str(_stream_exc)[:150])
@@ -1163,6 +1198,25 @@ async def run_agent(
                               _recent_tool_calls[_dedup_key] = txt
                               return (tc_name, tc_id, txt)
 
+                          # ── 工具调用链优化：检测循环模式 ──
+                          _current_tools = [n for n, _, _ in _parsed_calls]
+                          _tool_call_history.extend(_current_tools)
+                          _tool_call_history = _tool_call_history[-10:]  # 保留最近 10 次
+                          # 检测 A-B-A-B 循环
+                          if len(_tool_call_history) >= 4:
+                              _last4 = _tool_call_history[-4:]
+                              if _last4[0] == _last4[2] and _last4[1] == _last4[3] and not _loop_detected:
+                                  _loop_detected = True
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=(
+                                          f"[系统警告] 检测到工具调用循环: {_last4[0]} → {_last4[1]} → {_last4[0]} → {_last4[1]}\n"
+                                          "请改变策略，尝试不同的方法解决问题。"
+                                      ),
+                                  ))
+                          elif _loop_detected and len(set(_current_tools)) > 1:
+                              _loop_detected = False  # 使用不同工具后重置
+                          
                           # 先推送所有 tool_call 事件
                           for tc_name, tc_id, tc_args in _parsed_calls:
                               await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step))
@@ -1361,6 +1415,17 @@ async def run_agent(
                                   "如果发现问题，立即修复；否则输出最终总结。"
                               ),
                           ))
+                          continue
+
+                      # ── 最终回答质量门控：防空/过短/回显 ──
+                      _fa = (state.final_answer or "").strip()
+                      if len(_fa) < 10 and state.step > 1:
+                          # 回答过短，要求模型补充
+                          state.messages.append(Message(
+                              role="user",
+                              content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
+                          ))
+                          state.final_answer = None
                           continue
 
                       state.finished = True
