@@ -256,16 +256,56 @@ class FileEditTool:
         except Exception as e:
             return ToolResult(ok=False, error=f"read failed: {e}")
         count = content.count(old_text)
+
+        # ── 模糊匹配降级（对标 Codex 的容错编辑） ──
+        _fuzzy_used = False
         if count == 0:
-            lines = content.splitlines()
-            hint = ""
-            old_first = old_text.splitlines()[0].strip() if old_text else ""
-            if old_first:
-                for i, line in enumerate(lines, 1):
-                    if old_first in line:
-                        hint = f"\nHint: line {i} has similar: {line.strip()[:100]}"
+            # 策略 1：忽略行尾空白 + 统一换行符
+            import re as _re
+            _normalized_content = content.replace("\r\n", "\n")
+            _normalized_old = old_text.replace("\r\n", "\n")
+            # 去除每行尾部空白
+            _norm_lines = [l.rstrip() for l in _normalized_content.split("\n")]
+            _old_norm_lines = [l.rstrip() for l in _normalized_old.split("\n")]
+            _norm_content_joined = "\n".join(_norm_lines)
+            _norm_old_joined = "\n".join(_old_norm_lines)
+            if _norm_old_joined and _norm_content_joined.count(_norm_old_joined) > 0:
+                # 找到模糊匹配，用原始内容中的实际位置替换
+                # 通过行号定位
+                _start_line = -1
+                _old_line_count = len(_old_norm_lines)
+                for i in range(len(_norm_lines) - _old_line_count + 1):
+                    if _norm_lines[i:i + _old_line_count] == _old_norm_lines:
+                        _start_line = i
                         break
-            return ToolResult(ok=False, error=f"text not found ({len(lines)} lines){hint}")
+                if _start_line >= 0:
+                    # 用原始 content 的行来重建精确 old_text
+                    _orig_lines = content.replace("\r\n", "\n").split("\n")
+                    _actual_old = "\n".join(_orig_lines[_start_line:_start_line + _old_line_count])
+                    count = content.count(_actual_old)
+                    if count > 0:
+                        old_text = _actual_old
+                        _fuzzy_used = True
+
+            # 策略 2：如果仍然失败，提供智能提示
+            if count == 0 and not _fuzzy_used:
+                lines = content.splitlines()
+                hint = ""
+                old_first = old_text.splitlines()[0].strip() if old_text else ""
+                if old_first:
+                    for i, line in enumerate(lines, 1):
+                        if old_first in line:
+                            hint = f"\nHint: line {i} has similar: {line.strip()[:100]}"
+                            break
+                    # 模糊搜索：取 old_text 前 20 字符做子串搜索
+                    if not hint and len(old_first) > 5:
+                        _frag = old_first[:20]
+                        for i, line in enumerate(lines, 1):
+                            if _frag in line:
+                                hint = f"\nHint(fuzzy): line {i} contains fragment: {line.strip()[:100]}"
+                                break
+                return ToolResult(ok=False, error=f"text not found ({len(lines)} lines){hint}")
+
         if replace_all:
             new_content = content.replace(old_text, new_text)
         else:
@@ -275,7 +315,8 @@ class FileEditTool:
         except Exception as e:
             return ToolResult(ok=False, error=f"write failed: {e}")
         replaced = count if replace_all else 1
-        return ToolResult(ok=True, output=f"Replaced {replaced} occurrence(s) in {path.name}")
+        _note = " (fuzzy matched)" if _fuzzy_used else ""
+        return ToolResult(ok=True, output=f"Replaced {replaced} occurrence(s) in {path.name}{_note}")
 
 
 # --- Skill Tools ---

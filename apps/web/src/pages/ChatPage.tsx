@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
-import { readAgentRunStream, type StepInfo } from "../api/chatStream";
+import { readAgentRunStream, type StepInfo, type TokenUsage } from "../api/chatStream";
 import { getToken } from "../api/client";
 import { useShellActions, useShellStore } from "../shell/useShellStore";
 import { MarkdownRenderer, CollapsibleSection } from "../components/chat/MarkdownRenderer";
@@ -44,6 +44,7 @@ export default function ChatPage() {
   const [streamingText, setStreamingText] = useState("");
   const [completedSegments, setCompletedSegments] = useState<string[]>([]);
   const [sidebarKey, setSidebarKey] = useState(0);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -204,8 +205,9 @@ export default function ChatPage() {
           setStreamingText("");
         }
       },
-      onDone: (nextRunId) => {
+      onDone: (nextRunId, usage) => {
         sseRunId = nextRunId;
+        if (usage) setTokenUsage(usage);
         syncRunTask(nextRunId, { source: "chat" });
         appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
       },
@@ -327,6 +329,11 @@ export default function ChatPage() {
             <span>Enter 发送</span>
             <span>Shift+Enter 换行</span>
             <span>支持代码执行 · 文件操作 · 网页抓取 · 图像生成</span>
+            {tokenUsage && (
+              <span className="text-neutral-500 tabular-nums">
+                ↑{tokenUsage.promptTokens.toLocaleString()} ↓{tokenUsage.completionTokens.toLocaleString()} tokens
+              </span>
+            )}
           </div>
         </div>
       </div>

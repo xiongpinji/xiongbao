@@ -232,7 +232,11 @@ async def _event_stream(
                         await session.commit()
                     else:
                         raise
-                await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
+                await queue.put(_sse("done", {
+                    "steps": result.steps, "run_id": result.run_id,
+                    "prompt_tokens": result.prompt_tokens,
+                    "completion_tokens": result.completion_tokens,
+                }))
                 # Webhook 通知
                 try:
                     from xagent.core.webhooks import get_webhook_manager
@@ -247,7 +251,11 @@ async def _event_stream(
             await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         except Exception as exc:
             if result is not None and _is_runtime_persistence_schema_mismatch(exc):
-                await queue.put(_sse("done", {"steps": result.steps, "run_id": result.run_id}))
+                await queue.put(_sse("done", {
+                    "steps": result.steps, "run_id": result.run_id,
+                    "prompt_tokens": result.prompt_tokens,
+                    "completion_tokens": result.completion_tokens,
+                }))
             else:
                 failure_error = str(exc)
                 try:
@@ -398,3 +406,41 @@ async def delete_conversation(
         await delete_conversation_from_db(session, conversation_id)
         await session.commit()
     return {"deleted": True}
+
+
+# ═══════════════════════════════════════════════════════════
+#  并行执行 API（对标 Codex 多文件并行编辑）
+# ═══════════════════════════════════════════════════════════
+
+
+class ParallelRunIn(BaseModel):
+    goal: str = Field(..., min_length=1)
+    role: str | None = None
+
+
+@router.post("/agents/parallel-run", summary="并行执行（自动分解子任务）")
+async def parallel_run(
+    body: ParallelRunIn,
+    principal: Principal = Depends(require_permission("agent", "execute")),
+):
+    """智能判断是否适合并行，如果是则自动分解并并行执行子任务。"""
+    from xagent.core.orchestration.parallel import auto_decompose_and_run
+
+    result = await auto_decompose_and_run(body.goal, principal)
+    if result is None:
+        return {
+            "parallel": False,
+            "message": "任务不适合并行执行，请使用普通 /agents/run 端点",
+        }
+    return {
+        "parallel": True,
+        "run_id": result.run_id,
+        "status": result.status,
+        "summary": result.summary,
+        "sub_tasks": len(result.sub_results),
+        "total_duration_ms": result.total_duration_ms,
+        "sub_results": [
+            {"run_id": r.run_id, "status": r.status, "final_answer": r.final_answer[:200]}
+            for r in result.sub_results
+        ],
+    }

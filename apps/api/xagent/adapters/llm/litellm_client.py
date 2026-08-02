@@ -24,6 +24,9 @@ class StreamChunk:
     delta_content: str = ""
     tool_call_deltas: list[dict[str, Any]] = field(default_factory=list)
     finished: bool = False
+    # ── 流式 token 用量（最后一个 chunk 携带） ──
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
 class LiteLLMClient(LLMClient):
@@ -169,11 +172,22 @@ class LiteLLMClient(LLMClient):
         call_kwargs.update(temperature=temperature, stream=True, **kwargs)
         call_kwargs["tools"] = tools
         call_kwargs["tool_choice"] = "auto"
+        # 请求流式 usage（OpenAI 兼容接口支持）
+        call_kwargs["stream_options"] = {"include_usage": True}
 
         resp = await litellm.acompletion(messages=payload, **call_kwargs)
         async for chunk in resp:
+            # 提取 usage（通常在最后一个 chunk）
+            _usage = chunk.get("usage") or {}
             choices = chunk.get("choices") or []
             if not choices:
+                # 无 choices 但有 usage → 纯 usage chunk
+                if _usage:
+                    yield StreamChunk(
+                        finished=True,
+                        prompt_tokens=_usage.get("prompt_tokens", 0),
+                        completion_tokens=_usage.get("completion_tokens", 0),
+                    )
                 continue
             delta = choices[0].get("delta") or {}
             finish = choices[0].get("finish_reason")
@@ -181,6 +195,8 @@ class LiteLLMClient(LLMClient):
                 delta_content=delta.get("content") or "",
                 tool_call_deltas=delta.get("tool_calls") or [],
                 finished=finish is not None,
+                prompt_tokens=_usage.get("prompt_tokens", 0),
+                completion_tokens=_usage.get("completion_tokens", 0),
             )
 
     async def stream_complete(

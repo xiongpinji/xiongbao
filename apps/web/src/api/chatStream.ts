@@ -5,10 +5,15 @@ export interface StepInfo {
   content?: unknown;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+}
+
 export interface AgentRunStreamHandlers {
   onFinalAnswer?: (answer: string) => void;
   onError?: (error: string) => void;
-  onDone?: (runId: string) => void;
+  onDone?: (runId: string, usage?: TokenUsage) => void;
   onStep?: (step: StepInfo) => void;
   onStarted?: (conversationId: string) => void;
   onToken?: (token: string) => void;
@@ -79,7 +84,14 @@ function applySseEvent(
 
   const runId = event.data.run_id;
   if (event.eventName === "done" && typeof runId === "string" && runId) {
-    handlers.onDone?.(runId);
+    const usage: TokenUsage | undefined =
+      typeof event.data.prompt_tokens === "number"
+        ? {
+            promptTokens: event.data.prompt_tokens as number,
+            completionTokens: (event.data.completion_tokens as number) ?? 0,
+          }
+        : undefined;
+    handlers.onDone?.(runId, usage);
     return runId;
   }
 

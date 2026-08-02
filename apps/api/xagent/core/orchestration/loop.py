@@ -797,6 +797,9 @@ async def run_agent(
         _consecutive_errors = 0
         _MAX_CONSECUTIVE_ERRORS = 3
 
+        # ── 自反思标志（任务完成前质量检查，只触发一次） ──
+        _did_reflect = False
+
         try:
             while not state.finished and state.step < MAX_STEPS:
               state.step += 1
@@ -845,11 +848,19 @@ async def run_agent(
                               tool_calls_buf[idx]["name"] += fn["name"]
                           if fn.get("arguments"):
                               tool_calls_buf[idx]["arguments"] += fn["arguments"]
+                      # ── 流式 token 用量追踪 ──
+                      if chunk.prompt_tokens:
+                          state.total_prompt_tokens += chunk.prompt_tokens
+                      if chunk.completion_tokens:
+                          state.total_completion_tokens += chunk.completion_tokens
 
                   # 流结束：判断是工具调用还是最终回答
                   if tool_calls_buf:
                       state.messages.append(Message(role="assistant", content=content_buf or ""))
                       _had_edit = False
+
+                      # ── 解析所有 tool_call ──
+                      _parsed_calls: list[tuple[str, str, dict]] = []  # (name, id, args)
                       for _idx in sorted(tool_calls_buf.keys()):
                           tc_raw = tool_calls_buf[_idx]
                           tc_name = tc_raw["name"]
@@ -858,42 +869,88 @@ async def run_agent(
                               tc_args = json.loads(tc_raw["arguments"] or "{}")
                           except Exception:
                               tc_args = {}
-                          await _emit(
-                              StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step)
-                          )
-                          # ── Git 隔离：首次编辑时创建分支 ──
-                          if tc_name in _EDIT_TOOLS and _work_branch is None:
-                              _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
-                          if not role.can_use(tc_name):
-                              result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
-                              _consecutive_errors += 1
-                          else:
-                              result = await tools.call(tc_name, tc_args, ctx)
-                              if result.ok:
-                                  result_text = (
-                                      json.dumps(result.output, ensure_ascii=False)
-                                      if not isinstance(result.output, str)
-                                      else result.output
-                                  )
-                                  _consecutive_errors = 0
+                          _parsed_calls.append((tc_name, tc_id, tc_args))
+
+                      # ── 并行执行策略：多个只读工具并发，编辑工具顺序 ──
+                      _has_edit_call = any(n in _EDIT_TOOLS for n, _, _ in _parsed_calls)
+                      _use_parallel = len(_parsed_calls) > 1 and not _has_edit_call
+
+                      if _use_parallel:
+                          # ══ 并行路径：asyncio.gather 并发执行只读工具 ══
+                          import asyncio as _aio
+
+                          async def _exec_one(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
+                              """Execute single tool, return (name, id, result_text)."""
+                              if not role.can_use(tc_name):
+                                  return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
+                              r = await tools.call(tc_name, tc_args, ctx)
+                              if r.ok:
+                                  txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
                               else:
-                                  result_text = f"[错误] {result.error}"
+                                  txt = f"[错误] {r.error}"
+                              return (tc_name, tc_id, txt)
+
+                          # 先推送所有 tool_call 事件
+                          for tc_name, tc_id, tc_args in _parsed_calls:
+                              await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step))
+
+                          # 并发执行
+                          _results = await _aio.gather(
+                              *[_exec_one(n, i, a) for n, i, a in _parsed_calls],
+                              return_exceptions=True,
+                          )
+                          for (_p_name, _p_id, _p_args), _res in zip(_parsed_calls, _results):
+                              if isinstance(_res, Exception):
+                                  result_text = f"[错误] {type(_res).__name__}: {_res}"
                                   _consecutive_errors += 1
-                          if tc_name in _EDIT_TOOLS:
-                              _had_edit = True
-                              _edit_count += 1
-                              # 追踪变更文件
-                              _fp = tc_args.get("path", "")
-                              if _fp and _fp not in _changed_files:
-                                  _changed_files.append(_fp)
-                          await _emit(
-                              StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
-                          )
-                          # ── 原生 tool role + 智能截断（Codex 对齐） ──
-                          _stored = _truncate_tool_output(result_text, tc_name)
-                          state.messages.append(
-                              Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
-                          )
+                              else:
+                                  _, _, result_text = _res
+                                  if result_text.startswith("[错误]") or result_text.startswith("[拒绝]"):
+                                      _consecutive_errors += 1
+                                  else:
+                                      _consecutive_errors = 0
+                              await _emit(StepEvent(kind=StepKind.tool_result, tool=_p_name, content=result_text, step=state.step))
+                              _stored = _truncate_tool_output(result_text, _p_name)
+                              state.messages.append(Message(role="tool", content=_stored, tool_call_id=_p_id, name=_p_name))
+                      else:
+                          # ══ 顺序路径：含编辑工具时逐个执行 ══
+                          for tc_name, tc_id, tc_args in _parsed_calls:
+                              await _emit(
+                                  StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step)
+                              )
+                              # ── Git 隔离：首次编辑时创建分支 ──
+                              if tc_name in _EDIT_TOOLS and _work_branch is None:
+                                  _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
+                              if not role.can_use(tc_name):
+                                  result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
+                                  _consecutive_errors += 1
+                              else:
+                                  result = await tools.call(tc_name, tc_args, ctx)
+                                  if result.ok:
+                                      result_text = (
+                                          json.dumps(result.output, ensure_ascii=False)
+                                          if not isinstance(result.output, str)
+                                          else result.output
+                                      )
+                                      _consecutive_errors = 0
+                                  else:
+                                      result_text = f"[错误] {result.error}"
+                                      _consecutive_errors += 1
+                              if tc_name in _EDIT_TOOLS:
+                                  _had_edit = True
+                                  _edit_count += 1
+                                  # 追踪变更文件
+                                  _fp = tc_args.get("path", "")
+                                  if _fp and _fp not in _changed_files:
+                                      _changed_files.append(_fp)
+                              await _emit(
+                                  StepEvent(kind=StepKind.tool_result, tool=tc_name, content=result_text, step=state.step)
+                              )
+                              # ── 原生 tool role + 智能截断（Codex 对齐） ──
+                              _stored = _truncate_tool_output(result_text, tc_name)
+                              state.messages.append(
+                                  Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
+                              )
                       # ── 验证闭环：编辑后自动跑验证 ──
                       if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
@@ -949,6 +1006,22 @@ async def run_agent(
                           )
                       else:
                           state.final_answer = content_buf
+
+                      # ── 自反思：有编辑操作时，完成前做一次质量检查 ──
+                      if _edit_count > 0 and not _did_reflect and state.step < MAX_STEPS - 1:
+                          _did_reflect = True
+                          state.messages.append(Message(
+                              role="user",
+                              content=(
+                                  "[系统自反思] 任务即将完成。请快速自检：\n"
+                                  "1. 所有修改是否完整（无遗漏文件）\n"
+                                  "2. 代码是否能正常运行（无语法错误）\n"
+                                  "3. 是否满足了用户的原始需求\n"
+                                  "如果发现问题，立即修复；否则输出最终总结。"
+                              ),
+                          ))
+                          continue
+
                       state.finished = True
                       await _emit(
                           StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
