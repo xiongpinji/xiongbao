@@ -43,6 +43,7 @@ _LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", 
 
 # ── 单工具执行超时（防止单个工具卡死整个循环） ──
 _TOOL_TIMEOUT = 180  # 秒（shell_exec 自带 120s，这里做外层保护）
+_SLOW_TOOL_THRESHOLD = 30  # 秒：超过此值记录慢工具警告
 
 # ── Token 预算：超过此值触发主动压缩 ──
 _TOKEN_BUDGET = 100_000  # 估算上下文 token 上限
@@ -141,8 +142,55 @@ def _format_tool_result(tool_name: str, result_text: str, args: dict) -> str:
         return f"[{tool_name} 执行成功]\n{result_text}"
     return result_text
 
+
+def _validate_tool_args(tool_name: str, args: dict, specs: list[dict]) -> str | None:
+    """工具参数预校验：检查必填参数。返回错误描述或 None(通过)。"""
+    for spec in specs:
+        fn = spec.get("function", {})
+        if fn.get("name") != tool_name:
+            continue
+        params = fn.get("parameters", {})
+        required = params.get("required", [])
+        properties = params.get("properties", {})
+        missing = [r for r in required if r not in args or args[r] is None or args[r] == ""]
+        if missing:
+            return f"缺少必填参数: {', '.join(missing)}"
+        # 类型粗检：字符串参数不应是 dict/list
+        for key, val in args.items():
+            prop = properties.get(key, {})
+            if prop.get("type") == "string" and isinstance(val, (dict, list)):
+                return f"参数 {key} 应为字符串，实际为 {type(val).__name__}"
+        return None
+    return None  # 未找到 spec 不拦截
+
 # ── 编辑类工具：触发验证闭环 ──
 _EDIT_TOOLS = {"file_edit", "file_write"}
+
+# ── 编辑回滚配置：连续验证失败 N 次后自动 git checkout 回滚 ──
+_ROLLBACK_THRESHOLD = 2  # 连续验证失败次数阈值
+
+
+async def _rollback_changed_files(workspace: Path, changed_files: list[str]) -> str:
+    """回滚变更文件：git checkout -- <files>。返回操作结果描述。"""
+    import subprocess as _sp
+    if not changed_files:
+        return "(无变更文件需要回滚)"
+    try:
+        # 只回滚工作区内的文件
+        rel_files = []
+        for f in changed_files:
+            try:
+                rel_files.append(str(Path(f).relative_to(workspace)))
+            except ValueError:
+                rel_files.append(f)
+        cmd = ["git", "checkout", "--"] + rel_files
+        proc = _sp.run(cmd, cwd=str(workspace), capture_output=True, text=True, timeout=30)
+        if proc.returncode == 0:
+            return f"已回滚 {len(rel_files)} 个文件: {', '.join(rel_files[:5])}"
+        return f"回滚失败: {proc.stderr[:200]}"
+    except Exception as exc:
+        return f"回滚异常: {exc}"
+
 # ── 验证命令探测优先级 ──
 _VERIFY_COMMANDS = [
     ("pyproject.toml", "python -m pytest --tb=short -q"),
@@ -443,10 +491,25 @@ async def _run_verification(workspace: Path, ctx, changed_files: list[str] | Non
             if test_targets:
                 verify_cmd = f"python -m pytest {' '.join(test_targets)} --tb=short -q"
 
+    # 如果修改了 TS/JS 文件且验证命令是 tsc，只检查变更文件所在包
+    if changed_files and "tsc" in verify_cmd:
+        ts_files = [f for f in changed_files if f.endswith((".ts", ".tsx"))]
+        if ts_files:
+            # 找到最近的 tsconfig.json 目录
+            for tf in ts_files[:1]:
+                tp = Path(tf)
+                for parent in [tp.parent] + list(tp.parents):
+                    if (parent / "tsconfig.json").exists():
+                        verify_cmd = f"npx tsc --noEmit --project {parent / 'tsconfig.json'}"
+                        break
+
     tools = get_tool_registry()
     result = await tools.call("shell_exec", {"command": verify_cmd, "timeout": 60}, ctx)
     output = result.output if result.ok else (result.error or "")
-    passed = result.ok and "error" not in output.lower()[:200]
+    # 改进通过判断：检查 exit code 和常见失败标记
+    _fail_markers = ("error", "failed", "traceback", "Error:", "FAILED")
+    _has_fail = any(m in output[:500] for m in _fail_markers)
+    passed = result.ok and not _has_fail
     return passed, output[:2000]
 
 
@@ -942,6 +1005,9 @@ async def run_agent(
         # ── 会话级决策记忆：跨步骤记住关键决策 ──
         _session_decisions: list[str] = []  # 记录关键决策（最多 10 条）
 
+        # ── 编辑回滚：连续验证失败计数 ──
+        _verify_fail_count: int = 0
+
         try:
             while not state.finished and state.step < _effective_max_steps:
               state.step += 1
@@ -953,6 +1019,16 @@ async def run_agent(
                   content={"percent": _progress_pct, "step": state.step, "max_steps": _effective_max_steps},
                   step=state.step,
               ))
+
+              # ── 动态上下文注入：每 5 步注入任务进度摘要 ──
+              if state.step % 5 == 0 and state.step > 0:
+                  _ctx_parts = [f"[系统进度报告] 步骤 {state.step}/{_effective_max_steps} ({_progress_pct}%)"]
+                  if _changed_files:
+                      _ctx_parts.append(f"已修改文件: {', '.join(_changed_files[-8:])}")
+                  if _session_decisions:
+                      _ctx_parts.append(f"关键决策: {'; '.join(_session_decisions[-5:])}")
+                  _ctx_parts.append("请继续执行任务，不要重复已完成的步骤。")
+                  state.messages.append(Message(role="user", content="\n".join(_ctx_parts)))
 
               # 上下文压缩：每 10 步检查一次，或估算 token 超预算时触发
               _est_tokens = sum(len(m.content or "") for m in state.messages) // _CHARS_PER_TOKEN
@@ -1056,6 +1132,10 @@ async def run_agent(
                               """Execute single tool, return (name, id, result_text)."""
                               if not role.can_use(tc_name):
                                   return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
+                              # ── 工具参数预校验：拦截无效调用 ──
+                              _val_err = _validate_tool_args(tc_name, tc_args, specs)
+                              if _val_err:
+                                  return (tc_name, tc_id, f"[参数错误] {_val_err}")
                               # ── 工具调用去重：同工具+同参数跳过 ──
                               _dedup_key = f"{tc_name}:{json.dumps(tc_args, sort_keys=True, ensure_ascii=False)[:200]}"
                               if _dedup_key in _recent_tool_calls:
@@ -1065,7 +1145,11 @@ async def run_agent(
                                   _cache_key = tc_args.get("path", "")
                                   if _cache_key and _cache_key in _file_read_cache:
                                       return (tc_name, tc_id, _file_read_cache[_cache_key])
+                              _t0 = time.perf_counter()
                               r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
+                              _elapsed = time.perf_counter() - _t0
+                              if _elapsed > _SLOW_TOOL_THRESHOLD:
+                                  logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
                               if r.ok:
                                   txt = json.dumps(r.output, ensure_ascii=False) if not isinstance(r.output, str) else r.output
                                   # 缓存 file_read 结果
@@ -1130,34 +1214,46 @@ async def run_agent(
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}"
                                   _consecutive_errors += 1
                               else:
-                                  result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
-                                  if result.ok:
-                                      result_text = (
-                                          json.dumps(result.output, ensure_ascii=False)
-                                          if not isinstance(result.output, str)
-                                          else result.output
-                                      )
-                                      _consecutive_errors = 0
-                                  else:
-                                      result_text = f"[错误] {result.error}"
+                                  # ── 工具参数预校验 ──
+                                  _val_err = _validate_tool_args(tc_name, tc_args, specs)
+                                  if _val_err:
+                                      result_text = f"[参数错误] {_val_err}"
                                       _consecutive_errors += 1
                                       _last_error_text = result_text
                                       _last_error_tool = tc_name
-                                      # ── file_edit 失败智能重试：自动补读文件内容 ──
-                                      if tc_name == "file_edit" and "text not found" in result_text.lower():
-                                          _fail_path = tc_args.get("path", "")
-                                          if _fail_path:
-                                              try:
-                                                  _retry_read = await asyncio.wait_for(
-                                                      tools.call("file_read", {"path": _fail_path}, ctx),
-                                                      timeout=30,
-                                                  )
-                                                  if _retry_read.ok:
-                                                      _retry_txt = _retry_read.output if isinstance(_retry_read.output, str) else json.dumps(_retry_read.output, ensure_ascii=False)
-                                                      _file_read_cache[_fail_path] = _retry_txt
-                                                      result_text += f"\n[系统已自动读取文件] 以下是 {_fail_path} 的当前内容，请从中复制精确的 old_text 重试：\n{_retry_txt[:2000]}"
-                                              except Exception:  # noqa: S110
-                                                  pass
+                                  else:
+                                      _t0 = time.perf_counter()
+                                      result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
+                                      _elapsed = time.perf_counter() - _t0
+                                      if _elapsed > _SLOW_TOOL_THRESHOLD:
+                                          logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
+                                      if result.ok:
+                                          result_text = (
+                                              json.dumps(result.output, ensure_ascii=False)
+                                              if not isinstance(result.output, str)
+                                              else result.output
+                                          )
+                                          _consecutive_errors = 0
+                                      else:
+                                          result_text = f"[错误] {result.error}"
+                                          _consecutive_errors += 1
+                                          _last_error_text = result_text
+                                          _last_error_tool = tc_name
+                                          # ── file_edit 失败智能重试：自动补读文件内容 ──
+                                          if tc_name == "file_edit" and "text not found" in result_text.lower():
+                                              _fail_path = tc_args.get("path", "")
+                                              if _fail_path:
+                                                  try:
+                                                      _retry_read = await asyncio.wait_for(
+                                                          tools.call("file_read", {"path": _fail_path}, ctx),
+                                                          timeout=30,
+                                                      )
+                                                      if _retry_read.ok:
+                                                          _retry_txt = _retry_read.output if isinstance(_retry_read.output, str) else json.dumps(_retry_read.output, ensure_ascii=False)
+                                                          _file_read_cache[_fail_path] = _retry_txt
+                                                          result_text += f"\n[系统已自动读取文件] 以下是 {_fail_path} 的当前内容，请从中复制精确的 old_text 重试：\n{_retry_txt[:2000]}"
+                                                  except Exception:  # noqa: S110
+                                                      pass
                               if tc_name in _EDIT_TOOLS:
                                   _had_edit = True
                                   _edit_count += 1
@@ -1177,17 +1273,35 @@ async def run_agent(
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc_id, name=tc_name)
                               )
-                      # ── 验证闭环：编辑后自动跑验证 ──
+                      # ── 验证闭环：编辑后自动跑验证 + 回滚保护 ──
                       if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
                           if not v_passed:
-                              state.messages.append(Message(
-                                  role="user",
-                                  content=(
-                                      f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
-                                      "请分析错误原因并修复。"
-                                  ),
-                              ))
+                              _verify_fail_count += 1
+                              if _verify_fail_count >= _ROLLBACK_THRESHOLD:
+                                  # 连续失败达阈值 → 自动回滚
+                                  _rb_result = await _rollback_changed_files(_WORKSPACE, _changed_files)
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=(
+                                          f"[验证失败 + 自动回滚] 连续 {_verify_fail_count} 次验证未通过。\n"
+                                          f"验证输出：{v_output[:500]}\n"
+                                          f"{_rb_result}\n"
+                                          "请重新分析需求，采用不同策略实现。"
+                                      ),
+                                  ))
+                                  _verify_fail_count = 0
+                                  _changed_files.clear()
+                              else:
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=(
+                                          f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
+                                          "请分析错误原因并修复。"
+                                      ),
+                                  ))
+                          else:
+                              _verify_fail_count = 0
                       # ── 错误分类恢复：连续失败过多时注入分类分析指令 ──
                       if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
                           _recovery = _categorize_error(_last_error_text, _last_error_tool)
@@ -1356,17 +1470,34 @@ async def run_agent(
                               state.messages.append(
                                   Message(role="tool", content=_stored, tool_call_id=tc.id, name=tc.name)
                               )
-                      # 验证闭环
+                      # 验证闭环 + 回滚保护
                       if _had_edit_ns and _edit_count % 2 == 0:
                           v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
                           if not v_passed:
-                              state.messages.append(Message(
-                                  role="user",
-                                  content=(
-                                      f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
-                                      "请分析错误原因并修复。"
-                                  ),
-                              ))
+                              _verify_fail_count += 1
+                              if _verify_fail_count >= _ROLLBACK_THRESHOLD:
+                                  _rb_result = await _rollback_changed_files(_WORKSPACE, _changed_files)
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=(
+                                          f"[验证失败 + 自动回滚] 连续 {_verify_fail_count} 次验证未通过。\n"
+                                          f"验证输出：{v_output[:500]}\n"
+                                          f"{_rb_result}\n"
+                                          "请重新分析需求，采用不同策略实现。"
+                                      ),
+                                  ))
+                                  _verify_fail_count = 0
+                                  _changed_files.clear()
+                              else:
+                                  state.messages.append(Message(
+                                      role="user",
+                                      content=(
+                                          f"[验证失败] 你的修改未通过项目验证：\n{v_output[:1000]}\n"
+                                          "请分析错误原因并修复。"
+                                      ),
+                                  ))
+                          else:
+                              _verify_fail_count = 0
                       # 错误分类恢复
                       if _consecutive_errors >= _MAX_CONSECUTIVE_ERRORS:
                           _recovery = _categorize_error(_last_error_text, _last_error_tool)
