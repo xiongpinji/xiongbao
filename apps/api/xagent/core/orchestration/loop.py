@@ -982,6 +982,20 @@ async def run_agent(
     messages: list[Message] = []
     # 历史消息放在 goal 之前
     messages.extend(history)
+    # ── 多轮对话上下文注入：历史较长时添加摘要提示 ──
+    if len(history) >= 6:
+        _hist_topics = []
+        for m in history[-6:]:
+            if m.role == "user" and m.content:
+                _hist_topics.append(m.content[:60])
+        if _hist_topics:
+            messages.append(Message(
+                role="user",
+                content=(
+                    f"[系统] 当前为多轮对话，之前讨论了: {'; '.join(_hist_topics[-3:])}。"
+                    "请基于上下文继续，不要重复已完成的工作。"
+                ),
+            ))
     messages.append(Message(role="user", content=goal))
 
     state = AgentState(
@@ -1199,9 +1213,11 @@ async def run_agent(
                   pass
 
               if can_stream:
-                  # ── 流式路径：逐 token 推送（带重试） ──
+                  # ── 流式路径：逐 token 推送（带重试 + 超时保护） ──
                   content_buf = ""
                   tool_calls_buf: dict[int, dict] = {}  # index -> {id, name, arguments}
+                  _STREAM_FIRST_CHUNK_TIMEOUT = 60  # 首 chunk 超时
+                  _STREAM_CHUNK_TIMEOUT = 30  # 后续 chunk 间隔超时
 
                   # 流式重试：流失败时重建连接
                   _stream_ok = False
@@ -1209,9 +1225,18 @@ async def run_agent(
                       try:
                           content_buf = ""
                           tool_calls_buf = {}
+                          _last_chunk_time = time.perf_counter()
+                          _first_chunk_received = False
                           async for chunk in llm.stream_with_tools(
                               state.messages, specs, model=target_model
                           ):
+                              _now = time.perf_counter()
+                              # 超时保护：首 chunk 60s，后续 30s
+                              _timeout = _STREAM_FIRST_CHUNK_TIMEOUT if not _first_chunk_received else _STREAM_CHUNK_TIMEOUT
+                              if _now - _last_chunk_time > _timeout:
+                                  raise TimeoutError(f"Stream chunk timeout: {_timeout}s")
+                              _last_chunk_time = _now
+                              _first_chunk_received = True
                               if chunk.delta_content:
                                   content_buf += chunk.delta_content
                                   await _emit(
@@ -1237,7 +1262,7 @@ async def run_agent(
                           break
                       except Exception as _stream_exc:
                           err_s = str(_stream_exc).lower()
-                          _retryable = any(k in err_s for k in _LLM_RETRYABLE_ERRORS)
+                          _retryable = any(k in err_s for k in _LLM_RETRYABLE_ERRORS) or "timeout" in err_s
                           if not _retryable or _stream_attempt == _LLM_MAX_RETRIES - 1:
                               # ── 多模型降级：连续失败达阈值时切换备用模型 ──
                               _llm_fail_count += 1
@@ -1274,12 +1299,15 @@ async def run_agent(
                               tc_args = {}
                           _parsed_calls.append((tc_name, tc_id, tc_args))
 
-                      # ── 并行执行策略：多工具并发（编辑不同文件也可并行） ──
+                      # ── 并行执行策略：依赖感知排序（只读先并行，编辑后执行） ──
                       _edit_calls = [(n, a) for n, _, a in _parsed_calls if n in _EDIT_TOOLS]
+                      _read_calls = [(n, i, a) for n, i, a in _parsed_calls if n not in _EDIT_TOOLS]
                       _edit_paths = [a.get("path", "") for _, a in _edit_calls]
                       # 只有当编辑工具目标文件都不同时才允许并行
                       _edits_safe = len(_edit_paths) == len(set(_edit_paths))  # 无重复文件
                       _use_parallel = len(_parsed_calls) > 1 and (not _edit_calls or _edits_safe)
+                      # 依赖排序：有读+编辑混合时，读先执行
+                      _has_dependency = len(_read_calls) > 0 and len(_edit_calls) > 0
 
                       if _use_parallel:
                           # ══ 并行路径：asyncio.gather 并发执行（带限流） ══
@@ -1364,11 +1392,34 @@ async def run_agent(
                           for tc_name, tc_id, tc_args in _parsed_calls:
                               await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step))
 
-                          # 并发执行
-                          _results = await asyncio.gather(
-                              *[_exec_one(n, i, a) for n, i, a in _parsed_calls],
-                              return_exceptions=True,
-                          )
+                          # 并发执行（依赖感知：读工具先执行，编辑工具后执行）
+                          if _has_dependency:
+                              # 阶段1：只读工具并行
+                              _read_results = await asyncio.gather(
+                                  *[_exec_one(n, i, a) for n, i, a in _read_calls],
+                                  return_exceptions=True,
+                              )
+                              # 阶段2：编辑工具并行（不同文件）或顺序
+                              _edit_calls_full = [(n, i, a) for n, i, a in _parsed_calls if n in _EDIT_TOOLS]
+                              _edit_results = await asyncio.gather(
+                                  *[_exec_one(n, i, a) for n, i, a in _edit_calls_full],
+                                  return_exceptions=True,
+                              )
+                              # 合并结果（按原始顺序）
+                              _results = []
+                              _read_idx, _edit_idx = 0, 0
+                              for n, i, a in _parsed_calls:
+                                  if n in _EDIT_TOOLS:
+                                      _results.append(_edit_results[_edit_idx])
+                                      _edit_idx += 1
+                                  else:
+                                      _results.append(_read_results[_read_idx])
+                                      _read_idx += 1
+                          else:
+                              _results = await asyncio.gather(
+                                  *[_exec_one(n, i, a) for n, i, a in _parsed_calls],
+                                  return_exceptions=True,
+                              )
                           for (_p_name, _p_id, _p_args), _res in zip(_parsed_calls, _results):
                               if isinstance(_res, Exception):
                                   result_text = f"[错误] {type(_res).__name__}: {_res}"

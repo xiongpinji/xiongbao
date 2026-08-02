@@ -343,8 +343,9 @@ export default function ChatPage() {
             <span>Shift+Enter 换行</span>
             <span>支持代码执行 · 文件操作 · 网页抓取 · 图像生成</span>
             {tokenUsage && (
-              <span className="text-neutral-500 tabular-nums">
-                ↑{tokenUsage.promptTokens.toLocaleString()} ↓{tokenUsage.completionTokens.toLocaleString()} tokens
+              <span className="text-neutral-500 tabular-nums" title={`Prompt: ${tokenUsage.promptTokens.toLocaleString()} | Completion: ${tokenUsage.completionTokens.toLocaleString()}`}>
+                🔢 {(tokenUsage.promptTokens + tokenUsage.completionTokens).toLocaleString()} tokens
+                <span className="text-neutral-600"> (↑{tokenUsage.promptTokens.toLocaleString()} ↓{tokenUsage.completionTokens.toLocaleString()})</span>
               </span>
             )}
             {execProgress && (
