@@ -1227,6 +1227,7 @@ async def run_agent(
         _tool_stats: dict[str, int] = {}  # tool_name -> call_count
         _tool_success: int = 0
         _tool_fail: int = 0
+        _trace_seq: int = 0  # 链路追踪序号计数器
         _tool_success_by_type: dict[str, int] = {}  # tool_name -> success_count
         _tool_fail_by_type: dict[str, int] = {}  # tool_name -> fail_count
         _tool_time_by_type: dict[str, list[float]] = {}  # tool_name -> [elapsed_times]
@@ -1288,6 +1289,16 @@ async def run_agent(
 
               # 上下文压缩：每 10 步检查一次，或估算 token 超预算时触发
               _est_tokens = sum(len(m.content or "") for m in state.messages) // _CHARS_PER_TOKEN
+              # ── 上下文预警：接近 80% 预算时通知模型精简输出 ──
+              if _est_tokens > _TOKEN_BUDGET * 0.8 and not getattr(state, '_ctx_warned', False):
+                  state.messages.append(Message(
+                      role="user",
+                      content=(
+                          f"[系统] 上下文已使用 {_est_tokens // 1000}k/{_TOKEN_BUDGET // 1000}k tokens（{int(_est_tokens / _TOKEN_BUDGET * 100)}%）。"
+                          "请精简后续输出，避免冗长解释，直接执行工具调用。"
+                      ),
+                  ))
+                  state._ctx_warned = True  # type: ignore[attr-defined]
               if (state.step % 10 == 0 and len(state.messages) > 20) or _est_tokens > _TOKEN_BUDGET:
                   state.messages = await _compress_context(
                       state.messages, llm, target_model
@@ -1506,7 +1517,8 @@ async def run_agent(
                           
                           # 先推送所有 tool_call 事件
                           for tc_name, tc_id, tc_args in _parsed_calls:
-                              await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step))
+                              _trace_seq += 1
+                              await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step, trace_id=f"s{state.step}-{_trace_seq}"))
 
                           # 并发执行（依赖感知：读工具先执行，编辑工具后执行）
                           if _has_dependency:
@@ -1552,8 +1564,9 @@ async def run_agent(
                       else:
                           # ══ 顺序路径：含编辑工具时逐个执行 ══
                           for tc_name, tc_id, tc_args in _parsed_calls:
+                              _trace_seq += 1
                               await _emit(
-                                  StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step)
+                                  StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step, trace_id=f"s{state.step}-{_trace_seq}")
                               )
                               # ── Git 隔离：首次编辑时创建分支 ──
                               if tc_name in _EDIT_TOOLS and _work_branch is None:

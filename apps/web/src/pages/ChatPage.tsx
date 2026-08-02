@@ -318,7 +318,18 @@ export default function ChatPage() {
             {error && (
               <div className="my-3 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
                 <XCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
-                <span className="text-sm text-red-400">{error}</span>
+                <div className="flex-1">
+                  <span className="text-sm text-red-400">{error}</span>
+                  <button
+                    onClick={() => {
+                      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+                      if (lastUser) { setGoal(lastUser.content); setError(null); }
+                    }}
+                    className="mt-2 block rounded-lg border border-red-500/30 px-3 py-1 text-xs text-red-300 transition hover:bg-red-500/10"
+                  >
+                    ↻ 重试上次任务
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -368,7 +379,22 @@ export default function ChatPage() {
           <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-neutral-700">
             <span>Enter 发送</span>
             <span>Shift+Enter 换行</span>
-            <span>支持代码执行 · 文件操作 · 网页抓取 · 图像生成</span>
+            <span>Esc 停止</span>
+            {messages.length > 0 && (
+              <button
+                onClick={() => {
+                  const md = messages.map((m) => `## ${m.role === "user" ? "👤 用户" : "🤖 助手"}\n\n${m.content}`).join("\n\n---\n\n");
+                  const blob = new Blob([`# X-Agent 对话记录\n\n${md}`], { type: "text/markdown" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `xagent-chat-${Date.now()}.md`; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="text-neutral-500 hover:text-neutral-300 transition underline underline-offset-2"
+              >
+                导出对话
+              </button>
+            )}
             {tokenUsage && (
               <span className="text-neutral-500 tabular-nums" title={`Prompt: ${tokenUsage.promptTokens.toLocaleString()} | Completion: ${tokenUsage.completionTokens.toLocaleString()}`}>
                 🔢 {(tokenUsage.promptTokens + tokenUsage.completionTokens).toLocaleString()} tokens

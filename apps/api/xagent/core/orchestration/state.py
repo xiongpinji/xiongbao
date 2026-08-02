@@ -65,6 +65,7 @@ class StepEvent:
     content: Any = None
     tool: str | None = None
     step: int = 0
+    trace_id: str = ""  # 链路追踪 ID：格式 step-{step}-{seq}
 
 
 @dataclass
