@@ -1087,13 +1087,26 @@ async def run_agent(
         _subtask_count = max(goal.count("、"), len(re.findall(r'[1-9][)\.]', goal)), 1)
         _effective_max_steps = min(MAX_STEPS + _subtask_count * 5, 80)  # 上限 80
     if _is_complex:
-        state.messages.append(Message(
-            role="user",
-            content=(
-                "[系统] 这是一个复杂多步骤任务。请先在内心规划执行步骤（不要输出给用户），"
-                "然后立即开始执行第一步。每完成一步后立即执行下一步，直到全部完成。"
-            ),
-        ))
+        # ── 任务分解建议：提取子任务列表 ──
+        _subtasks = []
+        # 从 goal 中提取编号子任务
+        import re as _re
+        _numbered = _re.findall(r'[1-9][)\.、]\s*([^\n、]+)', goal)
+        if _numbered:
+            _subtasks = _numbered[:5]
+        # 从“、”分割提取
+        elif "、" in goal:
+            _parts = goal.split("、")
+            _subtasks = [p.strip()[:30] for p in _parts[1:4]]
+        
+        _decompose_hint = (
+            "[系统] 这是一个复杂多步骤任务。请先在内心规划执行步骤（不要输出给用户），"
+            "然后立即开始执行第一步。每完成一步后立即执行下一步，直到全部完成。"
+        )
+        if _subtasks:
+            _subtask_list = "; ".join(_subtasks)
+            _decompose_hint += f"\n识别到的子任务: {_subtask_list}。请确保每个子任务都完成。"
+        state.messages.append(Message(role="user", content=_decompose_hint))
 
     # ── 任务类型提示注入 ──
     _type_hint = _TASK_TYPE_HINTS.get(_task_type, "")
@@ -1134,6 +1147,18 @@ async def run_agent(
         _file_read_cache_time: dict[str, float] = {}  # 缓存时间戳
         _CACHE_TTL = 300  # 缓存有效期 5 分钟
 
+        # ── 缓存预热：预读关键配置文件（减少首次访问延迟） ──
+        _PREWARM_FILES = ["package.json", "pyproject.toml", "tsconfig.json", "README.md"]
+        for _pf in _PREWARM_FILES:
+            _pf_path = _WORKSPACE / _pf
+            if _pf_path.is_file():
+                try:
+                    _pf_content = _pf_path.read_text(encoding="utf-8", errors="ignore")[:5000]
+                    _file_read_cache[str(_pf_path)] = _pf_content
+                    _file_read_cache_time[str(_pf_path)] = time.time()
+                except Exception:  # noqa: S110
+                    pass
+
         # ── 工具调用去重：同工具+同参数连续调用跳过 ──
         _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
 
@@ -1155,6 +1180,7 @@ async def run_agent(
         # ── 错误分类恢复：追踪最后一次错误信息 ──
         _last_error_text: str = ""
         _last_error_tool: str = ""
+        _recovery_attempts: dict[str, int] = {}  # error_type -> recovery_count
 
         # ── 会话级决策记忆：跨步骤记住关键决策 ──
         _session_decisions: list[str] = []  # 记录关键决策（最多 10 条）
@@ -1607,6 +1633,7 @@ async def run_agent(
                                   f"{_recovery}"
                               ),
                           ))
+                          _recovery_attempts[_last_error_text[:50]] = _recovery_attempts.get(_last_error_text[:50], 0) + 1
                           _consecutive_errors = 0
                       continue
                   else:

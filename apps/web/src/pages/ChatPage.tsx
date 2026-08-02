@@ -64,8 +64,19 @@ export default function ChatPage() {
     setCompletedSegments([]);
   }, [chatSessionVersion, chatSessionKey]);
 
+  // 智能滚动：仅在用户位于底部时自动滚动
+  const isNearBottomRef = useRef(true);
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 100; // 距离底部 100px 内视为“底部”
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    if (isNearBottomRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
   }, [messages, loading, steps, streamingText]);
 
   // 页面加载时恢复当前会话消息
@@ -248,7 +259,7 @@ export default function ChatPage() {
       {/* 主聊天区 */}
       <div className="flex min-w-0 flex-1 flex-col">
       {/* 消息区 */}
-      <div ref={scrollRef} className="xagent-scrollbar min-h-0 flex-1 overflow-auto">
+      <div ref={scrollRef} onScroll={handleScroll} className="xagent-scrollbar min-h-0 flex-1 overflow-auto">
         {isEmpty ? (
           <EmptyState onPick={(t) => { setGoal(t); textareaRef.current?.focus(); }} />
         ) : (
