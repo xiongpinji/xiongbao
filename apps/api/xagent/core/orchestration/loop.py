@@ -967,6 +967,26 @@ async def run_agent(
     state.messages.insert(0, Message(role="system", content=system))
 
     # ── 任务规划阶段：复杂任务先分解再执行（Codex 对齐） ──
+    # ── 任务类型检测：根据目标动态调整提示策略 ──
+    _TASK_TYPE_HINTS = {
+        "coding": "\n[任务类型: 代码开发] 优先使用 file_write/file_edit 直接写入代码，完成后运行验证。",
+        "analysis": "\n[任务类型: 分析研究] 优先使用 file_read/code_search 收集信息，输出结构化分析报告。",
+        "search": "\n[任务类型: 信息检索] 优先使用 code_search/web_fetch 查找信息，简洁汇总结果。",
+        "debug": "\n[任务类型: 问题修复] 先复现问题，再定位根因，最后修复并验证。",
+    }
+    def _detect_task_type(g: str) -> str:
+        g_lower = g.lower()
+        if any(w in g_lower for w in ("修复", "bug", "错误", "报错", "异常", "fix")):
+            return "debug"
+        if any(w in g_lower for w in ("分析", "研究", "评估", "对比", "analyze")):
+            return "analysis"
+        if any(w in g_lower for w in ("查找", "搜索", "检索", "search", "find")):
+            return "search"
+        if any(w in g_lower for w in ("创建", "开发", "实现", "编写", "create", "build", "implement")):
+            return "coding"
+        return "coding"  # 默认
+    _task_type = _detect_task_type(goal)
+
     _is_complex = (
         len(goal) > 100
         or goal.count("、") >= 2
@@ -987,6 +1007,11 @@ async def run_agent(
                 "然后立即开始执行第一步。每完成一步后立即执行下一步，直到全部完成。"
             ),
         ))
+
+    # ── 任务类型提示注入 ──
+    _type_hint = _TASK_TYPE_HINTS.get(_task_type, "")
+    if _type_hint:
+        state.messages.append(Message(role="user", content=_type_hint))
 
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
         span.set_input(goal)
@@ -1010,7 +1035,9 @@ async def run_agent(
 
         # ── 工具结果缓存：file_read 同文件不重复读取（编辑后失效） ──
         _file_read_cache: dict[str, str] = {}
-        
+        _file_read_cache_time: dict[str, float] = {}  # 缓存时间戳
+        _CACHE_TTL = 300  # 缓存有效期 5 分钟
+
         # ── 工具调用去重：同工具+同参数连续调用跳过 ──
         _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
 
@@ -1049,8 +1076,8 @@ async def run_agent(
                   step=state.step,
               ))
 
-              # ── 动态上下文注入：每 5 步注入任务进度摘要 ──
-              if state.step % 5 == 0 and state.step > 0:
+              # ── 动态上下文注入：每 5 步注入任务进度摘要（复杂任务才注入） ──
+              if _is_complex and state.step % 5 == 0 and state.step > 0:
                   _ctx_parts = [f"[系统进度报告] 步骤 {state.step}/{_effective_max_steps} ({_progress_pct}%)"]
                   if _changed_files:
                       _ctx_parts.append(f"已修改文件: {', '.join(_changed_files[-8:])}")
@@ -1183,11 +1210,18 @@ async def run_agent(
                               _dedup_key = f"{tc_name}:{json.dumps(tc_args, sort_keys=True, ensure_ascii=False)[:200]}"
                               if _dedup_key in _recent_tool_calls:
                                   return (tc_name, tc_id, _recent_tool_calls[_dedup_key])
-                              # ── file_read 缓存：同文件不重复读取 ──
+                              # ── file_read 缓存：同文件不重复读取（带 TTL） ──
                               if tc_name == "file_read":
                                   _cache_key = tc_args.get("path", "")
                                   if _cache_key and _cache_key in _file_read_cache:
-                                      return (tc_name, tc_id, _file_read_cache[_cache_key])
+                                      # 检查 TTL
+                                      _cache_age = time.time() - _file_read_cache_time.get(_cache_key, 0)
+                                      if _cache_age < _CACHE_TTL:
+                                          return (tc_name, tc_id, _file_read_cache[_cache_key])
+                                      else:
+                                          # 缓存过期，删除
+                                          _file_read_cache.pop(_cache_key, None)
+                                          _file_read_cache_time.pop(_cache_key, None)
                               _t0 = time.perf_counter()
                               r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_TOOL_TIMEOUT)
                               _elapsed = time.perf_counter() - _t0
@@ -1200,6 +1234,7 @@ async def run_agent(
                                       _ck = tc_args.get("path", "")
                                       if _ck:
                                           _file_read_cache[_ck] = txt
+                                          _file_read_cache_time[_ck] = time.time()
                                   _tool_success += 1
                               else:
                                   txt = f"[错误] {r.error}"

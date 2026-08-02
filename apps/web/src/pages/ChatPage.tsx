@@ -340,9 +340,17 @@ export default function ChatPage() {
               </span>
             )}
             {execProgress && (
-              <span className="text-blue-500 tabular-nums animate-pulse">
-                ⚙️ 步骤 {execProgress.step}/{execProgress.maxSteps} ({execProgress.percent}%)
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-24 h-1.5 bg-neutral-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                    style={{ width: `${execProgress.percent}%` }}
+                  />
+                </div>
+                <span className="text-blue-400 text-xs tabular-nums">
+                  {execProgress.step}/{execProgress.maxSteps}
+                </span>
+              </div>
             )}
           </div>
         </div>
