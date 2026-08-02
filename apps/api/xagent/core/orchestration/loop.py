@@ -614,17 +614,25 @@ def _truncate_tool_output(text: str, tool_name: str) -> str:
 
     不同工具不同策略：
     - code_search: 保留前 N 条结果
-    - shell_exec: 保留头 + 尾（错误通常在尾部）
+    - shell_exec: 提取关键行（错误/警告/成功）+ 头尾
     - file_read: 保留前 N 行
     """
     if len(text) <= _MAX_TOOL_OUTPUT:
         return text
 
     if tool_name == "shell_exec":
-        # 保留头部 1500 + 尾部 2000（错误信息通常在尾部）
-        head = text[:1500]
-        tail = text[-2000:]
-        return f"{head}\n\n... [中间 {len(text) - 3500} 字符已截断] ...\n\n{tail}"
+        # 提取关键行：错误/警告/成功指标
+        lines = text.split("\n")
+        _key_patterns = ("error", "warning", "failed", "success", "passed", "✓", "✗", "Traceback")
+        _key_lines = [l for l in lines if any(p in l.lower() for p in _key_patterns)][:10]
+        _key_summary = "\n".join(_key_lines) if _key_lines else ""
+        # 保留头部 1200 + 尾部 1800
+        head = text[:1200]
+        tail = text[-1800:]
+        _result = f"{head}\n\n... [中间 {len(text) - 3000} 字符已截断] ...\n\n{tail}"
+        if _key_summary:
+            _result = f"[关键输出摘要]\n{_key_summary}\n\n{_result}"
+        return _result
     elif tool_name == "code_search":
         # 保留前 N 条结果
         lines = text.split("\n")
@@ -1159,8 +1167,9 @@ async def run_agent(
                 except Exception:  # noqa: S110
                     pass
 
-        # ── 工具调用去重：同工具+同参数连续调用跳过 ──
+        # ── 工具调用去重：同工具+同参数连续调用跳过（带大小限制） ──
         _recent_tool_calls: dict[str, str] = {}  # key -> last_result_text
+        _DEDUP_CACHE_MAX = 50  # 去重缓存最大条目数
 
         # ── 工具调用链优化：检测循环模式 ──
         _tool_call_history: list[str] = []  # 最近 10 次工具名
@@ -1402,6 +1411,9 @@ async def run_agent(
                                   _tool_success_by_type[tc_name] = _tool_success_by_type.get(tc_name, 0) + 1
                               else:
                                   txt = f"[错误] {r.error}"
+                                  # 错误上下文增强：文件操作时提示工作目录
+                                  if tc_name in ("file_read", "file_write", "file_edit") and "not found" in txt.lower():
+                                      txt += f"\n[提示] 工作目录: {_WORKSPACE}"
                                   _tool_fail += 1
                                   _tool_fail_by_type[tc_name] = _tool_fail_by_type.get(tc_name, 0) + 1
                                   # ── 重复错误检测 ──
@@ -1409,7 +1421,11 @@ async def run_agent(
                                   _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
                               # 统计工具调用次数
                               _tool_stats[tc_name] = _tool_stats.get(tc_name, 0) + 1
-                              # 记录去重缓存
+                              # 记录去重缓存（带大小限制）
+                              if len(_recent_tool_calls) >= _DEDUP_CACHE_MAX:
+                                  # 淘汰最旧的条目
+                                  _oldest_key = next(iter(_recent_tool_calls))
+                                  _recent_tool_calls.pop(_oldest_key, None)
                               _recent_tool_calls[_dedup_key] = txt
                               return (tc_name, tc_id, txt)
 

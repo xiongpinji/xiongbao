@@ -224,6 +224,10 @@ export default function ChatPage() {
         setExecProgress(null);
         syncRunTask(nextRunId, { source: "chat" });
         appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
+        // 浏览器通知：任务完成时提醒（需用户授权）
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          new Notification("X-Agent 任务完成", { body: `运行 ${nextRunId.slice(0, 8)}... 已完成`, icon: "🤖" });
+        }
       },
       onProgress: (percent, step, maxSteps) => {
         setExecProgress({ percent, step, maxSteps });
