@@ -180,7 +180,7 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 ### P1（自动化运营增强）
 - ✅ 自动告警联动（Alertmanager webhook 接收端点 + Helm 缺省接线，告警落 evidence_records）— 2026-08-03（813ffb1）
 - 自动恢复与自动归档（auto_recovery 引擎 + auto_archive_evidence.py 已有，联动已通）
-- run / workflow 证据链自动生成
+- ✅ run / workflow 证据链自动生成（run.summary 标准化证据 + 归档导出 evidence-records.jsonl）— 2026-08-03（1dd4e02）
 - 发布后观测结果自动汇总（post_deploy_summary.py 已有）
 
 ### P2（容量与性能实证）
