@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { formatBytes } from "../lib/format";
 
 interface UploadFile {
   id: string;
@@ -71,7 +72,7 @@ export function useFileUpload(options: UseFileUploadOptions): UseFileUploadRetur
   const validateFile = useCallback(
     (file: File): string | null => {
       if (file.size > maxSize) {
-        return `文件过大（${(file.size / 1024 / 1024).toFixed(1)}MB > ${(maxSize / 1024 / 1024).toFixed(0)}MB）`;
+        return `文件过大（${formatBytes(file.size)} > ${formatBytes(maxSize)}）`;
       }
       if (accept && accept.length > 0) {
         const matched = accept.some((pattern) => {

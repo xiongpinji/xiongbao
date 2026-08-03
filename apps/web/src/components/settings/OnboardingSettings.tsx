@@ -20,7 +20,7 @@ export default function OnboardingSettings() {
       <SectionTitle title="引导" description="工作区与短剧工厂的快速上手步骤。" />
       <div className="space-y-3">
         {steps.map((item, index) => (
-          <div key={item} className="flex gap-3 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm text-neutral-300">
+          <div key={item} className="flex gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-sm text-neutral-300">
             <span className="font-mono text-neutral-500">{String(index + 1).padStart(2, "0")}</span>
             <span>{item}</span>
           </div>

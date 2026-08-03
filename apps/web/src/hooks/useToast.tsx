@@ -6,7 +6,7 @@
  * - 4 种类型：success / error / warning / info
  * - 自动消失（可配置时长）
  * - 堆叠显示（最多 5 条）
- * - 暗色主题 + 金色强调
+ * - 暗色主题 + 语义色状态
  *
  * 用法：
  *   const toast = useToast();
@@ -93,8 +93,7 @@ export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xl backdrop-blur-sm ${COLORS[t.type]}`}
-          style={{ animation: "slideIn 0.2s ease-out" }}
+          className={`xb-fade-up pointer-events-auto flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xl shadow-black/25 backdrop-blur-sm ${COLORS[t.type]}`}
         >
           <span className="text-sm font-bold">{ICONS[t.type]}</span>
           <span className="text-sm text-neutral-200">{t.message}</span>

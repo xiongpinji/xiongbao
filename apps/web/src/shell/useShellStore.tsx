@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Edge, Node } from "reactflow";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
+import { formatTime } from "../lib/time";
 import type { AgentRun, WorkflowView } from "../api/index.ts";
 import {
   createCustomAgentProfile,
@@ -103,6 +104,8 @@ interface ShellState {
   commandPaletteOpen: boolean;
   chatSessionVersion: number;
   chatSessionKey: string;
+  activeConversationId: string | null;
+  setActiveConversationId: (id: string | null) => void;
   activity: ShellActivityItem[];
   workspaces: WorkspaceRecord[];
   customAgents: CustomAgentProfile[];
@@ -262,7 +265,7 @@ function createSessionState(): ShellSessionState {
   const startedAt = Date.now();
   return {
     id: `shell-${startedAt}`,
-    label: `当前会话 ${new Date(startedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`,
+    label: `当前会话 ${formatTime(startedAt)}`,
     startedAt,
     currentProject: "xiong bao / xagent / apps/web",
   };
@@ -302,6 +305,8 @@ export function createShellStore() {
     commandPaletteOpen: false,
     chatSessionVersion: 0,
     chatSessionKey: createChatSessionKey(),
+    activeConversationId: null,
+    setActiveConversationId: (id) => set({ activeConversationId: id }),
     activity: [
       {
         id: "boot",
@@ -407,6 +412,7 @@ export function createShellStore() {
             : state.currentContext,
         chatSessionVersion: state.chatSessionVersion + 1,
         chatSessionKey: createChatSessionKey(),
+        activeConversationId: null,
         chatTaskState: {
           ...state.chatTaskState,
           chat: makeDefaultChatTaskState(),
@@ -520,6 +526,7 @@ export function useShellActions() {
     setCurrentContext: state.setCurrentContext,
     appendActivity: state.appendActivity,
     resetChatSession: state.resetChatSession,
+    setActiveConversationId: state.setActiveConversationId,
     createWorkspaceRecord: state.createWorkspaceRecord,
     renameWorkspaceRecord: state.renameWorkspaceRecord,
     saveCustomAgentProfile: state.saveCustomAgentProfile,

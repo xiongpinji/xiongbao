@@ -45,7 +45,7 @@ describe("GoalBoard", () => {
     expect(screen.getByText("recovery")).toBeInTheDocument();
     expect(screen.getByText("Cut candidate")).toBeInTheDocument();
     expect(screen.getByText("Rollback")).toBeInTheDocument();
-    expect(screen.getByText(/release next: recovery/i)).toBeInTheDocument();
+    expect(screen.getByText(/下一步: recovery/i)).toBeInTheDocument();
     expect(screen.getByText("Build taskboard")).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe("GoalBoard", () => {
       />,
     );
 
-    if (container.textContent?.includes("release next: execute · t-1")) {
+    if (container.textContent?.includes("下一步: execute · t-1")) {
       throw new Error("release pane should not render non-release next action");
     }
   });

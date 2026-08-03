@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatDecimal } from "../lib/format";
 
 interface UseCountUpOptions {
   /** 动画时长（ms，默认 1500） */
@@ -46,22 +47,6 @@ interface UseCountUpReturn {
 // easeOutExpo 缓动
 function easeOutExpo(t: number): number {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-}
-
-function formatNumber(
-  value: number,
-  decimals: number,
-  separator: boolean,
-  prefix: string,
-  suffix: string,
-): string {
-  let str = value.toFixed(decimals);
-  if (separator) {
-    const parts = str.split(".");
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    str = parts.join(".");
-  }
-  return `${prefix}${str}${suffix}`;
 }
 
 export function useCountUp(
@@ -124,7 +109,8 @@ export function useCountUp(
     return () => cancelAnimationFrame(rafRef.current);
   }, [autoStart, animate]);
 
-  const display = formatNumber(value, decimals, separator, prefix, suffix);
+  const numStr = separator ? formatDecimal(value, decimals) : value.toFixed(decimals);
+  const display = `${prefix}${numStr}${suffix}`;
 
   return { display, value, isAnimating, start, reset };
 }

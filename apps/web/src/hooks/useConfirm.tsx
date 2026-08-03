@@ -14,7 +14,7 @@
  *   // 在 JSX 中: <ConfirmDialog />
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ConfirmOptions {
   title?: string;
@@ -52,6 +52,46 @@ export function useConfirm() {
   }, []);
 
   const ConfirmDialog = useCallback(() => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const confirmBtnRef = useRef<HTMLButtonElement>(null);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const cancelBtnRef = useRef<HTMLButtonElement>(null);
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      if (!state.open) return;
+      // 记录打开前聚焦的元素，关闭时归还焦点，避免键盘用户焦点丢失（落到 body）
+      const previouslyFocused = document.activeElement as HTMLElement | null;
+      confirmBtnRef.current?.focus();
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          handleClose(false);
+          return;
+        }
+        // 焦点陷阱：Tab 在取消/确认两按钮间循环，防止逃出模态框
+        if (e.key === "Tab") {
+          const focusables = [cancelBtnRef.current, confirmBtnRef.current].filter(
+            (el): el is HTMLButtonElement => el !== null
+          );
+          if (focusables.length === 0) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      window.addEventListener("keydown", handler);
+      return () => {
+        window.removeEventListener("keydown", handler);
+        previouslyFocused?.focus?.();
+      };
+    }, [state.open, handleClose]);
+
     if (!state.open) return null;
 
     return (
@@ -63,27 +103,35 @@ export function useConfirm() {
         />
 
         {/* 对话框 */}
-        <div className="relative w-full max-w-sm rounded-xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-message"
+          className="xb-fade-up relative w-full max-w-sm rounded-lg border border-neutral-700 bg-neutral-900 p-6 shadow-xl shadow-black/30"
+        >
           {state.title && (
-            <h3 className="mb-2 text-base font-semibold text-neutral-100">
+            <h3 id="confirm-dialog-title" className="mb-2 text-base font-semibold text-neutral-100">
               {state.title}
             </h3>
           )}
-          <p className="mb-6 text-sm text-neutral-400">{state.message}</p>
+          <p id="confirm-dialog-message" className="mb-6 text-sm text-neutral-400">{state.message}</p>
 
           <div className="flex justify-end gap-3">
             <button
+              ref={cancelBtnRef}
               onClick={() => handleClose(false)}
               className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800"
             >
               {state.cancelText || "取消"}
             </button>
             <button
+              ref={confirmBtnRef}
               onClick={() => handleClose(true)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 state.danger
                   ? "bg-red-600 text-white hover:bg-red-500"
-                  : "bg-[#d6ad62] text-black hover:bg-[#c49b52]"
+                  : "bg-neutral-100 text-black hover:bg-white"
               }`}
             >
               {state.confirmText || "确认"}

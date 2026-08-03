@@ -159,22 +159,22 @@ function DramaImportPanel({ onImport, onClose }: {
   }
 
   return (
-    <div className="absolute left-4 top-4 z-20 w-72 rounded-xl border border-neutral-700 bg-neutral-900/95 p-4 shadow-2xl backdrop-blur">
+    <div className="absolute left-4 top-4 z-20 w-72 rounded-lg border border-neutral-700 bg-neutral-900/95 p-4 shadow-2xl backdrop-blur">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-white flex items-center gap-2"><Clapperboard size={16} className="text-[#d6ad62]" /> 短剧平台</span>
+        <span className="text-sm font-medium text-white flex items-center gap-2"><Clapperboard size={16} className="text-neutral-300" /> 短剧平台</span>
         <button onClick={onClose} className="text-neutral-500 hover:text-white"><X size={16} /></button>
       </div>
       {error && <div className="text-xs text-red-400 mb-2">{error}</div>}
       {dramas.length === 0 ? (
         <button onClick={loadDramas} disabled={loading}
-          className="w-full rounded-lg bg-[#d6ad62]/15 px-3 py-2 text-sm text-[#d6ad62] hover:bg-[#d6ad62]/25 disabled:opacity-50">
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100 disabled:opacity-50">
           {loading ? "加载中..." : "加载短剧列表"}
         </button>
       ) : (
         <div className="space-y-2 max-h-64 overflow-auto">
           {dramas.map(d => (
             <button key={d.id} onClick={() => importDrama(d)} disabled={loading}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-left hover:border-[#d6ad62]/50 transition disabled:opacity-50">
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-left hover:border-white/25 transition disabled:opacity-50">
               <div className="text-sm text-white font-medium">{d.title}</div>
               <div className="text-xs text-neutral-500 mt-1">{d.genre} · {d.total_episodes}集 · {d.status}</div>
             </button>
@@ -202,7 +202,8 @@ export default function CanvasPage() {
   // 将短剧数据转为画布节点
   function importDramaToCanvas(drama: any) {
     const imported: CanvasNode[] = [];
-    let x = 80, y = 80;
+    let x = 80;
+    const y = 80;
     // 短剧根节点
     imported.push({ node_id: `drama-${drama.id}`, node_type: "梗概", title: drama.title || "短剧", content: drama.description || "", status: "approved", agent_note: `类型: ${drama.genre || "—"}`, human_note: "", position: { x, y }, dependencies: [] });
     x += 260;
@@ -308,7 +309,7 @@ export default function CanvasPage() {
         <div className="flex items-center gap-2 mb-4">
           <h1 className="text-xl font-semibold flex-1">制作画布</h1>
           <button onClick={() => setShowDramaPanel(!showDramaPanel)}
-            className="px-3 py-2 rounded text-sm border border-neutral-600 text-neutral-300 hover:border-[#d6ad62] hover:text-[#d6ad62] flex items-center gap-1 transition">
+            className="px-3 py-2 rounded text-sm border border-neutral-600 text-neutral-300 hover:border-white/30 hover:text-white flex items-center gap-1 transition">
             <Clapperboard size={14} /> 短剧导入
           </button>
           <input className="flex-1 border rounded px-3 py-2 text-sm" placeholder="一句话需求，如：霸总逆袭短剧"

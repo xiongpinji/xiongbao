@@ -7,6 +7,8 @@ import {
   type BillingSummary,
   type BillingRecord,
 } from "../api/enterprise";
+import { formatDateTime } from "../lib/time";
+import { formatCost } from "../lib/format";
 
 const PLAN_LABELS: Record<string, string> = {
   free: "免费版",
@@ -78,18 +80,25 @@ export default function BillingPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         {/* Header */}
         <header className="border-b border-white/[0.07] pb-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">
+          <div className="text-xs font-medium tracking-wide text-neutral-500">
             Billing & Usage
           </div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">计费与用量</h1>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">计费与用量</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">
             查看当前订阅档位、配额使用情况和账单明细。
           </p>
         </header>
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="shrink-0 rounded-md border border-red-500/30 px-3 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/10"
+            >
+              重试
+            </button>
           </div>
         )}
 
@@ -98,9 +107,9 @@ export default function BillingPage() {
             {/* Plan + Usage */}
             <section className="grid gap-4 md:grid-cols-2">
               {/* Current Plan */}
-              <div className="xagent-surface-subtle space-y-4 p-5">
+              <div className="space-y-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2">
-                  <CreditCard size={18} className="text-[#d6ad62]" />
+                  <CreditCard size={18} className="text-neutral-300" />
                   <span className="text-sm font-semibold text-white">当前订阅</span>
                 </div>
                 <div className="text-2xl font-bold text-white">
@@ -113,7 +122,7 @@ export default function BillingPage() {
                       onClick={() => handlePlanChange(p)}
                       className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                         summary.plan === p
-                          ? "bg-[#d6ad62] text-black"
+                          ? "bg-neutral-100 text-black"
                           : "bg-white/[0.06] text-neutral-400 hover:bg-white/[0.12]"
                       }`}
                     >
@@ -124,9 +133,9 @@ export default function BillingPage() {
               </div>
 
               {/* Usage Bars */}
-              <div className="xagent-surface-subtle space-y-4 p-5">
+              <div className="space-y-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2">
-                  <Gauge size={18} className="text-[#d6ad62]" />
+                  <Gauge size={18} className="text-neutral-300" />
                   <span className="text-sm font-semibold text-white">配额使用</span>
                 </div>
                 <UsageBar
@@ -156,8 +165,8 @@ export default function BillingPage() {
               ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} className="xagent-surface-subtle flex items-center gap-3 p-4">
-                    <Icon size={20} className="text-[#d6ad62]" />
+                  <div key={item.label} className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                    <Icon size={20} className="text-neutral-300" />
                     <div>
                       <div className="text-lg font-bold text-white">{item.value}</div>
                       <div className="text-xs text-neutral-500">{item.label}</div>
@@ -168,7 +177,7 @@ export default function BillingPage() {
             </section>
 
             {/* Records Table */}
-            <section className="xagent-surface-subtle p-5">
+            <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
               <h2 className="mb-4 text-sm font-semibold text-white">账单明细</h2>
               {records.length === 0 ? (
                 <p className="text-sm text-neutral-500">暂无账单记录</p>
@@ -188,13 +197,13 @@ export default function BillingPage() {
                       {records.slice(0, 50).map((r, i) => (
                         <tr key={i} className="border-b border-white/[0.04] text-neutral-300">
                           <td className="py-2 pr-4 whitespace-nowrap">
-                            {new Date(r.ts).toLocaleString("zh-CN")}
+                            {formatDateTime(r.ts)}
                           </td>
                           <td className="py-2 pr-4">{r.actor}</td>
                           <td className="py-2 pr-4">
                             <span className="rounded bg-white/[0.06] px-1.5 py-0.5">{r.action}</span>
                           </td>
-                          <td className="py-2 pr-4">{r.cost.toFixed(4)}</td>
+                          <td className="py-2 pr-4">{formatCost(r.cost)}</td>
                           <td className="py-2">{r.tokens.toLocaleString()}</td>
                         </tr>
                       ))}

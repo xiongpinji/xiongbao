@@ -138,22 +138,22 @@ export default function EditorPage() {
     <div className="flex h-full min-h-0 flex-col px-6 py-5">
       <header className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">
+          <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-neutral-500">
             <Film size={15} />
             Studio
           </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">剪辑工作台</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">剪辑工作台</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
             管理短剧时间线、素材轨道、渲染结果与剪映草稿导出。
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button onClick={handleCreate} disabled={loading} className="gold-button flex items-center gap-2">
+          <button onClick={handleCreate} disabled={loading} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
             <Plus size={15} /> 新建时间线
           </button>
           <button
             onClick={handleList}
-            className="xagent-chip"
+            className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
           >
             列出时间线
           </button>
@@ -161,7 +161,7 @@ export default function EditorPage() {
       </header>
 
       {msg && (
-        <div className="mt-4 rounded-2xl border border-[#8a6a32]/25 bg-[#171208] px-4 py-3 text-sm text-[#f2d99c]">
+        <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-neutral-300">
           {msg}
         </div>
       )}
@@ -174,7 +174,7 @@ export default function EditorPage() {
               onClick={async () => setTimeline(await getTimeline(item.id))}
               className={`rounded-full border px-3 py-1.5 text-xs transition ${
                 timeline?.id === item.id
-                  ? "border-[#d6ad62]/50 bg-[#171208] text-[#f2d99c]"
+                  ? "border-white/25 bg-white/[0.08] text-white"
                   : "border-white/[0.08] bg-white/[0.035] text-neutral-500 hover:text-white"
               }`}
             >
@@ -185,7 +185,7 @@ export default function EditorPage() {
       )}
 
       <div className="mt-5 grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <main className="xagent-surface xagent-scrollbar min-h-0 overflow-auto p-5">
+        <main className="min-h-0 overflow-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-5 xagent-scrollbar">
           {timeline ? (
             <div className="flex min-h-full flex-col">
               <div className="mb-5 flex items-center justify-between gap-4">
@@ -196,31 +196,31 @@ export default function EditorPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleRender} disabled={loading} className="gold-button flex items-center gap-2">
+                  <button onClick={handleRender} disabled={loading} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
                     <Play size={14} /> 渲染
                   </button>
                   <button
                     onClick={handleExportDraft}
                     disabled={loading}
-                    className="xagent-chip disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="inline-flex items-center gap-2"><Download size={14} />导出草稿</span>
                   </button>
                 </div>
               </div>
 
-              <div className="mb-5 flex min-h-[260px] items-center justify-center rounded-[22px] border border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(214,173,98,0.12),rgba(255,255,255,0.025)_42%,rgba(0,0,0,0.18))]">
+              <div className="mb-5 flex min-h-[260px] items-center justify-center rounded-lg border border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),rgba(255,255,255,0.02)_42%,rgba(0,0,0,0.18))]">
                 {renderUrl ? (
                   <video
                     src={renderUrl.startsWith("local://") ? undefined : renderUrl}
                     controls
-                    className="max-h-[420px] w-full rounded-2xl object-contain"
+                    className="max-h-[420px] w-full rounded-lg object-contain"
                   >
                     您的浏览器不支持视频播放。渲染文件：{renderUrl}
                   </video>
                 ) : (
                   <div className="text-center">
-                    <Film size={38} className="mx-auto text-[#d6ad62]" />
+                    <Film size={38} className="mx-auto text-neutral-500" />
                     <div className="mt-3 text-sm font-medium text-neutral-200">预览区</div>
                     <div className="mt-1 text-xs text-neutral-600">渲染后将在这里查看成片。</div>
                   </div>
@@ -236,7 +236,7 @@ export default function EditorPage() {
                       <div className="text-xs font-medium text-neutral-500">
                         {trackType === "video" ? "视频" : trackType === "audio" ? "音频" : "字幕"}
                       </div>
-                      <div className="relative h-11 overflow-hidden rounded-2xl border border-white/[0.06] bg-black/25">
+                      <div className="relative h-11 overflow-hidden rounded-lg border border-white/[0.06] bg-black/25">
                         {clips.map((clip) => {
                           const left = (clip.timeline_start / maxEnd) * 100;
                           const width = (clip.duration / maxEnd) * 100;
@@ -244,7 +244,7 @@ export default function EditorPage() {
                             <button
                               key={clip.id}
                               type="button"
-                              className={`absolute top-1 flex h-9 items-center overflow-hidden rounded-xl px-2 text-left text-xs font-medium text-white shadow-lg transition hover:ring-2 hover:ring-[#f1c96f] ${TRACK_COLORS[trackType]}`}
+                              className={`absolute top-1 flex h-9 items-center overflow-hidden rounded-md px-2 text-left text-xs font-medium text-white shadow-lg transition hover:ring-2 hover:ring-white/40 ${TRACK_COLORS[trackType]}`}
                               style={{ left: `${left}%`, width: `${Math.max(width, 4)}%` }}
                               title={`${clip.text || clip.source_url?.split("/").pop() || "片段"} - 点击删除`}
                               onClick={() => handleRemoveClip(clip.id)}
@@ -263,8 +263,8 @@ export default function EditorPage() {
               </div>
 
               {timeline.transitions.length > 0 && (
-                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Transitions</div>
+                <div className="mt-5 rounded-lg border border-white/[0.06] bg-black/20 p-4">
+                  <div className="mb-2 text-xs font-medium tracking-wide text-neutral-500">Transitions</div>
                   {timeline.transitions.map((transition) => (
                     <div key={transition.id} className="text-xs leading-6 text-neutral-500">
                       {transition.type} · {transition.duration}s → clip {transition.clip_id.slice(0, 6)}
@@ -276,7 +276,7 @@ export default function EditorPage() {
           ) : (
             <div className="flex h-full min-h-[520px] items-center justify-center text-center">
               <div>
-                <Film size={42} className="mx-auto text-[#d6ad62]" />
+                <Film size={42} className="mx-auto text-neutral-500" />
                 <div className="mt-4 text-lg font-semibold text-white">尚未打开时间线</div>
                 <div className="mt-2 text-sm text-neutral-500">新建或列出时间线后开始剪辑。</div>
               </div>
@@ -284,9 +284,9 @@ export default function EditorPage() {
           )}
         </main>
 
-        <aside className="xagent-surface xagent-scrollbar min-h-0 overflow-auto p-5">
+        <aside className="min-h-0 overflow-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-5 xagent-scrollbar">
           <div className="mb-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">Inspector</div>
+            <div className="text-xs font-medium tracking-wide text-neutral-500">Inspector</div>
             <h2 className="mt-2 text-xl font-semibold text-white">素材与片段</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500">为当前时间线添加视频、音频或字幕片段。</p>
           </div>
@@ -368,11 +368,11 @@ export default function EditorPage() {
                 </label>
               </div>
 
-              <button onClick={handleAddClip} disabled={loading} className="gold-button flex w-full items-center justify-center gap-2">
+              <button onClick={handleAddClip} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
                 <Scissors size={14} /> 添加片段
               </button>
 
-              <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
+              <div className="rounded-lg border border-white/[0.06] bg-black/20 p-4">
                 <div className="text-sm font-semibold text-white">当前时间线</div>
                 <div className="mt-3 space-y-2 text-sm text-neutral-500">
                   <div>片段：{timeline.clips.length}</div>
@@ -382,7 +382,7 @@ export default function EditorPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] p-4 text-sm leading-6 text-neutral-500">
+            <div className="rounded-lg border border-dashed border-white/[0.08] p-4 text-sm leading-6 text-neutral-500">
               先创建时间线，再添加素材片段。
             </div>
           )}

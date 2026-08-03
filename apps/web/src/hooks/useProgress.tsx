@@ -123,17 +123,17 @@ export function useProgress(): UseProgressReturn {
       >
         {/* 主进度条 */}
         <div
-          className="h-[2px] bg-[#d6ad62] transition-all duration-300 ease-out"
+          className="h-[2px] bg-neutral-200 transition-all duration-300 ease-out"
           style={{
             width: `${progress}%`,
             opacity: isActive || progress > 0 ? 1 : 0,
-            boxShadow: "0 0 8px rgba(214, 173, 98, 0.6)",
+            boxShadow: "0 0 8px rgba(255, 255, 255, 0.35)",
           }}
         />
         {/* 前端光点 */}
         {isActive && progress < 100 && (
           <div
-            className="absolute right-0 top-0 h-[2px] w-[80px] bg-gradient-to-r from-transparent to-[#d6ad62]"
+            className="absolute right-0 top-0 h-[2px] w-[80px] bg-gradient-to-r from-transparent to-neutral-200"
             style={{
               right: `${100 - progress}%`,
               opacity: 0.8,

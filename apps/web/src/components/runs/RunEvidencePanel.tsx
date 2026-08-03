@@ -12,13 +12,13 @@ function summarizePayload(payload: unknown): string {
 
 export default function RunEvidencePanel({ evidence }: { evidence: RuntimeEvidenceRecord[] }) {
   if (!evidence.length) {
-    return <div className="rounded-2xl border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">暂无 evidence。</div>;
+    return <div className="rounded-lg border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">暂无 evidence。</div>;
   }
 
   return (
     <div className="space-y-3">
       {evidence.map((item) => (
-        <article key={item.evidence_id} className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+        <article key={item.evidence_id} className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-medium text-white">{item.kind}</div>
@@ -29,7 +29,7 @@ export default function RunEvidencePanel({ evidence }: { evidence: RuntimeEviden
               <div>artifact {item.artifact_id || "—"}</div>
             </div>
           </div>
-          <pre className="mt-3 overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
+          <pre className="mt-3 overflow-auto rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
             {summarizePayload(item.payload)}
           </pre>
         </article>

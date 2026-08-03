@@ -17,22 +17,22 @@ export default function ReleasePane({
   const hasTasks = groups.some((group) => group.tasks.length > 0);
 
   return (
-    <section className="xagent-surface p-4">
-      <div className="text-sm font-medium text-white">{title}</div>
+    <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="text-[13px] font-medium text-neutral-200">{title}</div>
       <div className="mt-3 space-y-4">
         {hasTasks ? (
           groups.map((group) =>
             group.tasks.length > 0 ? (
               <div key={group.title} className="space-y-2">
-                <div className="text-xs uppercase tracking-[0.2em] text-neutral-500">{group.title}</div>
+                <div className="text-[11px] font-medium text-neutral-600">{group.title}</div>
                 <div className="space-y-2">
                   {group.tasks.map((task) => (
                     <article
                       key={task.task_id}
-                      className="rounded-2xl border border-white/[0.08] bg-black/20 p-3 text-sm text-neutral-200"
+                      className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:border-white/[0.12]"
                     >
-                      <div className="font-medium text-white">{task.title}</div>
-                      {task.detail ? <div className="mt-1 text-xs leading-5 text-neutral-400">{task.detail}</div> : null}
+                      <div className="text-[13px] font-medium text-neutral-200">{task.title}</div>
+                      {task.detail ? <div className="mt-1 text-[11px] leading-5 text-neutral-500">{task.detail}</div> : null}
                     </article>
                   ))}
                 </div>
@@ -40,14 +40,14 @@ export default function ReleasePane({
             ) : null,
           )
         ) : (
-          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/10 p-3 text-sm text-neutral-500">
+          <div className="rounded-lg border border-dashed border-white/[0.08] p-3 text-[12px] text-neutral-600">
             暂无发布项
           </div>
         )}
       </div>
       {nextAction ? (
-        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-black/20 p-3 text-xs text-neutral-300">
-          release next: {nextAction.kind}
+        <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 text-[11px] text-neutral-400">
+          下一步: {nextAction.kind}
           {nextAction.task_id ? ` · ${nextAction.task_id}` : ""}
           {nextAction.reason ? ` · ${nextAction.reason}` : ""}
         </div>

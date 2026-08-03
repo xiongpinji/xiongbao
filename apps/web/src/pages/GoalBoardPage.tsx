@@ -13,6 +13,9 @@ export default function GoalBoardPage() {
   const query = useQuery({
     queryKey: ["goal-board", goalId],
     queryFn: () => getGoalBoard(goalId),
+    // 看板任务状态会变化，每 10s 静默刷新
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
   });
 
   if (query.isLoading) {

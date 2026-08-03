@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import RunConsole from "../components/runs/RunConsole.tsx";
-import { getRunDetail } from "../api/runtime.ts";
+import { getRunDetail, isRunTerminal } from "../api/runtime.ts";
 import ConversationalCommand from "../components/chat/ConversationalCommand.tsx";
 
 export default function RunPage() {
@@ -10,6 +10,13 @@ export default function RunPage() {
     queryKey: ["run-detail", runId],
     queryFn: () => getRunDetail(runId ?? ""),
     enabled: Boolean(runId),
+    // 运行中每 2.5s 轮询，到达终态后停止
+    refetchInterval: (q) => {
+      const detail = q.state.data;
+      if (!detail) return 2500;
+      return isRunTerminal(detail) ? false : 2500;
+    },
+    refetchIntervalInBackground: false,
   });
 
   if (!runId) {
@@ -62,8 +69,8 @@ function RunFallback({
     <div className="xagent-scrollbar flex min-h-full items-center justify-center overflow-auto bg-transparent p-6 text-neutral-100">
       <div className="w-full max-w-3xl space-y-5">
         <header className="border-b border-white/[0.07] pb-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">{label}</div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">{title}</h1>
+          <div className="text-xs font-medium tracking-wide text-neutral-500">{label}</div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">{title}</h1>
           <p className="mt-3 text-sm leading-6 text-neutral-500">{description}</p>
         </header>
         <ConversationalCommand
@@ -85,14 +92,14 @@ function RunFallback({
         />
         <div className="flex flex-wrap gap-3">
           {onRetry && (
-            <button type="button" onClick={onRetry} className="gold-button">
+            <button type="button" onClick={onRetry} className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white">
               重试
             </button>
           )}
-          <Link to="/chat" className="gold-button">
+          <Link to="/chat" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white">
             返回对话
           </Link>
-          <Link to="/professional?mode=workflow" className="xagent-chip">
+          <Link to="/professional?mode=workflow" className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200">
             打开工作流
           </Link>
         </div>

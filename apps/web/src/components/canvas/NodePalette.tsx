@@ -14,7 +14,7 @@ export default function NodePalette({ onAddNode }: { onAddNode: (type: DramaNode
             key={type}
             type="button"
             onClick={() => onAddNode(type)}
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm text-neutral-300 transition hover:bg-neutral-800 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-neutral-300 transition hover:bg-neutral-800 hover:text-white"
           >
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: nodeTypeColors[type] }} />
             <span>{type}</span>

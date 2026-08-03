@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyRound, Plus, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import { api } from "../../api/client";
+import { useConfirm } from "../../hooks/useConfirm";
 
 interface TenantUser {
   user_id: string;
@@ -31,6 +32,8 @@ export default function TeamSettings() {
   const [keys, setKeys] = useState<ApiKeyView[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 创建用户表单
   const [showUserForm, setShowUserForm] = useState(false);
   const [uName, setUName] = useState("");
@@ -40,6 +43,13 @@ export default function TeamSettings() {
   const [showKeyForm, setShowKeyForm] = useState(false);
   const [kName, setKName] = useState("");
   const [kScopes, setKScopes] = useState("*");
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const showError = (msg: string) => {
+    setError(msg);
+    if (errTimer.current) clearTimeout(errTimer.current);
+    errTimer.current = setTimeout(() => setError(""), 6000);
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -53,29 +63,35 @@ export default function TeamSettings() {
       setKeys(keysR.data.keys);
       setError("");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      showError(e instanceof Error ? e.message : "加载失败");
     }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const createUser = async () => {
+    if (!uName.trim() || !uPass.trim()) return;
+    setSubmitting(true);
     try {
-      await api.post("/tenants/users", { username: uName, password: uPass, roles: [uRole] });
+      await api.post("/tenants/users", { username: uName.trim(), password: uPass, roles: [uRole] });
       setShowUserForm(false);
       setUName(""); setUPass(""); setURole("member");
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "创建失败");
+      showError(e instanceof Error ? e.message : "创建失败");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const deleteUser = async (userId: string) => {
+    const ok = await confirm({ title: "移除用户", message: "确定从团队中移除该用户？此操作不可撤销。", danger: true, confirmText: "移除" });
+    if (!ok) return;
     try {
       await api.delete(`/tenants/users/${userId}`);
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "删除失败");
+      showError(e instanceof Error ? e.message : "删除失败");
     }
   };
 
@@ -84,14 +100,16 @@ export default function TeamSettings() {
       await api.put(`/tenants/users/${userId}/roles`, { roles });
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "修改失败");
+      showError(e instanceof Error ? e.message : "修改失败");
     }
   };
 
   const createKey = async () => {
+    if (!kName.trim()) return;
+    setSubmitting(true);
     try {
       const resp = await api.post("/tenants/api-keys", {
-        name: kName,
+        name: kName.trim(),
         scopes: kScopes.split(",").map((s) => s.trim()),
       });
       setNewKey(resp.data.raw_key);
@@ -99,42 +117,48 @@ export default function TeamSettings() {
       setKName(""); setKScopes("*");
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "创建失败");
+      showError(e instanceof Error ? e.message : "创建失败");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const revokeKey = async (keyId: string) => {
+    const ok = await confirm({ title: "吊销密钥", message: "吊销后使用该密钥的集成将立即失效，确定继续？", danger: true, confirmText: "吊销" });
+    if (!ok) return;
     try {
       await api.post(`/tenants/api-keys/${keyId}/revoke`);
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "吊销失败");
+      showError(e instanceof Error ? e.message : "吊销失败");
     }
   };
 
   const deleteKey = async (keyId: string) => {
+    const ok = await confirm({ title: "删除密钥", message: "确定永久删除该 API Key？", danger: true, confirmText: "删除" });
+    if (!ok) return;
     try {
       await api.delete(`/tenants/api-keys/${keyId}`);
       refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "删除失败");
+      showError(e instanceof Error ? e.message : "删除失败");
     }
   };
 
   return (
     <div className="space-y-8">
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
 
       {/* 新 Key 一次性提示 */}
       {newKey && (
-        <div className="rounded-xl border border-[#d6ad62]/40 bg-[#d6ad62]/10 px-4 py-3">
+        <div className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-[#d6ad62]">API Key 已创建（仅显示一次）</span>
-            <button onClick={() => setNewKey(null)} className="text-neutral-400 hover:text-white"><XCircle size={16} /></button>
+            <span className="text-sm font-medium text-neutral-200">API Key 已创建（仅显示一次）</span>
+            <button onClick={() => setNewKey(null)} aria-label="关闭提示" className="text-neutral-400 hover:text-white"><XCircle size={16} /></button>
           </div>
           <code className="mt-2 block break-all rounded-lg bg-black/40 px-3 py-2 text-xs text-green-300">{newKey}</code>
         </div>
@@ -148,8 +172,8 @@ export default function TeamSettings() {
             { label: "用户数", value: String(info.user_count), icon: Users },
             { label: "API Key", value: String(info.api_key_count), icon: KeyRound },
           ].map((c) => (
-            <div key={c.label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-              <c.icon size={18} className="mb-2 text-[#d6ad62]" />
+            <div key={c.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+              <c.icon size={18} className="mb-2 text-neutral-500" />
               <div className="text-lg font-semibold text-white">{c.value}</div>
               <div className="text-xs text-neutral-500">{c.label}</div>
             </div>
@@ -163,21 +187,21 @@ export default function TeamSettings() {
           <h3 className="text-lg font-medium text-white">用户管理</h3>
           <button
             onClick={() => setShowUserForm(!showUserForm)}
-            className="flex items-center gap-1.5 rounded-xl bg-[#d6ad62]/15 px-3 py-1.5 text-sm text-[#d6ad62] transition hover:bg-[#d6ad62]/25"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
           >
             <UserPlus size={15} /> 添加用户
           </button>
         </div>
 
         {showUserForm && (
-          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
+          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div>
               <label className="mb-1 block text-xs text-neutral-400">用户名</label>
-              <input value={uName} onChange={(e) => setUName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-[#d6ad62]/50" placeholder="username" />
+              <input value={uName} onChange={(e) => setUName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="username" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">密码</label>
-              <input type="password" value={uPass} onChange={(e) => setUPass(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-[#d6ad62]/50" placeholder="••••••" />
+              <input type="password" value={uPass} onChange={(e) => setUPass(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="••••••" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">角色</label>
@@ -187,13 +211,13 @@ export default function TeamSettings() {
                 <option value="viewer">viewer</option>
               </select>
             </div>
-            <button onClick={createUser} className="rounded-lg bg-[#d6ad62] px-4 py-1.5 text-sm font-medium text-black transition hover:brightness-110">创建</button>
+            <button onClick={createUser} disabled={submitting || !uName.trim() || !uPass.trim()} className="rounded-lg bg-neutral-100 px-4 py-1.5 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">{submitting ? "创建中…" : "创建"}</button>
           </div>
         )}
 
         <div className="space-y-2">
           {users.map((u) => (
-            <div key={u.user_id} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+            <div key={u.user_id} className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
               <div>
                 <span className="text-sm font-medium text-white">{u.user_id}</span>
                 {u.email && <span className="ml-2 text-xs text-neutral-500">{u.email}</span>}
@@ -223,29 +247,29 @@ export default function TeamSettings() {
           <h3 className="text-lg font-medium text-white">API Key</h3>
           <button
             onClick={() => setShowKeyForm(!showKeyForm)}
-            className="flex items-center gap-1.5 rounded-xl bg-[#d6ad62]/15 px-3 py-1.5 text-sm text-[#d6ad62] transition hover:bg-[#d6ad62]/25"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
           >
             <Plus size={15} /> 创建 Key
           </button>
         </div>
 
         {showKeyForm && (
-          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
+          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div>
               <label className="mb-1 block text-xs text-neutral-400">名称</label>
-              <input value={kName} onChange={(e) => setKName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-[#d6ad62]/50" placeholder="my-integration" />
+              <input value={kName} onChange={(e) => setKName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="my-integration" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">Scopes（逗号分隔）</label>
-              <input value={kScopes} onChange={(e) => setKScopes(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-[#d6ad62]/50" placeholder="*" />
+              <input value={kScopes} onChange={(e) => setKScopes(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="*" />
             </div>
-            <button onClick={createKey} className="rounded-lg bg-[#d6ad62] px-4 py-1.5 text-sm font-medium text-black transition hover:brightness-110">创建</button>
+            <button onClick={createKey} disabled={submitting || !kName.trim()} className="rounded-lg bg-neutral-100 px-4 py-1.5 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">{submitting ? "创建中…" : "创建"}</button>
           </div>
         )}
 
         <div className="space-y-2">
           {keys.map((k) => (
-            <div key={k.key_id} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${k.revoked ? "border-red-500/20 bg-red-500/5 opacity-60" : "border-white/[0.07] bg-white/[0.02]"}`}>
+            <div key={k.key_id} className={`flex items-center justify-between rounded-lg border px-4 py-3 ${k.revoked ? "border-red-500/20 bg-red-500/5 opacity-60" : "border-white/[0.06] bg-white/[0.02]"}`}>
               <div>
                 <span className="text-sm font-medium text-white">{k.name}</span>
                 <span className="ml-2 text-xs text-neutral-500">{k.scopes.join(", ")}</span>
@@ -264,6 +288,7 @@ export default function TeamSettings() {
           {keys.length === 0 && <p className="text-sm text-neutral-500">暂无 API Key</p>}
         </div>
       </section>
+      <ConfirmDialog />
     </div>
   );
 }

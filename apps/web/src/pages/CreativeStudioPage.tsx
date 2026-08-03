@@ -47,6 +47,9 @@ import type {
   ExecutionStatus,
 } from "../components/canvas/canvasTypes";
 import { createDramaNodeData } from "../components/canvas/canvasTypes";
+import { useConfirm } from "../hooks/useConfirm";
+import { copyToClipboard } from "../lib/clipboard";
+import { openSafe, safeUrl } from "../lib/url";
 
 function starterNodes(): Node<DramaCanvasNodeData>[] {
   return ["需求分析", "梗概", "角色设定", "分镜"].map((type, index) => {
@@ -79,6 +82,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
   const isCanvasPage = variant === "canvas";
   const navigate = useNavigate();
   const { syncRunTask } = useShellActions();
+  const { confirm, ConfirmDialog } = useConfirm();
   const initial = useMemo(() => starterNodes(), []);
   const [brief, setBrief] = useState("");
   const [genre, setGenre] = useState("逆袭");
@@ -99,6 +103,13 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
   const layoutDebounce = useRef<number | null>(null);
   const taskPolls = useRef<Map<string, number>>(new Map());
   const importFileRef = useRef<HTMLInputElement | null>(null);
+
+  // 错误消息 6s 后自动消失
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => () => {
     taskPolls.current.forEach((id) => window.clearInterval(id));
@@ -294,9 +305,14 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
         triggerImportFilePicker();
         return;
       case "clear-canvas":
-        setNodes([]);
-        setEdges([]);
-        setSelectedNode(null);
+        void (async () => {
+          if (!nodes.length) return;
+          const ok = await confirm({ title: "清空画布", message: `确定删除画布上的 ${nodes.length} 个节点？此操作不可撤销。`, danger: true, confirmText: "清空" });
+          if (!ok) return;
+          setNodes([]);
+          setEdges([]);
+          setSelectedNode(null);
+        })();
         return;
       default:
         return;
@@ -575,6 +591,8 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
 
   async function handleNodeAction(nodeId: string, action: CanvasNodeAction) {
     if (action === "delete") {
+      const ok = await confirm({ title: "删除节点", message: "确定删除该节点及其关联连线？", danger: true, confirmText: "删除" });
+      if (!ok) return;
       setNodes((current) => current.filter((node) => node.id !== nodeId));
       setEdges((current) => current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
       setSelectedNode(null);
@@ -855,7 +873,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
     if (action === "copy-prompt") {
       const node = nodes.find((item) => item.id === nodeId);
       const prompt = node?.data.settings?.prompt ?? String(node?.data.content ?? "");
-      if (navigator.clipboard) await navigator.clipboard.writeText(prompt).catch(() => {});
+      await copyToClipboard(prompt);
       return;
     }
     if (action === "paste-prompt") {
@@ -891,10 +909,15 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
         setError("当前节点暂无可预览/下载的产物");
         return;
       }
-      if (action === "preview-artifact") window.open(artifact.url, "_blank");
+      if (action === "preview-artifact") openSafe(artifact.url);
       else {
+        const href = safeUrl(artifact.url);
+        if (!href) {
+          setError("产物地址不安全，无法下载");
+          return;
+        }
         const a = document.createElement("a");
-        a.href = artifact.url;
+        a.href = href;
         a.download = artifact.title || "artifact";
         a.click();
       }
@@ -1285,15 +1308,15 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
           onChange={(event) => void handleImportFile(event)}
         />
 
-        <header className="relative z-30 flex shrink-0 items-center gap-3 border-b border-white/[0.07] bg-black/72 px-4 py-3 backdrop-blur-2xl">
-          <Link to="/professional?mode=workflow" className="xagent-chip shrink-0 rounded-xl px-3 py-2 text-sm">
+        <header className="relative z-30 flex shrink-0 items-center gap-3 border-b border-white/[0.07] bg-black/72 px-4 py-3 backdrop-blur-lg">
+          <Link to="/professional?mode=workflow" className="shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200">
             返回专业模式
           </Link>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-white">短剧工厂 · 无限画布</div>
             <div className="truncate text-xs text-neutral-500">独立工作台，右键画布添加节点，拖拽节点编排生成链路。</div>
           </div>
-          <Link to="/editor" className="xagent-chip hidden shrink-0 rounded-xl px-3 py-2 text-sm md:inline-flex">
+          <Link to="/editor" className="hidden shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 md:inline-flex">
             高级剪辑
           </Link>
         </header>
@@ -1310,7 +1333,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
             onCanvasAction={handleCanvasAction}
           />
 
-          <div className="absolute left-4 top-4 z-30 w-[min(36rem,calc(100%-2rem))] rounded-3xl border border-white/[0.08] bg-neutral-950/88 p-3 shadow-2xl shadow-black/45 backdrop-blur-2xl">
+          <div className="absolute left-4 top-4 z-30 w-[min(36rem,calc(100%-2rem))] rounded-lg border border-white/[0.08] bg-neutral-950/88 p-3 shadow-xl shadow-black/25 backdrop-blur-lg">
             <textarea
               className="field min-h-20 w-full resize-none"
               value={brief}
@@ -1332,14 +1355,14 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               </select>
               <button
                 type="button"
-                className="xagent-chip rounded-xl px-3 py-2 text-sm"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
                 onClick={() => setPaletteOpen((value) => !value)}
               >
                 {paletteOpen ? "隐藏节点库" : "节点库"}
               </button>
               <button
                 type="button"
-                className="xagent-chip rounded-xl px-3 py-2 text-sm"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
                 onClick={runCanvasWorkflow}
                 disabled={runLoading || !canvasId}
               >
@@ -1347,7 +1370,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               </button>
               <button
                 type="button"
-                className="xagent-chip rounded-xl px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={runProduce}
                 disabled={producing || !brief.trim()}
               >
@@ -1355,7 +1378,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               </button>
               <button
                 type="button"
-                className="gold-button rounded-xl px-4 py-2 text-sm"
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
                 onClick={() => void createCanvasFromBrief()}
                 disabled={loading || !brief.trim()}
               >
@@ -1365,13 +1388,13 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
           </div>
 
           {paletteOpen && (
-            <div className="xagent-scrollbar absolute bottom-4 left-4 top-72 z-20 w-[min(18rem,calc(100%-2rem))] overflow-auto rounded-3xl border border-white/[0.08] shadow-2xl shadow-black/40 backdrop-blur-2xl">
+            <div className="xagent-scrollbar absolute bottom-4 left-4 top-72 z-20 w-[min(18rem,calc(100%-2rem))] overflow-auto rounded-lg border border-white/[0.08] shadow-xl shadow-black/25 backdrop-blur-lg">
               <NodePalette onAddNode={addLocalNode} />
             </div>
           )}
 
           {selectedNode && (
-            <div className="absolute bottom-4 right-4 top-4 z-20 hidden w-96 overflow-hidden rounded-3xl border border-white/[0.08] shadow-2xl shadow-black/50 backdrop-blur-2xl xl:block">
+            <div className="absolute bottom-4 right-4 top-4 z-20 hidden w-96 overflow-hidden rounded-lg border border-white/[0.08] shadow-xl shadow-black/30 backdrop-blur-lg xl:block">
               <NodeInspector
                 node={selectedNode}
                 onClose={() => setSelectedNode(null)}
@@ -1383,19 +1406,19 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
           )}
 
           {production?.timeline_id && (
-            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-30 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
+            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-30 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
               打开高级剪辑
             </a>
           )}
 
           {canvasId && (
-            <div className="absolute bottom-4 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full border border-white/[0.08] bg-neutral-950/82 px-4 py-2 font-mono text-xs text-neutral-500 shadow-2xl shadow-black/40 backdrop-blur-2xl">
+            <div className="absolute bottom-4 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full border border-white/[0.08] bg-neutral-950/82 px-4 py-2 font-mono text-xs text-neutral-500 shadow-xl shadow-black/25 backdrop-blur-lg">
               canvas {canvasId}{workflow ? ` · workflow ${workflow.run_id}` : ""}
             </div>
           )}
 
           {workflow && (
-            <section className="absolute bottom-4 left-4 right-4 z-30 max-h-72 overflow-hidden rounded-3xl border border-white/[0.08] bg-neutral-950/90 shadow-2xl shadow-black/50 backdrop-blur-2xl lg:left-72 xl:right-[25rem]">
+            <section className="absolute bottom-4 left-4 right-4 z-30 max-h-72 overflow-hidden rounded-lg border border-white/[0.08] bg-neutral-950/90 shadow-xl shadow-black/30 backdrop-blur-lg lg:left-72 xl:right-[25rem]">
               <button
                 type="button"
                 onClick={() => setTimelineOpen((value) => !value)}
@@ -1411,6 +1434,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               )}
             </section>
           )}
+          <ConfirmDialog />
         </section>
       </div>
     );
@@ -1443,7 +1467,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               return `已把「${value}」写入短剧 brief。你可以继续补充风格，也可以直接生成画布。`;
             }}
           />
-          <div className="xagent-surface-subtle p-4">
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="text-sm font-semibold text-white">执行参数</div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <select className="field w-full" value={genre} onChange={(e) => setGenre(e.target.value)} aria-label="短剧类型">
@@ -1459,15 +1483,15 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
               </select>
             </div>
             <div className="mt-4 grid gap-2">
-              <button className="gold-button justify-center" onClick={() => void createCanvasFromBrief()} disabled={loading || !brief.trim()}>{loading ? "生成中" : "生成画布"}</button>
+              <button className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40 justify-center" onClick={() => void createCanvasFromBrief()} disabled={loading || !brief.trim()}>{loading ? "生成中" : "生成画布"}</button>
               <button
-                className="xagent-chip justify-center"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 justify-center"
                 onClick={runCanvasWorkflow}
                 disabled={runLoading || !canvasId}
               >
                 {runLoading ? "运行中" : "运行画布"}
               </button>
-              <button className="xagent-chip justify-center disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "产出中" : "全链路产出"}</button>
+              <button className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 justify-center disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "产出中" : "全链路产出"}</button>
             </div>
           </div>
         </div>
@@ -1481,7 +1505,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
           <button
             type="button"
             onClick={() => setPaletteOpen((value) => !value)}
-            className="xagent-chip absolute left-4 top-4 z-20 rounded-xl px-3 py-2 text-xs"
+            className="absolute left-4 top-4 z-20 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
           >
             {paletteOpen ? "折叠节点库" : "展开节点库"}
           </button>
@@ -1494,7 +1518,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
             onCanvasAction={handleCanvasAction}
           />
           {production?.timeline_id && (
-            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-20 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
+            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-20 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
               打开高级剪辑
             </a>
           )}
@@ -1527,6 +1551,7 @@ export default function CreativeStudioPage({ variant = "embedded" }: CreativeStu
           )}
         </section>
       )}
+      <ConfirmDialog />
     </div>
   );
 }

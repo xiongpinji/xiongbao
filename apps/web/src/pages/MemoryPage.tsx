@@ -8,10 +8,10 @@ export default function MemoryPage() {
   return (
     <div className="xagent-scrollbar h-full overflow-auto bg-transparent px-4 py-6 text-neutral-100 md:px-8">
       <div className="mx-auto flex min-h-full max-w-5xl flex-col justify-center gap-6">
-        <header className="border-b border-white/[0.07] pb-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">Memory workspace</div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">长期记忆与知识库</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">
+        <header className="border-b border-white/[0.06] pb-5">
+          <div className="text-[11px] font-medium text-neutral-600">Memory workspace</div>
+          <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-neutral-100">长期记忆与知识库</h1>
+          <p className="mt-2 max-w-2xl text-[12px] leading-6 text-neutral-500">
             直接描述要查找、沉淀或隔离的知识，系统会把意图路由到索引库、项目知识库和智能体专属记忆。
           </p>
         </header>
@@ -46,16 +46,16 @@ export default function MemoryPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="xagent-surface-subtle p-4">
-                <Icon size={18} className="text-[#d6ad62]" />
-                <div className="mt-3 text-sm font-semibold text-white">{item.title}</div>
-                <p className="mt-2 text-xs leading-5 text-neutral-500">{item.text}</p>
+              <div key={item.title} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.12]">
+                <Icon size={16} className="text-neutral-400" />
+                <div className="mt-3 text-[13px] font-medium text-neutral-200">{item.title}</div>
+                <p className="mt-1.5 text-[11px] leading-5 text-neutral-500">{item.text}</p>
               </div>
             );
           })}
         </section>
 
-        <Link to="/settings?section=index&tab=knowledge" className="gold-button w-fit">
+        <Link to="/settings?section=index&tab=knowledge" className="inline-flex h-9 w-fit items-center rounded-lg bg-neutral-100 px-4 text-[13px] font-medium text-black transition hover:bg-white">
           进入索引库设置
         </Link>
       </div>

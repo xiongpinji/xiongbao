@@ -23,7 +23,7 @@ export interface WfNodeData {
 // ─── 节点元信息 ───
 export const WF_NODE_META: Record<WfNodeKind, { label: string; color: string; icon: string }> = {
   start: { label: "开始", color: "#10b981", icon: "CircleDot" },
-  agent: { label: "Agent 步骤", color: "#d6ad62", icon: "Bot" },
+  agent: { label: "Agent 步骤", color: "#60a5fa", icon: "Bot" },
   approval: { label: "审批门", color: "#f59e0b", icon: "ShieldCheck" },
   condition: { label: "条件分支", color: "#8b5cf6", icon: "GitBranch" },
   end: { label: "结束", color: "#ef4444", icon: "Flag" },
@@ -42,7 +42,7 @@ function NodeShell({ data, kind, children }: { data: WfNodeData; kind: WfNodeKin
   const meta = WF_NODE_META[kind];
   return (
     <div
-      className="min-w-[160px] rounded-2xl border px-4 py-3 shadow-lg transition-shadow hover:shadow-xl"
+      className="min-w-[160px] rounded-lg border px-4 py-3 shadow-lg transition-shadow hover:shadow-xl"
       style={{ background: "#18181b", borderColor: `${meta.color}55` }}
     >
       {kind !== "start" && <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2" style={{ background: meta.color }} />}

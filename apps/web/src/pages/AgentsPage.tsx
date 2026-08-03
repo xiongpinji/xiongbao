@@ -2,159 +2,183 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, CheckCircle2, LockKeyhole, Plus, Search, Sparkles } from "lucide-react";
 import { listRoles, type AgentRole } from "../api";
-import ConversationalCommand from "../components/chat/ConversationalCommand";
 
 export default function AgentsPage() {
-  const { data, isLoading, error } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center text-sm text-neutral-500">正在加载智能体角色...</div>;
+    return <div className="flex h-full items-center justify-center text-[13px] text-neutral-600">正在加载智能体角色...</div>;
+  }
+
+  // 完全加载失败：显示明确的错误态与重试入口，避免退化为误导性的“请选择或创建”空状态
+  if (error && !data) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        <div className="text-[13px] text-neutral-500">后端角色接口暂不可用，当前无法加载智能体角色。</div>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white"
+        >
+          重试
+        </button>
+      </div>
+    );
   }
 
   const roles: AgentRole[] = data ?? [];
+  const filtered = filter.trim()
+    ? roles.filter((r) => r.name.toLowerCase().includes(filter.trim().toLowerCase()))
+    : roles;
   const selected = roles.find((role) => role.name === selectedName) ?? roles[0] ?? null;
   const capabilities = selected?.capabilities ?? [];
 
   return (
-    <div className="flex h-full min-h-0 bg-transparent">
-      <aside className="xagent-scrollbar w-80 shrink-0 overflow-auto border-r border-white/[0.07] bg-black/36 p-4 backdrop-blur-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">Agents</div>
-            <h1 className="mt-2 text-2xl font-semibold text-white">智能体</h1>
-          </div>
-          <button className="xagent-chip flex h-9 w-9 items-center justify-center rounded-xl p-0">
-            <Plus size={17} />
+    <div className="flex h-full min-h-0">
+      {/* 左侧列表 */}
+      <aside className="xagent-scrollbar w-72 shrink-0 overflow-auto border-r border-white/[0.05] bg-[#0f0f0f] p-3">
+        <div className="mb-3 flex items-center justify-between px-1">
+          <h1 className="text-[15px] font-semibold text-neutral-100">智能体</h1>
+          <button
+            type="button"
+            title="新建角色"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition hover:bg-white/[0.06] hover:text-neutral-200"
+          >
+            <Plus size={15} />
           </button>
         </div>
 
-        <div className="xagent-composer-frame mb-4 flex items-center gap-2 px-3 py-2 text-neutral-500">
-          <Search size={15} />
-          <span className="text-sm">筛选角色、能力或任务方向</span>
+        {/* 筛选 */}
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1.5">
+          <Search size={13} className="shrink-0 text-neutral-600" />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="筛选角色..."
+            className="flex-1 bg-transparent text-[12px] text-neutral-200 outline-none placeholder:text-neutral-600"
+            spellCheck={false}
+          />
         </div>
 
-        <div className="space-y-1">
-          {roles.map((role) => {
+        <div className="space-y-px">
+          {filtered.map((role) => {
             const active = selected?.name === role.name;
             return (
               <button
                 key={role.name}
                 type="button"
                 onClick={() => setSelectedName(role.name)}
-                className={`w-full rounded-2xl px-3 py-3 text-left transition ${
-                  active
-                    ? "xagent-nav-active"
-                    : "xagent-nav-item"
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  active ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${active ? "bg-[#2b1e0d] text-[#f1c96f]" : "bg-white/[0.045] text-neutral-500"}`}>
-                    <Bot size={17} />
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                    active ? "bg-white/[0.08] text-neutral-100" : "bg-white/[0.04] text-neutral-500"
+                  }`}
+                >
+                  <Bot size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`truncate text-[13px] ${active ? "font-medium text-neutral-100" : "text-neutral-300"}`}>
+                    {role.name}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">{role.name}</div>
-                    <div className="mt-1 truncate text-xs text-neutral-600">{role.capabilities.length} 项能力</div>
-                  </div>
+                  <div className="mt-0.5 truncate text-[11px] text-neutral-600">{role.capabilities.length} 项能力</div>
                 </div>
               </button>
             );
           })}
-          {roles.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] p-4 text-sm leading-6 text-neutral-500">
-              当前没有可用智能体角色。
+          {filtered.length === 0 && (
+            <div className="rounded-lg border border-dashed border-white/[0.06] p-4 text-center text-[12px] text-neutral-600">
+              没有匹配的角色
             </div>
           )}
         </div>
       </aside>
 
+      {/* 右侧详情 */}
       <main className="xagent-scrollbar min-w-0 flex-1 overflow-auto p-6 md:p-8">
         {selected ? (
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-3xl">
             {error && (
-              <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-200">
+              <div className="mb-5 rounded-lg border border-amber-400/15 bg-amber-400/5 px-3.5 py-2.5 text-[12px] text-amber-200">
                 后端角色接口暂不可用，当前无法加载智能体角色。
               </div>
             )}
-            <div className="mb-8 border-b border-white/[0.07] pb-6">
+
+            {/* 头部 */}
+            <div className="mb-8 border-b border-white/[0.06] pb-6">
               <div className="flex items-start justify-between gap-6">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">Agent profile</div>
-                  <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white">{selected.name}</h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-500">{selected.description}</p>
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-semibold tracking-tight text-neutral-100">{selected.name}</h2>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-neutral-500">{selected.description}</p>
                 </div>
-                <button className="gold-button">
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg bg-white px-3.5 py-2 text-[13px] font-medium text-black transition hover:bg-neutral-200 active:scale-[0.98]"
+                >
                   设为当前角色
                 </button>
               </div>
             </div>
 
-            <ConversationalCommand
-              className="mb-5"
-              title="角色调度"
-              context={selected.name}
-              placeholder={`告诉「${selected.name}」要完成什么任务...`}
-              initialAssistantMessage={`当前已选择「${selected.name}」。你可以直接描述任务，我会按这个角色的能力拆成执行意图。`}
-              suggestions={[
-                "把短剧任务拆成导演工作流",
-                "为当前项目生成执行计划",
-                "检查这个角色的记忆边界",
-              ]}
-              onSubmit={(value) => ({
-                content: `「${selected.name}」已接收任务：${value}。建议先使用 ${capabilities.slice(0, 2).join(" / ") || "基础能力"} 建立可验证步骤。`,
-              })}
-            />
-
-            <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
-              <section className="xagent-surface-subtle p-5">
-                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
-                  <Sparkles size={17} className="text-[#d6ad62]" />
+            <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
+              {/* 能力清单 */}
+              <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
+                <div className="mb-4 flex items-center gap-2 text-[13px] font-medium text-neutral-200">
+                  <Sparkles size={15} className="text-neutral-500" />
                   能力清单
                 </div>
-                <div className="divide-y divide-white/[0.06]">
+                <div className="divide-y divide-white/[0.05]">
                   {capabilities.map((capability) => (
-                    <div key={capability} className="flex items-center justify-between gap-4 py-3">
-                      <div>
-                        <div className="text-sm font-medium text-neutral-100">{capability}</div>
-                        <div className="mt-1 text-xs text-neutral-600">可在对话、工作流和专业模式中调用</div>
+                    <div key={capability} className="flex items-center justify-between gap-4 py-2.5">
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] text-neutral-200">{capability}</div>
+                        <div className="mt-0.5 text-[11px] text-neutral-600">可在对话、工作流和专业模式中调用</div>
                       </div>
-                      <CheckCircle2 size={17} className="shrink-0 text-emerald-400" />
+                      <CheckCircle2 size={15} className="shrink-0 text-emerald-500/70" />
                     </div>
                   ))}
                   {capabilities.length === 0 && (
-                    <div className="py-8 text-center text-sm text-neutral-500">暂无能力标签。</div>
+                    <div className="py-8 text-center text-[12px] text-neutral-600">暂无能力标签</div>
                   )}
                 </div>
               </section>
 
+              {/* 侧栏信息 */}
               <section className="space-y-4">
-                <div className="xagent-surface-subtle p-5">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                    <LockKeyhole size={16} className="text-[#d6ad62]" />
+                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="mb-2.5 flex items-center gap-2 text-[13px] font-medium text-neutral-200">
+                    <LockKeyhole size={14} className="text-neutral-500" />
                     记忆隔离
                   </div>
-                  <p className="text-sm leading-6 text-neutral-500">
+                  <p className="text-[12px] leading-5 text-neutral-500">
                     当前角色使用专属上下文槽位，避免跨智能体污染长期记忆。
                   </p>
-                  <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-300">
+                  <div className="mt-3 rounded-md border border-emerald-400/15 bg-emerald-400/5 px-2.5 py-1.5 text-[11px] text-emerald-300">
                     已启用隔离策略
                   </div>
                 </div>
-                <div className="xagent-surface-subtle p-5">
-                  <div className="text-sm font-semibold text-white">接入位置</div>
-                  <div className="mt-3 space-y-2 text-sm text-neutral-500">
+                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="text-[13px] font-medium text-neutral-200">接入位置</div>
+                  <div className="mt-2.5 space-y-1.5 text-[12px] text-neutral-500">
                     <div>对话：可直接作为执行角色</div>
                     <div>工作流：可绑定到节点</div>
-                    <div>短剧工厂：可作为导演/编剧/剪辑角色</div>
+                    <div>短剧工厂：可作为导演 / 编剧 / 剪辑角色</div>
                   </div>
                 </div>
               </section>
             </div>
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-neutral-500">请选择或创建一个智能体。</div>
+          <div className="flex h-full items-center justify-center text-[13px] text-neutral-600">请选择或创建一个智能体</div>
         )}
       </main>
     </div>
   );
 }
+
+

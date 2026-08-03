@@ -9,6 +9,7 @@ import {
   type MediaModel,
 } from "../../api";
 import { SectionTitle } from "./GeneralSettings";
+import { useUnsavedChangesWarning } from "../../hooks/useUnsavedChangesWarning";
 
 /* ---------- 通用小组件 ---------- */
 
@@ -31,7 +32,7 @@ function Field({
 }
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30";
+  "w-full rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none transition focus:border-white/[0.16]";
 
 function KeyStatus({ has, label }: { has: boolean; label: string }) {
   return (
@@ -57,6 +58,8 @@ export default function ModelSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  // 未保存变更标记：用户编辑表单后置 true，加载/保存成功后置 false
+  const [dirty, setDirty] = useState(false);
 
   // 媒体模型
   const [mediaModels, setMediaModels] = useState<MediaModel[]>([]);
@@ -75,6 +78,7 @@ export default function ModelSettings() {
         ollama_model: llmCfg.ollama_model,
         request_timeout_seconds: llmCfg.request_timeout_seconds,
       });
+      setDirty(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "加载配置失败");
     }
@@ -83,6 +87,9 @@ export default function ModelSettings() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // 有未保存配置时，拦截浏览器刷新/关闭，避免编辑内容静默丢失
+  useUnsavedChangesWarning(dirty);
 
   const handleSave = async () => {
     setSaving(true);
@@ -113,8 +120,10 @@ export default function ModelSettings() {
     }
   };
 
-  const set = (key: keyof LLMConfigUpdate, value: unknown) =>
+  const set = (key: keyof LLMConfigUpdate, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setDirty(true);
+  };
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -136,7 +145,7 @@ export default function ModelSettings() {
             <Loader2 size={14} className="animate-spin" /> 加载中…
           </div>
         ) : (
-          <div className="space-y-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
+          <div className="space-y-5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
             {/* 基本模型 */}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="默认模型" hint="如 gpt-4o-mini / claude-sonnet-4-20250514 / deepseek-chat">
@@ -257,14 +266,14 @@ export default function ModelSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 保存配置
               </button>
               <button
                 onClick={load}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] px-3 py-2 text-sm text-neutral-400 transition hover:bg-white/[0.04]"
               >
                 <RefreshCw size={13} /> 刷新
               </button>
@@ -284,7 +293,7 @@ export default function ModelSettings() {
         />
         <div className="grid gap-3">
           {mediaModels.map((m) => (
-            <div key={m.model_id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+            <div key={m.model_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium text-white">{m.name}</div>
                 <div className="font-mono text-xs text-neutral-500">{m.kind}</div>
@@ -296,7 +305,7 @@ export default function ModelSettings() {
             </div>
           ))}
           {!mediaModels.length && (
-            <div className="rounded-2xl border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">
+            <div className="rounded-lg border border-dashed border-white/[0.08] p-4 text-sm text-neutral-500">
               尚未配置媒体模型。
             </div>
           )}

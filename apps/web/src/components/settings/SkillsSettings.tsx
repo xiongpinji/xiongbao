@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createSkill, deleteSkill, listSkills, retireSkill, restoreSkill,
   retireLowPerformers, skillStats,
   type SkillView, type SkillStats,
 } from "../../api";
 import { SectionTitle } from "./GeneralSettings";
+import { useConfirm } from "../../hooks/useConfirm";
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: "手动",
@@ -20,6 +21,14 @@ export default function SkillsSettings() {
   const [showForm, setShowForm] = useState(false);
   const [showRetired, setShowRetired] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", trigger_pattern: "", tags: "" });
+  const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const showError = (msg: string) => {
+    setError(msg);
+    if (errTimer.current) clearTimeout(errTimer.current);
+    errTimer.current = setTimeout(() => setError(null), 6000);
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -28,7 +37,7 @@ export default function SkillsSettings() {
       setStats(st);
       setError(null);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [showRetired]);
 
@@ -48,19 +57,21 @@ export default function SkillsSettings() {
       setShowForm(false);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    const ok = await confirm({ title: "删除技能", message: "确定永久删除该技能？此操作不可撤销。", danger: true, confirmText: "删除" });
+    if (!ok) return;
     setLoading(true);
     try {
       await deleteSkill(id);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -72,7 +83,7 @@ export default function SkillsSettings() {
       await retireSkill(id);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -84,19 +95,21 @@ export default function SkillsSettings() {
       await restoreSkill(id);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   };
 
   const handleRetireLow = async () => {
+    const ok = await confirm({ title: "淘汰低效技能", message: "将自动淘汰成功率低于阈值的技能，确定继续？", danger: true, confirmText: "淘汰" });
+    if (!ok) return;
     setLoading(true);
     try {
       await retireLowPerformers();
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -111,14 +124,14 @@ export default function SkillsSettings() {
             type="button"
             onClick={handleRetireLow}
             disabled={loading}
-            className="rounded-xl bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-400 transition hover:bg-orange-500/20 disabled:opacity-40"
+            className="rounded-lg bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-400 transition hover:bg-orange-500/20 disabled:opacity-40"
           >
             淘汰低效
           </button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className="rounded-xl bg-[#d6ad62]/15 px-4 py-2 text-sm font-medium text-[#d6ad62] transition hover:bg-[#d6ad62]/25"
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
           >
             {showForm ? "取消" : "+ 新建技能"}
           </button>
@@ -132,9 +145,9 @@ export default function SkillsSettings() {
             { label: "活跃技能", value: stats.active, color: "text-emerald-400" },
             { label: "自动提炼", value: stats.auto_extracted, color: "text-blue-400" },
             { label: "已淘汰", value: stats.retired, color: "text-neutral-500" },
-            { label: "平均成功率", value: `${Math.round(stats.avg_success_rate * 100)}%`, color: "text-[#d6ad62]" },
+            { label: "平均成功率", value: `${Math.round(stats.avg_success_rate * 100)}%`, color: "text-neutral-200" },
           ].map((item) => (
-            <div key={item.label} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 text-center">
+            <div key={item.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-center">
               <div className={`text-lg font-semibold ${item.color}`}>{item.value}</div>
               <div className="text-[11px] text-neutral-500">{item.label}</div>
             </div>
@@ -142,11 +155,11 @@ export default function SkillsSettings() {
         </div>
       )}
 
-      {error && <div className="rounded-xl bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
+      {error && <div className="rounded-lg bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
 
       {/* 创建表单 */}
       {showForm && (
-        <div className="space-y-3 rounded-2xl border border-neutral-700 bg-neutral-900/80 p-5">
+        <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
               <span className="text-xs text-neutral-400">技能名称 *</span>
@@ -154,7 +167,7 @@ export default function SkillsSettings() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="代码审查"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
               />
             </label>
             <label className="space-y-1">
@@ -163,7 +176,7 @@ export default function SkillsSettings() {
                 value={form.trigger_pattern}
                 onChange={(e) => setForm({ ...form, trigger_pattern: e.target.value })}
                 placeholder="review,审查,代码质量"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
               />
             </label>
           </div>
@@ -174,7 +187,7 @@ export default function SkillsSettings() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="当用户要求代码审查时，按以下流程执行..."
               rows={3}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62] resize-none"
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25 resize-none"
             />
           </label>
           <label className="space-y-1 block">
@@ -183,14 +196,14 @@ export default function SkillsSettings() {
               value={form.tags}
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
               placeholder="开发,质量"
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
             />
           </label>
           <button
             type="button"
             onClick={handleCreate}
             disabled={loading || !form.name.trim()}
-            className="rounded-xl bg-[#d6ad62] px-5 py-2 text-sm font-medium text-black transition hover:bg-[#e0be7a] disabled:opacity-40"
+            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
           >
             {loading ? "创建中..." : "创建技能"}
           </button>
@@ -212,17 +225,17 @@ export default function SkillsSettings() {
       </div>
       <div className="grid gap-3">
         {skills.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-neutral-700 p-6 text-center text-sm text-neutral-500">
+          <div className="rounded-lg border border-dashed border-white/[0.08] p-6 text-center text-sm text-neutral-500">
             暂无技能。Agent 执行复杂任务后会自动提炼，也可手动添加。
           </div>
         )}
         {skills.map((skill) => (
           <div
             key={skill.skill_id}
-            className={`rounded-2xl border p-4 transition ${
+            className={`rounded-lg border p-4 transition ${
               skill.retired
-                ? "border-neutral-800/50 bg-neutral-900/40 opacity-60"
-                : "border-neutral-800 bg-neutral-900"
+                ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                : "border-white/[0.06] bg-white/[0.02]"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -242,7 +255,7 @@ export default function SkillsSettings() {
                   <span className="rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">已淘汰</span>
                 )}
                 {skill.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-[#d6ad62]/10 px-2 py-0.5 text-[11px] text-[#d6ad62]">{tag}</span>
+                  <span key={tag} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-neutral-400">{tag}</span>
                 ))}
               </div>
               <div className="flex items-center gap-1.5">
@@ -290,6 +303,7 @@ export default function SkillsSettings() {
           </div>
         ))}
       </div>
+      <ConfirmDialog />
     </div>
   );
 }

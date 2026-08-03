@@ -30,12 +30,12 @@ type ThemeName = "dark" | "light" | "gold" | string;
 // 预设主题
 const THEMES: Record<string, ThemeVars> = {
   dark: {
-    bg: "#1a1a2e",
-    bgSecondary: "#16213e",
-    text: "#e8e8e8",
-    textSecondary: "#a0a0b0",
-    accent: "#d6ad62",
-    border: "#2a2a4a",
+    bg: "#0a0a0a",
+    bgSecondary: "#141414",
+    text: "#e5e5e5",
+    textSecondary: "#a3a3a3",
+    accent: "#f5f5f5",
+    border: "#262626",
     shadow: "rgba(0,0,0,0.4)",
   },
   light: {
@@ -43,18 +43,18 @@ const THEMES: Record<string, ThemeVars> = {
     bgSecondary: "#f5f5f7",
     text: "#1a1a2e",
     textSecondary: "#6b7280",
-    accent: "#b8860b",
+    accent: "#171717",
     border: "#e5e7eb",
     shadow: "rgba(0,0,0,0.1)",
   },
   gold: {
-    bg: "#1c1917",
-    bgSecondary: "#292524",
-    text: "#fef3c7",
-    textSecondary: "#d6ad62",
-    accent: "#f59e0b",
-    border: "#44403c",
-    shadow: "rgba(245,158,11,0.15)",
+    bg: "#0a0a0a",
+    bgSecondary: "#171717",
+    text: "#f5f5f5",
+    textSecondary: "#a3a3a3",
+    accent: "#fafafa",
+    border: "#262626",
+    shadow: "rgba(0,0,0,0.3)",
   },
 };
 

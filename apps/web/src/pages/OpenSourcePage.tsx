@@ -9,8 +9,8 @@ export default function OpenSourcePage() {
     <div className="xagent-scrollbar h-full overflow-auto bg-transparent px-4 py-6 text-neutral-100 md:px-8">
       <div className="mx-auto flex min-h-full max-w-5xl flex-col justify-center gap-6">
         <header className="border-b border-white/[0.07] pb-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">Open source scout</div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">开源补齐方案发现</h1>
+          <div className="text-xs font-medium tracking-wide text-neutral-500">Open source scout</div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">开源补齐方案发现</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">
             用对话提出能力缺口，系统按功能方向查找候选仓库、比较许可证和成熟度，再转入项目任务。
           </p>
@@ -46,8 +46,8 @@ export default function OpenSourcePage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="xagent-surface-subtle p-4">
-                <Icon size={18} className="text-[#d6ad62]" />
+              <div key={item.title} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                <Icon size={18} className="text-neutral-300" />
                 <div className="mt-3 text-sm font-semibold text-white">{item.title}</div>
                 <p className="mt-2 text-xs leading-5 text-neutral-500">{item.text}</p>
               </div>
@@ -55,7 +55,7 @@ export default function OpenSourcePage() {
           })}
         </section>
 
-        <Link to="/settings?section=index&tab=open-source" className="gold-button w-fit">
+        <Link to="/settings?section=index&tab=open-source" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white w-fit">
           进入开源发现设置
         </Link>
       </div>

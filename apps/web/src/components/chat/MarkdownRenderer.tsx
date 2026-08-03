@@ -4,30 +4,31 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import { Check, Copy, ChevronDown, ChevronRight } from "lucide-react";
+import { copyToClipboard } from "../../lib/clipboard";
 
 /* ---------- 代码块（带语言标签 + 复制按钮）---------- */
 
 function CodeBlock({ className, children }: { className?: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
-  const lang = className?.replace("language-", "") || "code";
+  const lang = className?.replace("language-", "") || "";
   const text = String(children).replace(/\n$/, "");
 
   async function copy() {
-    await navigator.clipboard.writeText(text);
+    await copyToClipboard(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   return (
-    <div className="group relative my-3 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d1117]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-1.5">
-        <span className="text-[11px] font-medium text-neutral-500">{lang}</span>
+    <div className="group relative my-3 overflow-hidden rounded-lg bg-[#111111]">
+      <div className="flex items-center justify-between px-4 pt-2.5 pb-0">
+        <span className="text-[11px] text-neutral-600">{lang}</span>
         <button
           type="button"
-          onClick={copy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 opacity-0 transition hover:text-neutral-200 group-hover:opacity-100"
+          onClick={() => void copy()}
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-600 opacity-0 transition hover:text-neutral-300 group-hover:opacity-100"
         >
-          {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+          {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
           {copied ? "已复制" : "复制"}
         </button>
       </div>
@@ -44,12 +45,12 @@ function ImageRenderer({ src, alt }: { src?: string; alt?: string }) {
   const [loaded, setLoaded] = useState(false);
   if (!src) return null;
   return (
-    <div className="my-3 overflow-hidden rounded-xl border border-white/[0.08]">
-      {!loaded && <div className="h-48 animate-pulse bg-white/[0.03]" />}
+    <div className="my-3 overflow-hidden rounded-lg">
+      {!loaded && <div className="h-40 animate-pulse bg-white/[0.03]" />}
       <img
         src={src}
-        alt={alt || "生成图片"}
-        className={`max-w-full transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
+        alt={alt || ""}
+        className={`max-w-full rounded-lg transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setLoaded(true)}
         loading="lazy"
       />
@@ -71,7 +72,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { co
             if (isInline) {
               return (
                 <code
-                  className="rounded bg-white/[0.07] px-1.5 py-0.5 text-[13px] text-amber-300/90"
+                  className="rounded bg-white/[0.07] px-1.5 py-0.5 text-[13px] text-sky-300/80"
                   {...props}
                 >
                   {children}
@@ -100,20 +101,20 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { co
           },
           table({ children }) {
             return (
-              <div className="my-3 overflow-x-auto rounded-lg border border-white/[0.08]">
+              <div className="my-3 overflow-x-auto">
                 <table className="w-full text-left text-[13px]">{children}</table>
               </div>
             );
           },
           th({ children }) {
             return (
-              <th className="border-b border-white/[0.08] bg-white/[0.03] px-3 py-2 font-medium text-neutral-400">
+              <th className="border-b border-white/[0.06] px-3 py-2 font-medium text-neutral-500">
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td className="border-b border-white/[0.04] px-3 py-2">{children}</td>;
+            return <td className="border-b border-white/[0.04] px-3 py-2 text-neutral-400">{children}</td>;
           },
           ul({ children }) {
             return <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>;
@@ -123,7 +124,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { co
           },
           blockquote({ children }) {
             return (
-              <blockquote className="my-3 border-l-2 border-white/[0.12] pl-4 text-neutral-500 italic">
+              <blockquote className="my-3 border-l-2 border-neutral-700 pl-4 text-neutral-500">
                 {children}
               </blockquote>
             );
@@ -165,22 +166,18 @@ export function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="my-2 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.015]">
+    <div className="my-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-medium text-neutral-400 transition hover:bg-white/[0.02] hover:text-neutral-300"
+        className="flex items-center gap-1.5 text-[12px] text-neutral-600 transition hover:text-neutral-400"
       >
-        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         {icon}
-        <span className="flex-1">{title}</span>
-        {badge && (
-          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-neutral-500">
-            {badge}
-          </span>
-        )}
+        <span>{title}</span>
+        {badge && <span className="text-[11px] text-neutral-700">{badge}</span>}
       </button>
-      {open && <div className="border-t border-white/[0.04] px-4 py-3">{children}</div>}
+      {open && <div className="mt-1.5 border-l border-white/[0.06] pl-3">{children}</div>}
     </div>
   );
 }

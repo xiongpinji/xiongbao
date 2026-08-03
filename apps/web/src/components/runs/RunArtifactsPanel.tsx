@@ -16,7 +16,7 @@ function isOpenableArtifactUri(uri: string): boolean {
 
 export default function RunArtifactsPanel({ artifacts }: { artifacts: RuntimeArtifactRecord[] }) {
   if (!artifacts.length) {
-    return <div className="rounded-2xl border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">暂无产物。</div>;
+    return <div className="rounded-lg border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">暂无产物。</div>;
   }
 
   return (
@@ -25,7 +25,7 @@ export default function RunArtifactsPanel({ artifacts }: { artifacts: RuntimeArt
         const preview = stringifyPreview(artifact.preview_summary);
         const canOpen = isOpenableArtifactUri(artifact.uri);
         return (
-          <article key={artifact.artifact_id} className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+          <article key={artifact.artifact_id} className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-sm font-medium text-white">{artifact.name}</div>
@@ -36,13 +36,13 @@ export default function RunArtifactsPanel({ artifacts }: { artifacts: RuntimeArt
                   href={artifact.uri}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-xl border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:border-neutral-500 hover:text-white"
+                  className="inline-flex items-center gap-1 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:border-neutral-500 hover:text-white"
                 >
                   <ExternalLink size={12} />
                   打开
                 </a>
               ) : (
-                <span className="inline-flex items-center rounded-xl border border-dashed border-neutral-700 px-3 py-1.5 text-xs text-neutral-500">
+                <span className="inline-flex items-center rounded-lg border border-dashed border-neutral-700 px-3 py-1.5 text-xs text-neutral-500">
                   {artifact.uri.trim().startsWith("placeholder://") ? "占位产物" : "暂无链接"}
                 </span>
               )}

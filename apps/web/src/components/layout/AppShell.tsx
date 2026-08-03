@@ -8,13 +8,16 @@ import TopBar from "./TopBar";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [contextOpen, setContextOpen] = useState(false);
+  // 窄屏自适应：平板/移动端默认折叠侧栏，小屏默认关闭右侧面板（避免主内容区被挤压到不可用）
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.innerWidth < 768);
+  const [contextOpen, setContextOpen] = useState(() => window.innerWidth >= 1280);
   const location = useLocation();
   const { syncRoute } = useShellActions();
 
   useEffect(() => {
-    syncRoute(resolveShellRoute(location.pathname, location.search));
+    const snapshot = resolveShellRoute(location.pathname, location.search);
+    syncRoute(snapshot);
+    document.title = snapshot.title ? `${snapshot.title} · X-Agent` : "X-Agent";
   }, [location.pathname, location.search, syncRoute]);
 
   return (

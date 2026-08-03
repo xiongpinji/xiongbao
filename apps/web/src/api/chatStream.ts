@@ -33,7 +33,13 @@ function parseSseEvent(block: string): SseEvent | null {
     .map((line) => line.slice(5).trim());
   if (!dataLines.length) return null;
 
-  const data = JSON.parse(dataLines.join("\n"));
+  let data: unknown;
+  try {
+    data = JSON.parse(dataLines.join("\n"));
+  } catch {
+    // 畸形 JSON（服务端截断/编码错误）——跳过该事件，不崩流
+    return null;
+  }
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
@@ -105,6 +111,9 @@ function applySseEvent(
   return null;
 }
 
+/** 流空闲超时（ms）：超过此时间未收到任何数据则判定连接已死 */
+const STREAM_IDLE_TIMEOUT = 120_000;
+
 export async function readAgentRunStream(
   resp: Response,
   handlers: AgentRunStreamHandlers = {},
@@ -120,24 +129,43 @@ export async function readAgentRunStream(
   let gotDone = false;
   let runId = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  /** 带超时的 read：服务器静默挂起时不会永远等待 */
+  function readWithTimeout(): Promise<ReadableStreamReadResult<Uint8Array>> {
+    return Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("STREAM_IDLE_TIMEOUT")), STREAM_IDLE_TIMEOUT),
+      ),
+    ]);
+  }
 
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split("\n\n");
-    buffer = events.pop() || "";
+  try {
+    while (true) {
+      const { done, value } = await readWithTimeout();
+      if (done) break;
 
-    for (const eventBlock of events) {
-      const event = parseSseEvent(eventBlock);
-      if (!event) continue;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
 
-      const rid = applySseEvent(event, handlers);
-      if (rid) {
-        gotDone = true;
-        runId = rid;
+      for (const eventBlock of events) {
+        const event = parseSseEvent(eventBlock);
+        if (!event) continue;
+
+        const rid = applySseEvent(event, handlers);
+        if (rid) {
+          gotDone = true;
+          runId = rid;
+        }
       }
     }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "STREAM_IDLE_TIMEOUT") {
+      handlers.onError?.("服务器响应超时，连接可能已中断");
+      reader.cancel().catch(() => {});
+      return runId || "timeout";
+    }
+    throw err;
   }
 
   buffer += decoder.decode();

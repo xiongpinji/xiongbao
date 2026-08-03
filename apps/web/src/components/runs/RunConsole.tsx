@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RunDetail } from "../../api/runtime.ts";
+import { isRunTerminal, type RunDetail } from "../../api/runtime.ts";
 import CollapsiblePanel from "../layout/CollapsiblePanel.tsx";
 import RunValidationPanel from "./RunValidationPanel.tsx";
 import RunArtifactsPanel from "./RunArtifactsPanel.tsx";
@@ -76,14 +76,25 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
 
   return (
     <div className="space-y-6">
-      <section className="xagent-surface p-6">
+      <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.24em] text-neutral-500">Run Console</div>
+            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-neutral-500">
+              Run Console
+              {!isRunTerminal(detail) && (
+                <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-normal text-emerald-300">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  实时刷新中
+                </span>
+              )}
+            </div>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">{detail.run_id}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-400">{summaryText(detail)}</p>
           </div>
-          <div className="xagent-surface-subtle grid gap-3 p-4 text-sm text-neutral-300 sm:grid-cols-2 lg:min-w-[320px]">
+          <div className="grid gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-sm text-neutral-300 sm:grid-cols-2 lg:min-w-[320px]">
             <div>
               <div className="text-xs text-neutral-500">租户</div>
               <div className="mt-1 font-mono text-[11px] text-neutral-300">{detail.tenant_id || "—"}</div>
@@ -144,26 +155,26 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
         </div>
 
         <aside className="space-y-4">
-          <section className="xagent-surface-subtle p-4">
+          <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="text-sm font-medium text-white">Delivery</div>
-            <pre className="mt-3 overflow-auto rounded-2xl border border-white/[0.07] bg-black/35 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
+            <pre className="mt-3 overflow-auto rounded-lg border border-white/[0.07] bg-black/35 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
               {prettyJson(detail.delivery)}
             </pre>
           </section>
 
-          <section className="xagent-surface-subtle p-4">
+          <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="text-sm font-medium text-white">Validation</div>
-            <pre className="mt-3 overflow-auto rounded-2xl border border-white/[0.07] bg-black/35 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
+            <pre className="mt-3 overflow-auto rounded-lg border border-white/[0.07] bg-black/35 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
               {prettyJson(detail.validation)}
             </pre>
           </section>
 
-          <section className="xagent-surface-subtle p-4">
+          <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="text-sm font-medium text-white">Related Tasks</div>
             {detail.related_tasks.length ? (
               <div className="mt-3 space-y-2">
                 {detail.related_tasks.map((task) => (
-                  <div key={`${task.task_id}-${task.run_id}`} className="rounded-2xl border border-white/[0.07] bg-black/30 p-3">
+                  <div key={`${task.task_id}-${task.run_id}`} className="rounded-lg border border-white/[0.07] bg-black/30 p-3">
                     <div className="text-sm text-white">{task.kind}</div>
                     <div className="mt-1 text-xs text-neutral-500">{task.status} · run {task.run_id}</div>
                     <div className="mt-2 font-mono text-[11px] text-neutral-600">task {task.task_id}</div>

@@ -28,18 +28,18 @@ function readRisks(value: unknown): string[] {
 function renderRiskGroup(title: string, risks: string[]) {
   if (!risks.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 p-3 text-sm text-neutral-500">
+      <div className="rounded-lg border border-dashed border-neutral-700 bg-neutral-900 p-3 text-sm text-neutral-500">
         {title}：无
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
-      <div className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">{title}</div>
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+      <div className="text-xs font-medium tracking-wide text-neutral-400">{title}</div>
       <ul className="mt-2 space-y-2 text-sm leading-6 text-neutral-300">
         {risks.map((risk, index) => (
-          <li key={`${title}-${risk}-${index}`} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-3 py-2">
+          <li key={`${title}-${risk}-${index}`} className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2">
             {risk}
           </li>
         ))}
@@ -55,20 +55,20 @@ function renderPointerCard(
 ) {
   if (!pointer) {
     return (
-      <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950 p-4 text-sm text-neutral-500">
+      <div className="rounded-lg border border-dashed border-neutral-700 bg-neutral-950 p-4 text-sm text-neutral-500">
         {emptyText}
       </div>
     );
   }
 
   return (
-    <article className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-white">{title}</div>
           <div className="mt-1 text-xs text-neutral-500">{pointerLabel(pointer, title)}</div>
         </div>
-        <div className="rounded-full border border-neutral-700 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-neutral-400">
+        <div className="rounded-full border border-neutral-700 px-2 py-1 text-[11px] tracking-wide text-neutral-400">
           {readString(pointer.mode)}
         </div>
       </div>
@@ -122,13 +122,13 @@ function renderFailureCard(failure: Record<string, unknown> | null | undefined) 
   const details = failure.details;
 
   return (
-    <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+    <section className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-red-200">失败态摘要</div>
           <div className="mt-2 text-sm leading-6 text-red-100">{reason}</div>
         </div>
-        <div className="rounded-full border border-red-400/20 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-red-200/80">
+        <div className="rounded-full border border-red-400/20 px-2.5 py-1 text-[11px] tracking-wide text-red-200/80">
           {state}
         </div>
       </div>
@@ -151,7 +151,7 @@ function renderFailureCard(failure: Record<string, unknown> | null | undefined) 
         </div>
       </div>
       {details ? (
-        <pre className="mt-3 overflow-auto rounded-2xl border border-red-400/15 bg-black/20 p-3 text-xs leading-5 text-red-100/80 whitespace-pre-wrap">
+        <pre className="mt-3 overflow-auto rounded-lg border border-red-400/15 bg-black/20 p-3 text-xs leading-5 text-red-100/80 whitespace-pre-wrap">
           {prettyJson(details)}
         </pre>
       ) : null}
@@ -167,7 +167,7 @@ function RunValidationPanelContent({ detail }: { detail: RunDetail }) {
   const failure = readFailure(detail.delivery.failure);
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-white">验证 · 风险 · 恢复</div>
@@ -175,7 +175,7 @@ function RunValidationPanelContent({ detail }: { detail: RunDetail }) {
             分开展示验证结果、风险来源以及 replay / resume 恢复指针。
           </p>
         </div>
-        <div className="rounded-full border border-neutral-700 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-neutral-400">
+        <div className="rounded-full border border-neutral-700 px-2.5 py-1 text-[11px] tracking-wide text-neutral-400">
           {detail.workflow?.status ?? detail.task?.status ?? "unknown"}
         </div>
       </div>
@@ -183,14 +183,14 @@ function RunValidationPanelContent({ detail }: { detail: RunDetail }) {
       {failure ? <div className="mt-4">{renderFailureCard(failure)}</div> : null}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+        <section className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <div className="text-sm font-medium text-white">Validation</div>
-          <pre className="mt-3 overflow-auto rounded-2xl border border-neutral-800 bg-neutral-900 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
+          <pre className="mt-3 overflow-auto rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-xs leading-5 text-neutral-300 whitespace-pre-wrap">
             {prettyJson(detail.validation)}
           </pre>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+        <section className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <div className="text-sm font-medium text-white">Risk</div>
           <div className="mt-3 space-y-3">
             {renderRiskGroup("Delivery Risks", deliveryRisks)}

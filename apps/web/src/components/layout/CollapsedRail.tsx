@@ -16,8 +16,8 @@ export default function CollapsedRail() {
   );
 
   return (
-    <aside className="flex h-screen w-14 shrink-0 flex-col items-center border-r border-white/[0.07] bg-black/48 py-3 text-neutral-300 backdrop-blur-2xl">
-      <div className="xagent-brand-logo mb-5 h-9 w-9 rounded-xl">
+    <aside className="flex h-screen w-14 shrink-0 flex-col items-center border-r border-white/[0.07] bg-black/48 py-3 text-neutral-300 backdrop-blur-lg">
+      <div className="xagent-brand-logo mb-5 h-9 w-9 rounded-lg">
         <img src="/assets/xiongbao-logo.png" alt="熊宝智能体系统" />
       </div>
 
@@ -26,9 +26,9 @@ export default function CollapsedRail() {
           to={chatItem?.preferredRoute ?? "/chat"}
           title="新建会话"
           onClick={resetChatSession}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
             chatItem?.active
-              ? "bg-[#21180c] text-[#f2d99c] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+              ? "bg-white/[0.08] text-white"
               : "text-neutral-500 hover:bg-white/[0.055] hover:text-white"
           }`}
         >
@@ -39,7 +39,7 @@ export default function CollapsedRail() {
           type="button"
           title="搜索"
           onClick={() => setCommandPaletteOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-neutral-500 transition-colors hover:bg-white/[0.055] hover:text-white"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-white/[0.055] hover:text-white"
         >
           <Search size={18} strokeWidth={1.8} />
           <span className="sr-only">搜索</span>
@@ -79,9 +79,9 @@ function RailLink({
       to={to}
       title={label}
       className={() =>
-        `flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+        `flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
           active
-            ? "bg-[#21180c] text-[#f2d99c] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            ? "bg-white/[0.08] text-white"
             : "text-neutral-500 hover:bg-white/[0.055] hover:text-white"
         }`
       }

@@ -273,3 +273,17 @@ export async function getRunDetail(runId: string): Promise<RunDetail> {
   const response = await api.get<RunDetailDTO>(`/runs/${encodeURIComponent(runId)}`);
   return normalizeRunDetail(response.data);
 }
+
+const TERMINAL_STATUSES = new Set([
+  "completed", "complete", "done", "finished", "delivered",
+  "failed", "error", "errored", "cancelled", "canceled", "succeeded", "success",
+]);
+
+export function runStatusOf(detail: RunDetail): string {
+  const raw = detail.task?.status || detail.workflow?.status || detail.delivery.status || "unknown";
+  return String(raw).toLowerCase();
+}
+
+export function isRunTerminal(detail: RunDetail): boolean {
+  return TERMINAL_STATUSES.has(runStatusOf(detail));
+}

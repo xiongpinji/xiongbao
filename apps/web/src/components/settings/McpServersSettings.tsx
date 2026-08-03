@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addMcpServer,
   callMcpTool,
@@ -10,6 +10,7 @@ import {
   type MCPToolView,
 } from "../../api";
 import { SectionTitle } from "./GeneralSettings";
+import { useConfirm } from "../../hooks/useConfirm";
 
 export default function McpServersSettings() {
   const [servers, setServers] = useState<MCPServerView[]>([]);
@@ -18,6 +19,14 @@ export default function McpServersSettings() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const showError = (msg: string) => {
+    setError(msg);
+    if (errTimer.current) clearTimeout(errTimer.current);
+    errTimer.current = setTimeout(() => setError(null), 6000);
+  };
 
   // 表单状态
   const [form, setForm] = useState({ name: "", transport: "stdio", command: "", args: "", url: "" });
@@ -29,7 +38,7 @@ export default function McpServersSettings() {
       setTools(tls);
       setError(null);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -51,19 +60,21 @@ export default function McpServersSettings() {
       setShowForm(false);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemove = async (name: string) => {
+    const ok = await confirm({ title: "删除 MCP 服务器", message: `确定删除「${name}」？删除后其工具将不可用。`, danger: true, confirmText: "删除" });
+    if (!ok) return;
     setLoading(true);
     try {
       await removeMcpServer(name);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -75,7 +86,7 @@ export default function McpServersSettings() {
       await connectMcpServer(name);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -98,17 +109,17 @@ export default function McpServersSettings() {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="rounded-xl bg-[#d6ad62]/15 px-4 py-2 text-sm font-medium text-[#d6ad62] transition hover:bg-[#d6ad62]/25"
+          className="rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
         >
           {showForm ? "取消" : "+ 添加服务器"}
         </button>
       </div>
 
-      {error && <div className="rounded-xl bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
+      {error && <div className="rounded-lg bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
 
       {/* 添加表单 */}
       {showForm && (
-        <div className="space-y-3 rounded-2xl border border-neutral-700 bg-neutral-900/80 p-5">
+        <div className="space-y-3 rounded-lg border border-neutral-700 bg-neutral-900/80 p-5">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
               <span className="text-xs text-neutral-400">名称 *</span>
@@ -116,7 +127,7 @@ export default function McpServersSettings() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="my-server"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
               />
             </label>
             <label className="space-y-1">
@@ -124,7 +135,7 @@ export default function McpServersSettings() {
               <select
                 value={form.transport}
                 onChange={(e) => setForm({ ...form, transport: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
               >
                 <option value="stdio">stdio</option>
                 <option value="sse">sse</option>
@@ -140,7 +151,7 @@ export default function McpServersSettings() {
                   value={form.command}
                   onChange={(e) => setForm({ ...form, command: e.target.value })}
                   placeholder="python / node / npx"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
                 />
               </label>
               <label className="space-y-1">
@@ -149,7 +160,7 @@ export default function McpServersSettings() {
                   value={form.args}
                   onChange={(e) => setForm({ ...form, args: e.target.value })}
                   placeholder="-m mcp_server --port 3001"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
                 />
               </label>
             </div>
@@ -160,7 +171,7 @@ export default function McpServersSettings() {
                 value={form.url}
                 onChange={(e) => setForm({ ...form, url: e.target.value })}
                 placeholder="http://localhost:3001/sse"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-[#d6ad62]"
+                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
               />
             </label>
           )}
@@ -168,7 +179,7 @@ export default function McpServersSettings() {
             type="button"
             onClick={handleAdd}
             disabled={loading || !form.name.trim()}
-            className="rounded-xl bg-[#d6ad62] px-5 py-2 text-sm font-medium text-black transition hover:bg-[#e0be7a] disabled:opacity-40"
+            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
           >
             {loading ? "连接中..." : "添加并连接"}
           </button>
@@ -178,12 +189,12 @@ export default function McpServersSettings() {
       {/* 服务器列表 */}
       <div className="grid gap-3">
         {servers.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-neutral-700 p-6 text-center text-sm text-neutral-500">
+          <div className="rounded-lg border border-dashed border-neutral-700 p-6 text-center text-sm text-neutral-500">
             暂无 MCP 服务器。点击「添加服务器」接入任意 MCP Server。
           </div>
         )}
         {servers.map((srv) => (
-          <div key={srv.name} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+          <div key={srv.name} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className={`h-2.5 w-2.5 rounded-full ${srv.connected ? "bg-emerald-400" : "bg-neutral-600"}`} />
@@ -223,7 +234,7 @@ export default function McpServersSettings() {
           <div className="text-sm font-medium text-neutral-300">已发现工具 ({tools.length})</div>
           <div className="grid gap-2">
             {tools.map((tool) => (
-              <div key={`${tool.server}/${tool.name}`} className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3">
+              <div key={`${tool.server}/${tool.name}`} className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-3">
                 <div>
                   <span className="text-sm text-white">{tool.name}</span>
                   <span className="ml-2 text-[11px] text-neutral-500">[{tool.server}]</span>
@@ -244,11 +255,12 @@ export default function McpServersSettings() {
 
       {/* 测试结果 */}
       {testResult && (
-        <div className="rounded-xl border border-neutral-700 bg-neutral-900 p-4">
+        <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-4">
           <div className="mb-2 text-xs font-medium text-neutral-400">调用结果</div>
           <pre className="max-h-48 overflow-auto text-xs text-emerald-300">{testResult}</pre>
         </div>
       )}
+      <ConfirmDialog />
     </div>
   );
 }

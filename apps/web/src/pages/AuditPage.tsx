@@ -7,6 +7,7 @@ import {
   type AuditListResponse,
   type AuditVerifyResponse,
 } from "../api/enterprise";
+import { formatDateTime } from "../lib/time";
 
 export default function AuditPage() {
   const [data, setData] = useState<AuditListResponse | null>(null);
@@ -66,25 +67,32 @@ export default function AuditPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         {/* Header */}
         <header className="border-b border-white/[0.07] pb-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6ad62]">
+          <div className="text-xs font-medium tracking-wide text-neutral-500">
             Audit Trail
           </div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">审计日志</h1>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">审计日志</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-500">
             查看系统操作审计链，校验完整性，导出合规报告。
           </p>
         </header>
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="shrink-0 rounded-md border border-red-500/30 px-3 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/10"
+            >
+              重试
+            </button>
           </div>
         )}
 
         {/* Integrity Status */}
         <section className="grid gap-4 md:grid-cols-3">
           <div
-            className={`xagent-surface-subtle flex items-center gap-3 p-4 ${
+            className={`flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 ${
               integrityValid ? "border-emerald-500/20" : "border-red-500/20"
             }`}
           >
@@ -105,19 +113,19 @@ export default function AuditPage() {
             </div>
           </div>
 
-          <div className="xagent-surface-subtle flex items-center gap-3 p-4">
-            <RefreshCw size={20} className="text-[#d6ad62]" />
+          <div className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <RefreshCw size={20} className="text-neutral-300" />
             <div>
               <div className="text-lg font-bold text-white">{data?.events.length ?? 0}</div>
               <div className="text-xs text-neutral-500">审计事件总数</div>
             </div>
           </div>
 
-          <div className="xagent-surface-subtle flex items-center justify-center p-4">
+          <div className="flex items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="gold-button flex items-center gap-2 text-sm"
+              className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white"
             >
               <Download size={16} />
               {exporting ? "导出中..." : "导出审计 JSON"}
@@ -126,7 +134,7 @@ export default function AuditPage() {
         </section>
 
         {/* Events Table */}
-        <section className="xagent-surface-subtle p-5">
+        <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
           <h2 className="mb-4 text-sm font-semibold text-white">审计事件</h2>
           {!data || data.events.length === 0 ? (
             <p className="text-sm text-neutral-500">暂无审计事件</p>
@@ -148,7 +156,7 @@ export default function AuditPage() {
                     <tr key={evt.seq} className="border-b border-white/[0.04] text-neutral-300">
                       <td className="py-2 pr-3 text-neutral-500">{evt.seq}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">
-                        {new Date(evt.ts).toLocaleString("zh-CN")}
+                        {formatDateTime(evt.ts)}
                       </td>
                       <td className="py-2 pr-3">{evt.actor}</td>
                       <td className="py-2 pr-3">

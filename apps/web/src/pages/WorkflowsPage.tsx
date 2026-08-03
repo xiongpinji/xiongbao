@@ -10,22 +10,25 @@ import ReactFlow, {
   type Connection, type Node, type Edge, MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Play, Save, Trash2 } from "lucide-react";
+import { Play, Save, Trash2, Loader2, Check } from "lucide-react";
 import { runWorkflow, type WorkflowView } from "../api";
 import { api } from "../api/client";
 import { useShellActions } from "../shell/useShellStore";
 import { wfNodeTypes, kindToRfType, WF_NODE_META, type WfNodeData, type WfNodeKind } from "../components/workflow/WorkflowNodes";
 import WorkflowPalette from "../components/workflow/WorkflowPalette";
 import WorkflowInspector from "../components/workflow/WorkflowInspector";
+import { useConfirm } from "../hooks/useConfirm";
+import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
 
 let _nodeSeq = 10;
 function nextId() { return `wf_${++_nodeSeq}`; }
 
 const edgeStyle = { stroke: "#52525b", strokeWidth: 1.5 };
-const defaultEdge = { markerEnd: { type: MarkerType.ArrowClosed, color: "#d6ad62" }, animated: true, style: edgeStyle };
+const defaultEdge = { markerEnd: { type: MarkerType.ArrowClosed, color: "#a1a1aa" }, animated: true, style: edgeStyle };
 
 // ─── 模板 ───
-const TEMPLATES: Record<string, { nodes: { kind: WfNodeKind; label: string }[] }> = {
+interface TplDef { nodes: { kind: WfNodeKind; label: string; pos?: [number, number] }[]; edges: [number, number][] }
+const TEMPLATES: Record<string, TplDef> = {
   sequential: {
     nodes: [
       { kind: "start", label: "开始" },
@@ -33,6 +36,7 @@ const TEMPLATES: Record<string, { nodes: { kind: WfNodeKind; label: string }[] }
       { kind: "agent", label: "步骤2" },
       { kind: "end", label: "结束" },
     ],
+    edges: [[0, 1], [1, 2], [2, 3]],
   },
   approval: {
     nodes: [
@@ -41,15 +45,17 @@ const TEMPLATES: Record<string, { nodes: { kind: WfNodeKind; label: string }[] }
       { kind: "approval", label: "审批" },
       { kind: "end", label: "结束" },
     ],
+    edges: [[0, 1], [1, 2], [2, 3]],
   },
   parallel: {
     nodes: [
-      { kind: "start", label: "开始" },
-      { kind: "agent", label: "分支A" },
-      { kind: "agent", label: "分支B" },
-      { kind: "condition", label: "汇总判断" },
-      { kind: "end", label: "结束" },
+      { kind: "start", label: "开始", pos: [60, 180] },
+      { kind: "agent", label: "分支A", pos: [300, 80] },
+      { kind: "agent", label: "分支B", pos: [300, 280] },
+      { kind: "condition", label: "汇总判断", pos: [540, 180] },
+      { kind: "end", label: "结束", pos: [760, 180] },
     ],
+    edges: [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4]],
   },
 };
 
@@ -59,13 +65,13 @@ function buildTemplateNodes(name: string): { nodes: Node<WfNodeData>[]; edges: E
   const nodes: Node<WfNodeData>[] = tpl.nodes.map((n, i) => ({
     id: nextId(),
     type: kindToRfType[n.kind],
-    position: { x: 80 + i * 220, y: 120 + (i % 2 === 0 ? 0 : 60) },
+    position: n.pos ? { x: n.pos[0], y: n.pos[1] } : { x: 80 + i * 220, y: 150 },
     data: { kind: n.kind, label: n.label },
   }));
-  const edges: Edge[] = nodes.slice(1).map((n, i) => ({
-    id: `e_${nodes[i].id}_${n.id}`,
-    source: nodes[i].id,
-    target: n.id,
+  const edges: Edge[] = tpl.edges.map(([si, ti]) => ({
+    id: `e_${nodes[si].id}_${nodes[ti].id}`,
+    source: nodes[si].id,
+    target: nodes[ti].id,
     ...defaultEdge,
   }));
   return { nodes, edges };
@@ -88,18 +94,24 @@ export default function WorkflowsPage() {
 function WorkflowsInner() {
   const navigate = useNavigate();
   const { syncRunTask } = useShellActions();
+  const { confirm, ConfirmDialog } = useConfirm();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
   const [name, setName] = useState("新工作流");
   const [nodes, setNodes, onNodesChange] = useNodesState<WfNodeData>(INIT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // 画布已搭建内容（超出初始的开始/结束两节点，或存在连线）时，刷新/关闭会丢失未保存的工作流，给出拦截提示
+  useUnsavedChangesWarning(nodes.length > 2 || edges.length > 0);
   const [selectedNode, setSelectedNode] = useState<{ id: string; data: WfNodeData } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastView, setLastView] = useState<WorkflowView | null>(null);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [savedTemplates, setSavedTemplates] = useState<{ template_id: string; name: string; version: number }[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges(eds => addEdge({ ...conn, ...defaultEdge }, eds));
@@ -144,14 +156,22 @@ function WorkflowsInner() {
     setSelectedNode(prev => prev && prev.id === id ? { ...prev, data: { ...prev.data, ...patch } } : prev);
   }, [setNodes]);
 
-  const deleteNode = useCallback((id: string) => {
+  const deleteNode = useCallback(async (id: string) => {
+    const ok = await confirm({ title: "删除节点", message: "确定删除该节点及其关联连线？", danger: true, confirmText: "删除" });
+    if (!ok) return;
     setNodes(ns => ns.filter(n => n.id !== id));
     setEdges(es => es.filter(e => e.source !== id && e.target !== id));
     setSelectedNode(null);
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, confirm]);
 
   // ─── 应用模板 ───
-  function applyTemplate(tplName: string) {
+  async function applyTemplate(tplName: string) {
+    // 画布已有自定义节点时确认覆盖
+    const hasCustom = nodes.some(n => !n.id.startsWith("wf_start") && !n.id.startsWith("wf_end")) || nodes.length > 2;
+    if (hasCustom) {
+      const ok = await confirm({ title: "应用模板", message: "应用模板将替换当前画布内容，确定继续？", danger: true, confirmText: "替换" });
+      if (!ok) return;
+    }
     const { nodes: tn, edges: te } = buildTemplateNodes(tplName);
     if (tn.length) { setNodes(tn); setEdges(te); setSelectedNode(null); }
   }
@@ -167,6 +187,8 @@ function WorkflowsInner() {
   useEffect(() => { refreshTemplates(); }, [refreshTemplates]);
 
   async function saveTemplate() {
+    if (saving) return;
+    setSaving(true);
     try {
       const resp = await api.post("/workflows/templates/save", {
         name, nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
@@ -176,7 +198,12 @@ function WorkflowsInner() {
       setTemplateId(resp.data.template.template_id);
       setError(null);
       refreshTemplates();
+      // 保存成功：短暂高亮反馈，避免用户不确定是否已保存而反复点击
+      setSavedFlash(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSavedFlash(false), 1600);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "保存失败"); }
+    finally { setSaving(false); }
   }
 
   async function loadTemplate(tid: string) {
@@ -193,6 +220,8 @@ function WorkflowsInner() {
   }
 
   async function deleteTemplate(tid: string) {
+    const ok = await confirm({ title: "删除模板", message: "确定删除该已保存的工作流模板？", danger: true, confirmText: "删除" });
+    if (!ok) return;
     try {
       await api.delete(`/workflows/templates/${tid}`);
       if (templateId === tid) setTemplateId(null);
@@ -240,45 +269,41 @@ function WorkflowsInner() {
         {/* 顶栏 */}
         <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-3 md:px-6">
           <h1 className="text-lg font-semibold text-white">工作流编排</h1>
-          <input className="field h-9 w-48 rounded-xl py-1.5 text-sm" value={name}
+          <input className="field h-9 w-48 rounded-lg py-1.5 text-sm" value={name}
             onChange={e => setName(e.target.value)} placeholder="工作流名称" />
           <div className="ml-auto flex items-center gap-2">
             {savedTemplates.length > 0 && (
-              <select className="field h-9 rounded-xl px-3 text-sm" defaultValue=""
-                onChange={e => { if (e.target.value) loadTemplate(e.target.value); e.target.value = ""; }}>
+              <select className="field h-9 rounded-lg px-3 text-sm" defaultValue=""
+                onChange={e => { if (e.target.value) loadTemplate(e.target.value); e.target.value = "" }}>
                 <option value="" disabled>打开...</option>
                 {savedTemplates.map(t => <option key={t.template_id} value={t.template_id}>{t.name} (v{t.version})</option>)}
               </select>
             )}
             <button onClick={saveTemplate}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-sm text-neutral-300 transition hover:border-[#d6ad62]/40 hover:text-[#d6ad62]">
-              <Save size={14} /> 保存
+              disabled={saving}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100 disabled:cursor-not-allowed disabled:opacity-40">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : savedFlash ? <Check size={14} className="text-emerald-400" /> : <Save size={14} />}
+              {saving ? "保存中…" : savedFlash ? "已保存" : "保存"}
             </button>
             {templateId && (
               <button onClick={() => deleteTemplate(templateId)}
-                className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-sm text-neutral-400 transition hover:border-red-500/40 hover:text-red-400">
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-sm text-neutral-400 transition hover:border-red-500/40 hover:text-red-400">
                 <Trash2 size={14} />
               </button>
             )}
-            <select className="field h-9 rounded-xl px-3 text-sm" defaultValue=""
-              onChange={e => { if (e.target.value) applyTemplate(e.target.value); e.target.value = ""; }}>
-              <option value="" disabled>模板...</option>
-              <option value="sequential">顺序执行</option>
-              <option value="approval">审批链</option>
-              <option value="parallel">并行分支</option>
-            </select>
+
             <button onClick={run} disabled={loading}
-              className="gold-button flex h-9 items-center gap-1.5 rounded-xl px-4 text-sm">
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-neutral-100 px-4 text-sm font-medium text-black transition hover:bg-white disabled:opacity-50">
               <Play size={14} /> {loading ? "执行中..." : "执行"}
             </button>
           </div>
         </div>
 
-        {error && <div className="mx-4 mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+        {error && <div className="mx-4 mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
 
         {/* 主体：调色板 + 画布 */}
         <div className="flex min-h-0 flex-1">
-          <WorkflowPalette onAddNode={(kind) => addNode(kind)} />
+          <WorkflowPalette onAddNode={(kind) => addNode(kind)} onApplyTemplate={applyTemplate} />
           <div className="relative min-w-0 flex-1" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver}>
             <ReactFlow
               nodes={nodes} edges={edges}
@@ -309,6 +334,7 @@ function WorkflowsInner() {
             上次执行: <span className="text-blue-300">{lastView.status}</span> · {lastView.steps.length} 步骤 · run_id: {lastView.run_id.slice(0, 8)}
           </div>
         )}
+        <ConfirmDialog />
       </div>
   );
 }

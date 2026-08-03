@@ -25,18 +25,25 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: false,
     target: "es2020",
-    minify: "terser",
-    terserOptions: {
-      compress: { drop_console: true, drop_debugger: true },
-    },
+    // esbuild 压缩：零额外依赖（terser 未安装会导致构建失败）且快 10x+
+    minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ["react", "react-dom", "react-router-dom"],
-          ui: ["axios"],
+          query: ["@tanstack/react-query", "zustand"],
+          ui: ["axios", "clsx"],
+          // 画布重型依赖：仅短剧/工作流页面懒加载时拉取
+          reactflow: ["reactflow"],
+          // Markdown 渲染栈：仅聊天消息需要
+          markdown: ["react-markdown", "remark-gfm", "rehype-highlight", "highlight.js"],
         },
       },
     },
     chunkSizeWarningLimit: 500,
+  },
+  esbuild: {
+    // 生产构建移除 console/debugger（等价于原 terser 配置）
+    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
   },
 });

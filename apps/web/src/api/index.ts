@@ -596,10 +596,10 @@ export const addMcpServer = (body: {
 }) => api.post<{ status: string; name: string; connection?: unknown }>("/mcp/servers", body).then((r) => r.data);
 
 export const removeMcpServer = (name: string) =>
-  api.delete<{ deleted: boolean; name: string }>(`/mcp/servers/${name}`).then((r) => r.data);
+  api.delete<{ deleted: boolean; name: string }>(`/mcp/servers/${encodeURIComponent(name)}`).then((r) => r.data);
 
 export const connectMcpServer = (name: string) =>
-  api.post<unknown>(`/mcp/servers/${name}/connect`).then((r) => r.data);
+  api.post<unknown>(`/mcp/servers/${encodeURIComponent(name)}/connect`).then((r) => r.data);
 
 export const listMcpTools = () =>
   api.get<{ tools: MCPToolView[] }>("/mcp/tools").then((r) => r.data.tools);

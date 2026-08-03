@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Layers, Lock, Play, RefreshCw, Save, Sliders, Sparkles, Type, Wand2, X } from "lucide-react";
 import type { CanvasNodeAction, DramaCanvasNodeData, DramaNodeSettings, GenerationStrategy } from "./canvasTypes";
 import { STRATEGY_LABELS } from "./canvasTypes";
@@ -21,6 +21,8 @@ export default function NodeInspector({
   const [content, setContent] = useState("");
   const [humanNote, setHumanNote] = useState("");
   const [settings, setSettings] = useState<DramaNodeSettings>({});
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setContent(typeof node?.content === "string" ? node.content : JSON.stringify(node?.content ?? "", null, 2));
@@ -29,6 +31,16 @@ export default function NodeInspector({
   }, [node]);
 
   const color = useMemo(() => (node ? nodeTypeColors[node.nodeType] : "#A3A3A3"), [node]);
+
+  // 切换节点时重置保存闪现
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
+
+  function handleSave() {
+    onUpdateContent(node!.nodeId, content, humanNote);
+    setSavedFlash(true);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSavedFlash(false), 1600);
+  }
 
   if (!node) return null;
 
@@ -52,7 +64,7 @@ export default function NodeInspector({
           <h2 className="mt-1 text-lg font-semibold text-white">{node.title}</h2>
           <div className="mt-1 text-[11px] text-neutral-500">执行 {node.executionStatus} · 审核 {node.reviewStatus}</div>
         </div>
-        <button onClick={onClose} className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-800 hover:text-white">
+        <button onClick={onClose} aria-label="关闭面板" className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-800 hover:text-white">
           <X size={16} />
         </button>
       </div>
@@ -61,13 +73,13 @@ export default function NodeInspector({
         <div className="space-y-5">
           <Section title="提示词" icon={Type}>
             <textarea
-              className="min-h-28 w-full rounded-2xl border border-neutral-700 bg-neutral-950 p-3 text-sm leading-6 text-neutral-100 outline-none focus:border-neutral-500"
+              className="min-h-28 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm leading-6 text-neutral-100 outline-none focus:border-neutral-500"
               value={settings.prompt ?? ""}
               placeholder="正向提示词，例如：电影感、写实风、暖光…"
               onChange={(event) => patch({ prompt: event.target.value })}
             />
             <textarea
-              className="mt-2 min-h-16 w-full rounded-2xl border border-neutral-700 bg-neutral-950 p-3 text-xs leading-6 text-neutral-300 outline-none focus:border-neutral-500"
+              className="mt-2 min-h-16 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-xs leading-6 text-neutral-300 outline-none focus:border-neutral-500"
               value={settings.negativePrompt ?? ""}
               placeholder="负面提示词（可选）"
               onChange={(event) => patch({ negativePrompt: event.target.value })}
@@ -81,7 +93,7 @@ export default function NodeInspector({
                   key={key}
                   type="button"
                   onClick={() => patch({ strategy: key })}
-                  className={`rounded-xl border px-2 py-1.5 text-[11px] transition ${
+                  className={`rounded-lg border px-2 py-1.5 text-[11px] transition ${
                     settings.strategy === key
                       ? "border-blue-500/60 bg-blue-500/15 text-blue-200"
                       : "border-neutral-700 bg-neutral-950 text-neutral-300 hover:bg-neutral-800"
@@ -98,7 +110,7 @@ export default function NodeInspector({
               <div className="grid grid-cols-2 gap-2">
                 <Field label="模型">
                   <input
-                    className="field-mini w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="field-mini w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.model ?? ""}
                     placeholder="sdxl_base / wan2.2…"
                     onChange={(event) => patch({ model: event.target.value })}
@@ -106,7 +118,7 @@ export default function NodeInspector({
                 </Field>
                 <Field label="分辨率">
                   <select
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.resolution ?? ""}
                     onChange={(event) => patch({ resolution: event.target.value })}
                   >
@@ -119,7 +131,7 @@ export default function NodeInspector({
                 </Field>
                 <Field label="Sampler">
                   <input
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.sampler ?? ""}
                     placeholder="euler_a / dpmpp_2m"
                     onChange={(event) => patch({ sampler: event.target.value })}
@@ -127,7 +139,7 @@ export default function NodeInspector({
                 </Field>
                 <Field label="Scheduler">
                   <input
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.scheduler ?? ""}
                     placeholder="karras / sgm_uniform"
                     onChange={(event) => patch({ scheduler: event.target.value })}
@@ -136,7 +148,7 @@ export default function NodeInspector({
                 <Field label="Steps">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.steps ?? ""}
                     onChange={(event) => patch({ steps: numberOrUndefined(event.target.value) })}
                   />
@@ -145,7 +157,7 @@ export default function NodeInspector({
                   <input
                     type="number"
                     step="0.1"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.cfg ?? ""}
                     onChange={(event) => patch({ cfg: numberOrUndefined(event.target.value) })}
                   />
@@ -153,7 +165,7 @@ export default function NodeInspector({
                 <Field label="Seed">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.seed ?? ""}
                     onChange={(event) => patch({ seed: numberOrUndefined(event.target.value) })}
                   />
@@ -162,7 +174,7 @@ export default function NodeInspector({
                   <input
                     type="number"
                     min={1}
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.batch ?? ""}
                     onChange={(event) => patch({ batch: numberOrUndefined(event.target.value) })}
                   />
@@ -172,7 +184,7 @@ export default function NodeInspector({
                     <input
                       type="number"
                       min={1}
-                      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                      className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                       value={settings.duration ?? ""}
                       onChange={(event) => patch({ duration: numberOrUndefined(event.target.value) })}
                     />
@@ -187,7 +199,7 @@ export default function NodeInspector({
               <div className="grid grid-cols-2 gap-2">
                 <Field label="音色">
                   <input
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.voice ?? ""}
                     placeholder="female_warm / male_calm"
                     onChange={(event) => patch({ voice: event.target.value })}
@@ -195,7 +207,7 @@ export default function NodeInspector({
                 </Field>
                 <Field label="语言">
                   <select
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.language ?? "zh-CN"}
                     onChange={(event) => patch({ language: event.target.value })}
                   >
@@ -206,7 +218,7 @@ export default function NodeInspector({
                 <Field label="时长(秒)">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.duration ?? ""}
                     onChange={(event) => patch({ duration: numberOrUndefined(event.target.value) })}
                   />
@@ -220,7 +232,7 @@ export default function NodeInspector({
               <div className="grid grid-cols-2 gap-2">
                 <Field label="风格">
                   <input
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.bgmStyle ?? ""}
                     placeholder="cinematic / lofi / epic"
                     onChange={(event) => patch({ bgmStyle: event.target.value })}
@@ -229,7 +241,7 @@ export default function NodeInspector({
                 <Field label="时长(秒)">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.duration ?? ""}
                     onChange={(event) => patch({ duration: numberOrUndefined(event.target.value) })}
                   />
@@ -242,7 +254,7 @@ export default function NodeInspector({
             <Section title="字幕参数" icon={Sliders}>
               <Field label="语言">
                 <select
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                   value={settings.language ?? "zh-CN"}
                   onChange={(event) => patch({ language: event.target.value })}
                 >
@@ -258,7 +270,7 @@ export default function NodeInspector({
               <div className="grid grid-cols-2 gap-2">
                 <Field label="镜头类型">
                   <select
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.shotType ?? ""}
                     onChange={(event) => patch({ shotType: event.target.value })}
                   >
@@ -273,7 +285,7 @@ export default function NodeInspector({
                 <Field label="单镜时长(秒)">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.duration ?? ""}
                     onChange={(event) => patch({ duration: numberOrUndefined(event.target.value) })}
                   />
@@ -281,7 +293,7 @@ export default function NodeInspector({
                 <Field label="镜头数">
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100"
                     value={settings.batch ?? ""}
                     onChange={(event) => patch({ batch: numberOrUndefined(event.target.value) })}
                   />
@@ -292,13 +304,13 @@ export default function NodeInspector({
 
           <Section title="人工备注 / 原始内容" icon={Type}>
             <textarea
-              className="min-h-20 w-full rounded-2xl border border-neutral-700 bg-neutral-950 p-3 text-sm leading-6 text-neutral-100 outline-none focus:border-neutral-500"
+              className="min-h-20 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm leading-6 text-neutral-100 outline-none focus:border-neutral-500"
               value={humanNote}
               placeholder="人工备注"
               onChange={(event) => setHumanNote(event.target.value)}
             />
             <textarea
-              className="mt-2 min-h-28 w-full rounded-2xl border border-neutral-800 bg-neutral-950 p-3 text-xs leading-6 text-neutral-400 outline-none focus:border-neutral-600"
+              className="mt-2 min-h-28 w-full rounded-lg border border-neutral-800 bg-neutral-950 p-3 text-xs leading-6 text-neutral-400 outline-none focus:border-neutral-600"
               value={content}
               placeholder="原始节点内容（JSON 或文本）"
               onChange={(event) => setContent(event.target.value)}
@@ -342,7 +354,7 @@ export default function NodeInspector({
       </div>
 
       <div className="flex flex-wrap gap-2 border-t border-neutral-800 px-5 py-3">
-        <ActionButton onClick={() => onUpdateContent(node.nodeId, content, humanNote)} icon={Save}>保存</ActionButton>
+        <ActionButton onClick={handleSave} icon={savedFlash ? Check : Save} highlight={savedFlash}>{savedFlash ? "已保存" : "保存"}</ActionButton>
         <ActionButton onClick={() => onAction(node.nodeId, "run")} icon={Play}>运行</ActionButton>
         <ActionButton onClick={() => onAction(node.nodeId, "generate")} icon={RefreshCw}>生成</ActionButton>
         <ActionButton onClick={() => onAction(node.nodeId, "approve")} icon={Check}>通过</ActionButton>
@@ -384,12 +396,16 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ActionButton({ children, icon: Icon, onClick }: { children: React.ReactNode; icon: typeof Save; onClick: () => void }) {
+function ActionButton({ children, icon: Icon, onClick, highlight }: { children: React.ReactNode; icon: typeof Save; onClick: () => void; highlight?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 hover:text-white active:scale-[0.98]"
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition active:scale-[0.98] ${
+        highlight
+          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+          : "border-neutral-700 text-neutral-200 hover:bg-neutral-800 hover:text-white"
+      }`}
     >
       <Icon size={14} />
       {children}

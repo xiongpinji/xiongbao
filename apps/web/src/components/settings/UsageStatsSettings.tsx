@@ -40,7 +40,7 @@ export default function UsageStatsSettings() {
       {error && <div className="text-xs text-red-400">{error}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {items.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+          <div key={item.label} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
             <div className="text-xs text-neutral-500">{item.label}</div>
             <div className="mt-2 font-mono text-2xl text-white">{item.value}</div>
           </div>
