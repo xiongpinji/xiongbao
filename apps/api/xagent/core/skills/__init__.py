@@ -33,6 +33,14 @@ MAX_SKILLS = 100                  # 技能库上限
 # ─── 自动提炼门禁配置（对标 Hermes GEPA：变体须过最小评测门禁才入库） ───
 DEDUP_SIMILARITY_THRESHOLD = 0.5  # 与现有技能 token 相似度 >= 此值视为重复，拒绝入库
 MIN_TRIGGER_KEYWORD_LEN = 2       # 触发关键词最小长度（过短易误匹配）
+# ─── 进化闭环配置（GEPA 轻量落地：变体生成 → 评测打分 → 优胜入库） ───
+EVOLVE_DEFAULT_VARIANTS = 2       # 每次自动进化生成的变体数
+EVOLVE_ACCEPT_THRESHOLD = 0.1     # 变体得分须显著优于父代（>= 此差值）才采纳
+EVAL_POSITIVE_GOALS = 4           # 合成评测：应命中 goal 数（3-5）
+EVAL_NEGATIVE_GOALS = 3           # 合成评测：不应命中 goal 数（2-3）
+SCORE_WEIGHT_MATCH = 0.6          # 评分权重：匹配准确率
+SCORE_WEIGHT_COMPLETENESS = 0.2   # 评分权重：字段完整度
+SCORE_WEIGHT_HISTORY = 0.2        # 评分权重：历史成功率
 
 
 def _tokenize(text: str) -> set[str]:
@@ -480,6 +488,274 @@ class SkillStore:
         )
         logger.info("skill_auto_distilled", skill_id=skill.skill_id, name=skill.name)
         return skill
+
+    # ─── 自进化：GEPA 式进化闭环（变体生成 → 评测打分 → 优胜入库） ───
+
+    @staticmethod
+    def _fields_of(skill: Skill) -> dict[str, Any]:
+        """把 Skill 转为可评测的字段 dict（与变体同一形状）。"""
+        return {
+            "name": skill.name,
+            "description": skill.description,
+            "trigger_pattern": skill.trigger_pattern,
+            "system_prompt_hint": skill.system_prompt_hint,
+            "steps": skill.steps,
+            "source_task": skill.source_task,
+        }
+
+    @staticmethod
+    def _match_trigger(trigger_pattern: str, goal: str) -> bool:
+        """与 match() 同一匹配语义：| 分隔关键词子串命中。"""
+        keywords = [
+            kw.strip().lower()
+            for kw in str(trigger_pattern).split("|")
+            if kw.strip()
+        ]
+        goal_lower = goal.lower()
+        return any(kw in goal_lower for kw in keywords)
+
+    @staticmethod
+    def _completeness_score(fields: dict[str, Any]) -> float:
+        """字段完整度分（0~1）：4 个文本字段各 0.2，steps 非空 0.2。"""
+        score = 0.0
+        for key in ("name", "description", "trigger_pattern", "system_prompt_hint"):
+            if str(fields.get(key, "")).strip():
+                score += 0.2
+        if fields.get("steps"):
+            score += 0.2
+        return round(score, 4)
+
+    def evaluate_fields(
+        self,
+        fields: dict[str, Any],
+        eval_tasks: dict[str, list[str]] | None = None,
+        success_rate: float = 0.5,
+        has_history: bool = False,
+    ) -> dict[str, Any]:
+        """对一组技能字段打分（变体与父代同一评测口径）。
+
+        得分 = 匹配准确率 * 0.6 + 字段完整度 * 0.2 + 历史成功率 * 0.2。
+        - 有合成评测任务时：在应命中/不应命中 goal 上计算匹配准确率
+        - 无 LLM（无评测任务）降级：纯匹配器准确率——触发模式能否命中技能自身语境
+        """
+        positive = [g for g in (eval_tasks or {}).get("positive", []) if str(g).strip()]
+        negative = [g for g in (eval_tasks or {}).get("negative", []) if str(g).strip()]
+        if positive or negative:
+            total = len(positive) + len(negative)
+            correct = sum(
+                1 for g in positive if self._match_trigger(fields.get("trigger_pattern", ""), g)
+            ) + sum(
+                1 for g in negative if not self._match_trigger(fields.get("trigger_pattern", ""), g)
+            )
+            match_accuracy = correct / total
+        else:
+            ref = " ".join([
+                str(fields.get("description", "")),
+                str(fields.get("source_task", "")),
+                str(fields.get("name", "")),
+            ])
+            match_accuracy = 1.0 if self._match_trigger(fields.get("trigger_pattern", ""), ref) else 0.0
+        completeness = self._completeness_score(fields)
+        history = success_rate if has_history else 0.5
+        score = (
+            SCORE_WEIGHT_MATCH * match_accuracy
+            + SCORE_WEIGHT_COMPLETENESS * completeness
+            + SCORE_WEIGHT_HISTORY * history
+        )
+        return {
+            "score": round(score, 4),
+            "match_accuracy": round(match_accuracy, 4),
+            "completeness": completeness,
+            "history": history,
+            "eval_mode": "synthetic" if (positive or negative) else "matcher_only",
+        }
+
+    def _resolve_llm(self, llm: Any | None) -> Any | None:
+        """解析 LLM 客户端；无真实 LLM（含 Mock 降级）返回 None。"""
+        if llm is None:
+            try:
+                from xagent.adapters.llm import get_llm_client
+                llm = get_llm_client()
+            except Exception as e:
+                logger.debug("skill_evolve_no_llm", error=str(e))
+                return None
+        from xagent.adapters.llm.mock import MockLLMClient
+        if isinstance(llm, MockLLMClient):
+            return None
+        return llm
+
+    async def generate_eval_tasks(self, skill: Skill, llm: Any) -> dict[str, list[str]] | None:
+        """由 LLM 基于技能描述生成合成评测任务：应命中 goal 3-5 个 + 不应命中 2-3 个。"""
+        import re as _re
+        prompt = (
+            "你是一个技能评测专家。根据以下技能，生成评测样例，输出严格 JSON（无其他文字）：\n"
+            '{"positive": ["应触发此技能的任务目标", ...], "negative": ["不应触发的任务目标", ...]}\n'
+            f"positive 生成 {EVAL_POSITIVE_GOALS} 个（语义多样），negative 生成 {EVAL_NEGATIVE_GOALS} 个"
+            "（与技能无关但领域相近）。\n\n"
+            f"技能名称: {skill.name}\n"
+            f"技能描述: {skill.description[:300]}\n"
+            f"触发关键词: {skill.trigger_pattern}"
+        )
+        try:
+            from xagent.adapters.llm import Message as LLMMessage
+            resp = await llm.complete([LLMMessage(role="user", content=prompt)])
+            raw = (resp.content or "").strip()
+            m = _re.search(r"\{[\s\S]*\}", raw)
+            if not m:
+                return None
+            data = json.loads(m.group())
+            positive = [str(g).strip() for g in data.get("positive", []) if str(g).strip()][:5]
+            negative = [str(g).strip() for g in data.get("negative", []) if str(g).strip()][:3]
+            if not positive and not negative:
+                return None
+            return {"positive": positive, "negative": negative}
+        except Exception as e:
+            logger.debug("skill_eval_tasks_failed", error=str(e))
+            return None
+
+    async def generate_variants(
+        self,
+        skill: Skill,
+        n: int = EVOLVE_DEFAULT_VARIANTS,
+        llm: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """由 LLM 对一个已有技能生成 N 个改进变体（不入库）。无 LLM 时返回空列表。"""
+        llm = self._resolve_llm(llm)
+        if llm is None:
+            logger.debug("skill_variants_skip", reason="no_llm", skill_id=skill.skill_id)
+            return []
+        import re as _re
+        prompt = (
+            "你是一个技能进化专家。针对以下技能，生成 "
+            f"{n} 个改进变体（如：优化触发关键词提高命中精度/补充执行步骤/优化提示词）。\n"
+            "输出严格 JSON 数组（无其他文字），每个元素：\n"
+            '{"description": "改进后描述", "trigger_pattern": "触发关键词(|分隔)", '
+            '"system_prompt_hint": "执行提示", "steps": [{"tool": "工具名", "order": 0}]}\n'
+            "变体之间要有差异化改进方向。\n\n"
+            f"技能名称: {skill.name}\n"
+            f"当前描述: {skill.description[:300]}\n"
+            f"当前触发: {skill.trigger_pattern}\n"
+            f"当前提示: {skill.system_prompt_hint[:200]}\n"
+            f"当前步骤: {json.dumps(skill.steps, ensure_ascii=False)[:300]}"
+        )
+        try:
+            from xagent.adapters.llm import Message as LLMMessage
+            resp = await llm.complete([LLMMessage(role="user", content=prompt)])
+            raw = (resp.content or "").strip()
+            m = _re.search(r"\[[\s\S]*\]", raw)
+            if not m:
+                logger.debug("skill_variants_skip", reason="llm_no_json", skill_id=skill.skill_id)
+                return []
+            data = json.loads(m.group())
+        except Exception as e:
+            logger.debug("skill_variants_skip", reason="llm_failed", error=str(e))
+            return []
+        variants: list[dict[str, Any]] = []
+        for item in data if isinstance(data, list) else []:
+            if not isinstance(item, dict):
+                continue
+            variant = {
+                "name": skill.name,
+                "description": str(item.get("description", "")).strip() or skill.description,
+                "trigger_pattern": str(item.get("trigger_pattern", "")).strip(),
+                "system_prompt_hint": str(item.get("system_prompt_hint", "")).strip()
+                    or skill.system_prompt_hint,
+                "steps": item.get("steps") if isinstance(item.get("steps"), list) else skill.steps,
+                "source_task": skill.source_task,
+            }
+            if variant["trigger_pattern"]:
+                variants.append(variant)
+        return variants[:n]
+
+    async def evolve_auto(
+        self,
+        skill_id: str,
+        n_variants: int = EVOLVE_DEFAULT_VARIANTS,
+        threshold: float = EVOLVE_ACCEPT_THRESHOLD,
+        llm: Any | None = None,
+    ) -> dict[str, Any] | None:
+        """自动进化闭环：变体生成 → 评测打分 → 显著优胜才通过 evolve 替换入库。
+
+        对标 Hermes GEPA：变体得分 >= 父代 + threshold 才采纳（走 evolve_skill 版本化，
+        history 记录进化原因与得分），否则丢弃并记日志。无 LLM 时跳过。
+        返回 None 表示技能不存在。"""
+        skill = self._cache.get(skill_id)
+        if not skill:
+            return None
+        result: dict[str, Any] = {
+            "skill_id": skill_id,
+            "adopted": False,
+            "reason": "",
+            "parent_score": None,
+            "variants": [],
+        }
+        llm = self._resolve_llm(llm)
+        if llm is None:
+            result["reason"] = "no_llm"
+            logger.info("skill_evolve_auto_skip", skill_id=skill_id, reason="no_llm")
+            return result
+
+        # 1. 合成评测任务（父代与变体共用，保证公平比较）；失败则降级纯匹配器
+        eval_tasks = await self.generate_eval_tasks(skill, llm)
+        has_history = skill.use_count > 0
+        parent_eval = self.evaluate_fields(
+            self._fields_of(skill), eval_tasks,
+            success_rate=skill.success_rate, has_history=has_history,
+        )
+        result["parent_score"] = parent_eval["score"]
+        result["parent_eval"] = parent_eval
+
+        # 2. 生成变体
+        variants = await self.generate_variants(skill, n=n_variants, llm=llm)
+        if not variants:
+            result["reason"] = "no_variants"
+            logger.info("skill_evolve_auto_skip", skill_id=skill_id, reason="no_variants")
+            return result
+
+        # 3. 评测打分（变体继承父代历史分量，差异只来自匹配准确率与完整度）
+        scored = []
+        for v in variants:
+            ev = self.evaluate_fields(
+                v, eval_tasks, success_rate=skill.success_rate, has_history=has_history,
+            )
+            scored.append({"variant": v, "eval": ev, "score": ev["score"]})
+        result["variants"] = scored
+        best = max(scored, key=lambda x: x["score"])
+        result["best_score"] = best["score"]
+
+        # 4. 优胜入库：显著优于父代才通过 evolve 替换
+        if best["score"] - parent_eval["score"] >= threshold:
+            v = best["variant"]
+            reason = (
+                f"auto_evolve: score {parent_eval['score']:.2f} -> {best['score']:.2f} "
+                f"(threshold +{threshold:.2f}, eval={parent_eval['eval_mode']})"
+            )
+            self.evolve_skill(
+                skill_id,
+                description=v["description"],
+                system_prompt_hint=v["system_prompt_hint"],
+                steps=v["steps"],
+                trigger_pattern=v["trigger_pattern"],
+                change_reason=reason,
+            )
+            result["adopted"] = True
+            result["reason"] = reason
+            result["skill"] = self._cache[skill_id].to_dict()
+            logger.info(
+                "skill_evolve_auto_adopted", skill_id=skill_id,
+                parent_score=parent_eval["score"], best_score=best["score"],
+            )
+        else:
+            result["reason"] = (
+                f"below_threshold: best {best['score']:.2f} vs parent "
+                f"{parent_eval['score']:.2f} (need +{threshold:.2f})"
+            )
+            logger.info(
+                "skill_evolve_auto_rejected", skill_id=skill_id,
+                parent_score=parent_eval["score"], best_score=best["score"],
+                threshold=threshold,
+            )
+        return result
 
     # ─── 自进化：淘汰机制 ───
 

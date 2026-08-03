@@ -110,6 +110,27 @@ async def evolve_skill(
     return {"evolved": True, "skill": skill.to_dict()}
 
 
+class EvolveAutoIn(BaseModel):
+    n_variants: int = Field(default=2, ge=1, le=5, description="生成变体数")
+    threshold: float = Field(default=0.1, ge=0.0, le=1.0, description="采纳阈值（变体须领先父代的分差）")
+
+
+@router.post("/{skill_id}/evolve-auto", summary="自动进化闭环（变体生成→评测→优胜入库）")
+async def evolve_auto(
+    skill_id: str,
+    body: EvolveAutoIn | None = None,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    store = get_skill_store()
+    body = body or EvolveAutoIn()
+    result = await store.evolve_auto(
+        skill_id, n_variants=body.n_variants, threshold=body.threshold,
+    )
+    if result is None:
+        raise HTTPException(404, f"skill '{skill_id}' not found")
+    return result
+
+
 # ─── 淘汰/恢复 ───
 
 
