@@ -8,6 +8,10 @@
 - 执行超时                : ``wait(timeout=...)``，超时 kill 容器
 - 输出截断                : stdout/stderr 超长截断，防内存放大
 - Windows 支持            : docker SDK 走 npipe；daemon 不可达时给出明确报错
+
+SDK 兼容性：docker SDK 7.x 已移除 ``logs(demux=True)``。本模块改用
+stdout/stderr 分流两次 ``logs()`` 调用（实测 daemon 返回无帧头原始字节，
+见 tests/test_docker_sandbox_integration.py），兼容 SDK 6.x/7.x。
 """
 
 from __future__ import annotations
@@ -57,6 +61,46 @@ def _truncate(text: str) -> str:
     if len(text) > _MAX_OUTPUT_CHARS:
         return text[:_MAX_OUTPUT_CHARS] + f"\n... [截断，共 {len(text)} 字符]"
     return text
+
+
+def _collect_output(container: Any) -> tuple[str, str]:
+    """分别回收 stdout / stderr（docker SDK 7.x 兼容，无 demux 依赖）。
+
+    SDK 7.x 移除了 ``logs(demux=True)``；改为 stdout/stderr 分流两次调用。
+    实测（Docker Engine 29，tty=False）：分流调用返回无帧头原始字节。
+    防御：若 daemon 仍返回 8 字节多路复用帧（旧 daemon/双流场景），先解帧。
+    """
+    out_raw = container.logs(stdout=True, stderr=False) or b""
+    err_raw = container.logs(stdout=False, stderr=True) or b""
+    out_bytes = _strip_mux_frames(out_raw, stream_id=1)
+    err_bytes = _strip_mux_frames(err_raw, stream_id=2)
+    return (
+        out_bytes.decode("utf-8", errors="replace"),
+        err_bytes.decode("utf-8", errors="replace"),
+    )
+
+
+def _strip_mux_frames(data: bytes, *, stream_id: int) -> bytes:
+    """若 data 是 Docker 多路复用帧流则解帧，否则原样返回。
+
+    帧格式：[stream(1B), 0, 0, 0, size(4B big-endian)] + payload。
+    仅在全部字节都能被完整解析为帧时才视为帧流，避免误伤正常输出。
+    """
+    if not data or data[0] not in (0, 1, 2):
+        return data
+    payload = bytearray()
+    pos = 0
+    while pos < len(data):
+        if pos + 8 > len(data):
+            return data  # 截断帧头 → 非帧流，原样返回
+        sid = data[pos]
+        size = int.from_bytes(data[pos + 4 : pos + 8], "big")
+        if pos + 8 + size > len(data):
+            return data  # 截断帧体 → 非帧流，原样返回
+        if sid == stream_id:
+            payload += data[pos + 8 : pos + 8 + size]
+        pos += 8 + size
+    return bytes(payload)
 
 
 class DockerSandbox:
@@ -145,11 +189,7 @@ class DockerSandbox:
                 if isinstance(wait_result, dict)
                 else -1
             )
-            out_bytes, err_bytes = container.logs(
-                stdout=True, stderr=True, demux=True
-            )
-            stdout = (out_bytes or b"").decode("utf-8", errors="replace")
-            stderr = (err_bytes or b"").decode("utf-8", errors="replace")
+            stdout, stderr = _collect_output(container)
             return SandboxResult(
                 ok=exit_code == 0,
                 stdout=_truncate(stdout),

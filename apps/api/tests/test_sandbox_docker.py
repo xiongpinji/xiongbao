@@ -34,6 +34,7 @@ class _FakeContainer:
         self.removed = False
         self.remove_force: bool | None = None
         self.wait_timeout: int | None = None
+        self.logs_calls: list[tuple[bool, bool]] = []
 
     def start(self) -> None:
         self.started = True
@@ -44,9 +45,11 @@ class _FakeContainer:
             raise self._wait_exc
         return self._wait_result
 
-    def logs(self, *, stdout: bool, stderr: bool, demux: bool) -> tuple[bytes, bytes]:
-        assert demux is True
-        return self._logs
+    def logs(self, *, stdout: bool, stderr: bool) -> bytes:
+        """SDK 7.x 兼容签名：无 demux 参数，分流调用返回单路字节流。"""
+        self.logs_calls.append((stdout, stderr))
+        assert stdout != stderr, "沙箱必须分流调用 logs()（SDK 7.x 已移除 demux）"
+        return self._logs[0] if stdout else self._logs[1]
 
     def kill(self) -> None:
         self.killed = True
@@ -370,3 +373,71 @@ async def test_python_exec_routes_to_sandbox(monkeypatch: pytest.MonkeyPatch) ->
     assert res.ok is True
     assert "sandbox-out" in (res.output or "")
     assert fake.calls == [("python", "print(1)", 30)]
+
+
+# ── stdout/stderr 分流回收（SDK 7.x，无 demux）───────────────────
+
+
+async def test_logs_split_calls_no_demux() -> None:
+    """SDK 7.x 兼容：分流两次 logs() 调用，stdout/stderr 分别回收。"""
+    container = _FakeContainer(logs=(b"out-line\n", b"err-line\n"))
+    sandbox, _ = _make_sandbox(container)
+    res = await sandbox.run_code("python", "print(1)")
+
+    assert res.ok is True
+    assert res.stdout == "out-line\n"
+    assert res.stderr == "err-line\n"
+    # 必须分流调用（不能 stdout/stderr 同 True 的合并流，更不能用已移除的 demux）
+    assert (True, False) in container.logs_calls
+    assert (False, True) in container.logs_calls
+
+
+async def test_logs_none_output_tolerated() -> None:
+    """logs() 返回 None（空流）时不崩溃。"""
+
+    class _NoneLogs(_FakeContainer):
+        def logs(self, *, stdout: bool, stderr: bool) -> bytes:
+            self.logs_calls.append((stdout, stderr))
+            return None
+
+    container = _NoneLogs()
+    sandbox, _ = _make_sandbox(container)
+    res = await sandbox.run_code("python", "pass")
+    assert res.ok is True
+    assert res.stdout == ""
+    assert res.stderr == ""
+
+
+# ── 多路复用帧防御性解帧 ─────────────────────────────────────────
+
+
+def _mux_frame(stream_id: int, payload: bytes) -> bytes:
+    return bytes([stream_id, 0, 0, 0]) + len(payload).to_bytes(4, "big") + payload
+
+
+async def test_mux_framed_logs_decoded() -> None:
+    """防御：若 daemon 返回 8 字节多路复用帧（旧 daemon/双流），正确解帧。"""
+
+    class _MuxLogs(_FakeContainer):
+        def logs(self, *, stdout: bool, stderr: bool) -> bytes:
+            self.logs_calls.append((stdout, stderr))
+            if stdout:
+                return _mux_frame(1, b"framed-out\n")
+            return _mux_frame(2, b"framed-err\n")
+
+    container = _MuxLogs(wait_result={"StatusCode": 1})
+    sandbox, _ = _make_sandbox(container)
+    res = await sandbox.run_code("python", "raise SystemExit(1)")
+    assert res.ok is False
+    assert res.stdout == "framed-out\n"
+    assert res.stderr == "framed-err\n"
+    assert "framed-err" in (res.error or "")
+
+
+async def test_plain_output_not_mistaken_for_frames() -> None:
+    """普通输出首字节恰为 0/1/2 时不误判为帧流。"""
+    # 首字节 0x01 但不是合法完整帧 → 原样返回
+    container = _FakeContainer(logs=(b"\x01not-a-frame", b""))
+    sandbox, _ = _make_sandbox(container)
+    res = await sandbox.run_code("python", "pass")
+    assert res.stdout == "\x01not-a-frame"
