@@ -117,7 +117,14 @@ class SkillStore:
         self._dir = base
         self._dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, Skill] = {}
+        # 单调递增版本号：任何库内容变更 +1，供读路径缓存失效判断
+        self._version = 0
         self._load_all()
+
+    @property
+    def version(self) -> int:
+        """库内容版本号（任何写操作递增，只增不减）。"""
+        return self._version
 
     def _load_all(self) -> None:
         for f in self._dir.glob("*.json"):
@@ -134,6 +141,7 @@ class SkillStore:
     def _persist(self, skill: Skill) -> None:
         path = self._dir / f"{skill.skill_id}.json"
         path.write_text(json.dumps(skill.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        self._version += 1
 
     # ─── 基础 CRUD ───
 
@@ -206,6 +214,7 @@ class SkillStore:
             del self._cache[skill_id]
             path = self._dir / f"{skill_id}.json"
             path.unlink(missing_ok=True)
+            self._version += 1
             return True
         return False
 

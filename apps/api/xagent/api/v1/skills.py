@@ -6,7 +6,9 @@ Agent 在任务执行中会自动提炼技能，此接口用于人工查看/干�
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from xagent.core.skills import get_skill_store
@@ -18,6 +20,14 @@ router = APIRouter(prefix="/skills", tags=["skills"])
 
 # ─── 查询 ───
 
+# list 响应缓存：key=(store.version, include_retired)。
+# 压测诊断（2026-08-03）：每请求 90 技能双重序列化（dataclasses.asdict 深拷贝 +
+# FastAPI jsonable_encoder 逐字段遍历）消耗 ~20ms CPU 阻塞事件循环，是 skills
+# 端点 ~48 RPS 硬顶的根源（并非此前猜测的目录扫描——SkillStore 本身全内存）。
+# 预编码为 JSON bytes 并以 Response 直接返回，可跳过 jsonable_encoder；
+# 库任何写操作（_persist/delete）递增 version 使缓存整体失效。
+_list_cache: dict[tuple[int, bool], bytes] = {}
+
 
 @router.get("", summary="列出所有技能")
 async def list_skills(
@@ -25,8 +35,18 @@ async def list_skills(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    skills = store.list_all(include_retired=include_retired)
-    return {"skills": [s.to_dict() for s in skills], "total": len(skills)}
+    key = (store.version, include_retired)
+    body = _list_cache.get(key)
+    if body is None:
+        skills = store.list_all(include_retired=include_retired)
+        # separators 与 starlette JSONResponse 一致（紧凑），保持响应字节级口径
+        body = json.dumps(
+            {"skills": [s.to_dict() for s in skills], "total": len(skills)},
+            ensure_ascii=False, separators=(",", ":"),
+        ).encode("utf-8")
+        _list_cache.clear()
+        _list_cache[key] = body
+    return Response(content=body, media_type="application/json")
 
 
 @router.get("/stats", summary="技能库统计")
@@ -112,7 +132,9 @@ async def evolve_skill(
 
 class EvolveAutoIn(BaseModel):
     n_variants: int = Field(default=2, ge=1, le=5, description="生成变体数")
-    threshold: float = Field(default=0.1, ge=0.0, le=1.0, description="采纳阈值（变体须领先父代的分差）")
+    threshold: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="采纳阈值（变体须领先父代的分差）"
+    )
 
 
 @router.post("/{skill_id}/evolve-auto", summary="自动进化闭环（变体生成→评测→优胜入库）")
