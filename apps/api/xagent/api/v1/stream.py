@@ -244,7 +244,7 @@ async def _event_stream(
                     )
                 except Exception:  # noqa: S110
                     pass
-        except asyncio.TimeoutError:
+        except TimeoutError:
             failure_error = f"Agent 运行超时（>{_AGENT_RUN_TIMEOUT}s），已自动终止。"
             await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         except Exception as exc:
@@ -321,7 +321,7 @@ async def _event_stream(
                 break
             try:
                 item = await asyncio.wait_for(queue.get(), timeout=1.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # SSE 心跳：防止 nginx/负载均衡器超时断开
                 now = asyncio.get_running_loop().time()
                 if now - last_heartbeat >= heartbeat_interval:

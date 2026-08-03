@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import pytest
-
 from xagent.adapters.llm.base import LLMResponse
 from xagent.core.skills import SkillStore
 

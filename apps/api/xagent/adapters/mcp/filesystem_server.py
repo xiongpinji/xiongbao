@@ -16,12 +16,11 @@ import fnmatch
 import json
 import os
 import shutil
-import stat
 from pathlib import Path
 
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 # 安全沙箱：允许访问的根目录（环境变量配置，逗号分隔）
 _raw_roots = os.environ.get("FS_ALLOWED_ROOTS", ".")

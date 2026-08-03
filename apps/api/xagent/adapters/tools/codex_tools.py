@@ -12,7 +12,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -261,7 +260,6 @@ class FileEditTool:
         _fuzzy_used = False
         if count == 0:
             # 策略 1：忽略行尾空白 + 统一换行符
-            import re as _re
             _normalized_content = content.replace("\r\n", "\n")
             _normalized_old = old_text.replace("\r\n", "\n")
             # 去除每行尾部空白

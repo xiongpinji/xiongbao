@@ -2,9 +2,9 @@
 import asyncio
 import datetime
 
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 app = Server("xagent-test")
 

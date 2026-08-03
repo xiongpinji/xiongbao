@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -48,7 +47,7 @@ class RecoveryLogger:
 
     def _get_log_file(self) -> Path:
         """获取当天的日志文件路径。"""
-        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date_str = datetime.now(UTC).strftime("%Y-%m-%d")
         return self._output_dir / f"recovery-{date_str}.jsonl"
 
     def log(
@@ -75,7 +74,7 @@ class RecoveryLogger:
             完整的事件字典（用于进一步处理）
         """
         event = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "action": action.value,
             "severity": severity.value,
             "component": component,
@@ -106,7 +105,7 @@ class RecoveryLogger:
     def get_recent_events(self, hours: int = 24) -> list[dict[str, Any]]:
         """获取最近 N 小时的恢复事件。"""
         events: list[dict[str, Any]] = []
-        cutoff = datetime.now(timezone.utc).timestamp() - hours * 3600
+        cutoff = datetime.now(UTC).timestamp() - hours * 3600
 
         for log_file in sorted(self._output_dir.glob("recovery-*.jsonl"), reverse=True):
             try:
@@ -129,7 +128,7 @@ class RecoveryLogger:
             try:
                 file_date_str = log_file.stem.replace("recovery-", "")
                 file_date = datetime.strptime(file_date_str, "%Y-%m-%d").replace(
-                    tzinfo=timezone.utc
+                    tzinfo=UTC
                 )
                 if file_date.timestamp() < cutoff - 86400:
                     break

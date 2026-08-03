@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-
 from xagent.adapters.llm.base import LLMResponse
 from xagent.core.skills import SkillStore
 

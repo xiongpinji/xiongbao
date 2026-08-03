@@ -7,13 +7,11 @@
 from __future__ import annotations
 
 import pytest
-
 from xagent.adapters.sandbox.base import DisabledSandbox, get_sandbox, reset_sandbox
 from xagent.adapters.sandbox.docker_sandbox import (
     DockerSandbox,
     SandboxUnavailableError,
 )
-
 
 # ── fake docker SDK ──────────────────────────────────────────────
 

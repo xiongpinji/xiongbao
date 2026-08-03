@@ -8,9 +8,9 @@ import json
 import os
 
 import httpx
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 BASE_URL = os.environ.get("HUOBAO_BASE_URL", "http://localhost:5679/api/v1")
 

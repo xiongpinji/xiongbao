@@ -16,9 +16,9 @@ import json
 import os
 from typing import Any
 
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 app = Server("xagent-playwright")
 

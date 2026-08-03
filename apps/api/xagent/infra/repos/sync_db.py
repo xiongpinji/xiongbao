@@ -46,7 +46,6 @@ def get_sync_engine() -> Engine:
         engine = create_engine(url, **kwargs)
         # 幂等建表：lite/测试兜底；生产由 alembic 管理（create_all 不覆盖已有表）
         import xagent.infra.models  # noqa: F401  注册全部 ORM
-
         from xagent.infra.db import Base
 
         Base.metadata.create_all(engine)

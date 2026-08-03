@@ -112,7 +112,7 @@ async def run_parallel_agents(
                 steps=rd.get("steps", 0) if isinstance(rd.get("steps"), int) else len(rd.get("steps") or []),
                 duration_ms=elapsed,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             return SubTaskResult(
                 goal=task.goal, run_id=sub_run_id, status="timeout",
@@ -182,7 +182,7 @@ async def auto_decompose_and_run(
         return None  # 不适合并行
 
     # 用 LLM 分解任务
-    from xagent.adapters.llm import get_llm_client, Message
+    from xagent.adapters.llm import Message, get_llm_client
 
     llm = get_llm_client()
     decompose_prompt = (

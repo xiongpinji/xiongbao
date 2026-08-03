@@ -19,7 +19,7 @@ from xagent.enterprise.authz.guards import require_permission
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 
-def _validate_server_config(body: "MCPServerIn") -> None:
+def _validate_server_config(body: MCPServerIn) -> None:
     """显式校验服务器配置，拒绝必然失败的假成功。"""
     if body.transport == "stdio":
         if not body.command:

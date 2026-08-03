@@ -15,9 +15,9 @@ import json
 import os
 
 import httpx
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 GITHUB_API = "https://api.github.com"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")

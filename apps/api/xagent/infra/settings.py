@@ -9,6 +9,11 @@
 
 from __future__ import annotations
 
+# 项目根目录（xagent/），.env 在此；不依赖 CWD。
+# 支持 XAGENT_ENV_FILE 显式覆盖（容器/自定义部署）；否则从包位置向上探测
+# 含 .env 或 pyproject.toml 的目录；探测不到（如容器内浅布局）则退化为
+# 不可达路径——此时配置完全来自环境变量，不致命。
+import os as _os
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -16,12 +21,6 @@ from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 
 from xagent.infra.secrets import resolve_settings_secrets
-
-# 项目根目录（xagent/），.env 在此；不依赖 CWD。
-# 支持 XAGENT_ENV_FILE 显式覆盖（容器/自定义部署）；否则从包位置向上探测
-# 含 .env 或 pyproject.toml 的目录；探测不到（如容器内浅布局）则退化为
-# 不可达路径——此时配置完全来自环境变量，不致命。
-import os as _os
 
 
 def _detect_project_root(start: Path) -> Path:

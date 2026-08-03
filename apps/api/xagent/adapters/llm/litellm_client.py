@@ -137,7 +137,6 @@ class LiteLLMClient(LLMClient):
         usage = resp.get("usage", {}) or {}
         tool_calls: list[ToolCall] = []
         for tc in msg.get("tool_calls") or []:
-            import json as _json
 
             fn = tc.get("function", {})
             try:

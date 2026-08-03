@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from xagent.adapters.llm import Message, get_llm_client
-from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
+from xagent.adapters.llm.litellm_client import LiteLLMClient
 from xagent.adapters.observability import get_tracer
 from xagent.adapters.tools import get_tool_registry
 from xagent.adapters.tools.base import ToolContext
@@ -1324,7 +1324,10 @@ async def run_agent(
 
               # ── 断点续传：每 5 步保存 checkpoint ──
               try:
-                  from xagent.core.orchestration.checkpoint import save_checkpoint, should_checkpoint
+                  from xagent.core.orchestration.checkpoint import (
+                      save_checkpoint,
+                      should_checkpoint,
+                  )
                   if should_checkpoint(state.step):
                       save_checkpoint(
                           conv_session.conversation_id, resolved_run_id, state.step,
