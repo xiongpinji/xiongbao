@@ -1,13 +1,23 @@
-"""认证路由：登录（签发 JWT）、当前主体信息、OIDC 回调占位。"""
+"""认证路由：登录（签发 JWT）、当前主体信息、OIDC 浏览器登录链路（RFC-002）。"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from xagent.enterprise.auth import create_access_token
 from xagent.enterprise.auth.dependencies import get_principal
 from xagent.enterprise.auth.login_rate_limit import get_login_rate_limiter
+from xagent.enterprise.auth.oidc_flow import (
+    OidcExchangeError,
+    OidcNotConfiguredError,
+    OidcStateError,
+    OidcTokenError,
+    build_login_redirect,
+    handle_callback,
+    oidc_enabled,
+)
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.auth.users import get_user_store
 
@@ -77,12 +87,13 @@ async def login(body: LoginIn, request: Request) -> TokenOut:
 
     安全：按 IP+用户名 限流——1 分钟内 5 次失败锁定 60 秒，锁定返回
     429 + retry_after（防口令爆破）。默认口令账号返回 must_change_password=true。
+    配置 XAGENT_CACHE__REDIS_URL 后限流状态走 Redis（多实例共享）。
     """
     limiter = get_login_rate_limiter()
     ip = request.client.host if request.client else "unknown"
     key = limiter.make_key(ip, body.username)
 
-    locked = limiter.locked_seconds(key)
+    locked = await limiter.alocked_seconds(key)
     if locked > 0:
         retry_after = max(1, int(locked + 0.5))
         raise HTTPException(
@@ -94,11 +105,11 @@ async def login(body: LoginIn, request: Request) -> TokenOut:
     store = get_user_store()
     user = store.authenticate(body.username, body.password)
     if user is None:
-        # 记录失败；达到阈值后后续请求会被上面的 locked_seconds 检查拦截
-        limiter.record_failure(key)
+        # 记录失败；达到阈值后后续请求会被上面的 alocked_seconds 检查拦截
+        await limiter.arecord_failure(key)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户名或密码错误")
 
-    limiter.record_success(key)
+    await limiter.arecord_success(key)
     tenant_id = body.tenant_id or user.tenant_id
     token = create_access_token(
         user_id=user.user_id, tenant_id=tenant_id, roles=user.roles
@@ -119,11 +130,61 @@ async def me(principal: Principal = Depends(get_principal)) -> dict:
     }
 
 
-@router.post("/oidc/callback", summary="OIDC 回调（占位，接 Keycloak 时启用）")
-async def oidc_callback(code: str) -> dict:
-    """配置 XAGENT_SECURITY__OIDC_JWKS_URL 后，此处用 code 换 token 并验签。"""
-    _ = code
-    raise HTTPException(
-        status.HTTP_501_NOT_IMPLEMENTED,
-        "OIDC 未配置：请设置 XAGENT_SECURITY__OIDC_JWKS_URL 接 Keycloak",
+def _oidc_not_configured(exc: OidcNotConfiguredError) -> HTTPException:
+    return HTTPException(status.HTTP_501_NOT_IMPLEMENTED, str(exc))
+
+
+def _audit_oidc_failure(reason: str) -> None:
+    from xagent.enterprise.audit import get_audit_log
+
+    get_audit_log().record(
+        tenant_id="default",
+        actor="anonymous",
+        action="auth.oidc_login_failed",
+        resource="auth/oidc/callback",
+        detail={"reason": reason},
     )
+
+
+@router.get("/oidc/providers", summary="OIDC/SSO 可用性（前端据此渲染 SSO 按钮）")
+async def oidc_providers() -> dict:
+    return {"enabled": oidc_enabled()}
+
+
+@router.get("/oidc/login", summary="OIDC 登录：302 跳转 IdP 授权端点")
+async def oidc_login() -> RedirectResponse:
+    try:
+        url = await build_login_redirect()
+    except OidcNotConfiguredError as exc:
+        raise _oidc_not_configured(exc) from exc
+    except OidcExchangeError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+
+
+@router.api_route("/oidc/callback", methods=["GET", "POST"], summary="OIDC 回调：换票 + 签发会话")
+async def oidc_callback(
+    code: str = "", state: str = "", error: str | None = None
+) -> TokenOut:
+    """校验 state → 授权码换 token → 验 id_token(JWKS+nonce) → JIT 开户 → TokenOut。"""
+    if not oidc_enabled():
+        raise HTTPException(
+            status.HTTP_501_NOT_IMPLEMENTED,
+            "OIDC 未配置：请设置 XAGENT_SECURITY__OIDC_CLIENT_ID 接 Keycloak",
+        )
+    if error:
+        _audit_oidc_failure(f"idp_error:{error}")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"IdP 返回错误: {error}")
+    if not code or not state:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "缺少 code 或 state 参数")
+    try:
+        result = await handle_callback(code=code, state=state)
+    except OidcNotConfiguredError as exc:
+        raise _oidc_not_configured(exc) from exc
+    except (OidcStateError, OidcTokenError) as exc:
+        _audit_oidc_failure(str(exc))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    except OidcExchangeError as exc:
+        _audit_oidc_failure(str(exc))
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return TokenOut(**result)

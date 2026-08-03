@@ -53,6 +53,11 @@ class ResponseCacheMiddleware(BaseHTTPMiddleware):
         if "/stream" in path or "/ws" in path:
             return await call_next(request)
 
+        # 跳过认证端点：OIDC 回调的 state 是一次性的，缓存会让重放请求绕过
+        # 校验直接拿到缓存的会话 token；登录/注册响应同样不应被缓存复用。
+        if "/auth" in path:
+            return await call_next(request)
+
         # 跳过携带凭据的请求：缓存键不含租户/用户维度，缓存已认证响应
         # 既会把轮询类端点（任务状态、看板）钉死在旧快照上（写后读不到新状态），
         # 又会把租户 A 的私有数据泄漏给同路径请求的租户 B。
