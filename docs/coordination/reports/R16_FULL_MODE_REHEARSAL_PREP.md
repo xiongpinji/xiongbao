@@ -204,3 +204,40 @@ R16 不做：
 - 不将本清单写成 R4 目标环境演练完成。
 
 R4 仍需基于实际环境执行演练并归档日志、截图、命令输出和异常处置结果。
+
+---
+
+## 8. 增补（2026-08-03）：secretRef 外部密管注入路径
+
+> 增补背景：944675b 落地 secretRef 外部密管后，full-mode secret 注入在「直接写值」之外新增了引用式路径。本增补只登记新路径，不改变 R16 既有清单与边界（本包已于 2026-08-03 验收 DONE，本节为同口径增补）。
+
+### 8.1 secretRef 引用格式
+
+支持在任意 `XAGENT_*` 配置值中使用引用代替明文：
+
+| 前缀 | 语义 | 示例 |
+|---|---|---|
+| `SECRETREF:file:<path>` | 从文件读取 secret（K8s/Docker secrets 挂载） | `XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/jwt_secret` |
+| `SECRETREF:env:<VAR>` | 从另一环境变量间接引用 | `XAGENT_DB__URL=SECRETREF:env:DATABASE_URL` |
+
+行为约束：
+
+- 生产模式（full/enterprise）下 secretRef 解析失败 **fail-fast**（不静默回退默认值）；
+- `SECRETREF:vault:<path>#<key>` 前缀已预留接口（未实装，引用即 fail-fast 提示）；
+- 直接写值路径仍然有效，二者可混用。
+
+### 8.2 对 R16 §3.2 清单的增补
+
+`.env.rehearsal` 中的 secret 项可按 secretRef 改写，例如：
+
+```text
+XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/xagent_jwt
+POSTGRES_PASSWORD=SECRETREF:file:/run/secrets/pg_password
+```
+
+Helm 部署时优先使用 chart 内置的 existingSecret / secretRef 接线（见 `deploy/helm` 与交付验证报告 v3 平台化一节），不再把 secret 明文写入 values。
+
+### 8.3 边界（增补同样适用）
+
+- 不新增真实 secret、不启动服务、不构成 R4 演练完成证据；
+- secretRef 的实机解析演练属下一轮 R4 级演练内容。

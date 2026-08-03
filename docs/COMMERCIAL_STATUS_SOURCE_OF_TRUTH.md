@@ -2,7 +2,7 @@
 
 > **用途：** 本文档是 `xagent` 当前项目状态、发布口径与商用 readiness 判断的唯一事实源。凡是 README、ROADMAP、项目总览、接手说明、对外同步材料与本文件冲突时，以本文件为准。
 >
-> **更新时间：** 2026-07-26
+> **更新时间：** 2026-08-03（增补：Roadmap v2 P0 平台化与 P2 容量实证落地证据、CI 门禁补强；README 口径同步修正）
 >
 > **适用对象：** owner、研发、QA、交付、下一位接手者。
 
@@ -122,6 +122,16 @@
 
 这些事实来自接手说明、对应运行日志与本轮协调交付证据，而不是纯规划口径。
 
+### 4.1 2026-08-03 增补事实（Roadmap v2 落地证据）
+
+- **P0 平台化已落地并实测**：`secretRef` 外部密管（`SECRETREF:file:/env:`，生产 fail-fast，vault 预留）+ Helm chart 产品化（全套模板 + default/dev/staging/prod/enterprise 五套 values 渲染通过）— 944675b；P0 不再停留于方向层
+- **SSO/OIDC 授权码流端到端实测通过**：Keycloak 26 discovery/302/换票/JWKS 验签/JIT 开户/state 防重放；SSO token 与本地账号 token 双源共存（alg 路由双源校验，伪造双算法均拒）— `audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md`
+- **沙箱分级 L1 Docker 实测通过**：stdout/stderr 分流回收、只读 rootfs/禁网/内存限额/超时 kill/一次性容器、逃逸尝试全拦截；python_exec 在沙箱 disabled 时 fail-closed 不回退宿主机；L2 E2B 代码就绪（无 key 未实测）— 同上
+- **P2 容量实证第一轮闭环**：三瓶颈（bcrypt 同步阻塞 / skills 双重序列化 / 限流硬编码）全部修复并实测——login c=50 3.2→54.8 RPS（17×）、skills c=50 31.5→162.3 RPS（5.2×）、限流 XAGENT_SECURITY__RATE_LIMIT_* 全项可配
+- **P2 正式压测**：10min soak 142,720 请求全 200 无泄漏迹象；Postgres 目标配置不劣于 SQLite；4 worker 形态 canvas c=10 达 606 RPS（6.4×）— `audit-20260802/LOAD_TEST_FORMAL_20260803.md`
+- **CI 门禁补强**：PR #7 新候选 backend/frontend/license-gate/e2e-api 全绿（run 30829673045）；e2e-api 与 backend 解耦防止连带 SKIPPED 掩盖 API 漂移；/perf 端点存量 bug 修复
+- **多实例 HA 仍未正式验证**（Redis 化完成但未经多实例实测）；**L2 E2B 未实测**（无 key）；**非当前机器的目标环境演练仍未做**——此三项维持原边界不外推
+
 ---
 
 ## 5. 历史阶段完成 ≠ 当前正式 GA
@@ -162,10 +172,10 @@
 G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 
 ### P0（平台化增强）
-- `secretRef` / external secret manager 真正落地（当前仍停留在方向层）
-- Helm chart 产品化补齐
-- 标准环境模板（dev / staging / prod / enterprise）
-- 平台级配置治理与差异控制
+- ✅ `secretRef` / external secret manager 已落地（file:/env:，生产 fail-fast；vault 预留）— 2026-08-03
+- ✅ Helm chart 产品化补齐（五套 values 渲染通过）— 2026-08-03
+- ✅ 标准环境模板（dev / staging / prod / enterprise values）— 2026-08-03
+- 平台级配置治理与差异控制（进行中）
 
 ### P1（自动化运营增强）
 - 自动告警联动
@@ -174,9 +184,9 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 - 发布后观测结果自动汇总
 
 ### P2（容量与性能实证）
-- 正式压测基线
-- 多实例一致性与扩容实证
-- 队列 / 缓存 / LLM 路径瓶颈治理
+- ✅ 正式压测基线（两轮：基线 + soak/Postgres/多 worker）— 2026-08-03
+- 多实例一致性与扩容实证（Redis 化完成，多实例实测未做）
+- ✅ 队列 / 缓存 / LLM 路径瓶颈治理（三瓶颈修复实测；skills/login 路径）— 2026-08-03
 
 ### P3（商业复制增强）
 - 标准交付模板与角色包
@@ -222,5 +232,7 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 ## 10. 当前结论（供快速引用）
 
 **当前结论：**
+
+G1/G2/G3 已全部完成，项目按当前定义达到商用交付标准，处于 Roadmap v2 增强期。截至 2026-08-03：P0 平台化（secretRef + Helm）与 P2 容量实证（三瓶颈修复 + soak/Postgres/多 worker 基线）已落地并实测；剩余边界为——多实例 HA 未正式验证、L2 E2B 云沙箱未实测（无 key）、非当前机器的目标环境演练未做、新候选（c175201 后 221 提交）待 owner 重新签发。
 
 > `xagent` 已达到当前定义下的**商用交付标准**。项目已完成内部试点可稳定使用（G1）、正式商用 GA（G2）与企业级长期运营治理与首轮验证（G3）的完整 Goal 收口，当前可以明确按“正式商用可交付”口径对外表述。后续若继续推进，将属于下一轮增强与演进，而不是当前交付标准仍未达成。

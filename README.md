@@ -6,9 +6,9 @@
 
 这是 X-Agent 的全新净重写版本。设计原则：不重复造轮子，把成熟能力（LLM 路由、记忆、可观测、沙箱、编排、SSO、授权、MCP）交给生产级开源组件，X-Agent 只保留并强化自己的差异化语义（工作流结构化视图、短剧工厂、开源候选发现、多租户审计黑板）。
 
-## 当前状态口径（2026-07-06）
+## 当前状态口径（2026-08-03）
 
-当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。项目主链可运行、功能版图完整，适合内部试点或受控私有部署；但尚未达到正式商用 GA，仍需远端 CI 全绿、目标环境演练、PR 审查包和发布签字。
+当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。G1/G2/G3 已全部完成，项目处于 Roadmap v2 增强期：P0 平台化（secretRef 外部密管 + Helm chart 产品化）与 P2 容量实证（10min soak 142,720 请求零错误、Postgres 与多 worker 基线）已落地实测；剩余边界为多实例 HA 未正式验证、L2 E2B 云沙箱未实测、非当前机器的目标环境演练未做。
 
 如需查看当前候选可直接交付给管理员 / 运维 / 试点负责人的材料入口，请从 [`docs/DELIVERY_MATERIALS_INDEX_V1.md`](docs/DELIVERY_MATERIALS_INDEX_V1.md) 开始。
 
