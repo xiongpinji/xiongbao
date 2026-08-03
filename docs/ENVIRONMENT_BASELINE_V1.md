@@ -176,3 +176,41 @@ curl.exe -f http://<web-host>/
 - 远端 CI 全绿由 R1 继续闭环。
 - 关键页面截图 / 验收记录由 R9 补齐。
 - 本文档不证明 staging / prod 已部署，只证明环境基线和 secret 策略已经文档化。
+
+---
+
+## 8. secretRef 引用语法（Roadmap v2 P0）
+
+任何标记为 secret 的配置字段（见 `apps/api/xagent/infra/secrets.py::SECRET_FIELD_PATHS`，
+含 `security.jwt_secret`、`security.oidc_client_secret`、`db.url`、`cache.redis_url`、
+`llm.*_api_key`、`memory.qdrant_api_key`、`media.*_api_key`、
+`observability.langfuse_secret_key`、`sandbox.e2b_api_key`）支持在环境变量 / .env 值中
+使用引用语法，避免明文落盘：
+
+```text
+SECRETREF:file:/run/secrets/jwt_secret   # 从文件读取（自动 strip 首尾空白）
+SECRETREF:env:SHARED_JWT_SECRET          # 从另一环境变量读取
+SECRETREF:vault:<path>#<key>             # 预留扩展位（当前 fail-fast 提示未实现）
+```
+
+优先级与行为：
+
+- 不带 `SECRETREF:` 前缀的值**原样透传**，现有行为完全不变。
+- 解析发生在 `Settings` 加载后的 model validator 中，晚于 .env / 环境变量合并，
+  因此引用可以出现在 .env、系统环境变量或 k8s 注入的 env 中。
+- full / enterprise 模式：解析失败（文件不存在、env 未设置、未知 scheme）
+  **fail-fast** 抛 `SecretRefError`，错误消息只含字段名与引用目标，不含 secret 值。
+- lite 模式：解析失败降级为 warning 日志并置空，保证本地开发不中断。
+
+k8s 衔接（推荐路径）：
+
+1. **首选 `secretKeyRef` 注入**：K8s Secret（或 ESO `ExternalSecret` 同步出的 Secret）
+   直接以 env 注入容器，应用侧无感知，无需 secretRef 语法。
+   Helm values 用 `security.existingJwtSecretRef.name/key` 等指向已有 Secret。
+2. **file 引用**：Secret 以 volume 挂载（如 `/run/secrets/jwt_secret`）时，
+   设 `XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/jwt_secret`。
+3. **env 间接引用**：多个组件共享同一密管变量时，
+   设 `XAGENT_SECURITY__JWT_SECRET=SECRETREF:env:SHARED_JWT_SECRET`。
+
+禁止事项：任何环境都不要把真实 secret 明文写入 `deploy/helm/values*.yaml` 或 git 仓库；
+`SECRETREF:` 值本身不是密文，可安全入库。

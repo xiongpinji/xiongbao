@@ -21,6 +21,7 @@ spec:
         prometheus.io/port: {{ .Values.api.port | quote }}
         prometheus.io/path: "/metrics"
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "xagent.serviceAccountName" . }}
       securityContext:
@@ -40,66 +41,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "xagent.fullname" . }}-config
+          {{- $depEnv := include "xagent.dependencyEnvVars" . | trim }}
+          {{- $secretEnv := include "xagent.secretEnvVars" . | trim }}
+          {{- if or $depEnv $secretEnv }}
           env:
-            {{- if .Values.secrets.eso.enabled }}
-            - name: XAGENT_SECURITY__JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "xagent.fullname" . }}-eso
-                  key: jwt-secret
-            - name: XAGENT_LLM__PROXY_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "xagent.fullname" . }}-eso
-                  key: proxy-api-key
-            - name: LANGFUSE_PUBLIC_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "xagent.fullname" . }}-eso
-                  key: langfuse-public-key
-            - name: LANGFUSE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "xagent.fullname" . }}-eso
-                  key: langfuse-secret-key
-            {{- else }}
-            {{- if .Values.llm.existingProxyApiKeySecretRef.name }}
-            - name: XAGENT_LLM__PROXY_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.llm.existingProxyApiKeySecretRef.name | quote }}
-                  key: {{ .Values.llm.existingProxyApiKeySecretRef.key | quote }}
-            {{- else }}
-            - { name: XAGENT_LLM__PROXY_API_KEY, value: "{{ .Values.llm.proxyApiKey }}" }
+            {{- if $depEnv }}
+            {{- $depEnv | nindent 12 }}
             {{- end }}
-            {{- if .Values.observability.existingLangfuseSecretRef.name }}
-            - name: LANGFUSE_PUBLIC_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
-                  key: {{ .Values.observability.existingLangfuseSecretRef.publicKeyKey | quote }}
-            - name: LANGFUSE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
-                  key: {{ .Values.observability.existingLangfuseSecretRef.secretKeyKey | quote }}
-            {{- else }}
-            - name: LANGFUSE_PUBLIC_KEY
-              value: {{ .Values.observability.langfusePublicKey | quote }}
-            - name: LANGFUSE_SECRET_KEY
-              value: {{ .Values.observability.langfuseSecretKey | quote }}
+            {{- if $secretEnv }}
+            {{- $secretEnv | nindent 12 }}
             {{- end }}
-            {{- if .Values.security.existingJwtSecretRef.name }}
-            - name: XAGENT_SECURITY__JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.security.existingJwtSecretRef.name | quote }}
-                  key: {{ .Values.security.existingJwtSecretRef.key | quote }}
-            {{- else }}
-            - name: XAGENT_SECURITY__JWT_SECRET
-              value: {{ required "either security.jwtSecret or security.existingJwtSecretRef.name is required" .Values.security.jwtSecret | quote }}
-            {{- end }}
-            {{- end }}
+          {{- end }}
           command: ["sh", "-c"]
           args:
             - "python -m alembic upgrade head && (python -m xagent.cli warmup || true) && uvicorn xagent.main:app --host 0.0.0.0 --port {{ .Values.api.port }} --workers {{ .Values.api.workers }}"
@@ -122,13 +74,14 @@ metadata:
   namespace: {{ include "xagent.namespace" . }}
   labels:
     {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
 spec:
   selector:
     {{- include "xagent.apiSelectorLabels" . | nindent 4 }}
   ports: [{ port: {{ .Values.api.port }}, targetPort: {{ .Values.api.port }} }]
 {{- end }}
 ---
-{{- if .Values.autoscaling.enabled }}
+{{- if and .Values.api.enabled .Values.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -148,178 +101,4 @@ spec:
       resource:
         name: cpu
         target: { type: Utilization, averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }} }
-{{- end }}
----
-{{- if .Values.ingress.enabled }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ include "xagent.fullname" . }}
-  namespace: {{ include "xagent.namespace" . }}
-  labels:
-    {{- include "xagent.labels" . | nindent 4 }}
-  annotations:
-    {{- if .Values.ingress.tls }}
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    {{- end }}
-spec:
-  ingressClassName: {{ .Values.ingress.className }}
-  rules:
-    - host: {{ .Values.ingress.host }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service: { name: {{ include "xagent.fullname" . }}-web, port: { number: {{ .Values.web.port }} } }
-          - path: /api
-            pathType: Prefix
-            backend:
-              service: { name: {{ include "xagent.fullname" . }}-api, port: { number: {{ .Values.api.port }} } }
-  {{- if .Values.ingress.tls }}
-  tls:
-    - hosts: [{{ .Values.ingress.host }}]
-      secretName: {{ include "xagent.fullname" . }}-tls
-  {{- end }}
-{{- end }}
-{{- if .Values.api.enabled }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ .Release.Name }}-api
-  labels: { app: xagent-api }
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels: { app: xagent-api }
-  template:
-    metadata:
-      labels: { app: xagent-api }
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8000"
-        prometheus.io/path: "/metrics"
-    spec:
-      containers:
-        - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          ports: [{ containerPort: {{ .Values.api.port }} }]
-          env:
-            - { name: XAGENT_MODE, value: "enterprise" }
-            - { name: XAGENT_DB__URL, value: "{{ .Values.postgres.url }}" }
-            - { name: XAGENT_CACHE__REDIS_URL, value: "{{ .Values.redis.url }}" }
-            - { name: XAGENT_MEMORY__QDRANT_URL, value: "{{ .Values.qdrant.url }}" }
-            - { name: XAGENT_LLM__OLLAMA_BASE_URL, value: "{{ .Values.llm.ollamaBaseUrl }}" }
-            - { name: XAGENT_LLM__OLLAMA_MODEL, value: "{{ .Values.llm.ollamaModel }}" }
-            - { name: XAGENT_LLM__PROXY_URL, value: "{{ .Values.llm.proxyUrl }}" }
-            {{- if .Values.llm.existingProxyApiKeySecretRef.name }}
-            - name: XAGENT_LLM__PROXY_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.llm.existingProxyApiKeySecretRef.name | quote }}
-                  key: {{ .Values.llm.existingProxyApiKeySecretRef.key | quote }}
-            {{- else }}
-            - { name: XAGENT_LLM__PROXY_API_KEY, value: "{{ .Values.llm.proxyApiKey }}" }
-            {{- end }}
-            - { name: XAGENT_LLM__REQUEST_TIMEOUT_SECONDS, value: {{ .Values.llm.requestTimeoutSeconds | quote }} }
-            - { name: XAGENT_LLM__WARMUP_ENABLED, value: {{ .Values.llm.warmupEnabled | quote }} }
-            - { name: XAGENT_LLM__WARMUP_PROMPT, value: {{ .Values.llm.warmupPrompt | quote }} }
-            - { name: XAGENT_LLM__WARMUP_MAX_TOKENS, value: {{ .Values.llm.warmupMaxTokens | quote }} }
-            - { name: XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS, value: {{ .Values.llm.warmupWaitTimeoutSeconds | quote }} }
-            - { name: XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS, value: {{ .Values.llm.warmupPollIntervalSeconds | quote }} }
-            {{- if .Values.observability.existingLangfuseSecretRef.name }}
-            - name: LANGFUSE_PUBLIC_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
-                  key: {{ .Values.observability.existingLangfuseSecretRef.publicKeyKey | quote }}
-            - name: LANGFUSE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.observability.existingLangfuseSecretRef.name | quote }}
-                  key: {{ .Values.observability.existingLangfuseSecretRef.secretKeyKey | quote }}
-            {{- else }}
-            - name: LANGFUSE_PUBLIC_KEY
-              value: {{ .Values.observability.langfusePublicKey | quote }}
-            - name: LANGFUSE_SECRET_KEY
-              value: {{ .Values.observability.langfuseSecretKey | quote }}
-            {{- end }}
-            {{- if .Values.security.existingJwtSecretRef.name }}
-            - name: XAGENT_SECURITY__JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.security.existingJwtSecretRef.name | quote }}
-                  key: {{ .Values.security.existingJwtSecretRef.key | quote }}
-            {{- else }}
-            - name: XAGENT_SECURITY__JWT_SECRET
-              value: {{ required "either security.jwtSecret or security.existingJwtSecretRef.name is required" .Values.security.jwtSecret | quote }}
-            {{- end }}
-            - { name: XAGENT_SECURITY__REQUIRE_AUTH, value: "{{ .Values.security.requireAuth }}" }
-          command: ["sh", "-c"]
-          args:
-            - "python -m alembic upgrade head && (python -m xagent.cli warmup || true) && uvicorn xagent.main:app --host 0.0.0.0 --port {{ .Values.api.port }} --workers {{ .Values.api.workers }}"
-          resources: {{ toYaml .Values.api.resources | nindent 12 }}
-          livenessProbe:
-            httpGet: { path: /health, port: {{ .Values.api.port }} }
-          readinessProbe:
-            httpGet: { path: /ready, port: {{ .Values.api.port }} }
-{{- end }}
----
-{{- if .Values.api.enabled }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-api
-spec:
-  selector: { app: xagent-api }
-  ports: [{ port: {{ .Values.api.port }}, targetPort: {{ .Values.api.port }} }]
-{{- end }}
----
-{{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ .Release.Name }}-api
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ .Release.Name }}-api
-  minReplicas: {{ .Values.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target: { type: Utilization, averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }} }
-{{- end }}
----
-{{- if .Values.ingress.enabled }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ .Release.Name }}
-  annotations:
-    {{- if .Values.ingress.tls }}
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    {{- end }}
-spec:
-  ingressClassName: {{ .Values.ingress.className }}
-  rules:
-    - host: {{ .Values.ingress.host }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service: { name: {{ .Release.Name }}-web, port: { number: {{ .Values.web.port }} } }
-          - path: /api
-            pathType: Prefix
-            backend:
-              service: { name: {{ .Release.Name }}-api, port: { number: {{ .Values.api.port }} } }
-  {{- if .Values.ingress.tls }}
-  tls:
-    - hosts: [{{ .Values.ingress.host }}]
-      secretName: {{ .Release.Name }}-tls
-  {{- end }}
 {{- end }}

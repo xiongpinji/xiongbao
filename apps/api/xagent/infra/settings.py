@@ -13,7 +13,9 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from xagent.infra.secrets import resolve_settings_secrets
 
 # 项目根目录（xagent/），.env 在此；不依赖 CWD。
 # 支持 XAGENT_ENV_FILE 显式覆盖（容器/自定义部署）；否则从包位置向上探测
@@ -262,6 +264,14 @@ class Settings(BaseSettings):
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     tools: ToolsSettings = Field(default_factory=ToolsSettings)
     sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
+
+    @model_validator(mode="after")
+    def _resolve_secret_refs(self) -> Settings:
+        """加载后对 secret 字段统一解析 ``SECRETREF:`` 引用（见 infra/secrets.py）。
+
+        无 ``SECRETREF:`` 前缀的值原样保留，现有行为不变。
+        """
+        return resolve_settings_secrets(self)
 
     @property
     def is_lite(self) -> bool:

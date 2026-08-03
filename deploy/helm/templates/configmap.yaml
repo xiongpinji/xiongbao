@@ -9,10 +9,17 @@ data:
   XAGENT_MODE: {{ .Values.config.mode | quote }}
   XAGENT_DEBUG: {{ .Values.config.debug | quote }}
   XAGENT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
-  XAGENT_DB__URL: {{ .Values.postgres.url | quote }}
   XAGENT_DB__ECHO: {{ .Values.config.dbEcho | quote }}
+  {{- /* 外部服务 url 仅在显式配置时注入；内置依赖连接串由 xagent.dependencyEnvVars 注入 */ -}}
+  {{- if .Values.postgres.url }}
+  XAGENT_DB__URL: {{ .Values.postgres.url | quote }}
+  {{- end }}
+  {{- if .Values.redis.url }}
   XAGENT_CACHE__REDIS_URL: {{ .Values.redis.url | quote }}
+  {{- end }}
+  {{- if .Values.qdrant.url }}
   XAGENT_MEMORY__QDRANT_URL: {{ .Values.qdrant.url | quote }}
+  {{- end }}
   XAGENT_LLM__OLLAMA_BASE_URL: {{ .Values.llm.ollamaBaseUrl | quote }}
   XAGENT_LLM__OLLAMA_MODEL: {{ .Values.llm.ollamaModel | quote }}
   XAGENT_LLM__PROXY_URL: {{ .Values.llm.proxyUrl | quote }}

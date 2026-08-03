@@ -1,0 +1,56 @@
+{{- if .Values.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xagent.fullname" . }}-worker
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "xagent.workerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xagent.workerSelectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "xagent.fullname" . }}-config
+          {{- $depEnv := include "xagent.dependencyEnvVars" . | trim }}
+          {{- $secretEnv := include "xagent.secretEnvVars" . | trim }}
+          {{- if or $depEnv $secretEnv }}
+          env:
+            {{- if $depEnv }}
+            {{- $depEnv | nindent 12 }}
+            {{- end }}
+            {{- if $secretEnv }}
+            {{- $secretEnv | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          command: ["sh", "-c"]
+          args:
+            - "(python -m xagent.cli warmup || true) && exec celery -A xagent.worker.celery_app worker --loglevel=info --concurrency {{ .Values.worker.concurrency }}"
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits: { cpu: "1000m", memory: "2Gi" }
+{{- end }}

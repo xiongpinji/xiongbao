@@ -58,20 +58,35 @@ worker:
 web:
   enabled: true
   port: 80
+  replicas: 2
+  image:
+    repository: xagent-web
 
-# 外部依赖（生产用 Bitnami Helm 或托管服务）
+# 依赖服务：enabled=true 且 url 为空时部署内置 StatefulSet；
+# 生产建议 enabled=false（或置 url）使用外部 / 托管服务。
 postgres:
   enabled: true
-  url: ""  # 留空则用内置；生产建议外部
+  url: ""  # 外部 PostgreSQL DSN，如 postgresql+asyncpg://user:pass@host:5432/xagent
   database: xagent
+  image: "postgres:16-alpine"
+  storage: 1Gi
+  # 内置实例密码。仅 dev 直填（会进入 chart 生成的 Secret）；生产用 existingSecretRef 或 ESO。
+  password: "xagent-dev-password-change-me"
+  existingSecretRef:
+    name: ""
+    key: "postgres-password"
 
 redis:
   enabled: true
-  url: ""
+  url: ""  # 外部 Redis，如 redis://:pass@host:6379/0
+  image: "redis:7-alpine"
+  storage: 1Gi
 
 qdrant:
   enabled: true
-  url: ""
+  url: ""  # 外部 Qdrant，如 http://qdrant.example.com:6333
+  image: "qdrant/qdrant:v1.12.5"
+  storage: 2Gi
 
 # LLM 配置
 llm:
@@ -90,11 +105,11 @@ llm:
   warmupPollIntervalSeconds: 1
 
 # 安全
+# secret 注入优先级：ESO（secrets.eso.enabled）> existingSecretRef > values 直填（进 chart 生成的 Secret）。
+# 禁止把真实 secret 提交进 values*.yaml；生产用 ESO 或 existingSecretRef。
+# 应用侧另支持 SECRETREF:file:/env: 语法（docs/ENVIRONMENT_BASELINE_V1.md 第 8 章）。
 security:
-  # 两种注入方式二选一：
-  # 1) 直接提供 jwtSecret（当前兼容模式）
-  # 2) 提供 existingJwtSecretRef.name / key（平台化推荐）
-  jwtSecret: ""
+  jwtSecret: ""  # 仅 dev 直填；留空且未配置 ref 时不注入（应用用内置 dev 默认）
   existingJwtSecretRef:
     name: ""
     key: "jwt-secret"
@@ -176,6 +191,7 @@ ingress:
   className: nginx
   host: xagent.example.com
   tls: true
+  clusterIssuer: letsencrypt-prod
 
 autoscaling:
   enabled: true

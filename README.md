@@ -23,7 +23,7 @@ xagent/
 │   └── desktop/      # Tauri 桌面壳
 ├── deploy/
 │   ├── compose/      # 单机 docker-compose（默认交付形态）
-│   └── helm/         # K8s（占位）
+│   └── helm/         # K8s Helm chart（api/worker/web/依赖件，dev~enterprise 五套 values）
 ├── packages/sdk-ts/  # TypeScript SDK
 └── docs/
 ```
