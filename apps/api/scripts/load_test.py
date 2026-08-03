@@ -122,6 +122,71 @@ async def run_one(
     )
 
 
+async def soak(
+    client: httpx.AsyncClient,
+    base: str,
+    auth: dict,
+    args: argparse.Namespace,
+) -> None:
+    """持续压测（soak）：混合端点、固定并发、按时长运行，周期性输出进度。
+
+    用于 >=10min 稳定性/内存泄漏观察（配合外部 RSS 采样），区别于突发式基线。
+    """
+    duration = args.duration
+    concurrency = int(args.concurrency.split(",")[0])
+    endpoints = [
+        ("GET", f"{base}/health", {}, None),
+        ("GET", f"{base}/api/v1/skills", auth, None),
+        ("GET", f"{base}/api/v1/canvas", auth, None),
+    ]
+    stop = time.perf_counter() + duration
+    latencies: list[float] = []
+    status_counts: dict[str, int] = {}
+    lock = asyncio.Lock()
+    counter = 0
+
+    async def worker() -> None:
+        nonlocal counter
+        while time.perf_counter() < stop:
+            method, url, headers, body = endpoints[counter % len(endpoints)]
+            counter += 1
+            lat, status = await _do_request(client, method, url, headers, body)
+            async with lock:
+                latencies.append(lat)
+                key = str(status)
+                status_counts[key] = status_counts.get(key, 0) + 1
+
+    t0 = time.perf_counter()
+    workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
+    while time.perf_counter() < stop:
+        await asyncio.sleep(60)
+        done = len(latencies)
+        el = time.perf_counter() - t0
+        print(f"[soak] {el/60:.1f}min total={done} rps={done/el:.1f} "
+              f"status={status_counts}", flush=True)
+    await asyncio.gather(*workers)
+    total_time = time.perf_counter() - t0
+    n = len(latencies)
+    latencies.sort()
+    r = Result(
+        endpoint="soak:mixed(health,skills,canvas)",
+        concurrency=concurrency, total=n,
+        ok=status_counts.get("200", 0),
+        errors=n - status_counts.get("200", 0),
+        error_rate=round((n - status_counts.get("200", 0)) / max(n, 1) * 100, 2),
+        rps=round(n / total_time, 1),
+        p50_ms=round(_pct(latencies, 0.50), 2),
+        p95_ms=round(_pct(latencies, 0.95), 2),
+        p99_ms=round(_pct(latencies, 0.99), 2),
+        avg_ms=round(statistics.mean(latencies), 2) if latencies else 0.0,
+        max_ms=round(latencies[-1], 2) if latencies else 0.0,
+        status_counts=status_counts,
+    )
+    print("RESULTS_JSON_BEGIN")
+    print(json.dumps([asdict(r)], ensure_ascii=False, indent=2))
+    print("RESULTS_JSON_END")
+
+
 async def main_async(args: argparse.Namespace) -> None:
     base = args.url.rstrip("/")
     limits = httpx.Limits(max_connections=200, max_keepalive_connections=200)
@@ -133,6 +198,10 @@ async def main_async(args: argparse.Namespace) -> None:
         resp.raise_for_status()
         token = resp.json()["access_token"]
         auth = {"Authorization": f"Bearer {token}"}
+
+        if args.duration > 0:
+            await soak(client, base, auth, args)
+            return
 
         all_targets = {
             "health": ("GET /health", "GET", f"{base}/health", {}, None, False),
@@ -182,6 +251,8 @@ def main() -> None:
     parser.add_argument("--requests", type=int, default=BURST_N, help="每档请求数")
     parser.add_argument("--wait", type=float, default=WINDOW_WAIT,
                         help="限流窗口排空等待秒数；服务端关闭限流时传 0")
+    parser.add_argument("--duration", type=float, default=0,
+                        help="soak 模式：持续压测秒数（>0 时启用，并发取 --concurrency 首档）")
     args = parser.parse_args()
     asyncio.run(main_async(args))
 
