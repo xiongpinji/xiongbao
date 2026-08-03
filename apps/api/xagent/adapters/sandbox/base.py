@@ -4,7 +4,7 @@
 要真正执行须显式配置后端（RFC-001 分级）：
   - disabled : L0，拒绝执行（lite 默认）
   - docker   : L1，一次性隔离容器（见 docker_sandbox.py）
-  - e2b      : L2，云 microVM（S3 落地，当前返回明确未实现错误）
+  - e2b      : L2，云 microVM（见 e2b_sandbox.py）
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ class DisabledSandbox:
 
 
 class UnsupportedBackendSandbox:
-    """已声明但未实现的后端（如 e2b）：明确报错，绝不静默降级到宿主机。"""
+    """未知/未实现的后端：明确报错（fail-closed），绝不静默降级到宿主机。"""
 
     def __init__(self, backend: str, reason: str) -> None:
         self.backend = backend
@@ -81,10 +81,20 @@ def get_sandbox() -> Sandbox:
             timeout_seconds=s.timeout_seconds,
         )
     if backend == "e2b":
+        from xagent.adapters.sandbox.e2b_sandbox import E2BSandbox
+
+        s = get_settings().sandbox
+        return E2BSandbox(
+            api_key=s.e2b_api_key,
+            template=s.e2b_template,
+            base_url=s.e2b_base_url,
+            timeout_seconds=s.timeout_seconds,
+        )
+    if backend != "disabled":
         return UnsupportedBackendSandbox(
-            "e2b",
-            "E2B 沙箱后端尚未实现（RFC-001 L2，计划 S3 落地）。"
-            "请改用 XAGENT_SANDBOX__BACKEND=docker 或 disabled。",
+            backend,
+            f"未知沙箱后端: {backend!r}（支持 disabled/docker/e2b）。"
+            "按拒绝执行处理（fail-closed），请修正 XAGENT_SANDBOX__BACKEND。",
         )
     return DisabledSandbox()
 

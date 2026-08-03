@@ -8,12 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from xagent.adapters.sandbox.base import (
-    DisabledSandbox,
-    UnsupportedBackendSandbox,
-    get_sandbox,
-    reset_sandbox,
-)
+from xagent.adapters.sandbox.base import DisabledSandbox, get_sandbox, reset_sandbox
 from xagent.adapters.sandbox.docker_sandbox import (
     DockerSandbox,
     SandboxUnavailableError,
@@ -237,22 +232,7 @@ def test_factory_docker_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     assert sandbox._readonly_rootfs is True
 
 
-def test_factory_e2b_backend_explicit_unsupported(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _set_backend(monkeypatch, "e2b")
-    sandbox = get_sandbox()
-    assert isinstance(sandbox, UnsupportedBackendSandbox)
-    assert sandbox.backend == "e2b"
-
-
-async def test_factory_e2b_run_code_errors_clearly(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _set_backend(monkeypatch, "e2b")
-    res = await get_sandbox().run_code("python", "print(1)")
-    assert res.ok is False
-    assert "尚未实现" in (res.error or "")
+# E2B 后端（L2）测试见 test_sandbox_e2b.py
 
 
 # ── 生产校验拦截 ─────────────────────────────────────────────────

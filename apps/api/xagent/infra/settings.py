@@ -227,6 +227,10 @@ class SandboxSettings(BaseModel):
     network_disabled: bool = True      # 默认 --network=none
     readonly_rootfs: bool = True       # 默认 --read-only
     timeout_seconds: int = 30          # 单次执行超时
+    # ── L2：E2B 云沙箱（见 adapters/sandbox/e2b_sandbox.py、docs/deployment/sandbox.md）
+    e2b_api_key: str = ""              # 也可读 E2B_API_KEY 环境变量
+    e2b_template: str = "code-interpreter"
+    e2b_base_url: str = "https://api.e2b.dev"  # 官方云，可指自托管网关
 
 
 class Settings(BaseSettings):
