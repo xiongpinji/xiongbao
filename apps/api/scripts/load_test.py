@@ -144,18 +144,19 @@ async def main_async(args: argparse.Namespace) -> None:
         wanted = [t.strip() for t in args.targets.split(",") if t.strip()]
         concurrencies = [int(c) for c in args.concurrency.split(",")]
 
+        wait_s = args.wait
         # 初始登录消耗了 1 次预算，先排空
-        if any(all_targets[t][5] for t in wanted):
-            print(f"[wait] 初始 {WINDOW_WAIT}s 排空限流窗口...", flush=True)
-            await asyncio.sleep(WINDOW_WAIT)
+        if wait_s > 0 and any(all_targets[t][5] for t in wanted):
+            print(f"[wait] 初始 {wait_s}s 排空限流窗口...", flush=True)
+            await asyncio.sleep(wait_s)
 
         results: list[dict] = []
         for t in wanted:
             name, method, url, headers, body, limited = all_targets[t]
             for i, c in enumerate(concurrencies):
-                if limited and i > 0:
-                    print(f"[wait] {WINDOW_WAIT}s 排空限流窗口...", flush=True)
-                    await asyncio.sleep(WINDOW_WAIT)
+                if limited and i > 0 and wait_s > 0:
+                    print(f"[wait] {wait_s}s 排空限流窗口...", flush=True)
+                    await asyncio.sleep(wait_s)
                 n = max(args.requests, BURST_N)
                 r = await run_one(client, name, method, url, headers, body, n, c)
                 results.append(asdict(r))
@@ -179,6 +180,8 @@ def main() -> None:
     parser.add_argument("--targets", default="health,login,skills,canvas")
     parser.add_argument("--concurrency", default="1,10,50")
     parser.add_argument("--requests", type=int, default=BURST_N, help="每档请求数")
+    parser.add_argument("--wait", type=float, default=WINDOW_WAIT,
+                        help="限流窗口排空等待秒数；服务端关闭限流时传 0")
     args = parser.parse_args()
     asyncio.run(main_async(args))
 
