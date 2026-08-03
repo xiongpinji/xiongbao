@@ -3,6 +3,8 @@
 > 适用场景：开启 shell / python 执行类工具（`XAGENT_TOOLS__ENABLE_SHELL` /
 > `XAGENT_TOOLS__ENABLE_PYTHON_EXEC`）时，为不可信代码选择隔离后端。
 > 默认 `disabled`：不执行任何不可信代码，绝不在宿主机裸跑。
+>
+> 注意（2026-08-03 起）：`python_exec` 在 `backend=disabled` 或沙箱不可用/执行失败时**一律 fail-closed 拒绝执行**，不再回退宿主机子进程；启用 `XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true` 必须同时配置 docker/e2b 沙箱后端。
 
 ---
 

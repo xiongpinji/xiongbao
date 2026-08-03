@@ -60,3 +60,6 @@ tests/e2e/specs/debug_login.spec.ts
 # ---- Local automation ----
 .claude/
 .worktrees/
+
+# 测试残留产物（test_audio_providers.py 写入后未清理）
+apps/api/tests/_tmp_vo.mp3

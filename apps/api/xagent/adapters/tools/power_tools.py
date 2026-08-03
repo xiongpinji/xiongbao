@@ -15,7 +15,6 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -119,7 +118,8 @@ class PythonExecTool:
                 ok=False,
                 error=(
                     "python_exec 已被配置禁用：请显式设置 "
-                    "XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true 后重启以启用宿主机 Python 代码执行"
+                    "XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true 后重启以启用 Python 代码执行"
+                    "（执行需配合沙箱后端，见 XAGENT_SANDBOX__BACKEND）"
                 ),
             )
 
@@ -127,48 +127,30 @@ class PythonExecTool:
         if not code.strip():
             return ToolResult(ok=False, error="code 不能为空")
 
-        # 沙箱路由（RFC-001）：backend=docker 时隔离执行，且**不降级到宿主机**
-        # （沙箱失败说明隔离边界不可用，静默落到宿主机等于绕过安全边界）
+        # 沙箱路由（RFC-001）：backend=docker/e2b 时隔离执行，且**不降级到宿主机**
+        # （沙箱失败说明隔离边界不可用，静默落到宿主机等于绕过安全边界）。
+        # backend=disabled（L0）同样 fail-closed：拒绝执行并明确报错，不做宿主机
+        # 子进程回退——与 docs/deployment/sandbox.md「默认 disabled：不执行任何
+        # 不可信代码，绝不在宿主机裸跑」的安全姿态一致。
         from xagent.adapters.sandbox.base import get_sandbox
 
         sandbox = get_sandbox()
-        if sandbox.backend != "disabled":
-            sr = await sandbox.run_code("python", code, timeout=_TIMEOUT)
-            if sr.ok:
-                return ToolResult(ok=True, output=_truncate(sr.stdout or "(无输出)"))
+        if sandbox.backend == "disabled":
             return ToolResult(
                 ok=False,
-                error=f"沙箱执行失败（backend={sandbox.backend}）: {sr.error or sr.stderr}",
+                error=(
+                    "python_exec 拒绝执行：沙箱后端为 disabled（L0），按 RFC-001 安全姿态"
+                    "不在宿主机执行不可信代码。请配置 XAGENT_SANDBOX__BACKEND=docker（或 e2b）"
+                    "后在隔离环境中执行。"
+                ),
             )
-
-        # 本地子进程执行（sandbox.backend=disabled，仅 lite/开发用途）
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", encoding="utf-8", delete=False
-        ) as f:
-            f.write(code)
-            tmp_path = f.name
-
-        try:
-            out, err, rc = await asyncio.to_thread(
-                _run_subprocess, [sys.executable, tmp_path], cwd=str(_WORKSPACE)
-            )
-            result_parts = []
-            if out.strip():
-                result_parts.append(f"stdout:\n{out}")
-            if err.strip():
-                result_parts.append(f"stderr:\n{err}")
-            if rc != 0:
-                result_parts.append(f"exit_code: {rc}")
-
-            output = _truncate("\n".join(result_parts) or "(无输出)")
-            return ToolResult(ok=rc == 0, output=output)
-        except Exception as e:
-            return ToolResult(ok=False, error=f"执行失败: {e}")
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+        sr = await sandbox.run_code("python", code, timeout=_TIMEOUT)
+        if sr.ok:
+            return ToolResult(ok=True, output=_truncate(sr.stdout or "(无输出)"))
+        return ToolResult(
+            ok=False,
+            error=f"沙箱执行失败（backend={sandbox.backend}）: {sr.error or sr.stderr}",
+        )
 
 
 # ─── Shell 命令执行 ───────────────────────────────────────────────

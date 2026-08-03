@@ -375,6 +375,38 @@ async def test_python_exec_routes_to_sandbox(monkeypatch: pytest.MonkeyPatch) ->
     assert fake.calls == [("python", "print(1)", 30)]
 
 
+async def test_python_exec_disabled_backend_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """backend=disabled（L0）时 python_exec 拒绝执行，不回退宿主机子进程（RFC-001）。"""
+    from xagent.adapters.sandbox.base import DisabledSandbox
+    from xagent.adapters.tools.power_tools import PythonExecTool
+
+    _enable_tool(monkeypatch, "XAGENT_TOOLS__ENABLE_PYTHON_EXEC", DisabledSandbox())
+    res = await PythonExecTool().run({"code": "print(1)"}, _ctx())
+    assert res.ok is False
+    assert "拒绝执行" in (res.error or "")
+    assert "disabled" in (res.error or "")
+    assert "XAGENT_SANDBOX__BACKEND" in (res.error or "")
+
+
+async def test_python_exec_sandbox_failure_no_host_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """沙箱后端报错时不降级到宿主机执行。"""
+    from xagent.adapters.sandbox.base import SandboxResult
+    from xagent.adapters.tools.power_tools import PythonExecTool
+
+    class _FailSandbox(_FakeSandbox):
+        async def run_code(self, language, code, *, timeout=30):
+            return SandboxResult(ok=False, error="Docker 沙箱不可用: no daemon")
+
+    _enable_tool(monkeypatch, "XAGENT_TOOLS__ENABLE_PYTHON_EXEC", _FailSandbox())
+    res = await PythonExecTool().run({"code": "print(1)"}, _ctx())
+    assert res.ok is False
+    assert "沙箱" in (res.error or "")
+
+
 # ── stdout/stderr 分流回收（SDK 7.x，无 demux）───────────────────
 
 
