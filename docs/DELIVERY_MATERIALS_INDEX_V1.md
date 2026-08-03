@@ -39,6 +39,7 @@
 | G3 容量 / 扩展边界验证计划 | [coordination/reports/commercialization-g3-c4-capacity-verification-plan.md](coordination/reports/commercialization-g3-c4-capacity-verification-plan.md) | READY | 将 G3-C4 从容量定义推进到真实验证阶段，冻结负载入口、性能检查项、瓶颈对象与规模边界的验证口径 |
 | G3 容量 / 扩展边界验证结果 | [coordination/reports/commercialization-g3-c4-capacity-verification.md](coordination/reports/commercialization-g3-c4-capacity-verification.md) | READY | 记录 G3-C4 第一轮真实验证结果，证明容量检查项、瓶颈对象和规模边界已经形成首轮通过证据 |
 | 联系人与故障升级路径 | [SUPPORT_ESCALATION_PATH_V1.md](SUPPORT_ESCALATION_PATH_V1.md) | READY | 当前单人交付模式下已明确由 owner `canqu` 同时承担 L1/L2/L3/L4；若后续转入外部团队或客户现场，再补企业联系方式与 SLA |
+| 商业复制模板集 v1（P3） | [delivery-templates/README.md](delivery-templates/README.md) | READY | 标准试点包/升级包/恢复包/角色包/行业变体指南——“复制下一次交付”的模板入口（2026-08-03） |
 
 ---
 
