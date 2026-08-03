@@ -227,11 +227,36 @@ class LiteLLMClient(LLMClient):
 
     @staticmethod
     def _serialize_messages(messages: list[Message]) -> list[dict[str, Any]]:
-        """将 Message 列表序列化为 OpenAI API 格式，支持原生 tool role。"""
+        """将 Message 列表序列化为 OpenAI API 格式，支持原生 tool role。
+
+        防御性修复：确保每个 role="tool" 消息前都有带 tool_calls 的 assistant 消息。
+        如果历史数据破损（如 checkpoint 恢复丢失 tool_calls），自动插入合成 assistant 消息。
+        """
         payload: list[dict[str, Any]] = []
         for m in messages:
             entry: dict[str, Any] = {"role": m.role, "content": m.content or ""}
+            if m.role == "assistant" and m.tool_calls:
+                entry["tool_calls"] = m.tool_calls
             if m.role == "tool":
+                # 防御性检查：确保前一条是带 tool_calls 的 assistant
+                _need_synth = True
+                if payload and payload[-1]["role"] == "assistant" and payload[-1].get("tool_calls"):
+                    # 检查 tool_call_id 是否在 assistant 的 tool_calls 中
+                    _tc_ids = {tc.get("id") for tc in payload[-1]["tool_calls"]}
+                    if m.tool_call_id in _tc_ids:
+                        _need_synth = False
+                if _need_synth:
+                    # 插入合成 assistant 消息，包含当前 tool 消息的 tool_call_id
+                    _synth_id = m.tool_call_id or f"synth_{id(m)}"
+                    payload.append({
+                        "role": "assistant",
+                        "content": "",
+                        "tool_calls": [{
+                            "id": _synth_id,
+                            "type": "function",
+                            "function": {"name": m.name or "unknown", "arguments": "{}"},
+                        }],
+                    })
                 entry["tool_call_id"] = m.tool_call_id or ""
                 if m.name:
                     entry["name"] = m.name

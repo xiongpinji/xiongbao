@@ -12,6 +12,7 @@ class Message:
     content: str
     tool_call_id: str | None = None  # role="tool" 时必填，关联 assistant 的 tool_call
     name: str | None = None  # role="tool" 时的工具名
+    tool_calls: list[dict[str, Any]] | None = None  # role="assistant" 时的原生工具调用列表
 
 
 @dataclass

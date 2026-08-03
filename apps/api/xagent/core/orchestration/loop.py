@@ -746,7 +746,8 @@ async def _auto_extract_skill(
             if e.kind == StepKind.tool_call and e.tool
         ]
         store = get_skill_store()
-        await store.auto_extract(
+        # [工作流F·竞品对标Hermes] LLM提炼+质量门禁路径（auto_distill），无LLM/不过门禁静默跳过
+        await store.auto_distill(
             goal=goal,
             answer=answer,
             steps_count=steps_count,
@@ -1085,7 +1086,17 @@ async def run_agent(
     if memory_context:
         system += f"\n\n相关记忆（供参考）：\n{memory_context}"
     # 注入 AGENTS.md 项目指令（Codex 对齐）
-    agents_md = _load_agents_md()
+    # [工作流F·竞品对标] 升级为三层分层指令（用户级<工作区根<子目录级），失败回退原单文件加载
+    # [工作流S3-2] 识别任务涉及路径传入 task_paths（goal 显式路径优先、历史工具调用路径参数次之），
+    #               无识别结果为 None 保持原仅两层行为；子目录层按就近优先合并
+    try:
+        from xagent.core.instructions import extract_task_paths, get_layered_instructions
+        _task_paths = extract_task_paths(_WORKSPACE, goal=goal, history=history)
+        agents_md = (
+            get_layered_instructions(_WORKSPACE, task_paths=_task_paths) or _load_agents_md()
+        )
+    except Exception:  # noqa: S110  指令加载失败不影响主流程
+        agents_md = _load_agents_md()
     if agents_md:
         system += f"\n\n## 项目指令 (AGENTS.md)\n{agents_md}"
     # 注入项目结构感知（Codex 对齐：先建立结构认知）
@@ -1317,7 +1328,11 @@ async def run_agent(
                   if should_checkpoint(state.step):
                       save_checkpoint(
                           conv_session.conversation_id, resolved_run_id, state.step,
-                          [{"role": m.role, "content": m.content[:500]} for m in state.messages],
+                          [{"role": m.role, "content": m.content[:500],
+                            **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
+                            **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
+                            **({"name": m.name} if m.name else {})}
+                           for m in state.messages],
                           _changed_files, goal,
                       )
               except Exception:  # noqa: S110
@@ -1398,7 +1413,13 @@ async def run_agent(
 
                   # 流结束：判断是工具调用还是最终回答
                   if tool_calls_buf:
-                      state.messages.append(Message(role="assistant", content=content_buf or ""))
+                      # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送，否则 Deepseek 报错）
+                      _tc_list = [
+                          {"id": tool_calls_buf[_i]["id"] or f"call_{state.step}_{_i}", "type": "function",
+                           "function": {"name": tool_calls_buf[_i]["name"], "arguments": tool_calls_buf[_i]["arguments"] or "{}"}}
+                          for _i in sorted(tool_calls_buf.keys())
+                      ]
+                      state.messages.append(Message(role="assistant", content=content_buf or "", tool_calls=_tc_list))
                       _had_edit = False
 
                       # ── 解析所有 tool_call ──
@@ -1796,8 +1817,14 @@ async def run_agent(
                   state.total_prompt_tokens += resp.prompt_tokens
                   state.total_completion_tokens += resp.completion_tokens
                   if resp.tool_calls:
+                      # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送）
+                      _tc_list_ns = [
+                          {"id": tc.id, "type": "function",
+                           "function": {"name": tc.name, "arguments": json.dumps(tc.args, ensure_ascii=False)}}
+                          for tc in resp.tool_calls
+                      ]
                       state.messages.append(
-                          Message(role="assistant", content=resp.content)
+                          Message(role="assistant", content=resp.content, tool_calls=_tc_list_ns)
                       )
                       _had_edit_ns = False
 
@@ -2072,7 +2099,11 @@ async def run_agent(
                 from xagent.core.orchestration.checkpoint import save_checkpoint
                 save_checkpoint(
                     conv_session.conversation_id, resolved_run_id, state.step,
-                    [{"role": m.role, "content": m.content[:500]} for m in state.messages[-20:]],
+                    [{"role": m.role, "content": m.content[:500],
+                      **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
+                      **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
+                      **({"name": m.name} if m.name else {})}
+                     for m in state.messages[-20:]],
                     _changed_files, goal,
                 )
             except Exception:  # noqa: S110
