@@ -46,6 +46,29 @@ dialogue,action,subtitle}]。
 要求：3-8 个镜头；总时长接近目标；台词与字幕一致。只输出 JSON。"""
 
 
+def _fill_continuity_refs(sb: Storyboard) -> None:
+    """分镜阶段记录 ShotContinuity 引用，供一致性管理器/图像生成消费。
+
+    按名字把 shot.characters / shot.scene 解析为 character_id / scene_id，
+    style_ref 记录题材风格 token。仅填充空字段，不覆盖已有值。
+    """
+    chars_by_name = {c.name: c for c in sb.characters if c.name}
+    scenes_by_loc = {s.location: s for s in sb.scenes if s.location}
+    for shot in sb.shots:
+        if not shot.continuity.character_ref:
+            ids = [
+                chars_by_name[n].character_id
+                for n in shot.characters
+                if n in chars_by_name
+            ]
+            if ids:
+                shot.continuity.character_ref = ";".join(ids)
+        if not shot.continuity.scene_ref and shot.scene in scenes_by_loc:
+            shot.continuity.scene_ref = scenes_by_loc[shot.scene].scene_id
+        if not shot.continuity.style_ref:
+            shot.continuity.style_ref = sb.genre or "default"
+
+
 async def generate_storyboard(
     brief: str,
     *,
@@ -125,7 +148,7 @@ def _from_llm_dict(
         )
         for sh in data.get("shots", [])
     ]
-    return Storyboard(
+    sb = Storyboard(
         title=data.get("title", brief[:20]),
         brief=brief,
         genre=genre,
@@ -137,6 +160,8 @@ def _from_llm_dict(
         shots=shots,
         status=StoryboardStatus.SCRIPTED,
     )
+    _fill_continuity_refs(sb)
+    return sb
 
 
 def _fallback_storyboard(
@@ -161,7 +186,7 @@ def _fallback_storyboard(
         )
         for i in range(n_shots)
     ]
-    return Storyboard(
+    sb = Storyboard(
         title=brief[:20],
         brief=brief,
         genre=genre,
@@ -172,3 +197,5 @@ def _fallback_storyboard(
         shots=shots,
         status=StoryboardStatus.DRAFT,
     )
+    _fill_continuity_refs(sb)
+    return sb
