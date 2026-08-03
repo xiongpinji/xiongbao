@@ -143,3 +143,81 @@ async def test_tool_registry_tenant_scoped_memory() -> None:
     s = await reg.call("memory_search", {"query": "工具写入"}, ctx)
     assert s.ok
     assert any(item["id"] == "m1" for item in s.output)
+
+
+
+# ─── #3 复现：原生 tool_calls 场景下工具执行异常必须回填 tool 消息 ──────────
+
+
+class _HangingToolRegistry:
+    """模拟工具调用抛异常（等价于 asyncio.wait_for 超时）的注册表。"""
+
+    def specs(self) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "echo",
+                    "description": "回显文本",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}},
+                    },
+                },
+            }
+        ]
+
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        raise TimeoutError("tool hung")
+
+
+class _NativeToolLLM(LLMClient):
+    """支持原生 function-calling 的 mock：第一轮下 tool_calls，第二轮给最终回答。"""
+
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.second_call_messages: list[Message] = []
+
+    async def complete(self, messages: list[Message], **kw) -> LLMResponse:  # noqa: ARG002
+        return LLMResponse(content="最终总结：全部完成。已调用工具并取得结果。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kw) -> LLMResponse:  # noqa: ARG002
+        from xagent.adapters.llm.base import ToolCall
+
+        self.calls += 1
+        if self.calls == 1:
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[ToolCall(id="call_1", name="echo", args={"text": "hi"})],
+            )
+        self.second_call_messages = list(messages)
+        return LLMResponse(content="最终总结：全部完成。已调用工具并取得结果。", model="test")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_native_tool_exception_backfills_tool_message(monkeypatch) -> None:
+    """工具执行抛异常（超时等）时：run 不应中途崩溃，且第二轮 LLM 调用前
+    必须回填与 assistant tool_calls 配对的 tool 消息（DeepSeek 硬性要求）。"""
+    llm = _NativeToolLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry", lambda: _HangingToolRegistry()
+    )
+    p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin("调用工具", principal=p, role_name="general")
+
+    # 修复前：异常穿透循环，run 在第一步崩溃，第二轮 LLM 调用永远不会发生
+    assert llm.calls == 2, "工具异常后 run 应继续第二轮 LLM 调用，而非中途崩溃"
+    # 第二轮下发前必须存在与 call_1 配对的 tool 回填消息（错误结果也要回填）
+    tool_msgs = [m for m in llm.second_call_messages if m.role == "tool"]
+    assert any(m.tool_call_id == "call_1" for m in tool_msgs), (
+        "缺 tool message 回填：assistant tool_calls 无配对 tool 消息"
+    )
+    assert any("[错误]" in m.content for m in tool_msgs)
+    assert run.final_answer

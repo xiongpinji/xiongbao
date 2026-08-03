@@ -1622,11 +1622,28 @@ async def run_agent(
                                   else:
                                       _t0 = time.perf_counter()
                                       _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
-                                      result = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_tool_timeout)
+                                      try:
+                                          result = await asyncio.wait_for(
+                                              tools.call(tc_name, tc_args, ctx),
+                                              timeout=_tool_timeout,
+                                          )
+                                      except Exception as _tool_exc:
+                                          # 工具超时/异常不炸穿循环：转为错误结果，回填 tool 消息，
+                                          # 保证 tool_call_id 配对（否则 DeepSeek 400 / run 崩溃）
+                                          result = None
+                                          _exc_name = type(_tool_exc).__name__
+                                          _tool_exc_info = f"{_exc_name}: {_tool_exc}"
                                       _elapsed = time.perf_counter() - _t0
                                       if _elapsed > _SLOW_TOOL_THRESHOLD:
                                           logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
-                                      if result.ok:
+                                      if result is None:
+                                          result_text = f"[错误] 工具执行异常: {_tool_exc_info}"
+                                          _consecutive_errors += 1
+                                          _last_error_text = result_text
+                                          _last_error_tool = tc_name
+                                          _err_sig = f"{tc_name}:{result_text[:80]}"
+                                          _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
+                                      elif result.ok:
                                           result_text = (
                                               json.dumps(result.output, ensure_ascii=False)
                                               if not isinstance(result.output, str)
@@ -1885,8 +1902,24 @@ async def run_agent(
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
                                   _consecutive_errors += 1
                               else:
-                                  result = await asyncio.wait_for(tools.call(tc.name, tc.args, ctx), timeout=_TOOL_TIMEOUT)
-                                  if result.ok:
+                                  try:
+                                      result = await asyncio.wait_for(
+                                          tools.call(tc.name, tc.args, ctx),
+                                          timeout=_TOOL_TIMEOUT,
+                                      )
+                                  except Exception as _tool_exc:
+                                      # 工具超时/异常不炸穿循环：转为错误结果，回填 tool 消息
+                                      result = None
+                                      _exc_name = type(_tool_exc).__name__
+                                      _tool_exc_info = f"{_exc_name}: {_tool_exc}"
+                                  if result is None:
+                                      result_text = f"[错误] 工具执行异常: {_tool_exc_info}"
+                                      _consecutive_errors += 1
+                                      _last_error_text = result_text
+                                      _last_error_tool = tc.name
+                                      _err_sig = f"{tc.name}:{result_text[:80]}"
+                                      _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
+                                  elif result.ok:
                                       result_text = (
                                           json.dumps(result.output, ensure_ascii=False)
                                           if not isinstance(result.output, str)
