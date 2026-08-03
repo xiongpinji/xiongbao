@@ -202,6 +202,18 @@ class SecuritySettings(BaseModel):
     oidc_client_secret: str = ""  # 仅走环境变量/secret 管理
     oidc_redirect_uri: str = "http://localhost:8000/api/v1/auth/oidc/callback"
     oidc_scopes: str = "openid profile email"
+    # ── 全局限流（RateLimitMiddleware，按客户端 IP 滑动窗口）──
+    # 默认与历史硬编码行为一致：300 req / 60s / IP，/health /ready /metrics 豁免。
+    # enabled=false 整体关闭（压测/受信内网）；exempt_paths 自定义豁免前缀清单。
+    # env 示例：XAGENT_SECURITY__RATE_LIMIT_ENABLED=false
+    #          XAGENT_SECURITY__RATE_LIMIT_REQUESTS=1000
+    #          XAGENT_SECURITY__RATE_LIMIT_EXEMPT_PATHS='["/health","/metrics"]'
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 300
+    rate_limit_window_seconds: int = 60
+    rate_limit_exempt_paths: list[str] = Field(
+        default_factory=lambda: ["/health", "/ready", "/metrics"]
+    )
 
 
 class ToolsSettings(BaseModel):

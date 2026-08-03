@@ -169,7 +169,19 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(RateLimitMiddleware, max_requests=300, window_seconds=60)
+    # 全局限流（XAGENT_SECURITY__RATE_LIMIT_* 可配；enabled=false 整体关闭，供压测/受信内网）
+    if settings.security.rate_limit_enabled:
+        app.add_middleware(
+            RateLimitMiddleware,
+            max_requests=settings.security.rate_limit_requests,
+            window_seconds=settings.security.rate_limit_window_seconds,
+            exempt_paths=settings.security.rate_limit_exempt_paths,
+        )
+    else:
+        logger.warning(
+            "rate_limit_disabled",
+            message="全局限流已通过配置关闭（rate_limit_enabled=false）",
+        )
     app.add_middleware(MetricsMiddleware)
 
     # ETag 响应缓存（GET 条件请求 304）
