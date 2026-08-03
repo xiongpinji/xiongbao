@@ -36,11 +36,16 @@
 | e2e-api 401 断言 ×2 | 匿名空角色被授权守卫拦截返回 403（CI REQUIRE_AUTH=false） | 规格放宽为 401/403 | 规格对齐设计语义 |
 | e2e-api /templates 404 | 模板路由漂移至 /api/v1/canvas/templates/list | 规格更新为当前路由与响应形状 | 规格对齐 |
 
-### 0.4 新候选的剩余签发条件
+### 0.4 新候选签发记录（2026-08-03，owner 已确认）
 
-- 原 §7 owner 三项确认（目标环境 / 单人签字模式 / 交付边界）**不自动延伸至新候选**——221 个提交含安全模型变更（SSO、沙箱 fail-closed、限流配置化），owner 需重新确认是否接受；
-- 新证据入口：`audit-20260802/DELIVERY_VERIFICATION_20260803.md`（v3）、`audit-20260802/LOAD_TEST_FORMAL_20260803.md`、`audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md`；
-- R8/R14/R15/R16/R17/R18/R19 的 REVIEW 验收状态自 2026-07-07 起未变，仍待总调度处理。
+- ~~原 §7 owner 三项确认（目标环境 / 单人签字模式 / 交付边界）不自动延伸至新候选~~ → **2026-08-03 owner 已明确将三项确认延伸至新候选，并确认签发**。
+- 签发对象：分支 `candidate/min-send-review-20260707-claude`（PR #7），HEAD `2aae3a212a51f253bc3e3ef485fbf3fa916204b8`（代码有效候选 `cfb973d`，其后均为文档/协调类提交）。
+- 签发依据：
+  1. 远端 CI run `30834318982` success（backend / frontend / license-gate / e2e-api 全绿；docker-build / promptfoo-eval / load-test 按既有 push 触发规则不适用于 PR，与原签字候选口径一致）；
+  2. 自 c175201 起 221 提交的变更范围（含安全模型变更：SSO/OIDC、沙箱 fail-closed、限流配置化、bcrypt 异步化、skills 响应缓存）已经 §0.2/§0.3 摘要与下列证据包完整披露，owner 已知悉并接受；
+  3. 证据入口：`audit-20260802/DELIVERY_VERIFICATION_20260803.md`（v3）、`audit-20260802/LOAD_TEST_FORMAL_20260803.md`、`audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md`、`docs/coordination/reports/REVIEW_ACCEPTANCE_PACKET_20260803.md`。
+- 签发边界（owner 确认不外推）：多实例 HA 未正式验证；L2 E2B 云沙箱未实测（无 key）；非当前机器的目标环境演练未做；SaaS 级并发容量不承诺（仅单机/4 worker 基线）。
+- R8/R14/R15/R16/R17/R18/R19 已于 2026-08-03 验收 DONE（见 §0.4 前文与验收材料包）。
 
 ---
 
