@@ -6,6 +6,44 @@
 
 ---
 
+## 0. 候选刷新附录（2026-08-03，v2）
+
+> 原签字候选 `c175201` 之后，分支又推进了 **221 个提交**（8/2 安全审计修复、沙箱/SSO 实测、平台化 P0/P2、性能瓶颈修复、CI 修复）。原签字口径不覆盖新候选，本节为刷新后的候选事实；**新候选的签发仍需 owner 重新确认**。
+
+### 0.1 新候选
+
+- 分支：`candidate/min-send-review-20260707-claude`（PR #7，不变）
+- 新候选 HEAD：`402302aca2ad7156ba5ddfb85ca69122c5512098`
+- 远端 CI：GitHub Actions `CI` run `30829673045`，**success**
+  - backend ✅ / frontend ✅ / license-gate ✅ / **e2e-api ✅**（本轮修复后首次转绿）
+  - docker-build / promptfoo-eval / load-test：skipped（路径触发规则，与原候选一致）
+
+### 0.2 自原签字候选 c175201 以来的 221 提交摘要
+
+- 8/2 审计修复 7 项全部核销（FIX_COMPLETION_REPORT_20260802）
+- 沙箱分级 L1 Docker 实测通过（stdout/stderr 分流、隔离/限额/超时/一次性容器）
+- SSO/OIDC 授权码流端到端实测通过（Keycloak 26，alg 路由双源校验）
+- 平台化：secretRef 外部密管 + Helm chart（五套 values 渲染通过）+ 限流/调度 Redis 化
+- P2 容量：压测基线 → bcrypt 线程池化（login c=50 3.2→54.8 RPS）→ skills 响应缓存（c=50 31.5→162.3 RPS）→ 10min soak 142,720 请求 0 错误无泄漏 → Postgres 基线 + 4 worker 扩展性实测（canvas c=10 6.4×）
+- CI 修复：edge_tts 可选依赖测试优雅跳过；/perf 端点实装统计（存量 bug）；e2e 冒烟规格对齐当前 API（403 语义、模板路由漂移）
+
+### 0.3 本轮 CI 修复明细（reviewer 关注点）
+
+| 失败 | 根因 | 修复 | 性质 |
+|---|---|---|---|
+| backend pytest ERROR ×4 + FAILED ×1 | edge-tts 为可选 extra，CI 不装；测试直接 import | `pytest.importorskip` 优雅跳过；缺包降级路径本有测试覆盖 | 测试环境适配，非产品缺陷 |
+| e2e-api /perf 断言失败 | /perf 自 6571d3f 起即为坏端点（TimingMiddleware 未注册、实例查找循环无效） | 注册 TimingMiddleware + 进程级实例自注册，/perf 实装汇总统计 | **真实存量 bug，已修** |
+| e2e-api 401 断言 ×2 | 匿名空角色被授权守卫拦截返回 403（CI REQUIRE_AUTH=false） | 规格放宽为 401/403 | 规格对齐设计语义 |
+| e2e-api /templates 404 | 模板路由漂移至 /api/v1/canvas/templates/list | 规格更新为当前路由与响应形状 | 规格对齐 |
+
+### 0.4 新候选的剩余签发条件
+
+- 原 §7 owner 三项确认（目标环境 / 单人签字模式 / 交付边界）**不自动延伸至新候选**——221 个提交含安全模型变更（SSO、沙箱 fail-closed、限流配置化），owner 需重新确认是否接受；
+- 新证据入口：`audit-20260802/DELIVERY_VERIFICATION_20260803.md`（v3）、`audit-20260802/LOAD_TEST_FORMAL_20260803.md`、`audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md`；
+- R8/R14/R15/R16/R17/R18/R19 的 REVIEW 验收状态自 2026-07-07 起未变，仍待总调度处理。
+
+---
+
 ## 1. 当前审查对象
 
 ### 候选主线
