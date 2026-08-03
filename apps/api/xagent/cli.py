@@ -19,6 +19,8 @@ import argparse
 import json
 import sys
 
+from xagent import __version__
+
 # ─── 本地管理命令 ───
 
 
@@ -209,20 +211,49 @@ def _cmd_run(args: argparse.Namespace) -> int:
         with httpx.stream(
             "POST", f"{base}/stream/agents/run", json=body, headers=headers, timeout=300,
         ) as r:
+            if r.status_code != 200:
+                print(f"执行失败: HTTP {r.status_code}", file=sys.stderr)
+                return 1
+            # 服务端协议：事件名在 SSE `event:` 行，`data:` 行只有 payload
+            event = ""
+            streamed = False
             for line in r.iter_lines():
-                if line.startswith("data: "):
+                if line.startswith("event: "):
+                    event = line[7:].strip()
+                    continue
+                if not line.startswith("data: "):
+                    continue
+                try:
                     data = json.loads(line[6:])
-                    event = data.get("event", "")
-                    if event == "step":
-                        step = data.get("data", {})
-                        kind = step.get('kind', '')
-                        tool = step.get('tool', '')
-                        print(f"  [{step.get('step', '?')}] {kind} {tool}")
-                    elif event == "done":
-                        answer = data.get("data", {}).get("final_answer", "")
-                        print(f"\n✓ 完成: {answer[:200]}")
-                    elif event == "error":
-                        print(f"\n✗ 错误: {data.get('data', {})}", file=sys.stderr)
+                except json.JSONDecodeError:
+                    continue
+                if event == "started":
+                    print(f"Run ID: {data.get('run_id', '?')}")
+                elif event == "plan":
+                    steps = data.get("steps") or []
+                    if steps:
+                        print(f"计划: {len(steps)} 步")
+                elif event == "tool_call":
+                    print(f"  [{data.get('step', '?')}] 调用工具 {data.get('tool', '')}")
+                elif event == "progress":
+                    content = data.get("content") or {}
+                    if isinstance(content, dict) and content.get("percent") is not None:
+                        print(f"  进度 {content.get('percent')}% "
+                              f"(step {content.get('step', '?')}/{content.get('max_steps', '?')})")
+                elif event == "token":
+                    print(str(data.get("content", "")), end="", flush=True)
+                    streamed = True
+                elif event == "final":
+                    if not streamed:
+                        print(str(data.get("content", "")))
+                elif event == "done":
+                    pt = data.get("prompt_tokens", 0)
+                    ct = data.get("completion_tokens", 0)
+                    print(f"\n✓ 完成: steps={data.get('steps', '?')} tokens={pt}+{ct}")
+                elif event == "error":
+                    print(f"\n✗ 错误: {data.get('error', data)}", file=sys.stderr)
+                    return 1
+        return 0
     else:
         resp = httpx.post(
             f"{base}/agents/run", json={"goal": args.goal}, headers=headers, timeout=300,
@@ -290,8 +321,6 @@ def _cmd_health(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    from xagent import __version__
-
     parser = argparse.ArgumentParser(prog="xagent", description="X-Agent CLI")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--host", default="127.0.0.1", help="API host")
