@@ -9,6 +9,9 @@
 # - 此 compose 会同时启动 postgres / redis / qdrant / litellm / langfuse / api / worker / web。
 # - web 镜像直接复制 apps/web/dist，因此 private deployment 首次启动前需要先本地构建前端。
 # - api / worker 默认通过 host.docker.internal 访问宿主机 Ollama；如改走 LiteLLM Proxy，可在 .env 中设置 XAGENT_LLM__PROXY_URL。
+# - 多实例部署（api 扩为 ≥2 副本）必读 docs/deployment/multi-instance.md：
+#   XAGENT_CACHE__REDIS_URL（登录限流 + 调度器分布式锁）与 XAGENT_MEMORY__QDRANT_URL
+#   在本 compose 中已接好；还需在负载均衡器上为 SSE / WebSocket 开启 sticky session。
 
 name: xagent
 
@@ -17,7 +20,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-xagent}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/compose/.env}
       POSTGRES_DB: ${POSTGRES_DB:-xagent}
     ports:
       - "5432:5432"
@@ -67,7 +70,7 @@ services:
     ports:
       - "8080:8080"    # HTTP API
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/contextforge
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/contextforge
       - REDIS_URL=redis://redis:6379/0
       - AUTH_ENABLED=false
       - LOG_LEVEL=info
@@ -75,11 +78,12 @@ services:
   # OpenFGA 细粒度授权（Google Zanzibar 模型）
   openfga:
     image: openfga/openfga:latest
+    command: ["run"]
     ports:
       - "8081:8081"    # HTTP API
     environment:
       - OPENFGA_DATASTORE_ENGINE=postgres
-      - OPENFGA_DATASTORE_URI=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/openfga
+      - OPENFGA_DATASTORE_URI=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/openfga
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,7 +109,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/langfuse
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
       - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:?set LANGFUSE_NEXTAUTH_SECRET in deploy/compose/.env}
       - SALT=${LANGFUSE_SALT:?set LANGFUSE_SALT in deploy/compose/.env}
       - NEXTAUTH_URL=http://localhost:3001
@@ -136,11 +140,12 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
-      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
       # LLM：默认走本地 Ollama（host.docker.internal 访问宿主机）；有 proxy key 时走 LiteLLM
-      - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+      # 置空 XAGENT_LLM__OLLAMA_BASE_URL 且无其它 provider key 时自动降级为内置 MockLLM
+      - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
@@ -180,10 +185,10 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
-      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD:-xagent}@postgres:5432/xagent
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
-      - XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
@@ -230,7 +235,7 @@ services:
     ports:
       - "3002:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in deploy/compose/.env}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ../grafana/xagent-dashboard.json:/var/lib/grafana/dashboards/xagent-overview.json:ro

@@ -59,6 +59,7 @@ dev = [
     "ruff>=0.7",
     "mypy>=1.13",
     "httpx>=0.27",
+    "fakeredis>=2.20",  # Redis 后端/分布式锁测试（无真实 Redis）
 ]
 
 [project.scripts]

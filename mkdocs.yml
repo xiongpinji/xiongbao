@@ -11,6 +11,7 @@ nav:
   - 架构说明: ARCHITECTURE.md
   - 路线图: ROADMAP.md
   - 部署指南: DEPLOYMENT_RUNBOOK.md
+  - 多实例部署: deployment/multi-instance.md
   - 测试指南: TESTING.md
   - 视频剪辑引擎设计: VIDEO_EDITOR_DESIGN.md
   - 短剧工厂媒体设计: CREATIVE_STUDIO_MEDIA.md

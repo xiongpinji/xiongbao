@@ -1,6 +1,14 @@
 # X-Agent 生产部署 Docker Compose
 # 一键启动：docker compose up -d
-# 包含：API + Web + PostgreSQL + Redis + Prometheus + Grafana
+# 包含：API + Web + PostgreSQL + Redis + Qdrant + Prometheus + Grafana
+#
+# 多实例部署（≥2 个 api 副本）必读：docs/deployment/multi-instance.md
+# - 必配 XAGENT_CACHE__REDIS_URL（登录限流共享计数 + 调度器分布式锁）
+# - 必配 XAGENT_MEMORY__QDRANT_URL 指向 qdrant server（本地磁盘模式有独占文件锁）
+# - SSE / WebSocket 长连接需要负载均衡器 sticky session
+#
+# 注意：应用实际读取的是 XAGENT_* 前缀环境变量（见 apps/api/xagent/infra/settings.py），
+# 下方 api 服务已按 XAGENT_DB__URL / XAGENT_CACHE__REDIS_URL / XAGENT_MEMORY__QDRANT_URL 配置。
 
 services:
   # ─── PostgreSQL ───
@@ -31,6 +39,20 @@ services:
       timeout: 3s
       retries: 5
 
+  # ─── Qdrant（向量库 server 模式；多实例必须，本地磁盘模式有独占文件锁）───
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # HTTP
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   # ─── X-Agent API ───
   api:
     build:
@@ -44,6 +66,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://xagent:${POSTGRES_PASSWORD:-xagent_secret}@postgres:5432/xagent
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      # 应用实际读取的 XAGENT_* 变量（多实例必配，见 docs/deployment/multi-instance.md）
+      XAGENT_MODE: full
+      XAGENT_DB__URL: postgresql+asyncpg://xagent:${POSTGRES_PASSWORD:-xagent_secret}@postgres:5432/xagent
+      XAGENT_CACHE__REDIS_URL: redis://redis:6379/0
+      XAGENT_MEMORY__QDRANT_URL: http://qdrant:6333
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
@@ -57,6 +84,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_started
     restart: unless-stopped
 
   # ─── X-Agent Web ───
@@ -99,3 +128,4 @@ volumes:
   skills:
   promdata:
   grafdata:
+  qdrantdata:

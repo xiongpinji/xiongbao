@@ -26,6 +26,49 @@ logger = get_logger("xagent.scheduler")
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
+class RedisJobLock:
+    """基于 Redis ``SET NX PX`` 的 job 粒度分布式锁（多实例防重复触发）。
+
+    - key：``xagent:scheduler:lock:{job_id}``，value 为实例 ID（排障用）。
+    - 租约（PX）由调用方给出，必须 < 任务调度间隔：同一轮调度窗口内只有
+      一个实例能抢到锁；抢到锁的实例若在租约内崩溃，锁自然过期后其他实例
+      可接管（failover）。
+    - Redis 调用异常时返回 False（安全降级：宁可本轮不触发，也不冒
+      多实例重复触发的风险），并打 warning。
+    """
+
+    KEY_PREFIX = "xagent:scheduler:lock:"
+
+    def __init__(
+        self,
+        redis_url: str,
+        instance_id: str | None = None,
+        *,
+        client: Any | None = None,
+    ) -> None:
+        if client is not None:
+            self._client = client  # 测试注入（fakeredis / mock）
+        else:
+            import redis.asyncio as aioredis  # 延迟导入，lite 模式无需 redis 服务
+
+            self._client = aioredis.from_url(redis_url, decode_responses=True)
+        self._instance_id = instance_id or uuid.uuid4().hex
+
+    async def acquire(self, job_id: str, lease_seconds: int) -> bool:
+        """尝试抢锁；抢到返回 True。Redis 异常返回 False（不触发）。"""
+        try:
+            ok = await self._client.set(
+                self.KEY_PREFIX + job_id,
+                self._instance_id,
+                nx=True,
+                px=max(1, int(lease_seconds * 1000)),
+            )
+            return bool(ok)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("scheduler_lock_redis_error", job_id=job_id, error=str(exc))
+            return False
+
+
 @dataclass
 class ScheduledJob:
     job_id: str
@@ -65,13 +108,20 @@ def _parse_cron_interval(cron_expr: str) -> int:
 class Scheduler:
     """asyncio 后台调度器。"""
 
-    def __init__(self, storage_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        storage_dir: Path | None = None,
+        *,
+        job_lock: RedisJobLock | None = None,
+    ) -> None:
         base = storage_dir or _PROJECT_ROOT / "data" / "scheduler"
         self._dir = base
         self._dir.mkdir(parents=True, exist_ok=True)
         self._jobs: dict[str, ScheduledJob] = {}
         self._task: asyncio.Task | None = None
         self._running = False
+        # 分布式锁：None 表示未初始化；start() 时按配置决定是否启用 Redis 锁
+        self._lock: RedisJobLock | None = job_lock
         self._load_all()
 
     def _load_all(self) -> None:
@@ -141,9 +191,45 @@ class Scheduler:
         """启动后台调度循环。"""
         if self._running:
             return
+        self._init_job_lock()
         self._running = True
         self._task = asyncio.create_task(self._loop())
         logger.info("scheduler_started", jobs=len(self._jobs))
+
+    def _init_job_lock(self) -> None:
+        """按配置初始化分布式锁。
+
+        配置 ``XAGENT_CACHE__REDIS_URL`` 时启用 Redis 锁（多实例防重复触发）；
+        未配置时保持单实例现状，并打一次性 warning 提示多实例风险。
+        """
+        if self._lock is not None:
+            return
+        from xagent.infra.settings import get_settings
+
+        redis_url = get_settings().cache.redis_url
+        if redis_url:
+            self._lock = RedisJobLock(redis_url)
+            logger.info("scheduler_distributed_lock_enabled")
+        else:
+            logger.warning(
+                "scheduler_no_distributed_lock",
+                detail="未配置 XAGENT_CACHE__REDIS_URL：多实例部署会重复触发定时任务"
+                "（单实例/lite 部署可忽略此警告）",
+            )
+
+    async def _try_acquire_job_lock(self, job: ScheduledJob) -> bool:
+        """多实例防重：启用分布式锁时必须抢到锁才执行；未启用直接放行。
+
+        锁租约取调度间隔的 90%（至少 1s），保证租约 < 调度间隔：本轮执行完后
+        锁先于下一次到期时间释放，不会误拦下一轮的合法触发。
+        """
+        if self._lock is None:
+            return True
+        lease = max(1, int(job.interval_seconds * 0.9))
+        acquired = await self._lock.acquire(job.job_id, lease)
+        if not acquired:
+            logger.info("job_skipped_lock_held", job_id=job.job_id)
+        return acquired
 
     async def stop(self) -> None:
         self._running = False
@@ -159,6 +245,9 @@ class Scheduler:
                 now = time.time()
                 for job in list(self._jobs.values()):
                     if not job.enabled or job.next_run > now:
+                        continue
+                    # 多实例防重：抢不到分布式锁说明其他实例正在执行，跳过
+                    if not await self._try_acquire_job_lock(job):
                         continue
                     # 触发执行
                     await self._execute_job(job)
