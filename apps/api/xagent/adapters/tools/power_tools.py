@@ -127,19 +127,21 @@ class PythonExecTool:
         if not code.strip():
             return ToolResult(ok=False, error="code 不能为空")
 
-        # 优先尝试 Docker 沙箱隔离执行（对标 Codex 云端沙箱）
-        try:
-            from xagent.adapters.sandbox.base import get_sandbox
-            sandbox = get_sandbox()
-            if sandbox.backend == "docker":
-                sr = await sandbox.run_code("python", code, timeout=_TIMEOUT)
-                if sr.ok:
-                    return ToolResult(ok=True, output=_truncate(sr.stdout or "(无输出)"))
-                # 沙箱失败降级到本地
-        except Exception:
-            pass
+        # 沙箱路由（RFC-001）：backend=docker 时隔离执行，且**不降级到宿主机**
+        # （沙箱失败说明隔离边界不可用，静默落到宿主机等于绕过安全边界）
+        from xagent.adapters.sandbox.base import get_sandbox
 
-        # 本地子进程执行（降级路径）
+        sandbox = get_sandbox()
+        if sandbox.backend != "disabled":
+            sr = await sandbox.run_code("python", code, timeout=_TIMEOUT)
+            if sr.ok:
+                return ToolResult(ok=True, output=_truncate(sr.stdout or "(无输出)"))
+            return ToolResult(
+                ok=False,
+                error=f"沙箱执行失败（backend={sandbox.backend}）: {sr.error or sr.stderr}",
+            )
+
+        # 本地子进程执行（sandbox.backend=disabled，仅 lite/开发用途）
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", encoding="utf-8", delete=False
         ) as f:
@@ -216,8 +218,34 @@ class ShellExecTool:
         if danger:
             return ToolResult(ok=False, error=danger)
 
-        cwd = args.get("working_dir") or str(_WORKSPACE)
         timeout = min(int(args.get("timeout") or _SHELL_TIMEOUT), 300)
+
+        # 沙箱路由（RFC-001 L1）：backend=docker 时命令在一次性隔离容器内执行，
+        # 绝不落到宿主机；沙箱不可用直接报错，不做宿主机降级。
+        from xagent.adapters.sandbox.base import get_sandbox
+
+        sandbox = get_sandbox()
+        if sandbox.backend != "disabled":
+            sr = await sandbox.run_code("shell", command, timeout=timeout)
+            parts = []
+            if sr.stdout.strip():
+                parts.append(sr.stdout)
+            if sr.stderr.strip():
+                parts.append(f"[stderr] {sr.stderr}")
+            parts.append(f"[exit: {sr.exit_code}]")
+            output = _truncate("\n".join(parts))
+            if sr.ok:
+                return ToolResult(ok=True, output=output)
+            return ToolResult(
+                ok=False,
+                error=(
+                    f"沙箱执行失败（backend={sandbox.backend}）: {sr.error}"
+                    if sr.error and not sr.stdout
+                    else output
+                ),
+            )
+
+        cwd = args.get("working_dir") or str(_WORKSPACE)
 
         try:
             out, err, rc = await asyncio.to_thread(
