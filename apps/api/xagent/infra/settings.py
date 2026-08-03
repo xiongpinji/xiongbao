@@ -15,9 +15,28 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-# 项目根目录（xagent/），.env 在此；不依赖 CWD
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_ENV_FILE = _PROJECT_ROOT / ".env"
+# 项目根目录（xagent/），.env 在此；不依赖 CWD。
+# 支持 XAGENT_ENV_FILE 显式覆盖（容器/自定义部署）；否则从包位置向上探测
+# 含 .env 或 pyproject.toml 的目录；探测不到（如容器内浅布局）则退化为
+# 不可达路径——此时配置完全来自环境变量，不致命。
+import os as _os
+
+
+def _detect_project_root(start: Path) -> Path:
+    candidates = [start, *start.parents]
+    # 优先：向上找到第一个真实存在的 .env（仓库根布局）
+    for parent in candidates:
+        if (parent / ".env").exists():
+            return parent
+    # 兜底：第一个含 pyproject.toml 的目录（包布局）
+    for parent in candidates:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    return start  # 探测失败：返回包目录，.env 视为不存在
+
+
+_PROJECT_ROOT = _detect_project_root(Path(__file__).resolve().parent)
+_ENV_FILE = Path(_os.environ["XAGENT_ENV_FILE"]) if _os.environ.get("XAGENT_ENV_FILE") else _PROJECT_ROOT / ".env"
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_JWT_SECRETS = {
@@ -173,6 +192,12 @@ class SecuritySettings(BaseModel):
     # OIDC 验签（RS256）：配置 jwks_url 后，Bearer token 走 OIDC 验签而非 HS256
     oidc_jwks_url: str = ""
     oidc_issuer: str = ""
+    # OIDC 浏览器登录链路（RFC-002 Authorization Code Flow）：
+    # 未配置 oidc_client_id 时 /auth/oidc/* 端点返回 501（安全默认不暴露）
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""  # 仅走环境变量/secret 管理
+    oidc_redirect_uri: str = "http://localhost:8000/api/v1/auth/oidc/callback"
+    oidc_scopes: str = "openid profile email"
 
 
 class ToolsSettings(BaseModel):
@@ -185,6 +210,23 @@ class ToolsSettings(BaseModel):
 
     enable_shell: bool = False
     enable_python_exec: bool = False
+
+
+class SandboxSettings(BaseModel):
+    """沙箱后端选择（RFC-001 分级：L0 disabled / L1 docker / L2 e2b）。
+
+    默认 ``disabled``：lite 模式禁执行，绝不在宿主机直接 exec 不可信代码。
+    显式设置 ``XAGENT_SANDBOX__BACKEND=docker`` 后，shell/python 执行路由进
+    一次性隔离容器（默认 --network=none、资源限额、只读根 fs）。
+    """
+
+    backend: str = "disabled"          # disabled | docker | e2b
+    docker_image: str = "python:3.11-slim"
+    mem_limit: str = "512m"            # Docker --memory
+    cpu_quota: int = 100000            # Docker --cpu-quota（100000 = 1 CPU）
+    network_disabled: bool = True      # 默认 --network=none
+    readonly_rootfs: bool = True       # 默认 --read-only
+    timeout_seconds: int = 30          # 单次执行超时
 
 
 class Settings(BaseSettings):
@@ -213,6 +255,7 @@ class Settings(BaseSettings):
     recovery: RecoverySettings = Field(default_factory=RecoverySettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     tools: ToolsSettings = Field(default_factory=ToolsSettings)
+    sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
 
     @property
     def is_lite(self) -> bool:
@@ -249,6 +292,17 @@ class Settings(BaseSettings):
                 )
             if self.security.require_auth is False:
                 problems.append("生产模式不允许关闭鉴权 (require_auth=False)")
+            # RFC-001：生产模式开启 shell/python 执行时必须有真实隔离边界，
+            # 禁止宿主机裸奔执行（backend 必须为 docker / e2b）。
+            exec_enabled = (
+                self.tools.enable_shell or self.tools.enable_python_exec
+            )
+            if exec_enabled and self.sandbox.backend not in ("docker", "e2b"):
+                problems.append(
+                    "生产模式开启 shell/python 执行时，必须配置沙箱后端："
+                    "XAGENT_SANDBOX__BACKEND=docker（或 e2b），"
+                    "禁止在宿主机直接执行不可信代码"
+                )
         return problems
 
 

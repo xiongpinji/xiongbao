@@ -92,7 +92,37 @@ def get_user_store() -> UserStore:
             ),
         )
     else:
-        logger.info("user_store_init", default_admin=False)
+        # full/enterprise 模式：无默认账号。首次部署通过
+        # XAGENT_ADMIN_BOOTSTRAP_PASSWORD 引导创建 admin（仅当库中无 admin 时生效），
+        # 创建后必须首登改密；未设置时打引导提示 warning。
+        import os
+
+        bootstrap_pwd = os.environ.get("XAGENT_ADMIN_BOOTSTRAP_PASSWORD", "").strip()
+        if bootstrap_pwd and "admin" not in store._users:
+            if len(bootstrap_pwd) < 12:
+                logger.warning(
+                    "admin_bootstrap_weak_password",
+                    message="XAGENT_ADMIN_BOOTSTRAP_PASSWORD 长度不足 12 位，已忽略",
+                )
+            else:
+                store._users["admin"] = User(
+                    "admin", ANONYMOUS_TENANT, ["admin"], _pwd.hash(bootstrap_pwd),
+                    must_change_password=True,
+                )
+                logger.warning(
+                    "admin_bootstrapped",
+                    message="已通过 XAGENT_ADMIN_BOOTSTRAP_PASSWORD 引导创建 admin，"
+                    "首次登录后必须修改密码；请尽快从环境中移除该变量",
+                )
+        elif not bootstrap_pwd:
+            logger.warning(
+                "admin_bootstrap_missing",
+                message=(
+                    "full/enterprise 模式无默认管理员：首次部署请设置 "
+                    "XAGENT_ADMIN_BOOTSTRAP_PASSWORD（≥12 位）引导创建 admin，"
+                    "或通过 SSO/OIDC 登录（realm_access.roles 映射）"
+                ),
+            )
     return store
 
 
