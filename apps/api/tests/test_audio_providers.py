@@ -44,7 +44,9 @@ class _FakeCommunicate:
 
 @pytest.fixture
 def fake_communicate(monkeypatch: pytest.MonkeyPatch):
-    import edge_tts
+    # edge-tts 为可选 extra（tts），CI 默认环境未安装时跳过而非 ERROR；
+    # 缺包降级路径由 test_edge_tts_not_installed_degrades 覆盖
+    edge_tts = pytest.importorskip("edge_tts")
 
     _FakeCommunicate.instances = []
     _FakeCommunicate.fail_with = None
@@ -162,6 +164,7 @@ def test_registry_audio_defaults_to_null() -> None:
 
 
 def test_registry_audio_edge_tts_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("edge_tts", reason="edge-tts 为可选 extra（tts），未装时跳过")
     from xagent.domains.creative_studio.media import (
         get_media_registry,
         reset_media_registry,
