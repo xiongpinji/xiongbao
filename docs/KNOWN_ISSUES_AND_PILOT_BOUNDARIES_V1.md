@@ -104,6 +104,26 @@ Roadmap v2 P0 已完成：
 
 ---
 
+## 2.6 开发库 audit_events 历史断链（仅存量开发数据，生产无影响）
+
+**现状**：长期使用的开发库（`apps/api/xagent.db`）`audit_events` 表存在历史断链——586 行中约 305 行为 GENESIS 类链起点（早期版本重启即重起链所致），另有约 97 行 `prev_hash` 指向不存在的哈希。这是开发过程遗留，**不影响新部署**。
+
+**运行时隔离机制（代码已内建，见 `enterprise/chain.py`）**：
+
+- 启动恢复时校验链完整性，校验失败记 `audit_chain_broken_on_restore` 错误日志；
+- 断链旧行保留在库中供取证，不删除、不续写；
+- 新链从 GENESIS 重起，且 `seq_floor` 越过存量最大 seq，新旧链不会混淆；
+- 校验状态可通过 `/api/v1/audit/*` 端点查询。
+
+**生产部署建议**：生产一律使用全新数据库初始化（`alembic upgrade head`），不携带开发库数据。若确需复用存量库，建议先通过 `scripts/backup.py`（`backup_audit`，经 `/api/v1/audit/export` 导出 JSON）归档审计历史，再清空 `audit_events` 表让链从干净的 GENESIS 开始：
+
+```sql
+-- 归档导出后执行（仅存量库复用场景）
+DELETE FROM audit_events;
+```
+
+---
+
 ## 3. 当前支持范围
 
 当前推荐支持：

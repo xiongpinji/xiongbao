@@ -290,7 +290,10 @@ def _cmd_health(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from xagent import __version__
+
     parser = argparse.ArgumentParser(prog="xagent", description="X-Agent CLI")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--host", default="127.0.0.1", help="API host")
     parser.add_argument("--port", type=int, default=8000, help="API port")
     parser.add_argument("--token", default="", help="JWT token (跳过登录)")
