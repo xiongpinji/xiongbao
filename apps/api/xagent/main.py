@@ -183,6 +183,9 @@ def create_app() -> FastAPI:
             message="全局限流已通过配置关闭（rate_limit_enabled=false）",
         )
     app.add_middleware(MetricsMiddleware)
+    # 响应耗时统计（为 /perf 端点提供 total_requests/avg/分位数）
+    from xagent.infra.performance import TimingMiddleware
+    app.add_middleware(TimingMiddleware)
 
     # ETag 响应缓存（GET 条件请求 304）
     from xagent.api.response_cache import ResponseCacheMiddleware
@@ -238,12 +241,21 @@ def create_app() -> FastAPI:
     # 性能统计端点
     @app.get("/perf", include_in_schema=False)
     async def _perf() -> dict:
-        from xagent.infra.performance import get_api_cache, get_search_cache
-        # 从中间件栈获取 timing 实例
-        for m in app.user_middleware:
-            if hasattr(m, "cls") and m.cls.__name__ == "TimingMiddleware":
-                break
+        from xagent.infra.performance import (
+            get_api_cache,
+            get_search_cache,
+            get_timing_middleware,
+        )
+        timing = get_timing_middleware()
+        summary = timing.get_summary() if timing else {
+            "total_requests": 0,
+            "avg_response_time_ms": 0.0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+        }
         return {
+            **summary,
             "cache_api": get_api_cache().stats,
             "cache_search": get_search_cache().stats,
         }

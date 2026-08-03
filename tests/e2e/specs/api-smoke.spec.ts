@@ -41,8 +41,8 @@ test.describe("API 健康 & 基础端点", () => {
 test.describe("API 安全", () => {
   test("未认证访问受保护端点返回 401", async ({ request }) => {
     const resp = await request.get(`${API_BASE}/api/v1/agents/roles`);
-    // lite 模式可能 200（无认证），full 模式 401
-    expect([200, 401]).toContain(resp.status());
+    // lite 无认证 200；认证开启缺凭据 401；匿名空角色被授权守卫拦截 403
+    expect([200, 401, 403]).toContain(resp.status());
   });
 
   test("响应包含安全头", async ({ request }) => {
@@ -73,7 +73,8 @@ test.describe("API 功能端点", () => {
       const body = await resp.json();
       expect(body).toHaveProperty("total_skills");
     } else {
-      expect(resp.status()).toBe(401);
+      // 缺凭据 401；匿名空角色被授权守卫拦截 403（CI 以 REQUIRE_AUTH=false 运行）
+      expect([401, 403]).toContain(resp.status());
     }
   });
 
@@ -84,13 +85,14 @@ test.describe("API 功能端点", () => {
     expect([401, 404, 422]).toContain(resp.status());
   });
 
-  test("GET /api/v1/templates 返回工作流模板列表", async ({ request }) => {
-    const resp = await request.get(`${API_BASE}/api/v1/templates`);
+  test("GET /api/v1/canvas/templates/list 返回工作流模板列表", async ({ request }) => {
+    // 模板路由现位于 canvas 域（/api/v1/templates 已不存在）
+    const resp = await request.get(`${API_BASE}/api/v1/canvas/templates/list`);
     if (resp.status() === 200) {
       const body = await resp.json();
-      expect(Array.isArray(body)).toBeTruthy();
+      expect(Array.isArray(body.templates)).toBeTruthy();
     } else {
-      expect(resp.status()).toBe(401);
+      expect([401, 403]).toContain(resp.status());
     }
   });
 });

@@ -30,6 +30,10 @@ class TimingMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.slow_threshold_ms = slow_threshold_ms
         self._latencies: list[float] = []
+        # 注册为进程级实例，供 /perf 端点读取统计（add_middleware 的
+        # 实例在 starlette 内部构建，外部无法从 user_middleware 取回）
+        global _timing_instance
+        _timing_instance = self
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.perf_counter()
@@ -63,6 +67,29 @@ class TimingMiddleware(BaseHTTPMiddleware):
             "p99": round(sorted_lat[min(int(n * 0.99), n - 1)], 1),
             "count": n,
         }
+
+    def get_summary(self) -> dict[str, float]:
+        """返回 /perf 端点所需的汇总统计（请求总数/平均耗时/分位数）。"""
+        pct = self.get_percentiles()
+        n = len(self._latencies)
+        return {
+            "total_requests": n,
+            "avg_response_time_ms": (
+                round(sum(self._latencies) / n, 2) if n else 0.0
+            ),
+            "p50_ms": pct["p50"],
+            "p95_ms": pct["p95"],
+            "p99_ms": pct["p99"],
+        }
+
+
+# 进程级 TimingMiddleware 实例（中间件实例化时自注册）
+_timing_instance: TimingMiddleware | None = None
+
+
+def get_timing_middleware() -> TimingMiddleware | None:
+    """获取当前进程的 TimingMiddleware 实例（未注册时返回 None）。"""
+    return _timing_instance
 
 
 # ─── LRU 内存缓存 ──────────────────────────────────────────
