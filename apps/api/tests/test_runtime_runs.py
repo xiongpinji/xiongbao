@@ -210,6 +210,7 @@ async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(
         "request.input",
         "result.final",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["delivery"]["channel"] == "task_runtime"
     assert body["delivery"]["artifacts"] == []
@@ -341,6 +342,7 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
         "request.input",
         "failure.evidence",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["evidence"][1]["payload"] == {"error": "direct exploded", "run_id": run_id}
 
@@ -743,6 +745,7 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
         "request.input",
         "approval.requested",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["validation"] == {"risks": []}
     assert body["delivery"]["summary"]

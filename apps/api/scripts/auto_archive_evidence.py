@@ -16,9 +16,10 @@ import argparse
 import json
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -42,7 +43,7 @@ def _run_cmd(cmd: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
 def collect_health_snapshot() -> dict:
     """收集健康快照。"""
     snapshot = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "health": {},
         "ready": {},
     }
@@ -67,7 +68,7 @@ def collect_recovery_logs(hours: int, evidence_dir: Path) -> list[Path]:
     if not evidence_dir.exists():
         return files
 
-    cutoff = datetime.now(timezone.utc).timestamp() - hours * 3600
+    cutoff = datetime.now(UTC).timestamp() - hours * 3600
 
     for log_file in evidence_dir.glob("recovery-*.jsonl"):
         try:
@@ -90,6 +91,50 @@ def collect_ops_evidence(output_file: Path) -> bool:
         cwd=API_ROOT,
     )
     return code == 0
+
+
+def collect_db_evidence_records(hours: int, output_file: Path) -> int:
+    """导出最近 N 小时的 evidence_records（JSONL）。
+
+    P1 证据链接通：run.summary / workflow.summary / alert:* 等自动生成的
+    证据记录随归档包一起导出，供离线审计。失败（如 DB 不可达）返回 -1，
+    归档继续（诚实降级，不阻断其他证据）。
+    """
+    import asyncio
+
+    async def _dump() -> int:
+        from datetime import datetime, timedelta
+
+        from sqlalchemy import select
+        from xagent.infra.db import get_sessionmaker
+        from xagent.infra.models.evidence import EvidenceORM
+
+        cutoff = datetime.now(UTC) - timedelta(hours=hours)
+        stmt = (
+            select(EvidenceORM)
+            .where(EvidenceORM.created_at >= cutoff)
+            .order_by(EvidenceORM.created_at.asc())
+        )
+        async with get_sessionmaker()() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+        with output_file.open("w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps({
+                    "tenant_id": r.tenant_id,
+                    "evidence_id": r.evidence_id,
+                    "run_id": r.run_id,
+                    "task_id": r.task_id,
+                    "kind": r.kind,
+                    "payload": json.loads(r.payload or "{}"),
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }, ensure_ascii=False) + "\n")
+        return len(rows)
+
+    try:
+        return asyncio.run(_dump())
+    except Exception as exc:  # noqa: BLE001 - 归档降级不阻断
+        print(f"[warn] db evidence export skipped: {exc}", file=sys.stderr)
+        return -1
 
 
 def collect_prometheus_metrics() -> dict:
@@ -128,7 +173,7 @@ def create_archive(
     evidence_dir: Path,
 ) -> Path | None:
     """创建归档 tar.gz。"""
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     archive_name = f"evidence-archive-{timestamp}.tar.gz"
     archive_path = output_dir / archive_name
 
@@ -157,21 +202,28 @@ def create_archive(
         ops_output = staging / "ops-evidence.json"
         collect_ops_evidence(ops_output)
 
-        # 4. Prometheus metrics
+        # 4. DB evidence records（P1 证据链：run.summary/workflow.summary/alert:*）
+        db_evidence_output = staging / "evidence-records.jsonl"
+        db_evidence_count = collect_db_evidence_records(hours, db_evidence_output)
+        if db_evidence_count < 0:
+            db_evidence_output.unlink(missing_ok=True)
+
+        # 5. Prometheus metrics
         prom_metrics = collect_prometheus_metrics()
         (staging / "prometheus-metrics.json").write_text(
             json.dumps(prom_metrics, indent=2, ensure_ascii=False), encoding="utf-8"
         )
 
-        # 5. Manifest
+        # 6. Manifest
         manifest = {
-            "archive_version": "1.0",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "archive_version": "1.1",
+            "created_at": datetime.now(UTC).isoformat(),
             "hours_covered": hours,
             "contents": [
                 "health-snapshot.json",
                 "recovery-logs/" if recovery_files else None,
                 "ops-evidence.json",
+                "evidence-records.jsonl" if db_evidence_count >= 0 else None,
                 "prometheus-metrics.json",
             ],
             "recovery_log_count": len(recovery_files),
@@ -210,7 +262,7 @@ def cleanup_old_archives(output_dir: Path, retention_days: int) -> int:
     if retention_days <= 0:
         return 0
 
-    cutoff = datetime.now(timezone.utc).timestamp() - retention_days * 86400
+    cutoff = datetime.now(UTC).timestamp() - retention_days * 86400
     removed = 0
 
     for archive in output_dir.glob("evidence-archive-*.tar.gz"):

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -112,6 +113,36 @@ def _build_result_summary(result: dict) -> dict:
         "steps_count": steps_count,
         "final_answer": final_answer[:400],
     }
+
+
+def _build_run_summary_evidence(
+    result_payload: dict,
+    *,
+    started_at: datetime,
+    status: str,
+    error: str = "",
+) -> dict:
+    """标准化运行摘要证据（P1 证据链自动生成）：每次 run 完成/失败都生成一条
+    ``run.summary``，汇总耗时/步骤/工具/token，供审计查询与归档。"""
+    events = result_payload.get("events") or []
+    tool_events = [e for e in events if e.get("tool")]
+    tools_used = sorted({str(e.get("tool")) for e in tool_events})
+    usage = result_payload.get("usage") or {}
+    steps_value = result_payload.get("steps")
+    steps_count = steps_value if isinstance(steps_value, int) else len(steps_value or [])
+    payload: dict[str, Any] = {
+        "run_id": str(result_payload.get("run_id") or ""),
+        "status": status,
+        "duration_ms": max(0, int((datetime.now(UTC) - started_at).total_seconds() * 1000)),
+        "steps_count": steps_count,
+        "tool_calls": len(tool_events),
+        "tools_used": tools_used[:20],
+        "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+        "completion_tokens": int(usage.get("completion_tokens") or 0),
+    }
+    if error:
+        payload["error"] = error[:200]
+    return {"kind": "run.summary", "payload": payload}
 
 
 def _build_delivery_summary(run_id: str, result: dict) -> dict:
@@ -334,6 +365,7 @@ async def run(
         )
     _apply_spine_provenance(input_payload, linkage)
 
+    result = None  # run_agent 抛错时失败路径仍需构造 evidence
     try:
         result = await run_agent(
             body.goal,
@@ -355,6 +387,9 @@ async def run(
             {"kind": "request.input", "payload": input_payload},
             {"kind": "result.final", "payload": _build_result_summary(result_payload)},
             {"kind": "delivery.generated", "payload": delivery_summary},
+            _build_run_summary_evidence(
+                result_payload, started_at=started_at, status="succeeded"
+            ),
         ]
         commit_evidence = _build_commit_evidence(result_payload)
         if commit_evidence is not None:
@@ -442,6 +477,12 @@ async def run(
                 {"kind": "request.input", "payload": input_payload},
                 {"kind": "failure.evidence", "payload": {"error": failure_error, "run_id": run_id}},
                 {"kind": "delivery.generated", "payload": failed_delivery},
+                _build_run_summary_evidence(
+                    result.to_dict() if result is not None else {"run_id": run_id},
+                    started_at=started_at,
+                    status="failed",
+                    error=failure_error,
+                ),
             ]
             try:
                 await persist_agent_task_record_in_session(

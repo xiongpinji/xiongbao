@@ -306,6 +306,8 @@ def _build_workflow_preview_summary(run_view: dict) -> dict:
 
 
 def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
+    steps = run_view.get("steps") or []
+    timeline = run_view.get("timeline") or []
     records: list[dict] = [
         {
             "kind": "request.input",
@@ -319,13 +321,13 @@ def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
                         "name": step.get("name"),
                         "status": step.get("status"),
                     }
-                    for step in run_view.get("steps") or []
+                    for step in steps
                 ],
             },
         }
     ]
     delivery_summary = build_workflow_delivery_summary(run_view)
-    for event in run_view.get("timeline") or []:
+    for event in timeline:
         kind = str(event.get("kind") or "").strip().lower()
         if kind == "approval_requested":
             records.append(
@@ -373,6 +375,19 @@ def _build_workflow_evidence_records(run_view: dict) -> list[dict]:
             }
         )
     records.append({"kind": "delivery.generated", "payload": delivery_summary})
+    # 标准化运行摘要证据（P1 证据链自动生成）：kind 与 agent run 统一为
+    # run.summary（与 delivery 契约的 workflow.summary 区分命名空间），追加在末尾
+    records.append({
+        "kind": "run.summary",
+        "payload": {
+            "spec_name": run_view.get("spec_name", ""),
+            "status": str(run_view.get("status") or "pending"),
+            "step_count": len(steps),
+            "steps_done": len([s for s in steps if s.get("status") in ("done", "succeeded")]),
+            "steps_failed": len([s for s in steps if s.get("status") == "failed"]),
+            "timeline_events": len(timeline),
+        },
+    })
     return records
 
 

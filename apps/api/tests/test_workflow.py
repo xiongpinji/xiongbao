@@ -338,6 +338,7 @@ async def test_workflow_delivery_summary_is_visible_when_runtime_schema_degrades
         "request.input",
         "result.final",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["delivery"] == {
         "status": "ready",
