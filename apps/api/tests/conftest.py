@@ -75,6 +75,7 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
     from xagent.core.workflow import reset_engine
     from xagent.domains.billing import reset_billing_service
     from xagent.domains.creative_studio.media import reset_media_registry
+    from xagent.domains.code_review import reset_review_store
     from xagent.domains.open_source_discovery import reset_discovery_engine
     from xagent.enterprise.audit import reset_audit_log
     from xagent.enterprise.auth.users import reset_user_store
@@ -101,6 +102,7 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
     reset_engine()
     reset_media_registry()
     reset_discovery_engine()
+    reset_review_store()
     get_browser_agent.cache_clear()
     get_desktop_agent.cache_clear()
     get_coding_agent.cache_clear()

@@ -8,6 +8,7 @@
     health      健康检查
     info        打印当前配置摘要
     smoke       三链路冒烟测试（LLM / trace / 向量）
+    review      代码评审（对标 Codex：git diff + AGENTS.md 规则 → 分级 findings）
     warmup      预热 Ollama 模型
     migrate     运行数据库迁移
 """
@@ -77,6 +78,107 @@ def _cmd_migrate(_: argparse.Namespace) -> int:
         env={**os.environ},
     )
     return result.returncode
+
+
+# ─── Code Review（本地直调 domain 服务，无需 API 服务）───
+
+
+def _cmd_review(args: argparse.Namespace) -> int:
+    """代码评审：git diff（repo + base..head）或直接粘贴 diff 文件。"""
+    import asyncio
+
+    from xagent.domains.code_review import review_diff
+
+    diff_text = ""
+    if args.diff_file:
+        try:
+            diff_text = open(args.diff_file, encoding="utf-8").read()
+        except OSError as e:
+            print(f"读取 diff 文件失败: {e}", file=sys.stderr)
+            return 2
+
+    try:
+        result = asyncio.run(
+            review_diff(
+                diff=diff_text or None,
+                repo=args.repo,
+                base=args.base,
+                head=args.head,
+                max_files=args.max_files,
+            )
+        )
+    except ValueError as e:
+        print(f"评审失败: {e}", file=sys.stderr)
+        return 2
+
+    _print_review(result)
+    if args.output:
+        try:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(_render_review_markdown(result))
+            print(f"\n报告已写入: {args.output}")
+        except OSError as e:
+            print(f"写入报告失败: {e}", file=sys.stderr)
+            return 2
+    return 0
+
+
+_VERDICT_ICONS = {"approve": "✅", "comment": "💬", "request_changes": "🚫"}
+_SEVERITY_ORDER = ("critical", "high", "medium", "low", "info")
+
+
+def _print_review(result) -> None:
+    icon = _VERDICT_ICONS.get(result.verdict, "❔")
+    print(f"\n{icon} Verdict: {result.verdict}  (status={result.status})")
+    print(
+        f"   变更: {result.files_changed} 个文件 "
+        f"(+{result.additions}/-{result.deletions})"
+        + ("，已加载 AGENTS.md 规则" if result.instructions_applied else "")
+    )
+    if result.failed_dimensions:
+        print(f"   ⚠ 失败维度: {', '.join(result.failed_dimensions)}")
+    print(f"   摘要: {result.summary}")
+    if not result.findings:
+        print("   无 findings")
+        return
+    print(f"\n   Findings ({len(result.findings)}):")
+    for f in result.findings:
+        loc = f"{f.file}:{f.line}" if f.line else f.file
+        rule = f"  [规则: {f.rule_ref}]" if f.rule_ref else ""
+        print(f"   - [{f.severity}] {loc} ({f.dimension}) {f.issue}{rule}")
+        if f.suggestion:
+            print(f"       建议: {f.suggestion}")
+
+
+def _render_review_markdown(result) -> str:
+    icon = _VERDICT_ICONS.get(result.verdict, "❔")
+    lines = [
+        "## X-Agent Code Review",
+        "",
+        f"{icon} **Verdict: {result.verdict}**（status={result.status}）",
+        "",
+        f"> {result.summary}",
+        "",
+        f"变更 {result.files_changed} 个文件（+{result.additions}/-{result.deletions}）"
+        + "。评审自动读取了仓库 AGENTS.md 自定义规则。"
+        if result.instructions_applied
+        else f"变更 {result.files_changed} 个文件（+{result.additions}/-{result.deletions}）。",
+        "",
+    ]
+    if result.findings:
+        lines.append("| Severity | 位置 | 维度 | 问题 | 建议 |")
+        lines.append("|---|---|---|---|---|")
+        for f in result.findings:
+            loc = f"`{f.file}:{f.line}`" if f.line else f"`{f.file}`"
+            issue = f.issue.replace("|", "\\|")
+            sugg = f.suggestion.replace("|", "\\|")
+            if f.rule_ref:
+                issue += f"（规则: {f.rule_ref}）"
+            lines.append(f"| {f.severity} | {loc} | {f.dimension} | {issue} | {sugg} |")
+    else:
+        lines.append("未发现问题。")
+    lines.append("")
+    return "\n".join(lines)
 
 
 # ─── API 客户端命令 ───
@@ -235,6 +337,16 @@ def build_parser() -> argparse.ArgumentParser:
     # warmup
     p_warmup = sub.add_parser("warmup", help="预热 Ollama 模型")
     p_warmup.set_defaults(func=_cmd_warmup)
+
+    # review
+    p_review = sub.add_parser("review", help="代码评审（对标 Codex Code Review）")
+    p_review.add_argument("--repo", default=".", help="本地仓库路径（加载其 AGENTS.md 规则）")
+    p_review.add_argument("--base", default=None, help="基准 ref，如 main 或 PR base sha")
+    p_review.add_argument("--head", default="HEAD", help="目标 ref")
+    p_review.add_argument("--diff-file", default=None, help="直接提供 diff 文件（repo 不可访问时）")
+    p_review.add_argument("--max-files", type=int, default=10, help="评审的最大文件数")
+    p_review.add_argument("--output", default=None, help="将 Markdown 报告写入文件")
+    p_review.set_defaults(func=_cmd_review)
 
     # migrate
     p_migrate = sub.add_parser("migrate", help="运行数据库迁移")

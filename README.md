@@ -70,7 +70,8 @@ X-Agent 默认按「最小权限」启动，所有放宽都必须显式配置：
 
 - ✅ 已做：仓库根 AGENTS.md 注入系统提示；权限模式（suggest/auto-edit/full-auto）注入；项目结构感知
 - ✅ 已做：`core/instructions` 三层分层指令（用户级 `~/.xagent/AGENTS.md` < 工作区根 < 子目录级就近优先），严格优先级合并
-- 🔄 在做：任务路径自动识别驱动子目录层选择（当前支持显式 `task_paths`）
+- ✅ 已做：Code Review（对标 Codex Review）——`domains/code_review` 按逻辑/安全/规范三维度并行评审，AGENTS.md 规则注入 standards 维度；`xagent review` CLI、`POST /api/v1/code-review` API、[GitHub Action 模板](docs/integrations/README.md)（PR 自动评审 + 评论）
+- 🔄 在做：任务路径自动识别驱动子目录层选择（当前支持显式 `task_paths`）；Code Review 前端页面（后续）
 - ❌ 不做：云端沙箱托管任务队列（与私有化交付形态冲突）
 
 **对标 Hermes Agent（技能自进化）**
