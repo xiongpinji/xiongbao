@@ -9,6 +9,7 @@ Phase 5：lite 启动默认 admin/admin（**仅本地演示**）：该账号标�
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -35,6 +36,11 @@ class User:
     def verify(self, plain: str) -> bool:
         return _pwd.verify(plain, self.password_hash)
 
+    async def averify(self, plain: str) -> bool:
+        """异步校验：bcrypt 校验为 CPU 密集（单次 ~300ms），移入线程池，
+        避免阻塞事件循环。安全语义与 :meth:`verify` 完全一致。"""
+        return await asyncio.to_thread(self.verify, plain)
+
 
 class UserExistsError(Exception):
     """用户已存在。"""
@@ -60,6 +66,38 @@ class UserStore:
         if u and u.verify(password):
             return u
         return None
+
+    async def aauthenticate(self, user_id: str, password: str) -> User | None:
+        """异步认证：bcrypt 校验在线程池执行（不阻塞事件循环）。
+
+        时序行为与同步版一致：用户不存在时不做 verify（短路返回）。"""
+        u = self._users.get(user_id)
+        if u and await u.averify(password):
+            return u
+        return None
+
+    async def aadd(self, user_id: str, tenant_id: str, roles: list[str], password: str,
+                   email: str = "") -> User:
+        """异步新增用户：bcrypt 哈希（~300ms CPU）在线程池执行。"""
+        if user_id in self._users:
+            raise UserExistsError(user_id)
+        password_hash = await asyncio.to_thread(_pwd.hash, password)
+        u = User(user_id, tenant_id, roles, password_hash, email)
+        self._users[user_id] = u
+        return u
+
+    async def achange_password(self, user_id: str, new_password: str) -> bool:
+        """异步改密：bcrypt 哈希在线程池执行（改密后清除 must_change_password）。"""
+        u = self._users.get(user_id)
+        if not u:
+            return False
+        password_hash = await asyncio.to_thread(_pwd.hash, new_password)
+        self._users[user_id] = User(
+            user_id=u.user_id, tenant_id=u.tenant_id, roles=u.roles,
+            password_hash=password_hash, email=u.email,
+            must_change_password=False,
+        )
+        return True
 
     def change_password(self, user_id: str, new_password: str) -> bool:
         u = self._users.get(user_id)

@@ -57,7 +57,7 @@ async def register(body: RegisterIn) -> TokenOut:
     store = get_user_store()
     tenant_id = body.tenant_id or body.username
     try:
-        store.add(body.username, tenant_id, ["member"], body.password, body.email)
+        await store.aadd(body.username, tenant_id, ["member"], body.password, body.email)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status.HTTP_409_CONFLICT, "用户名已存在") from exc
     token = create_access_token(
@@ -74,10 +74,10 @@ async def change_password(
     principal: Principal = Depends(get_principal),
 ) -> dict:
     store = get_user_store()
-    user = store.authenticate(principal.user_id, body.old_password)
+    user = await store.aauthenticate(principal.user_id, body.old_password)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "旧密码错误")
-    store.change_password(principal.user_id, body.new_password)
+    await store.achange_password(principal.user_id, body.new_password)
     return {"changed": True, "user_id": principal.user_id}
 
 
@@ -103,7 +103,8 @@ async def login(body: LoginIn, request: Request) -> TokenOut:
         )
 
     store = get_user_store()
-    user = store.authenticate(body.username, body.password)
+    # bcrypt 校验移入线程池（aauthenticate），避免 ~300ms CPU 阻塞事件循环
+    user = await store.aauthenticate(body.username, body.password)
     if user is None:
         # 记录失败；达到阈值后后续请求会被上面的 alocked_seconds 检查拦截
         await limiter.arecord_failure(key)
