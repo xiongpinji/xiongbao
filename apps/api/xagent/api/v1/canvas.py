@@ -18,6 +18,7 @@ from xagent.core.workflow import (
     WorkflowStep,
     get_engine,
 )
+from xagent.domains.creative_studio import persistence as creative_persistence
 from xagent.domains.creative_studio.canvas import (
     NodeStatus,
     NodeType,
@@ -139,6 +140,40 @@ def _load_snapshot_once() -> None:
 
 _load_snapshot_once()
 
+# 画布 DB 水合标记：每进程首次访问时从库恢复一次（重启恢复语义）；
+# 测试清空进程内 dict 后不重新水合，保证用例间隔离。
+_canvas_db_hydrated = False
+
+
+async def _hydrate_canvases_from_db() -> None:
+    """首次访问时从 DB 恢复画布到进程内缓存（文件快照已加载的优先）。"""
+    global _canvas_db_hydrated
+    if _canvas_db_hydrated:
+        return
+    _canvas_db_hydrated = True
+    try:
+        rows = await creative_persistence.load_all_canvases()
+    except Exception as exc:  # 持久化恢复失败不影响主流程
+        logger.warning("canvas_hydrate_failed", error=str(exc))
+        return
+    for canvas_id, (doc, tenant_id) in rows.items():
+        if canvas_id in _canvases:
+            continue
+        try:
+            _canvases[canvas_id] = ProductionCanvas.from_dict(doc)
+            _canvas_tenants[canvas_id] = tenant_id
+        except (ValueError, TypeError):
+            continue
+
+
+async def _persist_canvas(canvas: ProductionCanvas) -> None:
+    """画布双写：JSON 快照（lite 兼容）+ DB 落库（重启恢复主路径）。"""
+    _persist_snapshot()
+    await creative_persistence.save_canvas(
+        canvas.to_dict(), _canvas_tenants.get(canvas.canvas_id, "")
+    )
+
+
 # 需要人工审核门的节点类型（对齐工作流 ApprovalGate）
 _REVIEW_GATE_TYPES = {
     NodeType.brief_analysis,
@@ -234,7 +269,7 @@ async def create_from_template(
     ))
     _canvases[canvas.canvas_id] = canvas
     _canvas_tenants[canvas.canvas_id] = principal.tenant_id
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -243,6 +278,12 @@ def _get(canvas_id: str, principal: Principal) -> ProductionCanvas:
     if c is None or _canvas_tenants.get(canvas_id) != principal.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "画布不存在或无权访问")
     return c
+
+
+async def _get_hydrated(canvas_id: str, principal: Principal) -> ProductionCanvas:
+    """先水合再取画布（重启后首个请求可能只存在于 DB）。"""
+    await _hydrate_canvases_from_db()
+    return _get(canvas_id, principal)
 
 
 def _workflow_step_from_node(
@@ -321,7 +362,7 @@ async def create_canvas(
         ))
     _canvases[canvas.canvas_id] = canvas
     _canvas_tenants[canvas.canvas_id] = principal.tenant_id
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -352,7 +393,7 @@ async def import_canvas(
     canvas.apply_layout([], body.edges)
     _canvases[canvas.canvas_id] = canvas
     _canvas_tenants[canvas.canvas_id] = principal.tenant_id
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -361,13 +402,14 @@ async def get_canvas(
     canvas_id: str,
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
-    return _get(canvas_id, principal).to_dict()
+    return (await _get_hydrated(canvas_id, principal)).to_dict()
 
 
 @router.get("", summary="列出画布")
 async def list_canvases(
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
+    await _hydrate_canvases_from_db()
     return {
         "canvases": [
             c.to_dict()
@@ -390,7 +432,7 @@ async def add_node(
     body: NodeCreateIn,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = ProductionNode(
         node_type=NodeType(body.node_type),
         title=body.title,
@@ -398,7 +440,7 @@ async def add_node(
         position=body.position,
     )
     canvas.add_node(node)
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -408,14 +450,14 @@ async def delete_node(
     node_id: str,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     original_len = len(canvas.nodes)
     canvas.nodes = [node for node in canvas.nodes if node.node_id != node_id]
     if len(canvas.nodes) == original_len:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
     for node in canvas.nodes:
         node.dependencies = [dep for dep in node.dependencies if dep != node_id]
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -433,7 +475,7 @@ async def patch_node(
     body: NodeUpdateIn,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = canvas.get_node(node_id)
     if node is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
@@ -451,7 +493,7 @@ async def patch_node(
         node.merge_settings(body.settings)
     if body.locked is not None:
         node.locked = body.locked
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return {"node": node.to_dict(), "canvas": canvas.to_dict()}
 
 
@@ -461,9 +503,9 @@ async def save_layout(
     body: LayoutIn,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     canvas.apply_layout(body.nodes, body.edges)
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -473,7 +515,7 @@ async def run_canvas(
     principal: Principal = Depends(require_permission("creative", "execute")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     if not canvas.nodes:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "画布没有可运行节点")
     spec = _workflow_spec_from_canvas(canvas)
@@ -481,7 +523,7 @@ async def run_canvas(
     run = engine.create_run(spec, principal)
     canvas.workflow_run_id = run.run_id
     run = await engine.execute(run.run_id, principal)
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     workflow = run.to_view()
     await _persist_canvas_workflow_view(session, workflow)
     return {
@@ -499,7 +541,7 @@ async def run_canvas_node(
     node_id: str,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = canvas.get_node(node_id)
     if node is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
@@ -517,7 +559,7 @@ async def run_canvas_node(
         node.agent_note = f"执行失败：{step.error}"
     else:
         node.agent_note = "节点执行已提交"
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return {
         "canvas_id": canvas.canvas_id,
         "node_id": node.node_id,
@@ -532,7 +574,7 @@ async def estimate_canvas_endpoint(
     canvas_id: str,
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
-    return estimate_canvas(_get(canvas_id, principal))
+    return estimate_canvas(await _get_hydrated(canvas_id, principal))
 
 
 @router.post("/{canvas_id}/quality", summary="评估画布质量")
@@ -541,7 +583,7 @@ async def quality_canvas_endpoint(
     body: QualityIn,
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     if not body.node_ids:
         return score_canvas(canvas)
     nodes = []
@@ -560,7 +602,7 @@ async def auto_fix_node(
     node_id: str,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = canvas.get_node(node_id)
     if node is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
@@ -568,7 +610,7 @@ async def auto_fix_node(
         raise HTTPException(status.HTTP_409_CONFLICT, "节点已锁定")
     patch = canvas_auto_fix(node)
     node.merge_settings(patch)
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return {"patch": patch, "node": node.to_dict(), "canvas": canvas.to_dict()}
 
 
@@ -578,7 +620,7 @@ async def parse_script(
     body: ScriptParseIn | None = None,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     source = str(body.script if body and body.script is not None else canvas.brief or "")
     if body is None or body.keep_existing:
         for node in canvas.nodes:
@@ -595,7 +637,7 @@ async def parse_script(
         )
         canvas.add_node(node)
         created.append(node.to_dict())
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return {"created": created, "canvas": canvas.to_dict()}
 
 
@@ -604,7 +646,7 @@ async def export_canvas(
     canvas_id: str,
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     edges = [
         {"source": dep, "target": node.node_id}
         for node in canvas.nodes
@@ -619,12 +661,12 @@ async def request_node_review(
     node_id: str,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = canvas.get_node(node_id)
     if node is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
     node.status = NodeStatus.review_required
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     return canvas.to_dict()
 
 
@@ -635,28 +677,21 @@ async def batch_generate(
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
     from xagent.api.v1.creative_studio import _media_task_tenants
-    from xagent.domains.creative_studio.media.base import (
-        GenerationMode,
-        GenerationRequest,
-        MediaKind,
-    )
+    from xagent.domains.creative_studio.canvas import media_spec_for_node
+    from xagent.domains.creative_studio.media.base import GenerationRequest
     from xagent.domains.creative_studio.media.registry import get_media_registry
 
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     wanted = set(body.node_types)
     registry = get_media_registry()
     results = []
     for node in canvas.nodes:
         if wanted and node.node_type.value not in wanted:
             continue
-        if node.node_type is NodeType.keyframe:
-            kind = MediaKind.image
-            mode = GenerationMode.text_to_image
-        elif node.node_type is NodeType.video:
-            kind = MediaKind.video
-            mode = GenerationMode.text_to_video
-        else:
+        spec = media_spec_for_node(node.node_type)
+        if spec is None:
             continue
+        kind, mode = spec
         settings = dict(node.settings or {})
         task = await registry.generate(
             GenerationRequest(
@@ -683,7 +718,7 @@ async def review_node(
     body: NodeReviewIn,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
-    canvas = _get(canvas_id, principal)
+    canvas = await _get_hydrated(canvas_id, principal)
     node = canvas.get_node(node_id)
     if node is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "节点不存在")
@@ -694,7 +729,7 @@ async def review_node(
         node.content = body.content
     if body.title is not None:
         node.title = body.title
-    _persist_snapshot()
+    await _persist_canvas(canvas)
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,

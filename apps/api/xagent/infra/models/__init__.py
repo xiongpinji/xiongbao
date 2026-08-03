@@ -1,5 +1,11 @@
 """ORM 模型层。所有持久化表继承 infra.db.Base。"""
 
+from xagent.domains.creative_studio.persistence import (
+    CreativeCanvasORM,
+    CreativeDraftORM,
+    CreativeMediaTaskORM,
+    CreativeProductionORM,
+)
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.models.audit import AuditEventORM
@@ -35,4 +41,8 @@ __all__ = [
     "InitiativeORM",
     "DeliveryTaskORM",
     "ReleaseRecordORM",
+    "CreativeDraftORM",
+    "CreativeProductionORM",
+    "CreativeCanvasORM",
+    "CreativeMediaTaskORM",
 ]

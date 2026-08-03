@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.core.orchestration.task_view import build_task_view
 from xagent.domains.creative_studio import build_draft_from_brief
+from xagent.domains.creative_studio import persistence as creative_persistence
 from xagent.domains.creative_studio.media import (
     GenerationMode,
     GenerationRequest,
@@ -39,16 +40,39 @@ from xagent.infra.repos.evidence import persist_evidence_bundle
 router = APIRouter(prefix="/creative-studio", tags=["creative-studio"])
 logger = get_logger("xagent.api.creative_studio")
 
-# 进程内草稿存储（Phase 5 落库）；按租户隔离
+# 进程内草稿存储（Phase 5 已落库 creative_persistence，此处作内存缓存）；按租户隔离
 _drafts: dict[str, dict] = {}
-# 进程内成片产物存储；按租户隔离
+# 进程内成片产物存储（已落库，此处作内存缓存）；按租户隔离
 _productions: dict[str, dict] = {}
-# 媒体任务租户映射（用于按租户拉取 task 状态）
+# 媒体任务租户映射（用于按租户拉取 task 状态；已落库）
 _media_task_tenants: dict[str, str] = {}
 # unified runtime 过渡态：creative 入口补充最小 run/task 映射
 _media_runtime_tasks: dict[str, dict] = {}
 # unified runtime 过渡态：creative produce 结果按 run_id 暴露
 _production_runtime_runs: dict[str, dict] = {}
+
+# 持久化恢复标记：每进程首次读时从 DB 水合一次（重启恢复语义）；
+# 测试清空进程内 dict 后不重新水合，保证用例间隔离。
+_persistence_hydrated = False
+
+
+async def _hydrate_from_persistence() -> None:
+    """首次访问时从 DB 恢复草稿/产物/媒体任务租户映射到进程内缓存。"""
+    global _persistence_hydrated
+    if _persistence_hydrated:
+        return
+    _persistence_hydrated = True
+    try:
+        for draft_id, doc in (await creative_persistence.load_all_drafts()).items():
+            _drafts.setdefault(draft_id, doc)
+        for storyboard_id, doc in (await creative_persistence.load_all_productions()).items():
+            _productions.setdefault(storyboard_id, doc)
+        for task_id, tenant_id in (
+            await creative_persistence.load_all_media_task_tenants()
+        ).items():
+            _media_task_tenants.setdefault(task_id, tenant_id)
+    except Exception as exc:  # 持久化恢复失败不影响主流程
+        logger.warning("creative_hydrate_failed", error=str(exc))
 
 
 class BriefIn(BaseModel):
@@ -78,6 +102,7 @@ async def create_draft(
     doc["tenant_id"] = principal.tenant_id
     doc["owner"] = principal.user_id
     _drafts[draft.draft_id] = doc
+    await creative_persistence.save_draft(doc)
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -94,11 +119,13 @@ async def review_draft(
     body: ReviewIn,
     principal: Principal = Depends(require_permission("creative", "execute")),
 ) -> dict:
+    await _hydrate_from_persistence()
     doc = _drafts.get(draft_id)
     if doc is None or doc.get("tenant_id") != principal.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "草稿不存在或无权访问")
     doc["status"] = "approved" if body.approved else "rejected"
     doc["review_comment"] = body.comment
+    await creative_persistence.save_draft(doc)
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,
@@ -113,6 +140,7 @@ async def review_draft(
 async def list_drafts(
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
+    await _hydrate_from_persistence()
     items = [d for d in _drafts.values() if d.get("tenant_id") == principal.tenant_id]
     return {"drafts": items}
 
@@ -892,6 +920,7 @@ async def media_generate(
     task = await get_media_registry().generate(req, wait=body.wait)
     if task.task_id:
         _media_task_tenants[task.task_id] = principal.tenant_id
+        await creative_persistence.save_media_task_tenant(task.task_id, principal.tenant_id)
         creative_kind = f"creative.media.{body.kind}"
         input_payload = {
             "prompt": body.prompt,
@@ -952,6 +981,7 @@ async def media_task(
     principal: Principal = Depends(require_permission("creative", "read")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
+    await _hydrate_from_persistence()
     owner = _media_task_tenants.get(task_id)
     if owner is None or owner != principal.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "媒体任务不存在或无权访问")
@@ -1051,6 +1081,7 @@ async def produce(
     doc["tenant_id"] = principal.tenant_id
     doc["owner"] = principal.user_id
     _productions[result.storyboard_id] = doc
+    await creative_persistence.save_production(doc)
     artifacts = _build_production_artifacts(
         run_id=result.storyboard_id,
         tenant_id=principal.tenant_id,
@@ -1140,6 +1171,7 @@ async def produce(
 async def list_productions(
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
+    await _hydrate_from_persistence()
     items = [p for p in _productions.values() if p.get("tenant_id") == principal.tenant_id]
     return {"productions": items}
 
@@ -1149,6 +1181,7 @@ async def get_production(
     storyboard_id: str,
     principal: Principal = Depends(require_permission("creative", "read")),
 ) -> dict:
+    await _hydrate_from_persistence()
     doc = _productions.get(storyboard_id)
     if doc is None or doc.get("tenant_id") != principal.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "产物不存在或无权访问")
