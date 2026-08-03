@@ -8,7 +8,7 @@
 
 ## 当前状态口径（2026-08-03）
 
-当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。G1/G2/G3 已全部完成，项目处于 Roadmap v2 增强期：P0 平台化（secretRef 外部密管 + Helm chart 产品化）与 P2 容量实证（10min soak 142,720 请求零错误、Postgres 与多 worker 基线）已落地实测；剩余边界为多实例 HA 未正式验证、L2 E2B 云沙箱未实测、非当前机器的目标环境演练未做。
+当前发布 / 商用 readiness 判断以 [`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`](docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md) 为准。G1/G2/G3 已全部完成，项目处于 Roadmap v2 增强期：P0 平台化（secretRef 外部密管 + Helm chart 产品化）与 P2 容量实证（10min soak 142,720 请求零错误、Postgres 与多 worker 基线）已落地实测；剩余边界为多机 HA 未演练（共享状态类已同机两实例实测）、L2 E2B 云沙箱未实测、非当前机器的目标环境演练未做。
 
 如需查看当前候选可直接交付给管理员 / 运维 / 试点负责人的材料入口，请从 [`docs/DELIVERY_MATERIALS_INDEX_V1.md`](docs/DELIVERY_MATERIALS_INDEX_V1.md) 开始。
 

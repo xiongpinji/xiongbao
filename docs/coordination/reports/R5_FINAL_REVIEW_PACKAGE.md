@@ -44,7 +44,7 @@
   1. 远端 CI run `30834318982` success（backend / frontend / license-gate / e2e-api 全绿；docker-build / promptfoo-eval / load-test 按既有 push 触发规则不适用于 PR，与原签字候选口径一致）；
   2. 自 c175201 起 221 提交的变更范围（含安全模型变更：SSO/OIDC、沙箱 fail-closed、限流配置化、bcrypt 异步化、skills 响应缓存）已经 §0.2/§0.3 摘要与下列证据包完整披露，owner 已知悉并接受；
   3. 证据入口：`audit-20260802/DELIVERY_VERIFICATION_20260803.md`（v3）、`audit-20260802/LOAD_TEST_FORMAL_20260803.md`、`audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md`、`docs/coordination/reports/REVIEW_ACCEPTANCE_PACKET_20260803.md`。
-- 签发边界（owner 确认不外推）：多实例 HA 未正式验证；L2 E2B 云沙箱未实测（无 key）；非当前机器的目标环境演练未做；SaaS 级并发容量不承诺（仅单机/4 worker 基线）。
+- 签发边界（owner 确认不外推）：多机 HA 未演练（共享状态类已同机两实例实测，签发后补充证据 HA_MULTI_INSTANCE_VERIFY_20260803）；L2 E2B 云沙箱未实测（无 key）；非当前机器的目标环境演练未做；SaaS 级并发容量不承诺（仅单机/4 worker 基线）。
 - R8/R14/R15/R16/R17/R18/R19 已于 2026-08-03 验收 DONE（见 §0.4 前文与验收材料包）。
 
 ---
