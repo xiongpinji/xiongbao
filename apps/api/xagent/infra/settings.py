@@ -122,9 +122,11 @@ class MediaSettings(BaseModel):
     全部为空时用 NullProvider（占位产物，流程不中断）。
     """
 
-    # 默认 provider 选择（image/video）
+    # 默认 provider 选择（image/video/audio）
     default_image_provider: str = "null"   # null | openai
     default_video_provider: str = "null"   # null | kling | jimeng | generic
+    default_audio_provider: str = "null"   # null | edge_tts（免 key 但需外网，故默认 null）
+    tts_output_dir: str = "./data/tts"     # TTS 合成音频落盘目录
 
     # 图像（OpenAI 兼容）
     openai_image_api_key: str = ""

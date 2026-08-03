@@ -57,7 +57,13 @@ class VideoEditor:
                 "timeline_id": timeline.id,
             }
 
-        from moviepy import CompositeVideoClip, TextClip, VideoFileClip, concatenate_videoclips
+        from moviepy import (
+            AudioFileClip,
+            CompositeVideoClip,
+            TextClip,
+            VideoFileClip,
+            concatenate_videoclips,
+        )
 
         output_name = output_name or f"render_{timeline.id[:8]}.mp4"
         output_path = os.path.join(self._output_dir, output_name)
@@ -66,6 +72,7 @@ class VideoEditor:
             # 按轨道类型分组处理
             video_clips = []
             text_clips = []
+            audio_clips = []
 
             for clip in timeline.clips:
                 if clip.track_type == TrackType.video and clip.source_url:
@@ -90,6 +97,28 @@ class VideoEditor:
                     tc = tc.with_position(clip.position)
                     tc = tc.with_start(clip.timeline_start)
                     text_clips.append(tc)
+
+                elif clip.track_type == TrackType.audio and clip.source_url:
+                    # 音频轨（配音/配乐）：截取 + 音量 + 淡入淡出 + 时间线定位
+                    ac = AudioFileClip(clip.source_url)
+                    if clip.source_start is not None or clip.source_end is not None:
+                        ac = ac.subclipped(
+                            clip.source_start or 0,
+                            clip.source_end or ac.duration,
+                        )
+                    if clip.volume != 1.0:
+                        ac = ac.with_volume_scaled(clip.volume)
+                    if clip.fade_in or clip.fade_out:
+                        from moviepy import afx
+
+                        effects = []
+                        if clip.fade_in:
+                            effects.append(afx.AudioFadeIn(clip.fade_in))
+                        if clip.fade_out:
+                            effects.append(afx.AudioFadeOut(clip.fade_out))
+                        ac = ac.with_effects(effects)
+                    ac = ac.with_start(clip.timeline_start)
+                    audio_clips.append(ac)
 
             # 拼接视频片段（带转场效果）
             if video_clips:
@@ -141,6 +170,14 @@ class VideoEditor:
                     [base] + text_clips,
                     size=(timeline.width, timeline.height),
                 )
+
+            # 混流音频轨（配音/配乐合成进成片；保留视频自带音轨）
+            if audio_clips:
+                from moviepy import CompositeAudioClip
+
+                tracks = [base.audio] if base.audio is not None else []
+                tracks.extend(audio_clips)
+                base = base.with_audio(CompositeAudioClip(tracks))
 
             base = base.with_fps(timeline.fps)
             base.write_videofile(

@@ -49,6 +49,7 @@ dependencies = [
 # 重型 / 可选底座，按需安装，避免 lite 模式臃肿
 memory = ["mem0ai>=0.1.40", "graphiti-core>=0.3"]
 editor = ["moviepy>=2.0", "pyJianYingDraft>=0.1"]
+tts = ["edge-tts>=7.0"]  # 配音 TTS（免 key 在线服务，需外网；未装时 NullProvider 占位）
 orchestration = ["langgraph>=0.2.40", "temporalio>=1.7"]
 browser = ["browser-use>=0.1.40", "playwright>=1.48"]
 authz = ["casbin>=1.36"]
