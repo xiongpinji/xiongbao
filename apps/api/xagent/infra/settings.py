@@ -213,6 +213,9 @@ class SecuritySettings(BaseModel):
     rate_limit_exempt_paths: list[str] = Field(
         default_factory=lambda: ["/health", "/ready", "/metrics"]
     )
+    # 告警 webhook 共享令牌（Alertmanager → /api/v1/ops/alerts/webhook）；
+    # 空 = 端点 503 禁用。env：XAGENT_SECURITY__ALERT_WEBHOOK_TOKEN
+    alert_webhook_token: str = ""
 
 
 class ToolsSettings(BaseModel):

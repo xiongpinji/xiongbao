@@ -159,7 +159,11 @@ alerting:
     llmTimeoutRatePercent: 20
   alertmanager:
     enabled: false
+    # 为空时默认指向集群内 API 告警端点 /api/v1/ops/alerts/webhook（P1 告警联动）
     webhookUrl: ""
+    # 对应 API 侧 XAGENT_SECURITY__ALERT_WEBHOOK_TOKEN；勿直接写明文，
+    # 用 --set-file 或 CD secret 注入（与 secretRef 姿态一致）
+    webhookToken: ""
     emailTo: ""
     smtpHost: ""
     smtpPort: 587

@@ -35,19 +35,26 @@ data:
 
     receivers:
       - name: 'default'
-        {{- if .Values.alerting.alertmanager.webhookUrl }}
         webhook_configs:
-          - url: {{ .Values.alerting.alertmanager.webhookUrl | quote }}
+          # webhookUrl 为空时默认指向集群内 API 的告警接收端点（P1 告警联动）
+          - url: {{ .Values.alerting.alertmanager.webhookUrl | default (printf "http://%s-api:8000/api/v1/ops/alerts/webhook" (include "xagent.fullname" .)) | quote }}
             send_resolved: true
-        {{- end }}
+            {{- if .Values.alerting.alertmanager.webhookToken }}
+            http_config:
+              headers:
+                X-Alert-Token: {{ .Values.alerting.alertmanager.webhookToken | quote }}
+            {{- end }}
 
       - name: 'critical-webhook'
-        {{- if .Values.alerting.alertmanager.webhookUrl }}
         webhook_configs:
-          - url: {{ .Values.alerting.alertmanager.webhookUrl | quote }}
+          - url: {{ .Values.alerting.alertmanager.webhookUrl | default (printf "http://%s-api:8000/api/v1/ops/alerts/webhook" (include "xagent.fullname" .)) | quote }}
             send_resolved: true
             max_alerts: 10
-        {{- end }}
+            {{- if .Values.alerting.alertmanager.webhookToken }}
+            http_config:
+              headers:
+                X-Alert-Token: {{ .Values.alerting.alertmanager.webhookToken | quote }}
+            {{- end }}
 
       - name: 'warning-email'
         {{- if .Values.alerting.alertmanager.emailTo }}
