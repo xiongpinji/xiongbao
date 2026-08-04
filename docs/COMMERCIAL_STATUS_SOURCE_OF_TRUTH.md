@@ -196,7 +196,7 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 ### P4（产品增强）
 - ✅ Goal / taskboard 自动推进能力（advance tick：激活/recovery 自动解阻重试/可选自动执行，scheduler 驱动 + goal 级 Redis 锁 + opt-in API）— 2026-08-04（0a43de5）
 - ✅ review / recover / evidence 自动化（evidence 自动化——P1；recover 自动解阻重试——P4①；review 闭环 verdict 驱动迁移 + review.verdict 证据——P4②，f83ac75；release 收口——P4③，ReleaseRecordORM 首写入）
-- 工作台体验与治理视图深化（GoalBoardPage 已有只读看板；操作入口待做）
+- ✅ 工作台体验与治理视图深化（GoalBoard 操作入口：新建 Goal/自动推进开关/任务复检/Release 收口，mutation 上提 + 展示型组件）— 2026-08-04（dd8c18b）
 
 ---
 
