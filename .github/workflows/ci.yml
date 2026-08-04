@@ -79,6 +79,34 @@ jobs:
       - name: License gate (拦截 AGPL/GPL/ELv2/SSPL)
         run: python scripts/license_check.py
 
+  config-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate Helm values (all envs)
+        run: |
+          for env in dev staging prod enterprise; do
+            python scripts/validate_helm_values.py --env "$env"
+          done
+
+      - name: Helm template render gate (base + 4 overlays)
+        run: |
+          helm template xagent ./deploy/helm > /dev/null
+          for env in dev staging prod enterprise; do
+            helm template xagent ./deploy/helm -f deploy/helm/environments/values-$env.yaml > /dev/null
+          done
+
+      - name: Env diff smoke
+        run: python scripts/render_env_diff.py --from dev --to prod --format json > /dev/null
+
   docker-build:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
