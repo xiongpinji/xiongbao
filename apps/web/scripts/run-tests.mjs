@@ -33,6 +33,10 @@ try {
     entryPoints: [runnerSource],
     outfile: runnerOutput,
     format: "esm",
+    // CJS 依赖（如 axios→form-data）在 ESM bundle 中需要 require 垫片
+    banner: {
+      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+    },
     jsx: "automatic",
     loader: {
       ".ts": "ts",

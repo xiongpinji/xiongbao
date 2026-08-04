@@ -261,7 +261,9 @@ async def test_spine_snapshot_round_trip_preserves_order_and_serialization(
     assert [item["title"] for item in snapshot["tasks"]] == [
         task.to_dict()["title"] for task in tasks
     ]
-    assert snapshot["goal"] == goal.to_dict()
+    # snapshot goal 在 domain 字段之外附带 auto_advance/auto_execute 看板开关位（P4）
+    expected_goal = {**goal.to_dict(), "auto_advance": False, "auto_execute": False}
+    assert snapshot["goal"] == expected_goal
     assert snapshot["initiatives"][0]["position"] == 0
     assert snapshot["tasks"][0]["position"] == 0
 

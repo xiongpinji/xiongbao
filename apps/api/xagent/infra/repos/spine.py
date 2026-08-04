@@ -359,8 +359,19 @@ async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str
         task_view["orphaned"] = row.initiative_id not in initiative_order
         task_views.append(task_view)
 
+    goal_view = _goal_from_orm(goal).to_dict()
+    # 看板需要展示自动推进开关状态（P4）：从 metadata_json 带出，不带整个 metadata
+    try:
+        _meta = json.loads(goal.metadata_json or "{}")
+        if not isinstance(_meta, dict):
+            _meta = {}
+    except json.JSONDecodeError:
+        _meta = {}
+    goal_view["auto_advance"] = bool(_meta.get("auto_advance"))
+    goal_view["auto_execute"] = bool(_meta.get("auto_execute"))
+
     return {
-        "goal": _goal_from_orm(goal).to_dict(),
+        "goal": goal_view,
         "initiatives": initiative_views,
         "tasks": task_views,
     }
