@@ -194,8 +194,8 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 - 行业 / 场景交付变体包（指南已立，短剧变体待整体移植后启动）
 
 ### P4（产品增强）
-- Goal / taskboard 自动推进能力
-- review / recover / evidence 自动化
+- ✅ Goal / taskboard 自动推进能力（advance tick：激活/recovery 自动解阻重试/可选自动执行，scheduler 驱动 + goal 级 Redis 锁 + opt-in API）— 2026-08-04（0a43de5）
+- review / recover / evidence 自动化（evidence 已自动化——P1；review 闭环与 release 收口待做）
 - 工作台体验与治理视图深化
 
 ---
