@@ -82,6 +82,7 @@ Roadmap v2 P0 已完成：
 - External Secrets Operator (ESO) 落地 (Vault/AWS/GCP/Azure)
 - 多环境 values 模板 (dev/staging/prod/enterprise)
 - 配置治理脚本 (validate_helm_values.py, render_env_diff.py)
+- 配置治理收口 (2026-08-04)：门禁脚本单测 + CI `config-governance` 门禁 + 差异策略成文，详见 `docs/CONFIG_GOVERNANCE_V1.md`
 
 仍需后续推进：
 

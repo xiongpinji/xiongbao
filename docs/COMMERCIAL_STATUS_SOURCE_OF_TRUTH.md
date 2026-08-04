@@ -175,7 +175,7 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 - ✅ `secretRef` / external secret manager 已落地（file:/env:，生产 fail-fast；vault 预留）— 2026-08-03
 - ✅ Helm chart 产品化补齐（五套 values 渲染通过）— 2026-08-03
 - ✅ 标准环境模板（dev / staging / prod / enterprise values）— 2026-08-03
-- 平台级配置治理与差异控制（进行中）
+- ✅ 平台级配置治理与差异控制（validate/render_diff 单测 + 篡改用例 + 环境差异策略机器校验 073541b；CI `config-governance` 门禁 f95d26e；策略成文 docs/CONFIG_GOVERNANCE_V1.md）— 2026-08-04
 
 ### P1（自动化运营增强）
 - ✅ 自动告警联动（Alertmanager webhook 接收端点 + Helm 缺省接线，告警落 evidence_records）— 2026-08-03（813ffb1）
@@ -233,6 +233,6 @@ G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：
 
 **当前结论：**
 
-G1/G2/G3 已全部完成，项目按当前定义达到商用交付标准，处于 Roadmap v2 增强期。截至 2026-08-03：P0 平台化（secretRef + Helm）与 P2 容量实证（三瓶颈修复 + soak/Postgres/多 worker 基线）已落地并实测；新候选（c175201 后 221 提交，PR #7 HEAD 2aae3a2）已获 owner 重新签发（见 R5 包 §0.4）。剩余边界为——多机 HA 未演练（共享状态类已同机两实例实测）、L2 E2B 云沙箱未实测（无 key）、非当前机器的目标环境演练未做。
+G1/G2/G3 已全部完成，项目按当前定义达到商用交付标准，处于 Roadmap v2 增强期。截至 2026-08-03：P0 平台化（secretRef + Helm + 配置治理收口 2026-08-04）与 P2 容量实证（三瓶颈修复 + soak/Postgres/多 worker 基线）已落地并实测；新候选（c175201 后 221 提交，PR #7 HEAD 2aae3a2）已获 owner 重新签发（见 R5 包 §0.4）。剩余边界为——多机 HA 未演练（共享状态类已同机两实例实测）、L2 E2B 云沙箱未实测（无 key）、非当前机器的目标环境演练未做。
 
 > `xagent` 已达到当前定义下的**商用交付标准**。项目已完成内部试点可稳定使用（G1）、正式商用 GA（G2）与企业级长期运营治理与首轮验证（G3）的完整 Goal 收口，当前可以明确按“正式商用可交付”口径对外表述。后续若继续推进，将属于下一轮增强与演进，而不是当前交付标准仍未达成。
