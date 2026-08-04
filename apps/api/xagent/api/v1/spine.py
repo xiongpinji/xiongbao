@@ -88,3 +88,51 @@ async def get_goal_board(
         "columns": columns,
         "unknown_status_tasks": unknown_status_tasks,
     }
+
+
+class AutoAdvanceIn(BaseModel):
+    enabled: bool = Field(..., description="是否开启自动推进 tick")
+    auto_execute: bool = Field(default=False, description="是否允许 tick 自动起 run（花 LLM 费用）")
+    max_retries: int = Field(default=3, ge=0, le=10, description="recovery 瞬态失败自动重试上限")
+
+
+@router.post("/goals/{goal_id}/auto-advance", summary="开关 goal 自动推进（P4）")
+async def set_auto_advance(
+    goal_id: str,
+    body: AutoAdvanceIn,
+    principal: Principal = Depends(require_permission("spine", "execute")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    from xagent.core.spine.advance import DEFAULT_MAX_RETRIES
+    from xagent.infra.models.spine import GoalORM
+
+    goal = await session.get(GoalORM, goal_id)
+    if goal is None or goal.tenant_id != principal.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "目标不存在或无权访问")
+
+    import json as _json
+
+    try:
+        metadata = _json.loads(goal.metadata_json or "{}")
+        if not isinstance(metadata, dict):
+            metadata = {}
+    except _json.JSONDecodeError:
+        metadata = {}
+    metadata["auto_advance"] = body.enabled
+    metadata["auto_execute"] = body.auto_execute
+    if body.max_retries != DEFAULT_MAX_RETRIES:
+        metadata["advance_max_retries"] = body.max_retries
+    else:
+        metadata.pop("advance_max_retries", None)
+    goal.metadata_json = _json.dumps(metadata, ensure_ascii=False)
+    # 开启即激活（pending → active）；关闭不改 status
+    if body.enabled and goal.status == "pending":
+        goal.status = "active"
+    await session.commit()
+    return {
+        "goal_id": goal_id,
+        "auto_advance": body.enabled,
+        "auto_execute": body.auto_execute,
+        "max_retries": body.max_retries,
+        "status": goal.status,
+    }

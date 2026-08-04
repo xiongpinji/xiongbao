@@ -240,6 +240,7 @@ class Scheduler:
     async def _loop(self) -> None:
         """主调度循环：每 30s 检查一次到期任务。启动后延迟 60s 再执行。"""
         await asyncio.sleep(60)  # 避免启动时与主应用竞争资源
+        tick = 0
         while self._running:
             try:
                 now = time.time()
@@ -256,6 +257,12 @@ class Scheduler:
                     job.next_run = now + job.interval_seconds
                     job.run_count += 1
                     self._persist(job)
+                # P4 goal/taskboard 自动推进：每 2 个周期（~60s）一次 tick；
+                # 无候选 goal 时为空转，开销可忽略
+                tick += 1
+                if tick % 2 == 0:
+                    from xagent.core.spine.advance import advance_all_goals
+                    await advance_all_goals()
             except asyncio.CancelledError:
                 break
             except Exception as exc:
