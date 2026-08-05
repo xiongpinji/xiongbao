@@ -86,9 +86,21 @@ export const runAgent = (body: {
   capabilities?: string[];
 }) => api.post<AgentRun>("/agents/run", body).then((r) => r.data);
 
+export interface WorkflowStepInput {
+  id: string;
+  name: string;
+  role?: string;
+  goal: string;
+  depends_on?: string[];
+  approver_role?: string;
+  approval_message?: string;
+  compensation_role?: string;
+  compensation_goal?: string;
+}
+
 export const runWorkflow = (body: {
   name: string;
-  steps: { id: string; name: string; role?: string; goal: string }[];
+  steps: WorkflowStepInput[];
 }) => api.post<WorkflowView>("/workflows", body).then((r) => r.data);
 
 export const listWorkflows = () =>
@@ -312,6 +324,39 @@ export interface SystemCapabilities {
 export const getSystemCapabilities = () =>
   api.get<SystemCapabilities>("/system/capabilities").then((r) => r.data);
 
+// ---- LLM 模型配置 ----
+export interface LLMConfig {
+  default_model: string;
+  fallback_models: string[];
+  proxy_url: string;
+  has_proxy_api_key: boolean;
+  ollama_base_url: string;
+  ollama_model: string;
+  request_timeout_seconds: number;
+  has_openai_key: boolean;
+  has_anthropic_key: boolean;
+  has_deepseek_key: boolean;
+}
+
+export interface LLMConfigUpdate {
+  default_model?: string;
+  fallback_models?: string[];
+  proxy_url?: string;
+  proxy_api_key?: string;
+  ollama_base_url?: string;
+  ollama_model?: string;
+  request_timeout_seconds?: number;
+  openai_api_key?: string;
+  anthropic_api_key?: string;
+  deepseek_api_key?: string;
+}
+
+export const getLLMConfig = () =>
+  api.get<LLMConfig>("/system/llm-config").then((r) => r.data);
+
+export const updateLLMConfig = (body: LLMConfigUpdate) =>
+  api.put("/system/llm-config", body).then((r) => r.data);
+
 export const discoverOpenSource = (query: string, limit = 10) =>
   api
     .post<{ results: ScoredCandidateDTO[] }>("/open-source/discover", { query, limit })
@@ -442,3 +487,128 @@ export const importCanvas = (body: {
   nodes: Record<string, unknown>[];
   edges?: { source: string; target: string }[];
 }) => api.post<CanvasDTO>(`/canvas/import`, body).then((r) => r.data);
+
+// ---- 多 Agent 并行 ----
+export interface ParallelRunResult {
+  run_id: string;
+  status: string;
+  sub_results: { goal: string; run_id: string; status: string; final_answer: string; steps: number; error: string; duration_ms: number }[];
+  summary: string;
+  total_duration_ms: number;
+}
+
+export const parallelRun = (tasks: { goal: string; role?: string }[], coordinatorGoal = "") =>
+  api.post<ParallelRunResult>("/agents/parallel-run", { tasks, coordinator_goal: coordinatorGoal }).then((r) => r.data);
+
+// ---- 技能系统 ----
+export interface SkillView {
+  skill_id: string;
+  name: string;
+  description: string;
+  trigger_pattern: string;
+  use_count: number;
+  success_count: number;
+  success_rate: number;
+  tags: string[];
+  version: number;
+  retired: boolean;
+  source: string;
+  source_task: string;
+  system_prompt_hint: string;
+  steps: { tool: string; order?: number }[];
+  history: { version: number; description: string; changed_at: number; change_reason: string }[];
+  is_active: boolean;
+}
+
+export interface SkillStats {
+  total: number;
+  active: number;
+  retired: number;
+  auto_extracted: number;
+  evolved: number;
+  total_uses: number;
+  avg_success_rate: number;
+}
+
+export const listSkills = (includeRetired = false) =>
+  api.get<{ skills: SkillView[] }>("/skills", { params: { include_retired: includeRetired } }).then((r) => r.data.skills);
+export const skillStats = () => api.get<SkillStats>("/skills/stats").then((r) => r.data);
+export const createSkill = (body: { name: string; description?: string; trigger_pattern?: string; tags?: string[]; system_prompt_hint?: string; steps?: unknown[] }) =>
+  api.post<SkillView>("/skills", body).then((r) => r.data);
+export const deleteSkill = (id: string) => api.delete(`/skills/${id}`).then((r) => r.data);
+export const evolveSkill = (id: string, body: { description?: string; system_prompt_hint?: string; trigger_pattern?: string; steps?: unknown[]; change_reason?: string }) =>
+  api.put(`/skills/${id}/evolve`, body).then((r) => r.data);
+export const retireSkill = (id: string) => api.post(`/skills/${id}/retire`).then((r) => r.data);
+export const restoreSkill = (id: string) => api.post(`/skills/${id}/restore`).then((r) => r.data);
+export const retireLowPerformers = () => api.post("/skills/retire-low-performers").then((r) => r.data);
+
+// ---- 定时调度 ----
+export interface ScheduledJobView {
+  job_id: string;
+  name: string;
+  goal: string;
+  role: string | null;
+  interval_seconds: number;
+  enabled: boolean;
+  run_count: number;
+  last_result: string;
+  next_run: number;
+}
+
+export const listJobs = () => api.get<{ jobs: ScheduledJobView[] }>("/scheduler/jobs").then((r) => r.data.jobs);
+export const createJob = (body: { name: string; goal: string; role?: string; interval_seconds?: number; cron_expr?: string }) =>
+  api.post<ScheduledJobView>("/scheduler/jobs", body).then((r) => r.data);
+export const deleteJob = (id: string) => api.delete(`/scheduler/jobs/${id}`).then((r) => r.data);
+export const toggleJob = (id: string, enabled: boolean) =>
+  api.patch(`/scheduler/jobs/${id}/toggle`, null, { params: { enabled } }).then((r) => r.data);
+
+// ---- MCP 服务器管理 ----
+export interface MCPServerView {
+  name: string;
+  transport: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  url: string;
+  enabled: boolean;
+  connected: boolean;
+  tools_count: number;
+}
+
+export interface MCPToolView {
+  server: string;
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+export const listMcpServers = () =>
+  api.get<{ servers: MCPServerView[] }>("/mcp/servers").then((r) => r.data.servers);
+
+export const addMcpServer = (body: {
+  name: string;
+  transport?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  enabled?: boolean;
+}) => api.post<{ status: string; name: string; connection?: unknown }>("/mcp/servers", body).then((r) => r.data);
+
+export const removeMcpServer = (name: string) =>
+  api.delete<{ deleted: boolean; name: string }>(`/mcp/servers/${encodeURIComponent(name)}`).then((r) => r.data);
+
+export const connectMcpServer = (name: string) =>
+  api.post<unknown>(`/mcp/servers/${encodeURIComponent(name)}/connect`).then((r) => r.data);
+
+export const listMcpTools = () =>
+  api.get<{ tools: MCPToolView[] }>("/mcp/tools").then((r) => r.data.tools);
+
+export const callMcpTool = (server: string, tool: string, args: Record<string, unknown> = {}) =>
+  api.post<unknown>("/mcp/tools/call", { server, tool, arguments: args }).then((r) => r.data);
+
+// ---- 记忆 FTS ----
+export const memoryFts = (query: string, topK = 10) =>
+  api.post<{ hits: { conversation_id: string; role: string; text: string; score: number }[] }>(
+    "/memory/fts", { query, top_k: topK }
+  ).then((r) => r.data.hits);

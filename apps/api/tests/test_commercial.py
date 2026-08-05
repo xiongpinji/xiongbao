@@ -78,15 +78,18 @@ async def test_sandbox_disabled_in_lite() -> None:
 
 
 async def test_oidc_rejected_without_jwks(monkeypatch: pytest.MonkeyPatch) -> None:
-    # 不配 jwks_url 时走 HS256；配了但 token 是内置 HS256 -> 应失败
+    # alg 路由双源校验（2026-08-03 修复后语义）：配置 jwks_url 后，
+    # 本地 HS256 会话 token 仍应通过（SSO 会话 token 即 HS256）；伪造 token 仍被拒。
     from xagent.enterprise.auth.jwt_auth import InvalidTokenError, decode_token
     from xagent.infra.settings import get_settings
 
     s = get_settings()
     s.security.oidc_jwks_url = "http://localhost:9999/jwks"  # 不可达
     token = create_access_token(user_id="u", tenant_id="t1")  # HS256 token
+    principal = decode_token(token)
+    assert principal.user_id == "u"  # 本地 token 与 OIDC 共存
     with pytest.raises(InvalidTokenError):
-        decode_token(token)
+        decode_token(token[:-2] + "xx")  # 篡改签名仍拒
     s.security.oidc_jwks_url = ""
 
 

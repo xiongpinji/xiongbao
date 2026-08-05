@@ -85,6 +85,7 @@ def main() -> int:
     ap.add_argument("--api-url", default="http://localhost:8000")
     ap.add_argument("--token", default="")
     ap.add_argument("--output", default="./backups")
+    ap.add_argument("--retain", type=int, default=7, help="保留最近 N 份备份（默认 7）")
     args = ap.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -100,8 +101,23 @@ def main() -> int:
         if backup_audit(args.api_url, args.token, args.output) is None:
             ok = False
 
+    # 保留策略：删除超出 N 份的旧备份
+    _cleanup_old_backups(args.output, args.retain)
+
     print("\n" + ("✅ 备份完成" if ok else "❌ 部分备份失败"))
     return 0 if ok else 1
+
+
+def _cleanup_old_backups(output_dir: str, retain: int) -> None:
+    """按文件修改时间保留最近 N 份，删除更早的。"""
+    from pathlib import Path
+
+    p = Path(output_dir)
+    files = sorted(p.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
+    for old in files[retain:]:
+        if old.is_file():
+            old.unlink()
+            print(f"🗑️ 已清理旧备份: {old.name}")
 
 
 if __name__ == "__main__":

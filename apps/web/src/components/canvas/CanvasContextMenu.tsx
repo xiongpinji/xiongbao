@@ -44,6 +44,7 @@ import type {
   DramaNodeType,
 } from "./canvasTypes";
 import { DRAMA_NODE_TYPES, settingActionsFor } from "./canvasTypes";
+import { useEscapeClose } from "../../hooks/useEscapeClose";
 
 type IconCmp = typeof Edit3;
 
@@ -108,8 +109,7 @@ export default function CanvasContextMenu({
   onCanvasAction?: (action: CanvasGlobalAction) => void;
   selectedNode?: DramaCanvasNodeData | null;
 }) {
-  if (!menu) return null;
-
+  // 钩子必须在任何提前 return 之前调用（rules of hooks），避免 menu 切换时 hook 数量变化导致崩溃
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
 
   useEffect(() => {
@@ -117,6 +117,11 @@ export default function CanvasContextMenu({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Esc 关闭右键菜单（键盘可达性）
+  useEscapeClose(Boolean(menu), onClose);
+
+  if (!menu) return null;
 
   const positionStyle: CSSProperties = {
     left: clampPosition(menu.x, viewport.width, 340),
@@ -128,7 +133,7 @@ export default function CanvasContextMenu({
       <div
         role="menu"
         aria-label={menu.kind === "canvas" ? "画布菜单" : "节点菜单"}
-        className="absolute min-w-72 max-w-80 rounded-3xl border border-neutral-700/80 bg-neutral-900/95 p-2 text-sm text-neutral-200 shadow-2xl shadow-black/40 backdrop-blur"
+        className="absolute min-w-72 max-w-80 rounded-lg border border-neutral-700/80 bg-neutral-900/95 p-2 text-sm text-neutral-200 shadow-2xl shadow-black/40 backdrop-blur"
         style={positionStyle}
         onClick={(event) => event.stopPropagation()}
       >
@@ -299,7 +304,7 @@ function NodeMenu({
 function NodeBadge({ node }: { node: DramaCanvasNodeData }) {
   const Icon = PER_TYPE_ACCENT[node.nodeType] ?? FileText;
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-neutral-200">
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-800 text-neutral-200">
       <Icon size={14} />
     </div>
   );
@@ -413,7 +418,7 @@ function buildNodeGroups(node: DramaCanvasNodeData | null | undefined, isLocked:
 }
 
 function MenuTitle({ children }: { children: ReactNode }) {
-  return <div className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500">{children}</div>;
+  return <div className="px-3 pb-1 pt-2 text-[11px] font-medium tracking-wide text-neutral-500">{children}</div>;
 }
 
 function MenuItem({
@@ -434,7 +439,7 @@ function MenuItem({
       type="button"
       onClick={onClick}
       role="menuitem"
-      className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-500 ${
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-500 ${
         danger
           ? "text-red-300 hover:bg-red-500/10"
           : "text-neutral-200 hover:bg-neutral-800 hover:text-white"

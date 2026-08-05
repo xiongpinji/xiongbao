@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Edge, Node } from "reactflow";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
+import { formatTime } from "../lib/time";
 import type { AgentRun, WorkflowView } from "../api/index.ts";
 import {
   createCustomAgentProfile,
@@ -20,8 +21,10 @@ import {
   type PersistedUserDockProfile,
 } from "./workspaceStorage.ts";
 import {
+  buildPrimaryNavigation,
   createRunShellRoute,
   PRIMARY_SHELL_SURFACES,
+  type ShellNavigationItem,
   type ShellRouteSnapshot,
   type ShellTaskKind,
   type ShellTaskStatus,
@@ -99,6 +102,10 @@ interface ShellState {
   sidebarCollapsed: boolean;
   threadPanelOpen: boolean;
   commandPaletteOpen: boolean;
+  chatSessionVersion: number;
+  chatSessionKey: string;
+  activeConversationId: string | null;
+  setActiveConversationId: (id: string | null) => void;
   activity: ShellActivityItem[];
   workspaces: WorkspaceRecord[];
   customAgents: CustomAgentProfile[];
@@ -122,6 +129,7 @@ interface ShellState {
   ) => void;
   setCurrentContext: (context: Omit<ShellTaskSummary, "updatedAt">) => void;
   appendActivity: (entry: Omit<ShellActivityItem, "id" | "timestamp"> & { timestamp?: number }) => void;
+  resetChatSession: () => void;
   createWorkspaceRecord: (input: CreateWorkspaceInput) => WorkspaceRecord;
   renameWorkspaceRecord: (workspaceId: string, nextName: string) => void;
   saveCustomAgentProfile: (input: CreateCustomAgentProfileInput) => CustomAgentProfile;
@@ -143,6 +151,10 @@ const FLOW_NODE_STYLE = {
 
 function createWorkflowStepId() {
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function createChatSessionKey() {
+  return `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function applyPatch<T>(current: T, patch: StatePatch<T>): T {
@@ -175,7 +187,7 @@ export function createShellWorkflowStep(index: number): ShellWorkflowStepDraft {
     id: createWorkflowStepId(),
     name: `步骤${index + 1}`,
     role: "general",
-    goal: index === 0 ? "你好" : "",
+    goal: "",
     approverRole: "",
     approvalMessage: "",
   };
@@ -198,7 +210,7 @@ function makeDefaultChatTaskState(): ShellChatTaskState {
 function makeDefaultWorkflowTaskState(): ShellWorkflowTaskState {
   const steps = makeDefaultWorkflowSteps();
   return {
-    name: "demo",
+    name: "新工作流",
     view: null,
     error: null,
     loading: false,
@@ -221,7 +233,7 @@ function ensureRouteTaskState(state: ShellState, snapshot: ShellRouteSnapshot): 
     };
   }
 
-  if (snapshot.kind === "workflow" && !state.workflowTaskState.workflows) {
+  if (snapshot.taskId === "workflows" && !state.workflowTaskState.workflows) {
     return {
       workflowTaskState: {
         ...state.workflowTaskState,
@@ -243,8 +255,8 @@ function makeBaseTasks(): ShellTaskSummary[] {
     route: surface.route,
     status: surface.status,
     badge: surface.badge,
-    pinned: true,
-    isPrimary: true,
+    pinned: surface.pinned,
+    isPrimary: surface.isPrimary,
     updatedAt: now - index,
   }));
 }
@@ -253,7 +265,7 @@ function createSessionState(): ShellSessionState {
   const startedAt = Date.now();
   return {
     id: `shell-${startedAt}`,
-    label: `本地会话 ${new Date(startedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`,
+    label: `当前会话 ${formatTime(startedAt)}`,
     startedAt,
     currentProject: "xiong bao / xagent / apps/web",
   };
@@ -291,12 +303,16 @@ export function createShellStore() {
     sidebarCollapsed: false,
     threadPanelOpen: true,
     commandPaletteOpen: false,
+    chatSessionVersion: 0,
+    chatSessionKey: createChatSessionKey(),
+    activeConversationId: null,
+    setActiveConversationId: (id) => set({ activeConversationId: id }),
     activity: [
       {
         id: "boot",
         taskId: "chat",
         title: "Shell 已就绪",
-        detail: "本地会话状态正在驱动工作台，不依赖后端 control plane。",
+        detail: "当前工作台状态已就绪，可继续进入正式页面执行任务。",
         tone: "info",
         timestamp: Date.now(),
       },
@@ -359,7 +375,7 @@ export function createShellStore() {
         const routeTaskState = ensureRouteTaskState(state, snapshot);
 
         return {
-          tasks: [nextTask, ...sortTasks(existingTasks)],
+          tasks: sortTasks([nextTask, ...existingTasks]),
           currentContext: nextTask,
           ...(routeTaskState ?? {}),
         };
@@ -372,7 +388,7 @@ export function createShellStore() {
           updatedAt: Date.now(),
         };
         return {
-          tasks: [nextTask, ...state.tasks.filter((task) => task.id !== nextTask.id)],
+          tasks: sortTasks([nextTask, ...state.tasks.filter((task) => task.id !== nextTask.id)]),
           currentContext: nextTask,
         };
       });
@@ -384,6 +400,24 @@ export function createShellStore() {
           activity: [nextEntry, ...state.activity].slice(0, MAX_ACTIVITY_ITEMS),
         };
       });
+    },
+    resetChatSession: () => {
+      set((state) => ({
+        currentContext:
+          state.currentContext?.id === "chat"
+            ? {
+                ...state.currentContext,
+                updatedAt: Date.now(),
+              }
+            : state.currentContext,
+        chatSessionVersion: state.chatSessionVersion + 1,
+        chatSessionKey: createChatSessionKey(),
+        activeConversationId: null,
+        chatTaskState: {
+          ...state.chatTaskState,
+          chat: makeDefaultChatTaskState(),
+        },
+      }));
     },
     createWorkspaceRecord: (input) => {
       const workspace = createWorkspace(input);
@@ -491,6 +525,8 @@ export function useShellActions() {
     syncRunTask: state.syncRunTask,
     setCurrentContext: state.setCurrentContext,
     appendActivity: state.appendActivity,
+    resetChatSession: state.resetChatSession,
+    setActiveConversationId: state.setActiveConversationId,
     createWorkspaceRecord: state.createWorkspaceRecord,
     renameWorkspaceRecord: state.renameWorkspaceRecord,
     saveCustomAgentProfile: state.saveCustomAgentProfile,
@@ -509,6 +545,16 @@ export function useShellChatTaskState(_taskId: string) {
 
 export function useShellWorkflowTaskState(_taskId: string) {
   return useShellStore((state) => state.workflowTaskState.workflows ?? FALLBACK_WORKFLOW_TASK_STATE);
+}
+
+export function useShellNavigation() {
+  const tasks = useShellStore((state) => state.tasks);
+  const currentContext = useShellStore((state) => state.currentContext);
+
+  return useMemo<ShellNavigationItem[]>(
+    () => buildPrimaryNavigation(tasks, currentContext?.id),
+    [currentContext?.id, tasks],
+  );
 }
 
 export function useShellDerivedState() {

@@ -29,7 +29,7 @@ export default function CodePreviewSettings() {
 
 function KV({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
       <div className="text-xs text-neutral-500">{label}</div>
       <div className="mt-2 font-mono text-sm text-white">{value ?? "—"}</div>
     </div>

@@ -46,13 +46,25 @@ def create_access_token(
 
 
 def decode_token(token: str) -> Principal:
-    """校验 token：优先 OIDC(JWKS/RS256)，否则内置 HS256。"""
+    """校验 token：按未验签头部的 alg 路由到对应来源。
+
+    本地签发的会话 token（HS256，本地 secret）与外部 OIDC token（RS256，JWKS）
+    是两类来源，互不替代：
+    - alg == 本地 jwt_algorithm（默认 HS256）→ 本地 secret 验签；
+    - alg == RS256 且配置了 oidc_jwks_url → JWKS 验签；
+    - 其他 alg（含 none / 未配置 JWKS 时的 RS256）→ 拒绝。
+    伪造 token 在任何分支都会验签失败。
+    """
     sec = get_settings().security
-    if sec.oidc_jwks_url:
-        principal = _decode_oidc(token, sec)
-        if principal is not None:
-            return principal
-    return _decode_hs256(token, sec)
+    try:
+        alg = (jwt.get_unverified_header(token) or {}).get("alg", "")
+    except jwt.PyJWTError as exc:
+        raise InvalidTokenError(f"token 头部解析失败: {exc}") from exc
+    if alg == sec.jwt_algorithm:
+        return _decode_hs256(token, sec)
+    if alg == "RS256" and sec.oidc_jwks_url:
+        return _decode_oidc(token, sec)
+    raise InvalidTokenError(f"不支持的签名算法: {alg or 'unknown'}")
 
 
 def _decode_hs256(token: str, sec) -> Principal:
@@ -73,7 +85,7 @@ def _decode_hs256(token: str, sec) -> Principal:
     )
 
 
-def _decode_oidc(token: str, sec) -> Principal | None:
+def _decode_oidc(token: str, sec) -> Principal:
     """用 Keycloak/OIDC 的 JWKS 验签（RS256）。
 
     claims 约定：sub=user_id, tenant_id 来自 realm 或自定义 claim；

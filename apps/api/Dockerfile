@@ -10,12 +10,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 先复制元数据 + 源码（pyproject 引用 README，需一并复制）
 COPY pyproject.toml README.md ./
 COPY xagent ./xagent
-COPY migrations ./migrations
-COPY alembic.ini ./
-
 # 装构建后端再装包（非 editable，避免 hatchling editable 元数据问题）
 RUN pip install --upgrade pip hatchling && pip install ".[dev]" && \
     pip install "bcrypt==4.0.1" --force-reinstall --no-deps
+
+# 移除 /app 下的源码副本：cwd 在 sys.path 中会遮蔽 site-packages 已安装包，
+# 而 settings.py 按安装布局（parents[4]）推算项目根，/app/xagent 布局过浅会导致 IndexError。
+RUN rm -rf /app/xagent
+
+COPY migrations ./migrations
+COPY alembic.ini ./
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

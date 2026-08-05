@@ -54,9 +54,19 @@ class LightingSpec(BaseModel):
 
 
 class ShotContinuity(BaseModel):
-    character_ref: str = ""
-    scene_ref: str = ""
-    style_ref: str = ""
+    """跨镜头一致性记录，分阶段贯穿：
+
+    - 分镜阶段（producer）写入引用：character_ref/scene_ref/style_ref；
+    - 关键帧阶段（consistency 管理器）解析引用，写入 reference_images
+      与 prompt_modifier，由图像生成直接消费。
+    """
+
+    character_ref: str = ""  # 角色引用（character_id 列表，";" 分隔）
+    scene_ref: str = ""      # 场景引用（scene_id）
+    style_ref: str = ""      # 风格引用（genre / 风格 token）
+    # 一致性解析产物（关键帧生成前由 consistency 管理器写入）
+    reference_images: list[str] = Field(default_factory=list)
+    prompt_modifier: str = ""
 
 
 class Shot(BaseModel):

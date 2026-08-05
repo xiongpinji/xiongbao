@@ -401,6 +401,7 @@ async def test_creative_media_poll_persists_final_state_to_db_after_memory_clear
             "console_path": f"/runs/{queued_task_id}",
         },
         "resume": None,
+        "failure": None,
         "risks": [],
     }
     assert body["artifacts"] == [
@@ -608,6 +609,15 @@ async def test_creative_production_runtime_persists_to_db_after_memory_clear(
 async def test_creative_media_task_exposes_delivery_summary_via_runs(
     db_client: AsyncClient,
 ) -> None:
+    # 测试确定性：图像默认 provider 已漂移为 Pollinations（需联网，provider 名为
+    # 'pollinations'），本用例验证的是 delivery 契约而非 provider 选择，
+    # 故显式将图像 provider 替换为 NullProvider（离线确定，provider 名为 'null'）。
+    from xagent.domains.creative_studio.media import get_media_registry
+    from xagent.domains.creative_studio.media.base import MediaKind
+
+    reg = get_media_registry()
+    reg.register(MediaKind.image, reg.null)
+
     token = create_access_token(user_id="u-media", tenant_id="tenant-1", roles=["member"])
     generate_resp = await db_client.post(
         "/api/v1/creative-studio/media/generate",
@@ -674,6 +684,7 @@ async def test_creative_media_task_exposes_delivery_summary_via_runs(
             "console_path": f"/runs/{task_id}",
         },
         "resume": None,
+        "failure": None,
         "risks": [],
     }
     assert body["artifacts"] == [
@@ -698,6 +709,36 @@ async def test_creative_media_task_exposes_delivery_summary_via_runs(
             "preview_summary": {"prompt": "霓虹都市主视觉", "mode": "text_to_image"},
         }
     ]
+
+
+async def test_canvas_run_persists_workflow_for_run_console(
+    db_client: AsyncClient,
+) -> None:
+    token = create_access_token(user_id="u-canvas-run", tenant_id="tenant-1", roles=["member"])
+    headers = {"Authorization": f"Bearer {token}"}
+    canvas_resp = await db_client.post(
+        "/api/v1/canvas",
+        json={"title": "E2E canvas", "brief": "霸总逆袭短剧"},
+        headers=headers,
+    )
+    assert canvas_resp.status_code == 200, canvas_resp.text
+    canvas_id = canvas_resp.json()["canvas_id"]
+
+    run_resp = await db_client.post(f"/api/v1/canvas/{canvas_id}/run", headers=headers)
+    assert run_resp.status_code == 200, run_resp.text
+    workflow_run_id = run_resp.json()["workflow_run_id"]
+
+    runtime_resp = await db_client.get(
+        f"/api/v1/runs/{workflow_run_id}",
+        headers=headers,
+    )
+    assert runtime_resp.status_code == 200, runtime_resp.text
+    body = runtime_resp.json()
+    assert body["run_id"] == workflow_run_id
+    assert body["workflow"]["run_id"] == workflow_run_id
+    assert body["workflow"]["steps"]
+    assert body["delivery"]["kind"] == "workflow.summary"
+    assert body["delivery"]["replay"]["console_path"] == f"/runs/{workflow_run_id}"
 
 
 async def test_creative_production_exposes_delivery_summary_via_runs(
@@ -739,6 +780,7 @@ async def test_creative_production_exposes_delivery_summary_via_runs(
         "timeline_id": body["task"]["result"]["timeline_id"],
         "quality_passed": body["validation"]["all_passed"],
         "output_count": output_count,
+        "failure": None,
         "artifacts": body["delivery"]["artifacts"],
         "validation": body["validation"],
         "replay": {
@@ -820,6 +862,22 @@ async def test_creative_partial_production_maps_delivery_to_blocked(
         "timeline_id": None,
         "quality_passed": False,
         "output_count": 1,
+        "failure": {
+            "code": "partial",
+            "source": "creative",
+            "message": "镜头 shot-1 生成失败，当前短剧产出部分阻塞。",
+            "blocking_step": "shot-1",
+            "step_name": "办公室",
+            "retryable": True,
+            "recommended_action": "检查失败镜头与质量门后重新生成短剧产物",
+            "details": {
+                "workflow_status": "partial",
+                "quality_gate_failures": [{"name": "shot_count", "detail": "镜头不足"}],
+                "shot_error": "生成失败",
+                "validation_risks": ["镜头不足"],
+            },
+            "reason": "生成失败",
+        },
         "artifacts": body["delivery"]["artifacts"],
         "validation": body["validation"],
         "replay": {

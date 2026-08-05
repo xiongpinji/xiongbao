@@ -3,22 +3,177 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
+  --xb-bg: #0d0d0d;
+  --xb-surface: #161616;
+  --xb-line: rgba(255, 255, 255, 0.07);
+  /* Codex 风格字体栈：清晰无衬线正文 + 等宽代码 */
+  --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, monospace;
 }
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  @apply bg-[#0d0d0d] text-neutral-100 antialiased;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv11";
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+/* ── Codex 风格动效 ── */
+@keyframes xb-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes xb-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes xb-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes xb-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+@keyframes xb-slide-in-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes xb-slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.xb-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.85);
+  animation: xb-cursor-blink 0.9s ease-in-out infinite;
+}
+
+.xb-fade-up {
+  animation: xb-fade-up 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+}
+
+.xb-thinking-dots span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 1.5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  animation: xb-dot 1.2s ease-in-out infinite;
+}
+.xb-thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
+.xb-thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+.xb-panel-left {
+  animation: xb-slide-in-left 0.18s ease-out both;
+}
+.xb-panel-right {
+  animation: xb-slide-in-right 0.18s ease-out both;
 }
 
 @layer components {
   .field {
-    @apply w-full rounded-2xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-white/[0.2] disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .primary-button {
-    @apply rounded-xl bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-950 transition hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .toolbar-button {
-    @apply flex h-10 w-10 items-center justify-center rounded-2xl text-neutral-300 transition hover:bg-neutral-800 hover:text-white active:scale-[0.98];
+    @apply flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/[0.06] hover:text-white active:scale-[0.97];
+  }
+
+  .toolbar-button:disabled {
+    @apply cursor-not-allowed opacity-30 hover:bg-transparent hover:text-neutral-400 active:scale-100;
+  }
+
+  .xagent-brand-logo {
+    @apply overflow-hidden rounded-lg;
+  }
+
+  .xagent-brand-logo img {
+    @apply h-full w-full object-cover;
+  }
+
+  .xagent-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  .xagent-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .xagent-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .xagent-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .xagent-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .xagent-dark-flow .react-flow__pane {
+    background: #0d0d0d;
+  }
+
+  .xagent-dark-flow .react-flow__controls {
+    @apply overflow-hidden rounded-lg border border-neutral-800 shadow-none;
+  }
+
+  .xagent-dark-flow .react-flow__controls-button {
+    @apply border-neutral-800 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 hover:text-white;
+  }
+
+  .xagent-dark-flow .react-flow__minimap {
+    @apply rounded-lg border border-neutral-800 bg-neutral-900;
+  }
+
+  .xagent-dark-flow .react-flow__connection-path {
+    stroke: #60a5fa;
+    stroke-width: 2;
+    stroke-dasharray: 5 3;
+  }
+
+  .xagent-dark-flow .react-flow__node.selected > div {
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
+  }
+
+  .xagent-dark-flow .react-flow__handle:hover {
+    transform: scale(1.4);
+  }
+
+  .xagent-dark-flow .react-flow__edge.selected .react-flow__edge-path {
+    stroke: #60a5fa;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
   }
 }

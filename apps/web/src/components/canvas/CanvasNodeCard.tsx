@@ -53,7 +53,7 @@ export default function CanvasNodeCard({ data }: { data: DramaCanvasNodeData }) 
       tabIndex={0}
       role="button"
       aria-label={`${data.title}，${data.nodeType}节点，执行状态${data.executionStatus}，审核状态${data.reviewStatus}`}
-      className={`w-72 rounded-3xl border bg-neutral-900 p-4 text-neutral-100 shadow-2xl transition focus:outline-none focus:ring-2 focus:ring-neutral-500 hover:bg-neutral-850 ${
+      className={`w-72 rounded-lg border bg-neutral-900 p-4 text-neutral-100 shadow-2xl transition focus:outline-none focus:ring-2 focus:ring-neutral-500 hover:bg-neutral-850 ${
         isRunning ? "shadow-[0_0_0_2px_rgba(59,130,246,0.35)]" : "shadow-black/20"
       }`}
       style={{ borderColor: `${color}99` }}
@@ -74,7 +74,7 @@ export default function CanvasNodeCard({ data }: { data: DramaCanvasNodeData }) 
       {/* 头部 */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-neutral-800" style={{ color }}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-800" style={{ color }}>
             <Icon size={18} strokeWidth={1.8} />
           </div>
           <div className="min-w-0">
@@ -185,7 +185,7 @@ function ArtifactStrip({ artifacts }: { artifacts: DramaArtifact[] }) {
       {artifacts.map((artifact) => (
         <div
           key={artifact.id}
-          className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 text-[10px] text-neutral-500"
+          className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 text-[10px] text-neutral-500"
           title={artifact.title}
         >
           {artifact.url && artifact.kind === "image" ? (

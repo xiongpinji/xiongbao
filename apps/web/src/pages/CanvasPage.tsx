@@ -13,7 +13,8 @@ import ReactFlow, {
   MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Send, Check, X, MessageSquare, Image, Video } from "lucide-react";
+import { Send, Check, X, MessageSquare, Image, Video, Clapperboard } from "lucide-react";
+import { callMcpTool } from "../api";
 
 const NODE_COLORS: Record<string, string> = {
   "需求分析": "#3b82f6",
@@ -124,17 +125,111 @@ function CanvasNodeWidget({ data }: { data: any }) {
 
 const nodeTypes: NodeTypes = { canvasNode: CanvasNodeWidget };
 
+// ─── 短剧导入面板 ───
+interface DramaItem { id: number; title: string; genre: string; total_episodes: number; status: string; }
+
+function DramaImportPanel({ onImport, onClose }: {
+  onImport: (drama: any) => void;
+  onClose: () => void;
+}) {
+  const [dramas, setDramas] = useState<DramaItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadDramas() {
+    setLoading(true); setError(null);
+    try {
+      const res: any = await callMcpTool("huobao-drama", "list_dramas", {});
+      const text = res?.content?.[0]?.text || res?.result || JSON.stringify(res);
+      const parsed = typeof text === "string" ? JSON.parse(text) : text;
+      setDramas(parsed?.data?.items || []);
+    } catch (e: any) { setError(e.message || "加载失败"); }
+    finally { setLoading(false); }
+  }
+
+  async function importDrama(d: DramaItem) {
+    setLoading(true);
+    try {
+      const res: any = await callMcpTool("huobao-drama", "get_drama", { drama_id: d.id });
+      const text = res?.content?.[0]?.text || res?.result || JSON.stringify(res);
+      const parsed = typeof text === "string" ? JSON.parse(text) : text;
+      onImport(parsed?.data || parsed);
+    } catch (e: any) { setError(e.message || "导入失败"); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="absolute left-4 top-4 z-20 w-72 rounded-lg border border-neutral-700 bg-neutral-900/95 p-4 shadow-2xl backdrop-blur">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-white flex items-center gap-2"><Clapperboard size={16} className="text-neutral-300" /> 短剧平台</span>
+        <button onClick={onClose} className="text-neutral-500 hover:text-white"><X size={16} /></button>
+      </div>
+      {error && <div className="text-xs text-red-400 mb-2">{error}</div>}
+      {dramas.length === 0 ? (
+        <button onClick={loadDramas} disabled={loading}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100 disabled:opacity-50">
+          {loading ? "加载中..." : "加载短剧列表"}
+        </button>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-auto">
+          {dramas.map(d => (
+            <button key={d.id} onClick={() => importDrama(d)} disabled={loading}
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-left hover:border-white/25 transition disabled:opacity-50">
+              <div className="text-sm text-white font-medium">{d.title}</div>
+              <div className="text-xs text-neutral-500 mt-1">{d.genre} · {d.total_episodes}集 · {d.status}</div>
+            </button>
+          ))}
+          <button onClick={loadDramas} className="w-full text-xs text-neutral-500 hover:text-neutral-300 py-1">刷新</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CanvasPage() {
   const [brief, setBrief] = useState("");
   const [canvas, setCanvas] = useState<CanvasData | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedNode, setSelectedNode] = useState<CanvasNode | null>(null);
+  const [showDramaPanel, setShowDramaPanel] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges(eds => addEdge({ ...conn, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
   }, [setEdges]);
+
+  // 将短剧数据转为画布节点
+  function importDramaToCanvas(drama: any) {
+    const imported: CanvasNode[] = [];
+    let x = 80;
+    const y = 80;
+    // 短剧根节点
+    imported.push({ node_id: `drama-${drama.id}`, node_type: "梗概", title: drama.title || "短剧", content: drama.description || "", status: "approved", agent_note: `类型: ${drama.genre || "—"}`, human_note: "", position: { x, y }, dependencies: [] });
+    x += 260;
+    // 剧集节点
+    const episodes = drama.episodes || [];
+    episodes.forEach((ep: any, i: number) => {
+      const epId = `ep-${ep.id || i}`;
+      imported.push({ node_id: epId, node_type: "分镜", title: ep.title || `第${i + 1}集`, content: ep.synopsis || "", status: "pending", agent_note: `第${ep.episode_number || i + 1}集`, human_note: "", position: { x, y: 80 + i * 140 }, dependencies: [`drama-${drama.id}`] });
+    });
+    x += 260;
+    // 角色节点
+    const characters = drama.characters || [];
+    characters.forEach((ch: any, i: number) => {
+      imported.push({ node_id: `char-${ch.id || i}`, node_type: "角色设定", title: ch.name || `角色${i + 1}`, content: ch.description || "", status: "pending", agent_note: ch.personality || "", human_note: "", position: { x, y: 80 + i * 120 }, dependencies: [`drama-${drama.id}`] });
+    });
+    x += 260;
+    // 场景节点
+    const scenes = drama.scenes || [];
+    scenes.forEach((sc: any, i: number) => {
+      imported.push({ node_id: `scene-${sc.id || i}`, node_type: "关键帧", title: sc.name || `场景${i + 1}`, content: sc.description || "", status: "pending", agent_note: "", human_note: "", position: { x, y: 80 + i * 120 }, dependencies: [] });
+    });
+    const canvasData: CanvasData = { canvas_id: `drama-import-${drama.id}`, title: drama.title, brief: drama.description || "", nodes: imported };
+    setCanvas(canvasData);
+    syncFlow(imported);
+    setShowDramaPanel(false);
+  }
 
   async function createCanvas() {
     if (!brief.trim()) return;
@@ -213,6 +308,10 @@ export default function CanvasPage() {
       <div className="p-6 flex flex-col h-full">
         <div className="flex items-center gap-2 mb-4">
           <h1 className="text-xl font-semibold flex-1">制作画布</h1>
+          <button onClick={() => setShowDramaPanel(!showDramaPanel)}
+            className="px-3 py-2 rounded text-sm border border-neutral-600 text-neutral-300 hover:border-white/30 hover:text-white flex items-center gap-1 transition">
+            <Clapperboard size={14} /> 短剧导入
+          </button>
           <input className="flex-1 border rounded px-3 py-2 text-sm" placeholder="一句话需求，如：霸总逆袭短剧"
             value={brief} onChange={e => setBrief(e.target.value)} />
           <button onClick={createCanvas} disabled={loading || !brief.trim()}
@@ -238,6 +337,10 @@ export default function CanvasPage() {
             </div>
           )}
         </div>
+
+       {showDramaPanel && (
+          <DramaImportPanel onImport={importDramaToCanvas} onClose={() => setShowDramaPanel(false)} />
+        )}
 
         {selectedNode && canvas && (
           <div className="absolute right-6 top-24 z-10">

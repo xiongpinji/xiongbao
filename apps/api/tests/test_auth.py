@@ -49,3 +49,33 @@ def test_principal_anonymous_has_tenant() -> None:
     anon = Principal.anonymous()
     assert anon.tenant_id  # 匿名也必有租户
     assert anon.is_anonymous
+
+
+def test_principal_anonymous_has_no_roles() -> None:
+    """安全默认：匿名主体空角色，任何 require_role/权限校验都应拒绝。"""
+    anon = Principal.anonymous()
+    assert anon.roles == frozenset()
+    assert not authorize(anon, AccessRequest("agent", "execute"))
+    assert not authorize(anon, AccessRequest("memory", "write"))
+    assert not authorize(anon, AccessRequest("memory", "read"))
+    assert not anon.has_role("member")
+
+
+def test_auth_required_default_on_even_in_lite() -> None:
+    """lite 模式默认也要求鉴权（安全默认）。"""
+    from xagent.infra.settings import get_settings
+
+    assert get_settings().is_lite
+    assert get_settings().auth_required is True
+
+
+def test_auth_required_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """显式 XAGENT_SECURITY__REQUIRE_AUTH=false 可关闭（演示逃生门）。"""
+    from xagent.infra.settings import get_settings
+
+    monkeypatch.setenv("XAGENT_SECURITY__REQUIRE_AUTH", "false")
+    get_settings.cache_clear()
+    try:
+        assert get_settings().auth_required is False
+    finally:
+        get_settings.cache_clear()

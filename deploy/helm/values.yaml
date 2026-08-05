@@ -1,5 +1,9 @@
 # X-Agent Helm values
 # 用法: helm install xagent ./deploy/helm -f values.yaml
+# 多环境: helm install xagent ./deploy/helm -f values.yaml -f environments/values-prod.yaml
+
+nameOverride: ""
+fullnameOverride: ""
 
 replicaCount: 2
 
@@ -8,7 +12,38 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+# Namespace 管理
+namespace:
+  create: false
+  name: ""
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# NetworkPolicy
+networkPolicy:
+  enabled: false
+  allowFromIngressController: true
+  allowFromMonitoring: true
+
+# PodDisruptionBudget
+pdb:
+  enabled: false
+  minAvailable: 1
+
+# 非敏感配置（注入 ConfigMap）
+config:
+  mode: "enterprise"
+  debug: false
+  corsOrigins: "http://localhost:3000"
+  dbEcho: false
+
 api:
+  enabled: true
   port: 8000
   workers: 4
   resources:
@@ -23,30 +58,61 @@ worker:
 web:
   enabled: true
   port: 80
+  replicas: 2
+  image:
+    repository: xagent-web
 
-# 外部依赖（生产用 Bitnami Helm 或托管服务）
+# 依赖服务：enabled=true 且 url 为空时部署内置 StatefulSet；
+# 生产建议 enabled=false（或置 url）使用外部 / 托管服务。
 postgres:
   enabled: true
-  url: ""  # 留空则用内置；生产建议外部
+  url: ""  # 外部 PostgreSQL DSN，如 postgresql+asyncpg://user:pass@host:5432/xagent
   database: xagent
+  image: "postgres:16-alpine"
+  storage: 1Gi
+  # 内置实例密码。仅 dev 直填（会进入 chart 生成的 Secret）；生产用 existingSecretRef 或 ESO。
+  password: "xagent-dev-password-change-me"
+  existingSecretRef:
+    name: ""
+    key: "postgres-password"
 
 redis:
   enabled: true
-  url: ""
+  url: ""  # 外部 Redis，如 redis://:pass@host:6379/0
+  image: "redis:7-alpine"
+  storage: 1Gi
 
 qdrant:
   enabled: true
-  url: ""
+  url: ""  # 外部 Qdrant，如 http://qdrant.example.com:6333
+  image: "qdrant/qdrant:v1.12.5"
+  storage: 2Gi
 
 # LLM 配置
 llm:
   ollamaBaseUrl: ""
   ollamaModel: "qwen3:4b"
   proxyUrl: ""
+  proxyApiKey: ""
+  existingProxyApiKeySecretRef:
+    name: ""
+    key: "proxy-api-key"
+  requestTimeoutSeconds: 150
+  warmupEnabled: false
+  warmupPrompt: "回复一个字：好"
+  warmupMaxTokens: 8
+  warmupWaitTimeoutSeconds: 30
+  warmupPollIntervalSeconds: 1
 
 # 安全
+# secret 注入优先级：ESO（secrets.eso.enabled）> existingSecretRef > values 直填（进 chart 生成的 Secret）。
+# 禁止把真实 secret 提交进 values*.yaml；生产用 ESO 或 existingSecretRef。
+# 应用侧另支持 SECRETREF:file:/env: 语法（docs/ENVIRONMENT_BASELINE_V1.md 第 8 章）。
 security:
-  jwtSecret: "change-me"
+  jwtSecret: ""  # 仅 dev 直填；留空且未配置 ref 时不注入（应用用内置 dev 默认）
+  existingJwtSecretRef:
+    name: ""
+    key: "jwt-secret"
   requireAuth: true
 
 # 可观测
@@ -54,13 +120,82 @@ observability:
   langfuseHost: ""
   langfusePublicKey: ""
   langfuseSecretKey: ""
+  existingLangfuseSecretRef:
+    name: ""
+    publicKeyKey: "langfuse-public-key"
+    secretKeyKey: "langfuse-secret-key"
   prometheus: true
+
+# External Secrets Operator (ESO)
+secrets:
+  eso:
+    enabled: false
+    secretStoreName: ""
+    secretStoreKind: "SecretStore"  # SecretStore | ClusterSecretStore
+    backend: "vault"  # vault | aws | gcp | azure
+    refreshInterval: "1h"
+    vault:
+      server: ""
+      path: "secret/data/xagent"
+      role: ""
+    aws:
+      region: ""
+      secretName: ""
+    gcp:
+      projectId: ""
+      secretName: ""
+    azure:
+      vaultUrl: ""
+
+# 告警
+alerting:
+  enabled: false
+  rules:
+    highErrorRateThreshold: 5
+    highLatencyP95Seconds: 30
+    crashLoopRestarts: 3
+    readinessDownMinutes: 2
+    workerQueueBacklog: 100
+    llmTimeoutRatePercent: 20
+  alertmanager:
+    enabled: false
+    # 为空时默认指向集群内 API 告警端点 /api/v1/ops/alerts/webhook（P1 告警联动）
+    webhookUrl: ""
+    # 对应 API 侧 XAGENT_SECURITY__ALERT_WEBHOOK_TOKEN；勿直接写明文，
+    # 用 --set-file 或 CD secret 注入（与 secretRef 姿态一致）
+    webhookToken: ""
+    emailTo: ""
+    smtpHost: ""
+    smtpPort: 587
+
+# 自动恢复
+recovery:
+  enabled: true
+  maxConsecutiveLlmTimeouts: 3
+  fallbackOnLlmFailure: true
+  workerRestartThreshold: 5
+  evidenceOutputDir: "./data/recovery-evidence"
+
+# 运营自动化
+ops:
+  evidenceArchive:
+    enabled: false
+    schedule: "0 */6 * * *"  # 每 6 小时
+    retentionDays: 30
+    s3Bucket: ""
+    s3Prefix: "xagent/evidence/"
+  healthSnapshot:
+    enabled: false
+    schedule: "*/30 * * * *"  # 每 30 分钟
+  postDeploySummary:
+    enabled: false
 
 ingress:
   enabled: true
   className: nginx
   host: xagent.example.com
   tls: true
+  clusterIssuer: letsencrypt-prod
 
 autoscaling:
   enabled: true

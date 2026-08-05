@@ -8,9 +8,15 @@
   quality          —— 质量门
   media            —— 云生成 provider 抽象（image/video/audio）
   producer         —— 制作人 agent（DI：llm_caller + media registry）
+  consistency      —— 角色/场景一致性：基准参考图缓存 + 关键帧注入
   workflow_draft   —— 一句话→待审核工作流草稿（节点链）
 """
 
+from xagent.domains.creative_studio.consistency import (
+    ConsistencyManager,
+    ShotConsistency,
+    generate_keyframe_image,
+)
 from xagent.domains.creative_studio.pipeline import (
     ProductionResult,
     produce_short_drama,
@@ -49,4 +55,7 @@ __all__ = [
     "build_draft_from_brief",
     "ProductionResult",
     "produce_short_drama",
+    "ConsistencyManager",
+    "ShotConsistency",
+    "generate_keyframe_image",
 ]

@@ -77,6 +77,23 @@ class ProductionNode:
             else:
                 self.settings[key] = value
 
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> ProductionNode:
+        """从 to_dict() 产物反序列化（持久化恢复用）；非法枚举值抛 ValueError。"""
+        return cls(
+            node_id=raw.get("node_id") or uuid4().hex[:8],
+            node_type=NodeType(raw.get("node_type", NodeType.brief_analysis.value)),
+            title=raw.get("title", ""),
+            content=raw.get("content"),
+            status=NodeStatus(raw.get("status", NodeStatus.pending.value)),
+            agent_note=raw.get("agent_note", ""),
+            human_note=raw.get("human_note", ""),
+            position=raw.get("position") or {"x": 0, "y": 0},
+            dependencies=raw.get("dependencies") or [],
+            settings=raw.get("settings") or {},
+            locked=bool(raw.get("locked", False)),
+        )
+
 
 @dataclass
 class ProductionCanvas:
@@ -146,3 +163,36 @@ class ProductionCanvas:
         if self.workflow_run_id:
             data["workflow_run_id"] = self.workflow_run_id
         return data
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> ProductionCanvas:
+        """从 to_dict() 产物反序列化（持久化恢复用）；非法节点静默跳过。"""
+        canvas = cls(
+            canvas_id=raw.get("canvas_id") or uuid4().hex,
+            title=raw.get("title", ""),
+            brief=raw.get("brief", ""),
+            workflow_run_id=raw.get("workflow_run_id"),
+        )
+        for node_raw in raw.get("nodes", []):
+            try:
+                canvas.nodes.append(ProductionNode.from_dict(node_raw))
+            except ValueError:
+                continue
+        return canvas
+
+
+def media_spec_for_node(node_type: NodeType):
+    """batch-generate 的节点类型 → (MediaKind, GenerationMode) 映射。
+
+    关键帧→文生图、视频→文生视频、配音→音频 text_to_speech；
+    未映射节点类型返回 None（跳过）。供 api/v1/canvas.py batch-generate 消费，
+    避免节点类型判断散落在 API 层。
+    """
+    from xagent.domains.creative_studio.media.base import GenerationMode, MediaKind
+
+    specs = {
+        NodeType.keyframe: (MediaKind.image, GenerationMode.text_to_image),
+        NodeType.video: (MediaKind.video, GenerationMode.text_to_video),
+        NodeType.voiceover: (MediaKind.audio, GenerationMode.text_to_speech),
+    }
+    return specs.get(node_type)

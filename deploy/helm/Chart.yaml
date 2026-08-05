@@ -1,14 +1,14 @@
 apiVersion: v2
 name: xagent
-description: X-Agent — 面向企业的自主智能体框架（开源重构版）
+description: X-Agent 企业级自主智能体框架 Helm Chart
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 1.0.0
+appVersion: "1.0.0"
 keywords:
   - ai-agent
+  - enterprise
+  - orchestration
   - llm
-  - video-editing
-  - short-drama
 home: https://github.com/xiongpinji/xiongbao
 sources:
   - https://github.com/xiongpinji/xiongbao

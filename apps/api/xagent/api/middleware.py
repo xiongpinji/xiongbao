@@ -70,6 +70,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             status=response.status_code,
             elapsed_ms=round(elapsed_ms, 2),
+            request_id=request_id,  # 显式携带：内层中间件可能清空 contextvars
         )
         clear_request_context()
         return response

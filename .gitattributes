@@ -1,0 +1,2 @@
+# Keep shell scripts LF-terminated so Linux containers can execute them when mounted from Windows worktrees.
+*.sh text eol=lf

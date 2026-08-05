@@ -13,7 +13,8 @@ from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.infra.models.agent_task import AgentTaskORM
 from xagent.infra.models.artifact import ArtifactORM
 from xagent.infra.repos.evidence import load_evidence_records
-from xagent.infra.repos.workflow import load_workflow_runs
+from xagent.infra.repos.spine import load_spine_linkage_by_run_id, load_spine_task_reference
+from xagent.infra.repos.workflow import load_workflow_run_by_id, load_workflow_runs
 
 
 def _is_schema_mismatch(exc: Exception, table_name: str) -> bool:
@@ -123,9 +124,33 @@ def _ensure_validation_contract(validation: dict[str, Any] | None) -> dict[str, 
     return merged
 
 
+def _normalize_failure_bundle(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    normalized = deepcopy(value)
+    if "code" in normalized and normalized.get("code") is not None:
+        normalized["code"] = str(normalized.get("code") or "").strip()
+    if "source" in normalized and normalized.get("source") is not None:
+        normalized["source"] = str(normalized.get("source") or "").strip()
+    if "message" in normalized and normalized.get("message") is not None:
+        normalized["message"] = str(normalized.get("message") or "").strip()
+    if "blocking_step" in normalized and normalized.get("blocking_step") is not None:
+        normalized["blocking_step"] = str(normalized.get("blocking_step") or "").strip()
+    if "step_name" in normalized and normalized.get("step_name") is not None:
+        normalized["step_name"] = str(normalized.get("step_name") or "").strip() or None
+    if "recommended_action" in normalized and normalized.get("recommended_action") is not None:
+        normalized["recommended_action"] = (
+            str(normalized.get("recommended_action") or "").strip() or None
+        )
+    if "retryable" in normalized:
+        normalized["retryable"] = bool(normalized.get("retryable"))
+    return normalized
+
+
 def _ensure_delivery_contract(delivery: dict[str, Any] | None) -> dict[str, Any]:
     merged = deepcopy(delivery) if isinstance(delivery, dict) else {}
     merged["risks"] = _normalize_risks(merged.get("risks"))
+    merged["failure"] = _normalize_failure_bundle(merged.get("failure"))
     return merged
 
 
@@ -174,6 +199,47 @@ def _decode_json_payload(payload: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+async def _resolve_spine_linkage(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    db_task: AgentTaskORM | None,
+    task_view: dict[str, Any] | None,
+    workflow_view: dict[str, Any] | None,
+) -> dict[str, str]:
+    input_payload = (
+        _decode_json_payload(db_task.input_payload)
+        if db_task is not None
+        else deepcopy((task_view or {}).get("input") or {})
+    )
+    if not input_payload and isinstance(workflow_view, dict):
+        input_payload = {
+            "goal_id": str(workflow_view.get("goal_id") or ""),
+            "spine_task_id": str(workflow_view.get("spine_task_id") or ""),
+        }
+    goal_id = str(input_payload.get("goal_id") or "").strip()
+    spine_task_id = str(input_payload.get("spine_task_id") or "").strip()
+    if goal_id and spine_task_id:
+        reference = await load_spine_task_reference(
+            session,
+            tenant_id=tenant_id,
+            goal_id=goal_id,
+            spine_task_id=spine_task_id,
+        )
+        if reference is not None:
+            return {
+                "goal_id": reference["goal_id"],
+                "initiative_id": reference["initiative_id"],
+                "spine_task_id": reference["task_id"],
+            }
+    return await load_spine_linkage_by_run_id(
+        session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+    )
 
 
 def _build_runtime_task_view(row: AgentTaskORM) -> dict[str, Any]:
@@ -265,6 +331,10 @@ async def _load_workflow_view(
     run_id: str,
     tenant_id: str,
 ) -> dict[str, Any] | None:
+    exact = await load_workflow_run_by_id(session, tenant_id, run_id)
+    if exact is not None:
+        return exact
+
     runs = await load_workflow_runs(session, tenant_id, limit=200)
     for view in runs:
         if view.get("run_id") == run_id:
@@ -454,6 +524,14 @@ async def get_runtime_run_detail(
         if db_task is not None
         else deepcopy((creative_view or {}).get("related_tasks") or [])
     )
+    spine = await _resolve_spine_linkage(
+        session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        db_task=db_task,
+        task_view=task,
+        workflow_view=workflow_view,
+    )
 
     return {
         "run_id": run_id,
@@ -465,4 +543,5 @@ async def get_runtime_run_detail(
         "validation": validation,
         "delivery": delivery,
         "related_tasks": related_tasks,
+        "spine": spine,
     }

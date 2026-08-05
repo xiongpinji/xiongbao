@@ -154,29 +154,51 @@ def score_candidate(query: str, c: Candidate) -> ScoredCandidate:
 
 class DiscoveryEngine:
     def __init__(self, providers: list[Provider] | None = None) -> None:
-        # 默认含 mock（离线兜底）；真实源按可用性加入
-        from xagent.domains.open_source_discovery.providers import NpmProvider, PyPIProvider
+        # 真实源优先；Mock 仅作最终兜底
+        from xagent.domains.open_source_discovery.providers import (
+            DuckDuckGoProvider,
+            NpmProvider,
+            PyPIProvider,
+        )
 
         self._providers: list[Provider] = providers or [
-            MockProvider(),
+            DuckDuckGoProvider(),
             GitHubProvider(),
             PyPIProvider(),
             NpmProvider(),
+            MockProvider(),  # 离线兜底，所有真实源失败时保底
         ]
 
     async def discover(self, query: str, *, limit: int = 10) -> list[ScoredCandidate]:
+        results, _meta = await self.discover_with_meta(query, limit=limit)
+        return results
+
+    async def discover_with_meta(
+        self, query: str, *, limit: int = 10
+    ) -> tuple[list[ScoredCandidate], dict]:
+        """发现 + 元信息：provider 健康状况与降级标记。
+
+        degraded=True 表示结果中含 MockProvider 假数据（真实源全部失败/无结果），
+        调用方必须在响应中显式暴露，不得静默充当真实结果。
+        """
         # Redis 缓存：同 query 短期复用结果
         cache_key = f"osd:{query}:{limit}"
         cached = await self._cache_get(cache_key)
         if cached is not None:
-            return cached
+            results, meta = cached
+            meta["cached"] = True
+            return results, meta
 
         seen: dict[str, Candidate] = {}
+        providers_ok: list[str] = []
+        providers_failed: list[str] = []
         for p in self._providers:
             try:
                 results = await p.search(query, limit=limit)
+                providers_ok.append(p.name)
             except Exception as exc:  # 单个 provider 失败不阻断
                 logger.warning("osd_provider_failed", provider=p.name, error=str(exc))
+                providers_failed.append(p.name)
                 continue
             for c in results:
                 key = (c.source, c.name.lower())
@@ -186,10 +208,29 @@ class DiscoveryEngine:
         scored = [score_candidate(query, c) for c in seen.values()]
         scored.sort(key=lambda s: s.score, reverse=True)
         result = scored[:limit]
-        await self._cache_set(cache_key, result, ttl=300)
-        return result
 
-    async def _cache_get(self, key: str) -> list[ScoredCandidate] | None:
+        # 降级判定：结果来自 mock（假数据），或真实源全部失败
+        real_providers = [p.name for p in self._providers if p.name != "mock"]
+        real_all_failed = all(p in providers_failed for p in real_providers)
+        has_mock_data = any(c.candidate.source == "mock" for c in result)
+        degraded = has_mock_data or (real_all_failed and not result)
+        if has_mock_data:
+            degraded_reason = "所有真实源失败或无结果，结果含 MockProvider 示例数据（非真实开源项目）"
+        elif degraded:
+            degraded_reason = "所有真实源请求失败，无可用结果"
+        else:
+            degraded_reason = ""
+        meta = {
+            "providers_ok": providers_ok,
+            "providers_failed": providers_failed,
+            "degraded": degraded,
+            "degraded_reason": degraded_reason,
+            "cached": False,
+        }
+        await self._cache_set(cache_key, (result, meta), ttl=300)
+        return result, meta
+
+    async def _cache_get(self, key: str) -> tuple[list[ScoredCandidate], dict] | None:
         try:
             from xagent.infra.cache import get_cache
 
@@ -198,7 +239,7 @@ class DiscoveryEngine:
                 import json
 
                 data = json.loads(raw)
-                return [
+                results = [
                     ScoredCandidate(
                         candidate=Candidate(**c),
                         score=s,
@@ -206,28 +247,35 @@ class DiscoveryEngine:
                         license_ok=lo,
                         notes=n,
                     )
-                    for c, s, b, lo, n in data
+                    for c, s, b, lo, n in data["results"]
                 ]
+                return results, data.get("meta", {})
         except Exception:  # noqa: S110  缓存读失败降级为重新发现
             pass
         return None
 
-    async def _cache_set(self, key: str, value: list[ScoredCandidate], *, ttl: int) -> None:
+    async def _cache_set(
+        self, key: str, value: tuple[list[ScoredCandidate], dict], *, ttl: int
+    ) -> None:
         try:
             import json
 
             from xagent.infra.cache import get_cache
 
-            payload = [
-                [
-                    c.candidate.__dict__,
-                    c.score,
-                    c.breakdown,
-                    c.license_ok,
-                    c.notes,
-                ]
-                for c in value
-            ]
+            results, meta = value
+            payload = {
+                "results": [
+                    [
+                        c.candidate.__dict__,
+                        c.score,
+                        c.breakdown,
+                        c.license_ok,
+                        c.notes,
+                    ]
+                    for c in results
+                ],
+                "meta": meta,
+            }
             await get_cache().set(key, json.dumps(payload), ttl=ttl)
         except Exception:  # noqa: S110  缓存写失败不影响发现
             pass
@@ -244,3 +292,10 @@ def reset_discovery_engine() -> None:
 
 async def discover_and_rank(query: str, *, limit: int = 10) -> list[ScoredCandidate]:
     return await get_discovery_engine().discover(query, limit=limit)
+
+
+async def discover_and_rank_with_meta(
+    query: str, *, limit: int = 10
+) -> tuple[list[ScoredCandidate], dict]:
+    """发现 + 评分 + 元信息（含 degraded 降级标记，供 API 层透传）。"""
+    return await get_discovery_engine().discover_with_meta(query, limit=limit)

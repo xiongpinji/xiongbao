@@ -51,3 +51,9 @@ export async function login(username: string, password: string): Promise<{
 export function isLoggedIn(): boolean {
   return !!getToken();
 }
+
+// OIDC/SSO：后端配置了 oidc_client_id 时 enabled=true，登录页据此渲染 SSO 按钮
+export async function getOidcProviders(): Promise<{ enabled: boolean }> {
+  const resp = await api.get("/auth/oidc/providers");
+  return resp.data;
+}

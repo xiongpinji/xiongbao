@@ -10,11 +10,12 @@ import {
   listTimelines,
   type EditorTimeline,
 } from "../api";
+import ConversationalCommand from "../components/chat/ConversationalCommand";
 
 const TRACK_COLORS: Record<string, string> = {
-  video: "bg-blue-500",
-  audio: "bg-green-500",
-  text: "bg-amber-500",
+  video: "bg-red-500",
+  audio: "bg-amber-500",
+  text: "bg-violet-500",
 };
 
 export default function EditorPage() {
@@ -134,153 +135,259 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold flex items-center gap-2">
-          <Film size={20} /> 视频剪辑工作台
-        </h1>
-        <div className="flex gap-2">
-          <button onClick={handleCreate} disabled={loading}
-            className="px-3 py-1.5 bg-brand-600 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
-            <Plus size={14} /> 新建时间线
+    <div className="flex h-full min-h-0 flex-col px-6 py-5">
+      <header className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] pb-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-neutral-500">
+            <Film size={15} />
+            Studio
+          </div>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">剪辑工作台</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
+            管理短剧时间线、素材轨道、渲染结果与剪映草稿导出。
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button onClick={handleCreate} disabled={loading} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
+            <Plus size={15} /> 新建时间线
           </button>
-          <button onClick={handleList}
-            className="px-3 py-1.5 border rounded text-sm">
+          <button
+            onClick={handleList}
+            className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
+          >
             列出时间线
           </button>
         </div>
-      </div>
+      </header>
 
-      {msg && <div className="text-sm text-slate-600 mb-3">{msg}</div>}
-
-      {/* 渲染结果视频预览 */}
-      {renderUrl && (
-        <div className="mb-4 bg-white border rounded-md p-3">
-          <div className="text-xs text-slate-500 mb-2">渲染结果预览</div>
-          <video
-            src={renderUrl.startsWith("local://") ? undefined : renderUrl}
-            controls
-            className="max-h-64 rounded"
-            style={{ width: "100%" }}
-          >
-            您的浏览器不支持视频播放。渲染文件：{renderUrl}
-          </video>
+      {msg && (
+        <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-neutral-300">
+          {msg}
         </div>
       )}
 
       {timelines.length > 0 && (
-        <div className="mb-3 flex gap-2 flex-wrap">
-          {timelines.map((t) => (
-            <button key={t.id} onClick={async () => setTimeline(await getTimeline(t.id))}
-              className={`text-xs px-2 py-1 rounded ${timeline?.id === t.id ? "bg-brand-100 text-brand-700" : "bg-slate-100"}`}>
-              {t.name} ({t.clips.length}片段)
+        <div className="mt-4 flex flex-wrap gap-2">
+          {timelines.map((item) => (
+            <button
+              key={item.id}
+              onClick={async () => setTimeline(await getTimeline(item.id))}
+              className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                timeline?.id === item.id
+                  ? "border-white/25 bg-white/[0.08] text-white"
+                  : "border-white/[0.08] bg-white/[0.035] text-neutral-500 hover:text-white"
+              }`}
+            >
+              {item.name} ({item.clips.length}片段)
             </button>
           ))}
         </div>
       )}
 
-      {/* 添加片段 */}
-      {timeline && (
-        <div className="bg-white border rounded-md p-3 mb-3 flex gap-2 items-end flex-wrap">
-          <select value={clipType} onChange={(e) => setClipType(e.target.value)}
-            className="border rounded px-2 py-1 text-sm">
-            <option value="video">视频</option>
-            <option value="audio">音频</option>
-            <option value="text">字幕</option>
-          </select>
-          {clipType === "text" ? (
-            <input placeholder="字幕文本" value={clipText} onChange={(e) => setClipText(e.target.value)}
-              className="border rounded px-2 py-1 text-sm w-40" />
-          ) : (
-            <input placeholder="素材URL" value={clipUrl} onChange={(e) => setClipUrl(e.target.value)}
-              className="border rounded px-2 py-1 text-sm w-40" />
-          )}
-          <label className="text-xs text-slate-500">起 <input type="number" value={clipStart}
-            onChange={(e) => setClipStart(+e.target.value)} className="border rounded px-1 py-1 text-sm w-16" /></label>
-          <label className="text-xs text-slate-500">止 <input type="number" value={clipEnd}
-            onChange={(e) => setClipEnd(+e.target.value)} className="border rounded px-1 py-1 text-sm w-16" /></label>
-          <button onClick={handleAddClip} disabled={loading}
-            className="px-3 py-1.5 bg-slate-700 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
-            <Scissors size={14} /> 添加片段
-          </button>
-        </div>
-      )}
-
-      {/* 时间线预览 */}
-      {timeline && (
-        <div className="flex-1 bg-white border rounded-md p-4 overflow-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm">
-              <span className="font-medium">{timeline.name}</span>
-              <span className="text-slate-400 ml-2">
-                {timeline.width}×{timeline.height} · {timeline.fps}fps · {timeline.total_duration}s
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleRender} disabled={loading}
-                className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
-                <Play size={14} /> 渲染导出
-              </button>
-              <button onClick={handleExportDraft} disabled={loading}
-                className="px-3 py-1.5 bg-green-600 text-white rounded text-sm flex items-center gap-1 disabled:opacity-50">
-                <Download size={14} /> 导出剪映草稿
-              </button>
-            </div>
-          </div>
-
-          {/* 轨道可视化 */}
-          <div className="space-y-2">
-            {(["video", "audio", "text"] as const).map((trackType) => {
-              const clips = timeline.clips.filter((c) => c.track_type === trackType);
-              if (clips.length === 0) return null;
-              const maxEnd = timeline.total_duration || 1;
-              return (
-                <div key={trackType} className="flex items-center gap-2">
-                  <div className="text-xs text-slate-400 w-12">{trackType === "video" ? "视频" : trackType === "audio" ? "音频" : "字幕"}</div>
-                  <div className="flex-1 relative h-8 bg-slate-50 rounded">
-                    {clips.map((clip) => {
-                      const left = (clip.timeline_start / maxEnd) * 100;
-                      const width = (clip.duration / maxEnd) * 100;
-                      return (
-                        <div key={clip.id}
-                          className={`absolute h-7 ${TRACK_COLORS[trackType]} opacity-80 rounded text-white text-xs flex items-center px-1 overflow-hidden cursor-pointer hover:opacity-100 hover:ring-2 hover:ring-red-400`}
-                          style={{ left: `${left}%`, width: `${Math.max(width, 3)}%` }}
-                          title={`${clip.text || clip.source_url?.split("/").pop() || "片段"} — 点击删除`}
-                          onClick={() => handleRemoveClip(clip.id)}>
-                          {clip.text || clip.source_url?.split("/").pop() || "片段"}
-                        </div>
-                      );
-                    })}
+      <div className="mt-5 grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <main className="min-h-0 overflow-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-5 xagent-scrollbar">
+          {timeline ? (
+            <div className="flex min-h-full flex-col">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-lg font-semibold text-white">{timeline.name}</div>
+                  <div className="mt-1 text-xs text-neutral-500">
+                    {timeline.width}x{timeline.height} · {timeline.fps}fps · {timeline.total_duration}s
                   </div>
                 </div>
-              );
-            })}
-            {timeline.clips.length === 0 && (
-              <div className="text-sm text-slate-400 text-center py-8">
-                添加片段后在此显示时间线轨道
-              </div>
-            )}
-          </div>
-
-          {/* 转场 */}
-          {timeline.transitions.length > 0 && (
-            <div className="mt-4">
-              <div className="text-xs text-slate-400 mb-1">转场</div>
-              {timeline.transitions.map((t) => (
-                <div key={t.id} className="text-xs text-slate-600">
-                  {t.type} · {t.duration}s → clip {t.clip_id.slice(0, 6)}
+                <div className="flex gap-2">
+                  <button onClick={handleRender} disabled={loading} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
+                    <Play size={14} /> 渲染
+                  </button>
+                  <button
+                    onClick={handleExportDraft}
+                    disabled={loading}
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="inline-flex items-center gap-2"><Download size={14} />导出草稿</span>
+                  </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="mb-5 flex min-h-[260px] items-center justify-center rounded-lg border border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),rgba(255,255,255,0.02)_42%,rgba(0,0,0,0.18))]">
+                {renderUrl ? (
+                  <video
+                    src={renderUrl.startsWith("local://") ? undefined : renderUrl}
+                    controls
+                    className="max-h-[420px] w-full rounded-lg object-contain"
+                  >
+                    您的浏览器不支持视频播放。渲染文件：{renderUrl}
+                  </video>
+                ) : (
+                  <div className="text-center">
+                    <Film size={38} className="mx-auto text-neutral-500" />
+                    <div className="mt-3 text-sm font-medium text-neutral-200">预览区</div>
+                    <div className="mt-1 text-xs text-neutral-600">渲染后将在这里查看成片。</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {(["video", "audio", "text"] as const).map((trackType) => {
+                  const clips = timeline.clips.filter((clip) => clip.track_type === trackType);
+                  const maxEnd = timeline.total_duration || 1;
+                  return (
+                    <div key={trackType} className="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-3">
+                      <div className="text-xs font-medium text-neutral-500">
+                        {trackType === "video" ? "视频" : trackType === "audio" ? "音频" : "字幕"}
+                      </div>
+                      <div className="relative h-11 overflow-hidden rounded-lg border border-white/[0.06] bg-black/25">
+                        {clips.map((clip) => {
+                          const left = (clip.timeline_start / maxEnd) * 100;
+                          const width = (clip.duration / maxEnd) * 100;
+                          return (
+                            <button
+                              key={clip.id}
+                              type="button"
+                              className={`absolute top-1 flex h-9 items-center overflow-hidden rounded-md px-2 text-left text-xs font-medium text-white shadow-lg transition hover:ring-2 hover:ring-white/40 ${TRACK_COLORS[trackType]}`}
+                              style={{ left: `${left}%`, width: `${Math.max(width, 4)}%` }}
+                              title={`${clip.text || clip.source_url?.split("/").pop() || "片段"} - 点击删除`}
+                              onClick={() => handleRemoveClip(clip.id)}
+                            >
+                              <span className="truncate">{clip.text || clip.source_url?.split("/").pop() || "片段"}</span>
+                            </button>
+                          );
+                        })}
+                        {clips.length === 0 && (
+                          <div className="flex h-full items-center px-3 text-xs text-neutral-700">暂无轨道片段</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {timeline.transitions.length > 0 && (
+                <div className="mt-5 rounded-lg border border-white/[0.06] bg-black/20 p-4">
+                  <div className="mb-2 text-xs font-medium tracking-wide text-neutral-500">Transitions</div>
+                  {timeline.transitions.map((transition) => (
+                    <div key={transition.id} className="text-xs leading-6 text-neutral-500">
+                      {transition.type} · {transition.duration}s → clip {transition.clip_id.slice(0, 6)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-[520px] items-center justify-center text-center">
+              <div>
+                <Film size={42} className="mx-auto text-neutral-500" />
+                <div className="mt-4 text-lg font-semibold text-white">尚未打开时间线</div>
+                <div className="mt-2 text-sm text-neutral-500">新建或列出时间线后开始剪辑。</div>
+              </div>
             </div>
           )}
-        </div>
-      )}
+        </main>
 
-      {!timeline && (
-        <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-          点击"新建时间线"开始剪辑
-        </div>
-      )}
+        <aside className="min-h-0 overflow-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-5 xagent-scrollbar">
+          <div className="mb-5">
+            <div className="text-xs font-medium tracking-wide text-neutral-500">Inspector</div>
+            <h2 className="mt-2 text-xl font-semibold text-white">素材与片段</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">为当前时间线添加视频、音频或字幕片段。</p>
+          </div>
+
+          <ConversationalCommand
+            compact
+            className="mb-5"
+            title="剪辑助手"
+            context={timeline ? timeline.name : "尚未打开时间线"}
+            placeholder="例如：添加片头字幕，或把这段素材放到第 4 秒..."
+            initialAssistantMessage="你可以直接描述剪辑意图，我会把它转换成当前时间线的素材输入。"
+            suggestions={["添加片头字幕", "生成 3 秒转场说明", "为当前镜头补一句旁白"]}
+            onSubmit={async (value) => {
+              if (!timeline) {
+                await handleCreate();
+                setClipType("text");
+                setClipText(value);
+                return `已先创建一条时间线，并把「${value}」放入字幕片段输入。`;
+              }
+              setClipType("text");
+              setClipText(value);
+              setClipStart(clipStart);
+              setClipEnd(Math.max(clipEnd, clipStart + 3));
+              return `已把「${value}」转成字幕片段输入。确认起止时间后点击添加片段。`;
+            }}
+          />
+
+          {timeline ? (
+            <div className="space-y-4">
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-neutral-500">轨道类型</span>
+                <select value={clipType} onChange={(event) => setClipType(event.target.value)} className="field">
+                  <option value="video">视频</option>
+                  <option value="audio">音频</option>
+                  <option value="text">字幕</option>
+                </select>
+              </label>
+
+              {clipType === "text" ? (
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-neutral-500">字幕文本</span>
+                  <input
+                    placeholder="输入字幕文本"
+                    value={clipText}
+                    onChange={(event) => setClipText(event.target.value)}
+                    className="field"
+                  />
+                </label>
+              ) : (
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-neutral-500">素材 URL</span>
+                  <input
+                    placeholder="https://..."
+                    value={clipUrl}
+                    onChange={(event) => setClipUrl(event.target.value)}
+                    className="field"
+                  />
+                </label>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-neutral-500">开始</span>
+                  <input
+                    type="number"
+                    value={clipStart}
+                    onChange={(event) => setClipStart(+event.target.value)}
+                    className="field"
+                  />
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-neutral-500">结束</span>
+                  <input
+                    type="number"
+                    value={clipEnd}
+                    onChange={(event) => setClipEnd(+event.target.value)}
+                    className="field"
+                  />
+                </label>
+              </div>
+
+              <button onClick={handleAddClip} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">
+                <Scissors size={14} /> 添加片段
+              </button>
+
+              <div className="rounded-lg border border-white/[0.06] bg-black/20 p-4">
+                <div className="text-sm font-semibold text-white">当前时间线</div>
+                <div className="mt-3 space-y-2 text-sm text-neutral-500">
+                  <div>片段：{timeline.clips.length}</div>
+                  <div>转场：{timeline.transitions.length}</div>
+                  <div>尺寸：{timeline.width} x {timeline.height}</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-white/[0.08] p-4 text-sm leading-6 text-neutral-500">
+              先创建时间线，再添加素材片段。
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

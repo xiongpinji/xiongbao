@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { URL } from "node:url";
 import {
   createWorkspace,
   renameWorkspace,
@@ -12,6 +14,10 @@ import {
   readPersistedShellSnapshot,
   writePersistedShellSnapshot,
 } from "../src/shell/workspaceStorage.ts";
+
+async function read(relativePath) {
+  return readFile(new URL(relativePath, import.meta.url), "utf8");
+}
 
 function makeSurface(overrides = {}) {
   return {
@@ -183,4 +189,32 @@ test("workspace snapshot round-trip preserves createdAt and stable ordering afte
     hydrated.workspaces.map((workspace) => workspace.id),
     ["beta", "alpha"],
   );
+});
+
+test("formal entry removes anonymous fallback and demo workflow seeds", async () => {
+  const [clientSource, loginSource, shellStoreSource, generalSettingsSource, storageSource, e2eSource] = await Promise.all([
+    read("../src/api/client.ts"),
+    read("../src/pages/LoginPage.tsx"),
+    read("../src/shell/useShellStore.tsx"),
+    read("../src/components/settings/GeneralSettings.tsx"),
+    read("../src/shell/workspaceStorage.ts"),
+    read("../../../tests/e2e/specs/full-flow.spec.ts"),
+  ]);
+
+  assert.doesNotMatch(clientSource, /ANONYMOUS_KEY/);
+  assert.doesNotMatch(clientSource, /setAnonymousSession/);
+  assert.doesNotMatch(clientSource, /isAnonymousSession/);
+  assert.match(clientSource, /export function isLoggedIn\(\): boolean \{\s*return !!getToken\(\);\s*\}/s);
+
+  assert.doesNotMatch(loginSource, /匿名进入工作区/);
+  assert.doesNotMatch(loginSource, /admin\/admin/);
+  assert.doesNotMatch(loginSource, /先匿名进入工作区/);
+
+  assert.doesNotMatch(shellStoreSource, /name:\s*"demo"/);
+  assert.doesNotMatch(shellStoreSource, /goal:\s*index === 0 \? "你好" : ""/);
+  assert.doesNotMatch(shellStoreSource, /本地会话状态正在驱动工作台/);
+
+  assert.doesNotMatch(generalSettingsSource, /lite 模式可留空/);
+  assert.doesNotMatch(storageSource, /本地工作台/);
+  assert.doesNotMatch(e2eSource, /匿名登录页/);
 });

@@ -1,6 +1,6 @@
 """provider 注册表 + 工厂。
 
-据 settings 注册图像/视频 provider；image/video 各有默认 provider。
+据 settings 注册图像/视频/音频 provider；image/video/audio 各有默认 provider。
 未配 key 时回退 NullProvider（占位产物，流程不中断）。
 对外暴露 get(kind)、list_models()、generate()（submit+轮询封装）。
 """
@@ -102,6 +102,11 @@ def _build_registry() -> MediaProviderRegistry:
                 default_model=cfg.openai_image_model,
             ),
         )
+    else:
+        # 无 OpenAI key 时使用免费 Pollinations 文生图
+        from xagent.domains.creative_studio.media.image_providers import PollinationsProvider
+
+        registry.register(MediaKind.image, PollinationsProvider())
 
     # 视频 provider
     from xagent.domains.creative_studio.media.video_providers import (
@@ -130,6 +135,20 @@ def _build_registry() -> MediaProviderRegistry:
         registry.register(MediaKind.video, GenericVideoProvider(
             api_key=cfg.generic_video_api_key, submit_url=cfg.generic_video_submit_url,
             poll_url=cfg.generic_video_poll_url, default_model=cfg.generic_video_model))
+
+    # 音频/TTS provider：默认 null（占位）。edge-tts 免 key 但需外网，需显式开启；
+    # 未安装 edge-tts 时不注册，get(audio) 回退 NullProvider，流程不中断。
+    if cfg.default_audio_provider == "edge_tts":
+        from xagent.domains.creative_studio.media.audio_providers import (
+            EdgeTTSProvider,
+            edge_tts_available,
+        )
+
+        if edge_tts_available():
+            registry.register(
+                MediaKind.audio,
+                EdgeTTSProvider(output_dir=cfg.tts_output_dir),
+            )
 
     return registry
 

@@ -3,8 +3,8 @@
 规则：
 - 带 Bearer token：校验 JWT -> Principal。无效 -> 401。
 - 无 token：
-    require_auth=True  -> 401（full/enterprise）
-    require_auth=False -> 匿名 Principal（lite 演示）
+    require_auth=True  -> 401（安全默认，含 lite）
+    require_auth=False -> 匿名 Principal（**空角色**，仅演示；写/执行操作一律 403）
 - 若请求带 X-Tenant-Id 头，必须与 principal.tenant_id 一致，否则 403（防越权）。
 """
 
@@ -22,10 +22,12 @@ from xagent.infra.settings import get_settings
 async def get_principal(
     authorization: Annotated[str | None, Header()] = None,
     x_tenant_id: Annotated[str | None, Header()] = None,
+    x_api_key: Annotated[str | None, Header()] = None,
 ) -> Principal:
     settings = get_settings()
     principal: Principal | None = None
 
+    # 优先 JWT Bearer
     if authorization:
         scheme, _, token = authorization.partition(" ")
         if scheme.lower() != "bearer" or not token:
@@ -40,6 +42,22 @@ async def get_principal(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"无效 token: {exc}",
             ) from exc
+
+    # 其次 API Key
+    if principal is None and x_api_key:
+        from xagent.enterprise.auth.api_keys import get_api_key_store
+        ak = get_api_key_store().validate(x_api_key)
+        if ak is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效或已吊销的 API Key",
+            )
+        principal = Principal(
+            user_id=f"apikey:{ak.key_id}",
+            tenant_id=ak.tenant_id,
+            roles=frozenset({"member"}),
+            scopes=frozenset(ak.scopes),
+        )
 
     if principal is None:
         if settings.auth_required:

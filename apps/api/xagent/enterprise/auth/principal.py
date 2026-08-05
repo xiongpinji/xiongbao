@@ -19,11 +19,15 @@ class Principal:
 
     @classmethod
     def anonymous(cls, tenant_id: str = ANONYMOUS_TENANT) -> Principal:
-        """lite 模式无 token 时的匿名主体（默认租户 + member 角色）。"""
+        """鉴权关闭（演示模式）时的匿名主体。
+
+        安全默认：**空角色**——只能通过无角色依赖的公开端点；任何带
+        ``require_role`` / ``require_permission`` 的写/执行操作一律 403。
+        """
         return cls(
             user_id="anonymous",
             tenant_id=tenant_id,
-            roles=frozenset({"member"}),
+            roles=frozenset(),
             is_anonymous=True,
         )
 

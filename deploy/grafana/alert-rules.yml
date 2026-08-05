@@ -1,0 +1,90 @@
+# X-Agent Prometheus 告警规则
+# 部署：挂载到 Prometheus 容器 /etc/prometheus/rules/xagent-alerts.yml
+# 在 prometheus.yml 中添加:
+#   rule_files:
+#     - /etc/prometheus/rules/*.yml
+
+groups:
+  - name: xagent-availability
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(xagent_http_requests_total{status=~"5.."}[5m])
+            / rate(xagent_http_requests_total[5m])
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: xagent
+        annotations:
+          summary: "X-Agent 5xx 错误率超过 5%"
+          description: "过去 5 分钟 5xx 比例 {{ $value | humanizePercentage }}，持续 2 分钟。"
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99, rate(xagent_http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          team: xagent
+        annotations:
+          summary: "X-Agent P99 延迟超过 500ms"
+          description: "P99 = {{ $value | humanizeDuration }}，持续 3 分钟。"
+
+      - alert: ServiceDown
+        expr: up{job="xagent"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: xagent
+        annotations:
+          summary: "X-Agent 服务不可达"
+          description: "Prometheus 抓取 xagent 目标失败超过 1 分钟。"
+
+  - name: xagent-llm
+    rules:
+      - alert: LLMCallFailureSpike
+        expr: |
+          rate(xagent_llm_calls_total{status="error"}[5m])
+          / rate(xagent_llm_calls_total[5m]) > 0.3
+        for: 2m
+        labels:
+          severity: warning
+          team: xagent
+        annotations:
+          summary: "LLM 调用失败率超过 30%"
+          description: "模型 {{ $labels.model }} 失败比例 {{ $value | humanizePercentage }}。"
+
+      - alert: LLMCallLatencyHigh
+        expr: |
+          histogram_quantile(0.95, rate(xagent_llm_call_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          team: xagent
+        annotations:
+          summary: "LLM P95 延迟超过 30s"
+          description: "模型推理 P95 = {{ $value | humanizeDuration }}。"
+
+  - name: xagent-capacity
+    rules:
+      - alert: RateLimitSpike
+        expr: rate(xagent_http_requests_total{status="429"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: xagent
+        annotations:
+          summary: "429 限流频繁触发"
+          description: "每秒 {{ $value }} 个请求被限流，可能需要扩容或调整限流阈值。"
+
+      - alert: ActiveConnectionsHigh
+        expr: xagent_active_connections > 500
+        for: 3m
+        labels:
+          severity: warning
+          team: xagent
+        annotations:
+          summary: "活跃连接数过高"
+          description: "当前活跃连接 {{ $value }}，接近容量上限。"

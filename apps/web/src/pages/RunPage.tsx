@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import RunConsole from "../components/runs/RunConsole.tsx";
-import { getRunDetail } from "../api/runtime.ts";
+import { getRunDetail, isRunTerminal } from "../api/runtime.ts";
+import ConversationalCommand from "../components/chat/ConversationalCommand.tsx";
 
 export default function RunPage() {
   const { runId } = useParams<{ runId: string }>();
@@ -9,23 +10,22 @@ export default function RunPage() {
     queryKey: ["run-detail", runId],
     queryFn: () => getRunDetail(runId ?? ""),
     enabled: Boolean(runId),
+    // 运行中每 2.5s 轮询，到达终态后停止
+    refetchInterval: (q) => {
+      const detail = q.state.data;
+      if (!detail) return 2500;
+      return isRunTerminal(detail) ? false : 2500;
+    },
+    refetchIntervalInBackground: false,
   });
 
   if (!runId) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-neutral-950 p-8 text-neutral-100">
-        <div className="max-w-xl rounded-3xl border border-neutral-800 bg-neutral-900 p-8 shadow-2xl shadow-black/20">
-          <div className="text-sm font-medium text-neutral-500">缺少参数</div>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">未提供 runId</h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-400">请从任务、工作流或创意运行入口跳转到具体的运行详情页。</p>
-          <Link
-            to="/chat"
-            className="mt-6 inline-flex rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-white active:scale-[0.98]"
-          >
-            返回对话
-          </Link>
-        </div>
-      </div>
+      <RunFallback
+        label="缺少参数"
+        title="未提供 runId"
+        description="请从任务、工作流或创意运行入口跳转到具体的运行详情页。"
+      />
     );
   }
 
@@ -36,28 +36,12 @@ export default function RunPage() {
   if (query.error || !query.data) {
     const message = query.error instanceof Error ? query.error.message : "运行详情加载失败";
     return (
-      <div className="flex min-h-full items-center justify-center bg-neutral-950 p-8 text-neutral-100">
-        <div className="max-w-xl rounded-3xl border border-red-900/60 bg-neutral-900 p-8 shadow-2xl shadow-black/20">
-          <div className="text-sm font-medium text-red-300">加载失败</div>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">无法读取运行 {runId}</h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-400">{message}</p>
-          <div className="mt-6 flex gap-3">
-            <button
-              type="button"
-              onClick={() => query.refetch()}
-              className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-white active:scale-[0.98]"
-            >
-              重试
-            </button>
-            <Link
-              to="/workflows"
-              className="rounded-xl border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-500 hover:text-white"
-            >
-              打开工作流
-            </Link>
-          </div>
-        </div>
-      </div>
+      <RunFallback
+        label="加载失败"
+        title={`无法读取运行 ${runId}`}
+        description={message}
+        onRetry={() => query.refetch()}
+      />
     );
   }
 
@@ -65,6 +49,60 @@ export default function RunPage() {
     <div className="p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
         <RunConsole detail={query.data} />
+      </div>
+    </div>
+  );
+}
+
+function RunFallback({
+  label,
+  title,
+  description,
+  onRetry,
+}: {
+  label: string;
+  title: string;
+  description: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="xagent-scrollbar flex min-h-full items-center justify-center overflow-auto bg-transparent p-6 text-neutral-100">
+      <div className="w-full max-w-3xl space-y-5">
+        <header className="border-b border-white/[0.07] pb-5">
+          <div className="text-xs font-medium tracking-wide text-neutral-500">{label}</div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">{title}</h1>
+          <p className="mt-3 text-sm leading-6 text-neutral-500">{description}</p>
+        </header>
+        <ConversationalCommand
+          title="运行恢复助手"
+          context="运行详情不可用"
+          placeholder="描述你想恢复的运行、来源任务，或直接要求回到工作流..."
+          initialAssistantMessage="当前运行详情不可用。你可以让我回到对话、工作流，或重新尝试读取。"
+          suggestions={["返回对话", "打开工作流", "重新读取运行"]}
+          onSubmit={(value) => {
+            if (value.includes("重新") && onRetry) {
+              onRetry();
+              return "已重新发起读取请求。";
+            }
+            if (value.includes("工作流")) {
+              return "请使用下方入口进入工作流，选择对应任务后重新打开运行详情。";
+            }
+            return "建议先返回对话，重新描述目标或从最近任务里打开对应运行。";
+          }}
+        />
+        <div className="flex flex-wrap gap-3">
+          {onRetry && (
+            <button type="button" onClick={onRetry} className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white">
+              重试
+            </button>
+          )}
+          <Link to="/chat" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white">
+            返回对话
+          </Link>
+          <Link to="/professional?mode=workflow" className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200">
+            打开工作流
+          </Link>
+        </div>
       </div>
     </div>
   );

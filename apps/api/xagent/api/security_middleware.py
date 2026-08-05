@@ -35,12 +35,17 @@ return 1
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """滑动窗口限流。Redis 可用 -> 分布式；否则进程内。"""
 
-    EXEMPT = ("/health", "/ready", "/metrics")
+    # 默认豁免前缀（健康探针/metrics）；可由 exempt_paths 参数覆盖
+    DEFAULT_EXEMPT = ("/health", "/ready", "/metrics")
 
-    def __init__(self, app, max_requests: int = 120, window_seconds: int = 60) -> None:
+    def __init__(self, app, max_requests: int = 120, window_seconds: int = 60,
+                 exempt_paths: list[str] | tuple[str, ...] | None = None) -> None:
         super().__init__(app)
         self._max = max_requests
         self._window = window_seconds
+        self._exempt = (
+            tuple(exempt_paths) if exempt_paths is not None else self.DEFAULT_EXEMPT
+        )
         self._buckets: dict[str, deque[float]] = defaultdict(deque)
         self._redis = None
         self._lua_sha: str | None = None
@@ -61,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return None
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if any(request.url.path.startswith(p) for p in self.EXEMPT):
+        if any(request.url.path.startswith(p) for p in self._exempt):
             return await call_next(request)
 
         key = f"ratelimit:{request.client.host if request.client else 'anon'}"

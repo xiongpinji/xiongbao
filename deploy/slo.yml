@@ -1,0 +1,56 @@
+# X-Agent SLO 定义
+# 服务等级目标（Service Level Objectives）
+
+service: xagent-api
+version: v1
+owner: xagent-team
+
+# ─── 可用性 SLO ───
+availability:
+  target: 99.5%          # 月度可用性目标
+  window: 30d            # 滚动窗口
+  sli:
+    # 成功请求占比（非 5xx）
+    query: |
+      1 - (
+        sum(rate(xagent_http_requests_total{status=~"5.."}[30d]))
+        / sum(rate(xagent_http_requests_total[30d]))
+      )
+  error_budget: 0.5%     # 允许 3.6h/月 不可用
+
+# ─── 延迟 SLO ───
+latency:
+  p50:
+    target: 50ms
+    query: histogram_quantile(0.50, rate(xagent_http_request_duration_seconds_bucket[5m]))
+  p95:
+    target: 200ms
+    query: histogram_quantile(0.95, rate(xagent_http_request_duration_seconds_bucket[5m]))
+  p99:
+    target: 500ms
+    query: histogram_quantile(0.99, rate(xagent_http_request_duration_seconds_bucket[5m]))
+
+# ─── LLM 调用 SLO ───
+llm:
+  success_rate:
+    target: 95%
+    query: |
+      1 - (
+        sum(rate(xagent_llm_calls_total{status="error"}[5m]))
+        / sum(rate(xagent_llm_calls_total[5m]))
+      )
+  p95_latency:
+    target: 30s
+    query: histogram_quantile(0.95, rate(xagent_llm_call_duration_seconds_bucket[5m]))
+
+# ─── 告警升级 ───
+escalation:
+  - level: warning
+    condition: "error_budget_remaining < 50%"
+    notify: [slack]
+  - level: critical
+    condition: "error_budget_remaining < 20%"
+    notify: [slack, pagerduty]
+  - level: page
+    condition: "availability < 99% over 5m"
+    notify: [pagerduty, phone]

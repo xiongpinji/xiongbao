@@ -25,7 +25,7 @@ export interface PersistedShellSnapshot {
 
 const DEFAULT_USER_DOCK: PersistedUserDockProfile = {
   name: "当前用户",
-  title: "本地工作台",
+  title: "工作台",
   description: "管理工作区、智能体与个性化偏好。",
   avatarSeed: "user-dock",
 };

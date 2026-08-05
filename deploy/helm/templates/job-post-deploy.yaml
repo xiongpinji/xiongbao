@@ -1,0 +1,67 @@
+{{- if .Values.ops.postDeploySummary.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "xagent.fullname" . }}-post-deploy-{{ .Release.Revision }}
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ops
+  annotations:
+    "helm.sh/hook": post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        {{- include "xagent.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ops
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+        - name: post-deploy-summary
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - /app/scripts/post_deploy_summary.py
+            - --wait-seconds
+            - "300"
+            - --namespace
+            - {{ include "xagent.namespace" . | quote }}
+            - --format
+            - both
+            - --output
+            - /data/post-deploy/summary
+          envFrom:
+            - configMapRef:
+                name: {{ include "xagent.fullname" . }}-config
+          volumeMounts:
+            - name: summary-data
+              mountPath: /data/post-deploy
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: summary-data
+          emptyDir: {}
+      securityContext:
+        fsGroup: 1000
+{{- end }}

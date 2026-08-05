@@ -26,7 +26,7 @@ model_list:
 litellm_settings:
   # 全局降级顺序（成本/可用性）
   num_retries: 2
-  request_timeout: 60
+  request_timeout: 150
   drop_params: true
 
 general_settings:

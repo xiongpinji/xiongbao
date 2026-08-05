@@ -10,5 +10,13 @@ from xagent.enterprise.audit.chain import (
     get_audit_log,
     reset_audit_log,
 )
+from xagent.enterprise.audit.persistence import PostgresAuditLog, read_events
 
-__all__ = ["AuditEvent", "AuditLog", "get_audit_log", "reset_audit_log"]
+__all__ = [
+    "AuditEvent",
+    "AuditLog",
+    "get_audit_log",
+    "reset_audit_log",
+    "PostgresAuditLog",
+    "read_events",
+]

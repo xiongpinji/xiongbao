@@ -3,7 +3,7 @@ import type { DramaArtifact } from "./canvasTypes";
 export default function ArtifactPreview({ artifacts }: { artifacts: DramaArtifact[] }) {
   if (!artifacts.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">
+      <div className="rounded-lg border border-dashed border-neutral-700 p-4 text-sm text-neutral-500">
         当前节点暂无产物。
       </div>
     );
@@ -12,7 +12,7 @@ export default function ArtifactPreview({ artifacts }: { artifacts: DramaArtifac
   return (
     <div className="space-y-2">
       {artifacts.map((artifact) => (
-        <div key={artifact.id} className="rounded-2xl border border-neutral-800 bg-neutral-950 p-3">
+        <div key={artifact.id} className="rounded-lg border border-neutral-800 bg-neutral-950 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-medium text-white">{artifact.title}</div>

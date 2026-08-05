@@ -55,6 +55,8 @@ class StepKind(str, Enum):  # noqa: UP042  (兼容 py3.11)
     tool_result = "tool_result"
     final = "final"
     error = "error"
+    token = "token"        # 流式逐 token 输出
+    progress = "progress"  # 执行进度估算
 
 
 @dataclass
@@ -63,6 +65,7 @@ class StepEvent:
     content: Any = None
     tool: str | None = None
     step: int = 0
+    trace_id: str = ""  # 链路追踪 ID：格式 step-{step}-{seq}
 
 
 @dataclass
@@ -74,6 +77,9 @@ class AgentState:
     step: int = 0
     finished: bool = False
     final_answer: str = ""
+    # ── Token 用量追踪（对标 Codex usage 统计） ──
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
 
 
 @dataclass
@@ -87,6 +93,14 @@ class AgentRun:
     final_answer: str
     steps: int
     events: list[StepEvent] = field(default_factory=list)
+    conversation_id: str = ""
+    # ── Token 用量（实测成本追踪） ──
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
 
     def to_dict(self) -> dict:
         return {
@@ -96,6 +110,12 @@ class AgentRun:
             "tenant_id": self.tenant_id,
             "final_answer": self.final_answer,
             "steps": self.steps,
+            "conversation_id": self.conversation_id,
+            "usage": {
+                "prompt_tokens": self.prompt_tokens,
+                "completion_tokens": self.completion_tokens,
+                "total_tokens": self.total_tokens,
+            },
             "events": [
                 {"kind": e.kind.value, "tool": e.tool, "step": e.step, "content": e.content}
                 for e in self.events

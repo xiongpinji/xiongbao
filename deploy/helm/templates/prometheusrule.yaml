@@ -1,0 +1,96 @@
+{{- if .Values.alerting.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "xagent.fullname" . }}-alerts
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: xagent.availability
+      rules:
+        - alert: XAgentHighErrorRate
+          expr: |
+            (
+              sum(rate(xagent_http_requests_total{status=~"5.."}[5m]))
+              /
+              sum(rate(xagent_http_requests_total[5m]))
+            ) * 100 > {{ .Values.alerting.rules.highErrorRateThreshold }}
+          for: 5m
+          labels:
+            severity: critical
+            component: api
+          annotations:
+            summary: "X-Agent API 5xx 错误率过高"
+            description: "5xx 错误率超过 {{ .Values.alerting.rules.highErrorRateThreshold }}% 持续 5 分钟"
+            runbook_url: "https://github.com/xiongpinji/xiongbao/blob/master/docs/OPERATIONS_MANUAL_V1.md"
+
+        - alert: XAgentHighLatency
+          expr: |
+            histogram_quantile(0.95, sum(rate(xagent_agent_run_seconds_bucket[5m])) by (le))
+            > {{ .Values.alerting.rules.highLatencyP95Seconds }}
+          for: 5m
+          labels:
+            severity: warning
+            component: api
+          annotations:
+            summary: "X-Agent Agent 运行 P95 延迟过高"
+            description: "Agent 运行 P95 延迟超过 {{ .Values.alerting.rules.highLatencyP95Seconds }}s 持续 5 分钟"
+
+        - alert: XAgentReadinessDown
+          expr: |
+            kube_pod_status_ready{condition="true", namespace="{{ include "xagent.namespace" . }}"}
+            == 0
+          for: {{ .Values.alerting.rules.readinessDownMinutes }}m
+          labels:
+            severity: critical
+            component: api
+          annotations:
+            summary: "X-Agent Pod readiness 失败"
+            description: "Pod readiness 检查失败超过 {{ .Values.alerting.rules.readinessDownMinutes }} 分钟"
+
+    - name: xagent.stability
+      rules:
+        - alert: XAgentPodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="{{ include "xagent.namespace" . }}"}[10m])
+            > {{ .Values.alerting.rules.crashLoopRestarts }}
+          for: 0m
+          labels:
+            severity: critical
+            component: runtime
+          annotations:
+            summary: "X-Agent Pod CrashLooping"
+            description: "Pod 在 10 分钟内重启超过 {{ .Values.alerting.rules.crashLoopRestarts }} 次"
+
+        - alert: XAgentWorkerQueueBacklog
+          expr: |
+            xagent_worker_queue_depth > {{ .Values.alerting.rules.workerQueueBacklog }}
+          for: 5m
+          labels:
+            severity: warning
+            component: worker
+          annotations:
+            summary: "X-Agent Worker 队列积压"
+            description: "Celery 队列深度超过 {{ .Values.alerting.rules.workerQueueBacklog }} 持续 5 分钟"
+
+    - name: xagent.llm
+      rules:
+        - alert: XAgentLLMTimeout
+          expr: |
+            (
+              sum(rate(xagent_llm_requests_total{status="timeout"}[3m]))
+              /
+              sum(rate(xagent_llm_requests_total[3m]))
+            ) * 100 > {{ .Values.alerting.rules.llmTimeoutRatePercent }}
+          for: 3m
+          labels:
+            severity: warning
+            component: llm
+          annotations:
+            summary: "X-Agent LLM 调用超时率过高"
+            description: "LLM 调用超时率超过 {{ .Values.alerting.rules.llmTimeoutRatePercent }}% 持续 3 分钟"
+{{- end }}

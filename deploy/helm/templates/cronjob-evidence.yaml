@@ -1,0 +1,98 @@
+{{- if .Values.ops.evidenceArchive.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "xagent.fullname" . }}-evidence-archive
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ops
+spec:
+  schedule: {{ .Values.ops.evidenceArchive.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            {{- include "xagent.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: ops
+        spec:
+          {{- if .Values.serviceAccount.create }}
+          serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+          {{- end }}
+          restartPolicy: Never
+          containers:
+            - name: evidence-archive
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python
+                - /app/scripts/auto_archive_evidence.py
+                - --hours
+                - "6"
+                - --output-dir
+                - /data/evidence-archive
+                - --evidence-dir
+                - /data/recovery-evidence
+                - --retention-days
+                - {{ .Values.ops.evidenceArchive.retentionDays | quote }}
+                {{- if .Values.ops.evidenceArchive.s3Bucket }}
+                - --s3-bucket
+                - {{ .Values.ops.evidenceArchive.s3Bucket | quote }}
+                - --s3-prefix
+                - {{ .Values.ops.evidenceArchive.s3Prefix | quote }}
+                {{- end }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "xagent.fullname" . }}-config
+                {{- if .Values.secrets.eso.enabled }}
+                - secretRef:
+                    name: {{ include "xagent.fullname" . }}-eso
+                {{- else if .Values.security.existingJwtSecretRef.name }}
+                - secretRef:
+                    name: {{ .Values.security.existingJwtSecretRef.name }}
+                {{- end }}
+              volumeMounts:
+                - name: evidence-data
+                  mountPath: /data
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+          volumes:
+            - name: evidence-data
+              persistentVolumeClaim:
+                claimName: {{ include "xagent.fullname" . }}-evidence
+          securityContext:
+            fsGroup: 1000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xagent.fullname" . }}-evidence
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+{{- end }}

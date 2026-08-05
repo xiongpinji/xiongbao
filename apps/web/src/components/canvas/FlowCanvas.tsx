@@ -166,7 +166,7 @@ function FlowCanvasInner({
   }
 
   return (
-    <div ref={wrapperRef} className="relative h-full w-full overflow-hidden bg-[#0f0f0f]" onContextMenu={handleCanvasContextMenu}>
+    <div ref={wrapperRef} className="xagent-dark-flow relative h-full w-full overflow-hidden bg-[#0f0f0f]" onContextMenu={handleCanvasContextMenu}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

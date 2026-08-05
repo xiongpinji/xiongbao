@@ -210,6 +210,7 @@ async def test_runs_api_reads_direct_agent_run_persisted_to_agent_tasks(
         "request.input",
         "result.final",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["delivery"]["channel"] == "task_runtime"
     assert body["delivery"]["artifacts"] == []
@@ -304,10 +305,10 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
     )
 
     assert resp.status_code == 500, resp.text
-    assert resp.json() == {"detail": "direct exploded"}
     assert mocked_run_agent.await_count == 1
     _, kwargs = mocked_run_agent.await_args
     run_id = kwargs["run_id"]
+    assert resp.json() == {"detail": {"run_id": run_id, "error": "direct exploded"}}
 
     run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
 
@@ -341,6 +342,7 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
         "request.input",
         "failure.evidence",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["evidence"][1]["payload"] == {"error": "direct exploded", "run_id": run_id}
 
@@ -743,6 +745,7 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
         "request.input",
         "approval.requested",
         "delivery.generated",
+        "run.summary",
     ]
     assert body["validation"] == {"risks": []}
     assert body["delivery"]["summary"]
@@ -831,6 +834,58 @@ async def test_runs_api_exposes_resume_pointer_for_awaiting_approval_workflow(
     run_resp_2 = await client.get(f"/api/v1/runs/{run_id_2}", headers=_auth(owner_token))
     assert run_resp_2.status_code == 200, run_resp_2.text
     assert run_resp_2.json()["task"]["owner_id"] == "owner-user"
+
+
+async def test_runs_api_reads_workflow_by_run_id_outside_recent_limit(client: AsyncClient) -> None:
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as session:
+        for index in range(205):
+            await persist_workflow_run(
+                session,
+                {
+                    "run_id": f"wf-run-{index}",
+                    "tenant_id": "tenant-1",
+                    "spec_name": f"flow-{index}",
+                    "status": "completed",
+                    "steps": [{"id": "s1", "status": "succeeded"}],
+                    "timeline": [{"kind": "succeeded", "step_id": "s1"}],
+                },
+            )
+        await session.commit()
+
+    token = create_access_token(user_id="u1", tenant_id="tenant-1", roles=["member"])
+    resp = await client.get("/api/v1/runs/wf-run-0", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["workflow"] is not None
+    assert body["workflow"]["run_id"] == "wf-run-0"
+    assert body["workflow"]["spec_name"] == "flow-0"
+    assert body["delivery"]["kind"] == "workflow.summary"
+
+
+async def test_runs_api_returns_not_found_for_workflow_run_from_other_tenant_even_with_exact_lookup(
+    client: AsyncClient,
+) -> None:
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as session:
+        await persist_workflow_run(
+            session,
+            {
+                "run_id": "wf-run-foreign-tenant",
+                "tenant_id": "tenant-2",
+                "spec_name": "foreign-flow",
+                "status": "completed",
+                "steps": [{"id": "s1", "status": "succeeded"}],
+                "timeline": [{"kind": "succeeded", "step_id": "s1"}],
+            },
+        )
+        await session.commit()
+
+    token = create_access_token(user_id="u1", tenant_id="tenant-1", roles=["member"])
+    resp = await client.get("/api/v1/runs/wf-run-foreign-tenant", headers=_auth(token))
+
+    assert resp.status_code == 404, resp.text
 
 
 async def test_runs_api_returns_empty_related_tasks_without_lineage(client: AsyncClient) -> None:

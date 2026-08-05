@@ -1,0 +1,95 @@
+# X-Agent Enterprise 环境覆盖值
+# 用法: helm install xagent ./deploy/helm -f values.yaml -f environments/values-enterprise.yaml
+# 企业级：多实例 HA、审计开启、SLO 严格、ESO 强制
+
+replicaCount: 5
+
+config:
+  mode: "enterprise"
+  debug: false
+  corsOrigins: "https://xagent.enterprise.example.com"
+
+api:
+  workers: 8
+  resources:
+    requests: { cpu: "2000m", memory: "4Gi" }
+    limits: { cpu: "8000m", memory: "16Gi" }
+
+worker:
+  replicas: 5
+  concurrency: 32
+
+# Enterprise 强制 ESO + ClusterSecretStore
+secrets:
+  eso:
+    enabled: true
+    secretStoreName: ""
+    secretStoreKind: "ClusterSecretStore"
+    backend: "vault"
+    refreshInterval: "15m"
+    vault:
+      server: "https://vault.enterprise.internal:8200"
+      path: "secret/data/xagent/enterprise"
+      role: "xagent-enterprise"
+
+# Enterprise 最严格告警阈值
+alerting:
+  enabled: true
+  rules:
+    highErrorRateThreshold: 1
+    highLatencyP95Seconds: 15
+    crashLoopRestarts: 2
+    readinessDownMinutes: 1
+    workerQueueBacklog: 30
+    llmTimeoutRatePercent: 10
+  alertmanager:
+    enabled: true
+
+observability:
+  prometheus: true
+
+# Enterprise 全部运营自动化 + 更频繁
+ops:
+  evidenceArchive:
+    enabled: true
+    schedule: "0 */4 * * *"
+    retentionDays: 365
+  healthSnapshot:
+    enabled: true
+    schedule: "*/10 * * * *"
+  postDeploySummary:
+    enabled: true
+
+recovery:
+  enabled: true
+  maxConsecutiveLlmTimeouts: 2
+  fallbackOnLlmFailure: true
+  workerRestartThreshold: 2
+
+# Enterprise 全部安全加固
+networkPolicy:
+  enabled: true
+  allowFromIngressController: true
+  allowFromMonitoring: true
+pdb:
+  enabled: true
+  minAvailable: 3
+
+namespace:
+  create: true
+  name: "xagent-enterprise"
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+
+ingress:
+  enabled: true
+  host: xagent.enterprise.example.com
+  tls: true

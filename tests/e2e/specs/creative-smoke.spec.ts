@@ -10,6 +10,18 @@ async function login(page: Page) {
   await page.evaluate((token) => localStorage.setItem("xagent_token", token), body.access_token);
 }
 
+test("Login page authenticates into the workspace", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "熊宝智能体系统" })).toBeVisible();
+
+  await page.getByPlaceholder("用户名").fill("admin");
+  await page.getByPlaceholder("密码").fill("admin");
+  await page.getByRole("button", { name: "登录" }).click();
+
+  await expect(page).toHaveURL(/\/chat/);
+  await expect(page.getByRole("heading", { name: "对话" })).toBeVisible();
+});
+
 test("Creative Studio canvas smoke", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -21,10 +33,10 @@ test("Creative Studio canvas smoke", async ({ page }) => {
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
   await login(page);
-  await page.goto("/creative", { waitUntil: "networkidle" });
+  await page.goto("/creative/canvas", { waitUntil: "networkidle" });
 
-  await expect(page.getByText("短剧工厂自由画布")).toBeVisible();
-  await page.locator('input:not([type="file"]):visible').first().fill("霸总逆袭短剧");
+  await expect(page.getByText("短剧工厂 · 无限画布")).toBeVisible();
+  await page.getByLabel("短剧 brief").fill("霸总逆袭短剧");
   await page.getByRole("button", { name: "生成画布" }).click();
 
   await expect(page.locator(".react-flow")).toBeVisible({ timeout: 30_000 });
@@ -32,10 +44,11 @@ test("Creative Studio canvas smoke", async ({ page }) => {
     timeout: 30_000,
   }).toBeGreaterThan(0);
 
+  await expect(page.getByRole("button", { name: "运行画布" })).toBeEnabled({ timeout: 30_000 });
   await page.getByRole("button", { name: "运行画布" }).click();
-  await expect(page.getByText(/工作流|运行|审核|pending|awaiting|completed|failed/).first()).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(page).toHaveURL(/\/runs\//, { timeout: 30_000 });
+  await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
+  await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });
@@ -98,5 +111,5 @@ test("Creative Run Console exposes runtime recovery panel", async ({ page }) => 
 
   await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
   await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
-  await expect(page.getByText("Replay", { exact: true })).toBeVisible();
+  await expect(page.getByText("Replay", { exact: true }).first()).toBeVisible();
 });

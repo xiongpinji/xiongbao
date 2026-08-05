@@ -13,7 +13,7 @@ export default function CollapsiblePanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-neutral-900">
+    <section className="rounded-lg border border-neutral-800 bg-neutral-900">
       <button
         type="button"
         onClick={onToggle}

@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.infra.logging import get_logger
+from xagent.infra.repos.spine import update_task_status_by_run_id
 from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.celery")
@@ -49,6 +50,31 @@ def _utcnow_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _decode_json_payload(payload: str | None) -> dict[str, Any]:
+    if not payload:
+        return {}
+    try:
+        value = json.loads(payload)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _merge_spine_provenance(
+    existing_payload: str | None,
+    input_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    merged = dict(input_payload or {})
+    if merged.get("goal_id") and merged.get("spine_task_id"):
+        return merged
+    existing = _decode_json_payload(existing_payload)
+    if existing.get("goal_id") and "goal_id" not in merged:
+        merged["goal_id"] = existing["goal_id"]
+    if existing.get("spine_task_id") and "spine_task_id" not in merged:
+        merged["spine_task_id"] = existing["spine_task_id"]
+    return merged
+
+
 async def _upsert_agent_task(
     session: AsyncSession,
     *,
@@ -73,6 +99,10 @@ async def _upsert_agent_task(
 
     row = await session.get(AgentTaskORM, task_id)
     resolved_run_id = (run_id or task_id).strip() or task_id
+    merged_input_payload = _merge_spine_provenance(
+        row.input_payload if row is not None else None,
+        input_payload,
+    )
     if row is None:
         row = AgentTaskORM(
             task_id=task_id,
@@ -85,7 +115,7 @@ async def _upsert_agent_task(
             source="task",
             intent_type="agent",
             route_source="fallback",
-            input_payload=json.dumps(input_payload or {}, ensure_ascii=False),
+            input_payload=json.dumps(merged_input_payload, ensure_ascii=False),
             result_payload=json.dumps(result_payload or {}, ensure_ascii=False),
             error=error,
             validation_summary=json.dumps(validation_summary or {}, ensure_ascii=False),
@@ -107,7 +137,7 @@ async def _upsert_agent_task(
         row.source = "task"
         row.intent_type = "agent"
         row.route_source = "fallback"
-        row.input_payload = json.dumps(input_payload or {}, ensure_ascii=False)
+        row.input_payload = json.dumps(merged_input_payload, ensure_ascii=False)
         row.validation_summary = json.dumps(validation_summary or {}, ensure_ascii=False)
         row.delivery_summary = json.dumps(delivery_summary or {}, ensure_ascii=False)
         row.lineage_summary = json.dumps(lineage_summary or {}, ensure_ascii=False)
@@ -393,6 +423,13 @@ def run_agent_task(
                             started_at=started_at,
                             finished_at=datetime.now(UTC),
                         )
+                        await update_task_status_by_run_id(
+                            session,
+                            tenant_id=tenant_id,
+                            run_id=task_id,
+                            next_status="recovery",
+                            blocker_reason=run_error,
+                        )
                         await session.commit()
                 except Exception as persist_exc:
                     if _is_schema_mismatch(persist_exc, "agent_tasks"):
@@ -422,6 +459,12 @@ def run_agent_task(
                         error="",
                         started_at=started_at,
                         finished_at=datetime.now(UTC),
+                    )
+                    await update_task_status_by_run_id(
+                        session,
+                        tenant_id=tenant_id,
+                        run_id=task_id,
+                        next_status="review",
                     )
                     await session.commit()
             except Exception as persist_exc:

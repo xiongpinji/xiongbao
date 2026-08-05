@@ -68,11 +68,16 @@ class WorkflowEngine:
     def __init__(self) -> None:
         self._runs: dict[str, WorkflowRun] = {}
 
-    def create_run(self, spec: WorkflowSpec, principal: Principal) -> WorkflowRun:
+    def create_run(
+        self,
+        spec: WorkflowSpec,
+        principal: Principal,
+        run_id: str | None = None,
+    ) -> WorkflowRun:
         from uuid import uuid4
 
         run = WorkflowRun(
-            run_id=uuid4().hex,
+            run_id=run_id or uuid4().hex,
             spec_name=spec.name,
             tenant_id=principal.tenant_id,
             steps=[_clone_step(s) for s in spec.steps],

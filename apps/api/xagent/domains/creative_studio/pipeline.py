@@ -4,9 +4,11 @@
   1. LLM 生成结构化故事板（producer.generate_storyboard）
   2. 逐镜头生成关键帧图（image provider，text_to_image）
   3. 逐镜头生成视频片段（video provider，image_to_video 用关键帧驱动；无关键帧则 text_to_video）
-  4. 汇总成 ProductionResult（含故事板 + 每镜头图/视频产物 + 质量门）
+  4. 逐镜头配音（audio provider，text_to_speech，按台词/字幕文本 + 角色音色分配）
+  5. 汇总成 ProductionResult（含故事板 + 每镜头图/视频/音频产物 + 质量门）
 
 设计为「尽力而为」：单镜头媒体生成失败不中断整片，记录 error 继续。
+配音为增强轨：单镜头配音失败仅记 audio_error，不影响整体 status。
 未配 media key 时走 NullProvider（占位产物），全链路仍可端到端跑通。
 """
 
@@ -25,6 +27,7 @@ from xagent.domains.creative_studio.media import (
 from xagent.domains.creative_studio.producer import generate_storyboard
 from xagent.domains.creative_studio.quality import run_gates
 from xagent.domains.creative_studio.storyboard import Storyboard
+from xagent.domains.creative_studio.voice_assigner import assign_voices, voice_for_shot
 from xagent.infra.logging import get_logger
 
 logger = get_logger("xagent.creative.pipeline")
@@ -38,8 +41,11 @@ class ShotProduct:
     video_prompt: str
     image_outputs: list[str] = field(default_factory=list)
     video_outputs: list[str] = field(default_factory=list)
+    audio_outputs: list[str] = field(default_factory=list)
+    voice: str = ""  # 配音音色（edge-tts voice id）
     image_error: str | None = None
     video_error: str | None = None
+    audio_error: str | None = None
 
 
 @dataclass
@@ -74,8 +80,11 @@ class ProductionResult:
                     "video_prompt": s.video_prompt,
                     "image_outputs": s.image_outputs,
                     "video_outputs": s.video_outputs,
+                    "audio_outputs": s.audio_outputs,
+                    "voice": s.voice,
                     "image_error": s.image_error,
                     "video_error": s.video_error,
+                    "audio_error": s.audio_error,
                 }
                 for s in self.shots
             ],
@@ -103,9 +112,10 @@ async def produce_short_drama(
     platform: str = "抖音",
     target_duration_seconds: float = 60.0,
     with_video: bool = True,
+    with_voiceover: bool = True,
     llm: LLMClient | None = None,
 ) -> ProductionResult:
-    """一句话 brief 全链路产出短剧（故事板 + 逐镜头图/视频）。"""
+    """一句话 brief 全链路产出短剧（故事板 + 逐镜头图/视频/配音）。"""
     # 1. 生成故事板
     sb: Storyboard = await generate_storyboard(
         brief, genre=genre, platform=platform,
@@ -113,6 +123,8 @@ async def produce_short_drama(
     )
     gates = run_gates(sb)
     registry = get_media_registry()
+    # 角色 → 音色分配（启发式，离线确定性）
+    voice_assignments = assign_voices(sb) if with_voiceover else {}
 
     shots: list[ShotProduct] = []
     any_fail = False
@@ -165,6 +177,28 @@ async def produce_short_drama(
             except Exception as exc:
                 product.video_error = str(exc)
                 any_fail = True
+
+        # 4. 配音（按台词/字幕文本；增强轨，失败仅记录不阻断整体）
+        if with_voiceover:
+            vo_text = (shot.dialogue or shot.subtitle or "").strip()
+            if vo_text:
+                try:
+                    profile = voice_for_shot(shot, voice_assignments)
+                    product.voice = profile.voice
+                    audio_task = await registry.generate(
+                        GenerationRequest(
+                            kind=MediaKind.audio, prompt=vo_text,
+                            mode=GenerationMode.text_to_speech,
+                            params=profile.to_params(),
+                        ),
+                        wait=True,
+                    )
+                    if audio_task.status == "succeeded":
+                        product.audio_outputs = audio_task.outputs
+                    else:
+                        product.audio_error = audio_task.error
+                except Exception as exc:
+                    product.audio_error = str(exc)
 
         shots.append(product)
 
@@ -232,6 +266,15 @@ def _create_timeline_from_shots(
                     timeline_end=cursor if shot.video_outputs else cursor + dur,
                     font_size=56,
                     position="bottom",
+                ))
+            # 配音片段（仅本地音频文件进时间线；占位 URL 跳过，MoviePy 无法打开）
+            if shot.audio_outputs and "://" not in shot.audio_outputs[0]:
+                a_dur = sb.shots[i].duration_seconds if i < len(sb.shots) else 4.0
+                tl.add_clip(Clip(
+                    track_type=TrackType.audio,
+                    source_url=shot.audio_outputs[0],
+                    timeline_start=cursor - a_dur if shot.video_outputs else cursor,
+                    timeline_end=cursor if shot.video_outputs else cursor + a_dur,
                 ))
         _timelines[tl.id] = tl
         logger.info("timeline_auto_created", timeline_id=tl.id, clips=len(tl.clips))

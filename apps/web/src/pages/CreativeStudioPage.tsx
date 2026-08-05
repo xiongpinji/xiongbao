@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Edge, Node } from "reactflow";
 import {
   addClip,
@@ -36,6 +36,7 @@ import FlowCanvas from "../components/canvas/FlowCanvas";
 import NodeInspector from "../components/canvas/NodeInspector";
 import NodePalette from "../components/canvas/NodePalette";
 import CanvasRunTimeline from "../components/canvas/CanvasRunTimeline";
+import ConversationalCommand from "../components/chat/ConversationalCommand";
 import { useShellActions } from "../shell/useShellStore";
 import type {
   CanvasGlobalAction,
@@ -46,6 +47,9 @@ import type {
   ExecutionStatus,
 } from "../components/canvas/canvasTypes";
 import { createDramaNodeData } from "../components/canvas/canvasTypes";
+import { useConfirm } from "../hooks/useConfirm";
+import { copyToClipboard } from "../lib/clipboard";
+import { openSafe, safeUrl } from "../lib/url";
 
 function starterNodes(): Node<DramaCanvasNodeData>[] {
   return ["需求分析", "梗概", "角色设定", "分镜"].map((type, index) => {
@@ -68,9 +72,17 @@ function starterEdges(nodes: Node<DramaCanvasNodeData>[]): Edge[] {
   }));
 }
 
-export default function CreativeStudioPage() {
+type CreativeStudioVariant = "embedded" | "canvas";
+
+interface CreativeStudioPageProps {
+  variant?: CreativeStudioVariant;
+}
+
+export default function CreativeStudioPage({ variant = "embedded" }: CreativeStudioPageProps) {
+  const isCanvasPage = variant === "canvas";
   const navigate = useNavigate();
   const { syncRunTask } = useShellActions();
+  const { confirm, ConfirmDialog } = useConfirm();
   const initial = useMemo(() => starterNodes(), []);
   const [brief, setBrief] = useState("");
   const [genre, setGenre] = useState("逆袭");
@@ -91,6 +103,13 @@ export default function CreativeStudioPage() {
   const layoutDebounce = useRef<number | null>(null);
   const taskPolls = useRef<Map<string, number>>(new Map());
   const importFileRef = useRef<HTMLInputElement | null>(null);
+
+  // 错误消息 6s 后自动消失
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => () => {
     taskPolls.current.forEach((id) => window.clearInterval(id));
@@ -113,12 +132,14 @@ export default function CreativeStudioPage() {
     };
   }, [canvasId, nodes, edges]);
 
-  async function createCanvasFromBrief() {
-    if (!brief.trim()) return;
+  async function createCanvasFromBrief(promptOverride?: string) {
+    const prompt = (promptOverride ?? brief).trim();
+    if (!prompt) return;
+    setBrief(prompt);
     setLoading(true);
     setError(null);
     try {
-      const canvas = await createCanvas({ brief, title: brief.slice(0, 30) || "短剧画布" });
+      const canvas = await createCanvas({ brief: prompt, title: prompt.slice(0, 30) || "短剧画布" });
       setCanvasId(canvas.canvas_id);
       const nextNodes = canvas.nodes.map((node, index) => {
         const data: DramaCanvasNodeData = {
@@ -284,9 +305,14 @@ export default function CreativeStudioPage() {
         triggerImportFilePicker();
         return;
       case "clear-canvas":
-        setNodes([]);
-        setEdges([]);
-        setSelectedNode(null);
+        void (async () => {
+          if (!nodes.length) return;
+          const ok = await confirm({ title: "清空画布", message: `确定删除画布上的 ${nodes.length} 个节点？此操作不可撤销。`, danger: true, confirmText: "清空" });
+          if (!ok) return;
+          setNodes([]);
+          setEdges([]);
+          setSelectedNode(null);
+        })();
         return;
       default:
         return;
@@ -324,7 +350,7 @@ export default function CreativeStudioPage() {
       return;
     }
     if (!brief.trim()) {
-      setError("请先在顶部输入 brief 或剧本内容");
+        setError("请先在对话入口输入 brief 或剧本内容");
       return;
     }
     try {
@@ -565,6 +591,8 @@ export default function CreativeStudioPage() {
 
   async function handleNodeAction(nodeId: string, action: CanvasNodeAction) {
     if (action === "delete") {
+      const ok = await confirm({ title: "删除节点", message: "确定删除该节点及其关联连线？", danger: true, confirmText: "删除" });
+      if (!ok) return;
       setNodes((current) => current.filter((node) => node.id !== nodeId));
       setEdges((current) => current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
       setSelectedNode(null);
@@ -845,7 +873,7 @@ export default function CreativeStudioPage() {
     if (action === "copy-prompt") {
       const node = nodes.find((item) => item.id === nodeId);
       const prompt = node?.data.settings?.prompt ?? String(node?.data.content ?? "");
-      if (navigator.clipboard) await navigator.clipboard.writeText(prompt).catch(() => {});
+      await copyToClipboard(prompt);
       return;
     }
     if (action === "paste-prompt") {
@@ -881,10 +909,15 @@ export default function CreativeStudioPage() {
         setError("当前节点暂无可预览/下载的产物");
         return;
       }
-      if (action === "preview-artifact") window.open(artifact.url, "_blank");
+      if (action === "preview-artifact") openSafe(artifact.url);
       else {
+        const href = safeUrl(artifact.url);
+        if (!href) {
+          setError("产物地址不安全，无法下载");
+          return;
+        }
         const a = document.createElement("a");
-        a.href = artifact.url;
+        a.href = href;
         a.download = artifact.title || "artifact";
         a.click();
       }
@@ -1264,8 +1297,151 @@ export default function CreativeStudioPage() {
     setError(count ? `已记录 ${count} 个产物到工作区资产（占位）` : "当前节点暂无产物可保存");
   }
 
+  if (isCanvasPage) {
+    return (
+      <div className="xagent-app-bg relative flex h-[100dvh] flex-col overflow-hidden text-neutral-100">
+        <input
+          ref={importFileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(event) => void handleImportFile(event)}
+        />
+
+        <header className="relative z-30 flex shrink-0 items-center gap-3 border-b border-white/[0.07] bg-black/72 px-4 py-3 backdrop-blur-lg">
+          <Link to="/professional?mode=workflow" className="shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200">
+            返回专业模式
+          </Link>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-white">短剧工厂 · 无限画布</div>
+            <div className="truncate text-xs text-neutral-500">独立工作台，右键画布添加节点，拖拽节点编排生成链路。</div>
+          </div>
+          <Link to="/editor" className="hidden shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 md:inline-flex">
+            高级剪辑
+          </Link>
+        </header>
+
+        {error && <div className="relative z-30 border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-300">{error}</div>}
+
+        <section className="relative z-10 min-h-0 flex-1 overflow-hidden">
+          <FlowCanvas
+            nodes={nodes}
+            edges={edges}
+            onChange={handleNodesUpdate}
+            onSelectNode={setSelectedNode}
+            onNodeAction={handleNodeAction}
+            onCanvasAction={handleCanvasAction}
+          />
+
+          <div className="absolute left-4 top-4 z-30 w-[min(36rem,calc(100%-2rem))] rounded-lg border border-white/[0.08] bg-neutral-950/88 p-3 shadow-xl shadow-black/25 backdrop-blur-lg">
+            <textarea
+              className="field min-h-20 w-full resize-none"
+              value={brief}
+              onChange={(event) => setBrief(event.target.value)}
+              placeholder="输入短剧 brief，例如：60 秒男频逆袭短剧，前 3 秒强钩子，结尾导出剪辑草稿..."
+              aria-label="短剧 brief"
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <select className="field w-28" value={genre} onChange={(e) => setGenre(e.target.value)} aria-label="短剧类型">
+                <option>逆袭</option>
+                <option>霸总</option>
+                <option>甜宠</option>
+                <option>重生</option>
+              </select>
+              <select className="field w-28" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="发布平台">
+                <option>抖音</option>
+                <option>快手</option>
+                <option>小红书</option>
+              </select>
+              <button
+                type="button"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
+                onClick={() => setPaletteOpen((value) => !value)}
+              >
+                {paletteOpen ? "隐藏节点库" : "节点库"}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
+                onClick={runCanvasWorkflow}
+                disabled={runLoading || !canvasId}
+              >
+                {runLoading ? "运行中" : "运行画布"}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={runProduce}
+                disabled={producing || !brief.trim()}
+              >
+                {producing ? "产出中" : "全链路产出"}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
+                onClick={() => void createCanvasFromBrief()}
+                disabled={loading || !brief.trim()}
+              >
+                {loading ? "生成中" : "生成画布"}
+              </button>
+            </div>
+          </div>
+
+          {paletteOpen && (
+            <div className="xagent-scrollbar absolute bottom-4 left-4 top-72 z-20 w-[min(18rem,calc(100%-2rem))] overflow-auto rounded-lg border border-white/[0.08] shadow-xl shadow-black/25 backdrop-blur-lg">
+              <NodePalette onAddNode={addLocalNode} />
+            </div>
+          )}
+
+          {selectedNode && (
+            <div className="absolute bottom-4 right-4 top-4 z-20 hidden w-96 overflow-hidden rounded-lg border border-white/[0.08] shadow-xl shadow-black/30 backdrop-blur-lg xl:block">
+              <NodeInspector
+                node={selectedNode}
+                onClose={() => setSelectedNode(null)}
+                onUpdateContent={updateNodeContent}
+                onUpdateSettings={updateNodeSettings}
+                onAction={handleNodeAction}
+              />
+            </div>
+          )}
+
+          {production?.timeline_id && (
+            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-30 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
+              打开高级剪辑
+            </a>
+          )}
+
+          {canvasId && (
+            <div className="absolute bottom-4 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full border border-white/[0.08] bg-neutral-950/82 px-4 py-2 font-mono text-xs text-neutral-500 shadow-xl shadow-black/25 backdrop-blur-lg">
+              canvas {canvasId}{workflow ? ` · workflow ${workflow.run_id}` : ""}
+            </div>
+          )}
+
+          {workflow && (
+            <section className="absolute bottom-4 left-4 right-4 z-30 max-h-72 overflow-hidden rounded-lg border border-white/[0.08] bg-neutral-950/90 shadow-xl shadow-black/30 backdrop-blur-lg lg:left-72 xl:right-[25rem]">
+              <button
+                type="button"
+                onClick={() => setTimelineOpen((value) => !value)}
+                className="flex w-full items-center justify-between px-4 py-3 text-sm text-neutral-300 hover:text-white"
+              >
+                <span>运行日志 · {workflow.status}</span>
+                <span className="text-xs text-neutral-500">{timelineOpen ? "收起" : "展开"}</span>
+              </button>
+              {timelineOpen && (
+                <div className="max-h-56 overflow-auto border-t border-neutral-800 p-4">
+                  <CanvasRunTimeline events={workflow.timeline} />
+                </div>
+              )}
+            </section>
+          )}
+          <ConfirmDialog />
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100">
+    <div className="flex h-full flex-col bg-transparent text-neutral-100">
       <input
         ref={importFileRef}
         type="file"
@@ -1273,32 +1449,52 @@ export default function CreativeStudioPage() {
         className="hidden"
         onChange={(event) => void handleImportFile(event)}
       />
-      <header className="grid shrink-0 gap-3 border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:grid-cols-[minmax(220px,1fr)_minmax(320px,640px)_112px_112px_auto_auto_auto] lg:items-center">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-white">短剧工厂自由画布</div>
-          <div className="text-xs text-neutral-500">节点、连线、审核、媒体生成、剪辑与导出都在画布中完成</div>
+      <header className="shrink-0 border-b border-white/[0.07] bg-black/18 px-4 py-4 backdrop-blur">
+        <div className="mx-auto grid max-w-[1440px] gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <ConversationalCommand
+            compact
+            title="短剧导演台"
+            context="输入一句话，熊宝会把目标转成画布、分镜、生成与剪辑链路"
+            placeholder="例如：做一个 60 秒男频逆袭短剧，前 3 秒强钩子，最后导出剪映草稿..."
+            initialAssistantMessage="把短剧目标直接告诉我，我会先沉淀为 brief，再进入画布执行。"
+            suggestions={[
+              "生成一个男频逆袭短剧画布",
+              "拆成剧本、分镜、关键帧、视频、剪辑节点",
+              "为这个短剧补质量验收节点",
+            ]}
+            onSubmit={(value) => {
+              setBrief(value);
+              return `已把「${value}」写入短剧 brief。你可以继续补充风格，也可以直接生成画布。`;
+            }}
+          />
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="text-sm font-semibold text-white">执行参数</div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <select className="field w-full" value={genre} onChange={(e) => setGenre(e.target.value)} aria-label="短剧类型">
+                <option>逆袭</option>
+                <option>霸总</option>
+                <option>甜宠</option>
+                <option>重生</option>
+              </select>
+              <select className="field w-full" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="发布平台">
+                <option>抖音</option>
+                <option>快手</option>
+                <option>小红书</option>
+              </select>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <button className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40 justify-center" onClick={() => void createCanvasFromBrief()} disabled={loading || !brief.trim()}>{loading ? "生成中" : "生成画布"}</button>
+              <button
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 justify-center"
+                onClick={runCanvasWorkflow}
+                disabled={runLoading || !canvasId}
+              >
+                {runLoading ? "运行中" : "运行画布"}
+              </button>
+              <button className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200 justify-center disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "产出中" : "全链路产出"}</button>
+            </div>
+          </div>
         </div>
-        <input className="field w-full" value={brief} onChange={(e) => setBrief(e.target.value)} placeholder="一句话 brief，例如：霸总逆袭短剧" />
-        <select className="field w-full" value={genre} onChange={(e) => setGenre(e.target.value)}>
-          <option>逆袭</option>
-          <option>霸总</option>
-          <option>甜宠</option>
-          <option>重生</option>
-        </select>
-        <select className="field w-full" value={platform} onChange={(e) => setPlatform(e.target.value)}>
-          <option>抖音</option>
-          <option>快手</option>
-          <option>小红书</option>
-        </select>
-        <button className="primary-button whitespace-nowrap" onClick={createCanvasFromBrief} disabled={loading || !brief.trim()}>{loading ? "生成中" : "生成画布"}</button>
-        <button
-          className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200 transition hover:bg-blue-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={runCanvasWorkflow}
-          disabled={runLoading || !canvasId}
-        >
-          {runLoading ? "运行中" : "运行画布"}
-        </button>
-        <button className="whitespace-nowrap rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" onClick={runProduce} disabled={producing || !brief.trim()}>{producing ? "产出中" : "全链路产出"}</button>
       </header>
 
       {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-300">{error}</div>}
@@ -1309,7 +1505,7 @@ export default function CreativeStudioPage() {
           <button
             type="button"
             onClick={() => setPaletteOpen((value) => !value)}
-            className="absolute left-4 top-4 z-20 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
+            className="absolute left-4 top-4 z-20 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-neutral-400 transition hover:border-white/[0.16] hover:text-neutral-200"
           >
             {paletteOpen ? "折叠节点库" : "展开节点库"}
           </button>
@@ -1322,7 +1518,7 @@ export default function CreativeStudioPage() {
             onCanvasAction={handleCanvasAction}
           />
           {production?.timeline_id && (
-            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-20 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
+            <a href={`/editor?timeline_id=${production.timeline_id}`} className="absolute right-4 top-4 z-20 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20">
               打开高级剪辑
             </a>
           )}
@@ -1355,6 +1551,7 @@ export default function CreativeStudioPage() {
           )}
         </section>
       )}
+      <ConfirmDialog />
     </div>
   );
 }

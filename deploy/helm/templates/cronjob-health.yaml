@@ -1,0 +1,81 @@
+{{- if .Values.ops.healthSnapshot.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "xagent.fullname" . }}-health-snapshot
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ops
+spec:
+  schedule: {{ .Values.ops.healthSnapshot.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      template:
+        metadata:
+          labels:
+            {{- include "xagent.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: ops
+        spec:
+          {{- if .Values.serviceAccount.create }}
+          serviceAccountName: {{ include "xagent.serviceAccountName" . }}
+          {{- end }}
+          restartPolicy: Never
+          containers:
+            - name: health-snapshot
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python
+                - /app/scripts/collect_ops_evidence.py
+                - --output
+                - /data/health-snapshots/snapshot-$(date +%Y%m%d-%H%M%S).json
+                - --format
+                - json
+              envFrom:
+                - configMapRef:
+                    name: {{ include "xagent.fullname" . }}-config
+              volumeMounts:
+                - name: health-data
+                  mountPath: /data/health-snapshots
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+          volumes:
+            - name: health-data
+              persistentVolumeClaim:
+                claimName: {{ include "xagent.fullname" . }}-health-snapshots
+          securityContext:
+            fsGroup: 1000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xagent.fullname" . }}-health-snapshots
+  namespace: {{ include "xagent.namespace" . }}
+  labels:
+    {{- include "xagent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{- end }}

@@ -6,16 +6,27 @@ from xagent.api.v1 import (
     agents,
     audit,
     auth,
+    automation,
     billing,
+    bulk,
     canvas,
+    code_review,
     creative_studio,
+    data_io,
     editor,
+    knowledge,
+    marketplace,
+    mcp,
     memory,
     open_source,
+    ops,
     runs,
+    skills,
+    spine,
     stream,
     system,
     tasks,
+    tenants,
     workflows,
 )
 
@@ -27,12 +38,23 @@ api_v1.include_router(tasks.router)
 api_v1.include_router(memory.router)
 api_v1.include_router(workflows.router)
 api_v1.include_router(runs.router)
+api_v1.include_router(spine.router)
 api_v1.include_router(canvas.router)
+api_v1.include_router(code_review.router)
 api_v1.include_router(creative_studio.router)
 api_v1.include_router(editor.router)
 api_v1.include_router(open_source.router)
 api_v1.include_router(billing.router)
 api_v1.include_router(audit.router)
 api_v1.include_router(system.router)
+api_v1.include_router(automation.router)
+api_v1.include_router(mcp.router)
+api_v1.include_router(skills.router)
+api_v1.include_router(tenants.router)
+api_v1.include_router(knowledge.router)
+api_v1.include_router(marketplace.router)
+api_v1.include_router(ops.router)
+api_v1.include_router(data_io.router)
+api_v1.include_router(bulk.router)
 
 __all__ = ["api_v1"]

@@ -22,6 +22,7 @@ from xagent.api.security_middleware import RateLimitMiddleware, SecurityHeadersM
 from xagent.api.v1 import api_v1
 from xagent.infra import db
 from xagent.infra.logging import configure_logging, get_logger
+from xagent.infra.metrics import MetricsMiddleware, metrics_response
 from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.app")
@@ -45,13 +46,85 @@ async def lifespan(app: FastAPI):
         version=__version__,
         mode=settings.mode.value,
     )
+    # 安全姿态告警：鉴权被显式关闭（XAGENT_SECURITY__REQUIRE_AUTH=false）时显眼提示
+    if not settings.auth_required:
+        logger.warning(
+            "auth_disabled",
+            message=(
+                "⚠️  安全问题：鉴权已关闭（XAGENT_SECURITY__REQUIRE_AUTH=false），"
+                "所有 API 端点无需凭据即可访问，仅限本地演示，请勿暴露到网络"
+            ),
+        )
+    # 初始化内置用户存储：lite 模式会创建默认 admin/admin 并打安全 warning
+    from xagent.enterprise.auth.users import get_user_store
+    get_user_store()
+    # 自动建表（SQLite 开发模式，生产用 alembic）
+    import xagent.infra.models  # noqa: F401  确保所有 ORM 模型注册
+    async with db.get_engine().begin() as conn:
+        await conn.run_sync(db.Base.metadata.create_all)
     # 启动 MCP 管理器（无 server 时安全空转）
     await get_mcp_manager().start()
+    # 从 SQLite 恢复持久化数据（Webhook/知识库）
+    try:
+        from xagent.core.knowledge import Document, get_knowledge_base
+        from xagent.core.persistence import load_documents, load_webhooks
+        from xagent.core.webhooks import WebhookConfig, get_webhook_manager
+        hooks = await load_webhooks("default")
+        wm = get_webhook_manager()
+        for h in hooks:
+            wm._hooks[h["webhook_id"]] = WebhookConfig(
+                webhook_id=h["webhook_id"], tenant_id=h["tenant_id"],
+                url=h["url"], events=h["events"], secret=h["secret"],
+            )
+        docs = await load_documents("default")
+        kb = get_knowledge_base()
+        for d in docs:
+            kb._docs[d["doc_id"]] = Document(
+                doc_id=d["doc_id"], title=d["title"],
+                tenant_id=d["tenant_id"], source=d["source"],
+                chunk_count=d["chunk_count"], tags=d["tags"],
+            )
+        logger.info("persistence_loaded", webhooks=len(hooks), docs=len(docs))
+    except Exception:  # noqa: S110
+        pass
+    # 启动定时调度器
+    from xagent.core.scheduler import get_scheduler
+    await get_scheduler().start()
     yield
     # ---- shutdown ----
+    await get_scheduler().stop()
     await get_mcp_manager().stop()
+    # 刷新追踪缓冲
+    from xagent.infra.tracing import flush_traces
+    flush_traces()
     await db.dispose_engine()
     logger.info("shutdown")
+
+
+# OpenAPI 标签元数据
+TAG_METADATA = [
+    {"name": "system", "description": "系统探针与元信息"},
+    {"name": "auth", "description": "认证与令牌管理"},
+    {"name": "agents", "description": "Agent 角色与对话"},
+    {"name": "stream", "description": "SSE 流式对话"},
+    {"name": "tasks", "description": "后台任务管理"},
+    {"name": "runs", "description": "Run Console 执行记录"},
+    {"name": "workflows", "description": "工作流编排与执行"},
+    {"name": "skills", "description": "Skill 自进化管理"},
+    {"name": "knowledge", "description": "RAG 知识库"},
+    {"name": "memory", "description": "对话记忆"},
+    {"name": "mcp", "description": "MCP 工具网关"},
+    {"name": "automation", "description": "定时任务与 Webhook"},
+    {"name": "creative-studio", "description": "短剧工厂 / 创意画布"},
+    {"name": "canvas", "description": "自由画布节点"},
+    {"name": "editor", "description": "剧本编辑器"},
+    {"name": "spine", "description": "Spine 动画"},
+    {"name": "billing", "description": "计量计费"},
+    {"name": "audit", "description": "审计日志"},
+    {"name": "tenants", "description": "租户管理"},
+    {"name": "open-source", "description": "开源发现"},
+    {"name": "marketplace", "description": "插件/技能市场"},
+]
 
 
 def create_app() -> FastAPI:
@@ -59,9 +132,34 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=__version__,
-        description="X-Agent — 面向企业的自主智能体框架（开源重构版）",
+        description=(
+            "X-Agent — 面向企业的自主智能体框架（开源重构版）\n\n"
+            "## 快速开始\n"
+            "1. `POST /api/v1/auth/login` 获取 token\n"
+            "2. 请求头携带 `Authorization: Bearer <token>`\n"
+            "3. 浏览各模块端点\n\n"
+            "## 版本策略\n"
+            "- 当前稳定版: `/api/v1`\n"
+            "- 破坏性变更发布新版本 `/api/v2`，旧版保留 6 个月\n"
+            "- `GET /api/versions` 查询可用版本\n"
+        ),
         lifespan=lifespan,
+        openapi_tags=TAG_METADATA,
+        contact={"name": "X-Agent Team", "url": "https://github.com/xiongpinji/xiongbao"},
+        license_info={"name": "Apache-2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0"},
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
     )
+
+    # 全局异常处理：防止未捕获异常导致连接中断
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+
+    @app.exception_handler(Exception)
+    async def _global_exc_handler(request: Request, exc: Exception) -> JSONResponse:  # noqa: ARG001
+        logger.error("unhandled_exception", path=request.url.path, error=str(exc))
+        return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
 
     # CORS（生产禁止通配符，已在 settings.validate_for_production 校验）
     app.add_middleware(
@@ -71,13 +169,96 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # 全局限流（XAGENT_SECURITY__RATE_LIMIT_* 可配；enabled=false 整体关闭，供压测/受信内网）
+    if settings.security.rate_limit_enabled:
+        app.add_middleware(
+            RateLimitMiddleware,
+            max_requests=settings.security.rate_limit_requests,
+            window_seconds=settings.security.rate_limit_window_seconds,
+            exempt_paths=settings.security.rate_limit_exempt_paths,
+        )
+    else:
+        logger.warning(
+            "rate_limit_disabled",
+            message="全局限流已通过配置关闭（rate_limit_enabled=false）",
+        )
+    app.add_middleware(MetricsMiddleware)
+    # 响应耗时统计（为 /perf 端点提供 total_requests/avg/分位数）
+    from xagent.infra.performance import TimingMiddleware
+    app.add_middleware(TimingMiddleware)
+
+    # ETag 响应缓存（GET 条件请求 304）
+    from xagent.api.response_cache import ResponseCacheMiddleware
+    app.add_middleware(ResponseCacheMiddleware, cache_ttl=60)
+
+    # 链路追踪（X-Trace-ID 贯穿）
+    from xagent.api.trace import TraceMiddleware
+    app.add_middleware(TraceMiddleware)
+
+    # 幂等性保障（Idempotency-Key 防重复提交）
+    from xagent.api.idempotency import IdempotencyMiddleware
+    app.add_middleware(IdempotencyMiddleware)
+
+    # 安全响应头 + 请求上下文必须最后添加（Starlette 后添加=最外层）：
+    # 缓存/幂等等中间件会重建 Response，若它们在外层会丢掉内侧中间件注入的
+    # X-Content-Type-Options / X-Request-ID 等头。
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware, max_requests=120, window_seconds=60)
     app.add_middleware(RequestContextMiddleware)
 
     # 路由挂载
     app.include_router(system.router)
     app.include_router(api_v1)
+
+    # WebSocket 实时通信
+    from xagent.api.ws import router as ws_router
+    app.include_router(ws_router)
+
+    # 增强健康检查（/health/live, /health/ready, /health/deep）
+    from xagent.api.health import router as health_router
+    app.include_router(health_router)
+
+    # 运行时配置热更新（/api/v1/runtime-config）
+    from xagent.api.runtime_config import router as runtime_config_router
+    app.include_router(runtime_config_router, prefix="/api/v1")
+
+    # API 版本发现
+    @app.get("/api/versions", tags=["system"], summary="可用 API 版本")
+    async def _api_versions() -> dict:
+        return {
+            "current": "v1",
+            "supported": ["v1"],
+            "deprecated": [],
+            "base_url": "/api/v1",
+            "docs": "/docs",
+        }
+
+    # Prometheus 指标端点
+    from fastapi import Response
+    @app.get("/metrics", include_in_schema=False)
+    async def _metrics() -> Response:
+        return metrics_response()
+
+    # 性能统计端点
+    @app.get("/perf", include_in_schema=False)
+    async def _perf() -> dict:
+        from xagent.infra.performance import (
+            get_api_cache,
+            get_search_cache,
+            get_timing_middleware,
+        )
+        timing = get_timing_middleware()
+        summary = timing.get_summary() if timing else {
+            "total_requests": 0,
+            "avg_response_time_ms": 0.0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+        }
+        return {
+            **summary,
+            "cache_api": get_api_cache().stats,
+            "cache_search": get_search_cache().stats,
+        }
 
     return app
 

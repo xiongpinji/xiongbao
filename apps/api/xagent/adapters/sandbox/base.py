@@ -1,7 +1,10 @@
 """沙箱抽象 + 默认「禁用」实现 + 工厂。
 
 安全原则：lite 模式默认 DisabledSandbox，**绝不在宿主机直接 exec 不可信代码**。
-要真正执行须显式切到 docker / e2b 后端（Phase 2 落地）。
+要真正执行须显式配置后端（RFC-001 分级）：
+  - disabled : L0，拒绝执行（lite 默认）
+  - docker   : L1，一次性隔离容器（见 docker_sandbox.py）
+  - e2b      : L2，云 microVM（见 e2b_sandbox.py）
 """
 
 from __future__ import annotations
@@ -39,7 +42,7 @@ class DisabledSandbox:
             ok=False,
             error=(
                 "沙箱未启用：lite 模式禁止执行不可信代码。"
-                "请配置 docker / E2B 后端（Phase 2）后重试。"
+                "请配置 XAGENT_SANDBOX__BACKEND=docker（或 e2b）后重试。"
             ),
         )
 
@@ -47,69 +50,63 @@ class DisabledSandbox:
         return True
 
 
-class DockerSandbox:
-    """Docker 容器沙箱：用官方 docker SDK 在隔离容器执行代码。
+class UnsupportedBackendSandbox:
+    """未知/未实现的后端：明确报错（fail-closed），绝不静默降级到宿主机。"""
 
-    需要 docker daemon + 镜像（默认 python:3.11-slim）。未装 docker SDK
-    或 daemon 不可达时，factory 降级回 DisabledSandbox。
-    """
-
-    backend = "docker"
-
-    def __init__(self, image: str = "python:3.11-slim", network: str = "none") -> None:
-        self._image = image
-        self._network = network
+    def __init__(self, backend: str, reason: str) -> None:
+        self.backend = backend
+        self._reason = reason
 
     async def run_code(self, language: str, code: str, *, timeout: int = 30) -> SandboxResult:
-        import docker  # 延迟导入
-
-        client = docker.from_env()
-        if language not in ("python", "python3"):
-            return SandboxResult(ok=False, error=f"暂不支持语言: {language}")
-        try:
-            result = client.containers.run(
-                self._image,
-                command=["python", "-c", code],
-                network=self._network,
-                mem_limit="128m",
-                cpu_quota=50000,
-                detach=False,
-                stdout=True,
-                stderr=True,
-                remove=True,
-            )
-            stdout = (
-                result.decode("utf-8", errors="replace")
-                if isinstance(result, bytes)
-                else str(result)
-            )
-            return SandboxResult(ok=True, stdout=stdout, exit_code=0)
-        except Exception as exc:
-            return SandboxResult(ok=False, error=f"沙箱执行失败: {exc}")
+        return SandboxResult(ok=False, error=self._reason)
 
     async def health(self) -> bool:
-        try:
-            import docker
-
-            docker.from_env().ping()
-            return True
-        except Exception:
-            return False
+        return False
 
 
 @lru_cache
 def get_sandbox() -> Sandbox:
-    settings = get_settings()
-    # docker 后端：尝试 import docker，成功且 daemon 可达则用 DockerSandbox
-    try:
-        import docker  # noqa: F401
+    """按 ``XAGENT_SANDBOX__BACKEND`` 选择沙箱后端（默认 disabled 保持现状）。"""
+    backend = get_settings().sandbox.backend.strip().lower()
+    if backend == "docker":
+        from xagent.adapters.sandbox.docker_sandbox import DockerSandbox
 
-        return DockerSandbox()
-    except ImportError:
-        pass
-    _ = settings
+        s = get_settings().sandbox
+        return DockerSandbox(
+            image=s.docker_image,
+            mem_limit=s.mem_limit,
+            cpu_quota=s.cpu_quota,
+            network_disabled=s.network_disabled,
+            readonly_rootfs=s.readonly_rootfs,
+            timeout_seconds=s.timeout_seconds,
+        )
+    if backend == "e2b":
+        from xagent.adapters.sandbox.e2b_sandbox import E2BSandbox
+
+        s = get_settings().sandbox
+        return E2BSandbox(
+            api_key=s.e2b_api_key,
+            template=s.e2b_template,
+            base_url=s.e2b_base_url,
+            timeout_seconds=s.timeout_seconds,
+        )
+    if backend != "disabled":
+        return UnsupportedBackendSandbox(
+            backend,
+            f"未知沙箱后端: {backend!r}（支持 disabled/docker/e2b）。"
+            "按拒绝执行处理（fail-closed），请修正 XAGENT_SANDBOX__BACKEND。",
+        )
     return DisabledSandbox()
 
 
 def reset_sandbox() -> None:
     get_sandbox.cache_clear()
+
+
+# 兼容旧导入路径（DockerSandbox 已移至 docker_sandbox.py）
+def __getattr__(name: str):
+    if name == "DockerSandbox":
+        from xagent.adapters.sandbox.docker_sandbox import DockerSandbox
+
+        return DockerSandbox
+    raise AttributeError(name)

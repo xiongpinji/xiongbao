@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
 
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.audit.persistence import export_chain, export_json
@@ -61,3 +62,35 @@ async def export_full(
 
 # 消除未使用导入告警（export_chain 在导出逻辑中可用）
 _ = export_chain
+
+
+@router.get("/export-csv", summary="导出审计日志 CSV", response_class=PlainTextResponse)
+async def export_csv(
+    principal: Principal = Depends(require_permission("audit", "read")),
+) -> str:
+    from xagent.enterprise.security import export_audit_csv
+    log = get_audit_log()
+    events = log.list(principal.tenant_id)
+    return export_audit_csv(events)
+
+
+class ContentScanIn(BaseModel):
+    text: str = Field(..., min_length=1)
+    direction: str = Field(default="input", description="input | output")
+
+
+@router.post("/content-scan", summary="内容安全扫描")
+async def content_scan(
+    body: ContentScanIn,
+    principal: Principal = Depends(require_permission("audit", "read")),
+) -> dict:
+    from xagent.enterprise.security import scan_input, scan_output
+    if body.direction == "output":
+        result = scan_output(body.text)
+    else:
+        result = scan_input(body.text)
+    return {
+        "safe": result.safe,
+        "risks": result.risks,
+        "masked_text": result.masked_text,
+    }

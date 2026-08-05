@@ -107,5 +107,7 @@ class NullProvider:
                       [GenerationMode.text_to_image, GenerationMode.image_to_image], "null"),
             ModelCard("null-video", "占位视频模型", MediaKind.video,
                       [GenerationMode.text_to_video, GenerationMode.image_to_video], "null"),
+            ModelCard("null-audio", "占位音频模型", MediaKind.audio,
+                      [GenerationMode.text_to_speech], "null"),
         ]
         return [c for c in cards if kind is None or c.kind == kind]
