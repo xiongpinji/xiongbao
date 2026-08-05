@@ -27,6 +27,7 @@ from xagent.adapters.tools.base import ToolContext
 from xagent.core.agents import get_role_registry
 from xagent.core.orchestration.conversation import get_conversation_manager
 from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, StepKind
+from xagent.core.workspace import get_workspace  # V3-3: 每任务 contextvar 可覆盖
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.logging import get_logger
 
@@ -34,7 +35,6 @@ logger = get_logger("xagent.loop")
 
 MAX_STEPS = 40
 _AGENT_RUN_TIMEOUT = 600  # 10 分钟
-_WORKSPACE = Path(os.environ.get("XAGENT_WORKSPACE", Path.home() / "xagent_workspace"))
 
 # ── LLM 调用重试配置（对标 Codex 的自动重试 + 指数退避） ──
 _LLM_MAX_RETRIES = 3
@@ -287,9 +287,9 @@ def _load_agents_md() -> str:
     returns content to inject into system prompt.
     """
     candidates = [
-        _WORKSPACE / "AGENTS.md",
-        _WORKSPACE / "agents.md",
-        _WORKSPACE / ".agents" / "AGENTS.md",
+        get_workspace() / "AGENTS.md",
+        get_workspace() / "agents.md",
+        get_workspace() / ".agents" / "AGENTS.md",
         Path.cwd() / "AGENTS.md",
     ]
     for p in candidates:
@@ -1091,16 +1091,16 @@ async def run_agent(
     #               无识别结果为 None 保持原仅两层行为；子目录层按就近优先合并
     try:
         from xagent.core.instructions import extract_task_paths, get_layered_instructions
-        _task_paths = extract_task_paths(_WORKSPACE, goal=goal, history=history)
+        _task_paths = extract_task_paths(get_workspace(), goal=goal, history=history)
         agents_md = (
-            get_layered_instructions(_WORKSPACE, task_paths=_task_paths) or _load_agents_md()
+            get_layered_instructions(get_workspace(), task_paths=_task_paths) or _load_agents_md()
         )
     except Exception:  # noqa: S110  指令加载失败不影响主流程
         agents_md = _load_agents_md()
     if agents_md:
         system += f"\n\n## 项目指令 (AGENTS.md)\n{agents_md}"
     # 注入项目结构感知（Codex 对齐：先建立结构认知）
-    project_ctx = _detect_project_context(_WORKSPACE)
+    project_ctx = _detect_project_context(get_workspace())
     if project_ctx:
         system += f"\n\n## 项目环境\n{project_ctx}"
     # 注入权限模式说明（Codex 对齐）
@@ -1217,7 +1217,7 @@ async def run_agent(
         # ── 缓存预热：预读关键配置文件（减少首次访问延迟） ──
         _PREWARM_FILES = ["package.json", "pyproject.toml", "tsconfig.json", "README.md"]
         for _pf in _PREWARM_FILES:
-            _pf_path = _WORKSPACE / _pf
+            _pf_path = get_workspace() / _pf
             if _pf_path.is_file():
                 try:
                     _pf_content = _pf_path.read_text(encoding="utf-8", errors="ignore")[:5000]
@@ -1505,7 +1505,7 @@ async def run_agent(
                                   txt = f"[错误] {r.error}"
                                   # 错误上下文增强：文件操作时提示工作目录
                                   if tc_name in ("file_read", "file_write", "file_edit") and "not found" in txt.lower():
-                                      txt += f"\n[提示] 工作目录: {_WORKSPACE}"
+                                      txt += f"\n[提示] 工作目录: {get_workspace()}"
                                   _tool_fail += 1
                                   _tool_fail_by_type[tc_name] = _tool_fail_by_type.get(tc_name, 0) + 1
                                   # ── 重复错误检测 ──
@@ -1595,7 +1595,7 @@ async def run_agent(
                               )
                               # ── Git 隔离：首次编辑时创建分支 ──
                               if tc_name in _EDIT_TOOLS and _work_branch is None:
-                                  _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
+                                  _work_branch = _git_create_work_branch(get_workspace(), resolved_run_id)
                               # ── 编辑前上下文注入：文件未读过时自动补读 ──
                               if tc_name in _EDIT_TOOLS:
                                   _edit_path = tc_args.get("path", "")
@@ -1722,12 +1722,12 @@ async def run_agent(
 
                       # ── 验证闭环：编辑后自动跑验证 + 回滚保护 ──
                       if _had_edit and _edit_count % 2 == 0:  # 每 2 次编辑验证一次
-                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
+                          v_passed, v_output = await _run_verification(get_workspace(), ctx, _changed_files)
                           if not v_passed:
                               _verify_fail_count += 1
                               if _verify_fail_count >= _ROLLBACK_THRESHOLD:
                                   # 连续失败达阈值 → 自动回滚
-                                  _rb_result = await _rollback_changed_files(_WORKSPACE, _changed_files)
+                                  _rb_result = await _rollback_changed_files(get_workspace(), _changed_files)
                                   state.messages.append(Message(
                                       role="user",
                                       content=(
@@ -1901,7 +1901,7 @@ async def run_agent(
                                   StepEvent(kind=StepKind.tool_call, tool=tc.name, content=tc.args, step=state.step)
                               )
                               if tc.name in _EDIT_TOOLS and _work_branch is None:
-                                  _work_branch = _git_create_work_branch(_WORKSPACE, resolved_run_id)
+                                  _work_branch = _git_create_work_branch(get_workspace(), resolved_run_id)
                               if not role.can_use(tc.name):
                                   result_text = f"[拒绝] 角色 {role.name} 无权使用工具 {tc.name}"
                                   _consecutive_errors += 1
@@ -1973,11 +1973,11 @@ async def run_agent(
 
                       # 验证闭环 + 回滚保护
                       if _had_edit_ns and _edit_count % 2 == 0:
-                          v_passed, v_output = await _run_verification(_WORKSPACE, ctx, _changed_files)
+                          v_passed, v_output = await _run_verification(get_workspace(), ctx, _changed_files)
                           if not v_passed:
                               _verify_fail_count += 1
                               if _verify_fail_count >= _ROLLBACK_THRESHOLD:
-                                  _rb_result = await _rollback_changed_files(_WORKSPACE, _changed_files)
+                                  _rb_result = await _rollback_changed_files(get_workspace(), _changed_files)
                                   state.messages.append(Message(
                                       role="user",
                                       content=(
@@ -2122,7 +2122,7 @@ async def run_agent(
                     import subprocess as _sp
                     _diff = _sp.run(
                         ["git", "diff", "--stat", "HEAD"],
-                        cwd=str(_WORKSPACE), capture_output=True, text=True, timeout=10
+                        cwd=str(get_workspace()), capture_output=True, text=True, timeout=10
                     )
                     if _diff.returncode == 0 and _diff.stdout.strip():
                         _cancel_parts.append(f"\n已修改文件：\n{_diff.stdout.strip()}")
@@ -2180,7 +2180,7 @@ async def run_agent(
         span.set_output(state.final_answer)
         # ── Git 清理：任务完成后清理临时分支 ──
         if _work_branch:
-            _git_cleanup_branch(_WORKSPACE, _work_branch)
+            _git_cleanup_branch(get_workspace(), _work_branch)
         # ── 文件变更摘要：追加到最终回答 ──
         if _changed_files and state.final_answer:
             _summary_lines = ["\n\n---\n📝 **文件变更**:"]
@@ -2265,7 +2265,7 @@ async def run_agent(
                 import subprocess as _sp
                 _diff_stat = _sp.run(
                     ["git", "diff", "--stat", "HEAD"],
-                    cwd=str(_WORKSPACE), capture_output=True, text=True, timeout=10
+                    cwd=str(get_workspace()), capture_output=True, text=True, timeout=10
                 )
                 if _diff_stat.returncode == 0 and _diff_stat.stdout.strip():
                     _stat_line = _diff_stat.stdout.strip().split("\n")[-1]

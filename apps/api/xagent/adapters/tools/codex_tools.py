@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any
 
 from xagent.adapters.tools.base import Tool, ToolContext, ToolResult, ToolSpec
+from xagent.core.workspace import get_workspace as _ws_resolve  # V3-3: 每任务可覆盖
 
-_WORKSPACE = Path(os.environ.get("XAGENT_WORKSPACE", Path.home() / "xagent_workspace"))
 _MAX_OUTPUT = 6000
 _MAX_SEARCH_RESULTS = 50
 
@@ -88,7 +88,7 @@ class GitTool:
         for blocked in self._BLOCKED:
             if blocked in cmd_lower:
                 return ToolResult(ok=False, error=f"Security: '{blocked}' is blocked")
-        cwd = args.get("working_dir") or str(_WORKSPACE)
+        cwd = args.get("working_dir") or str(_ws_resolve())
         git_args = command.split()
         out, err, rc = await asyncio.to_thread(_run_git, git_args, cwd)
         output = _truncate((out + ("\n[stderr] " + err if err.strip() else "")).strip())
@@ -140,7 +140,7 @@ class CodeSearchTool:
             return ToolResult(ok=False, error="pattern cannot be empty")
         search_path = Path(args.get("path") or ".")
         if not search_path.is_absolute():
-            search_path = _WORKSPACE / search_path
+            search_path = _ws_resolve() / search_path
         if not search_path.exists():
             return ToolResult(ok=False, error=f"path not found: {search_path}")
         file_pattern = args.get("file_pattern", "")
@@ -240,7 +240,7 @@ class FileEditTool:
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         path = Path(args.get("path", ""))
         if not path.is_absolute():
-            path = _WORKSPACE / path
+            path = _ws_resolve() / path
         if not path.exists():
             return ToolResult(ok=False, error=f"file not found: {path}")
         old_text = args.get("old_text", "")
@@ -457,7 +457,7 @@ class SkillCreateTool:
 
 def codex_tools() -> list[Tool]:
     """Return all Codex-aligned tool instances."""
-    _WORKSPACE.mkdir(parents=True, exist_ok=True)
+    _ws_resolve().mkdir(parents=True, exist_ok=True)
     return [
         GitTool(), CodeSearchTool(), FileEditTool(),
         SkillExecTool(), SkillListTool(), SkillCreateTool(),

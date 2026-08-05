@@ -39,15 +39,23 @@
 
 证据：`tests/test_skill_evolve_review.py` 9 项（挂起/批准/拒绝/跨重启持久化/向后兼容/失败提炼三态）。
 
-## V3-3 并行子代理 worktree 隔离 — 待启动
+## V3-3 并行子代理 worktree 隔离 ✅（2026-08-05）
 
 现状：`parallel.py`（run_parallel_agents / auto_decompose_and_run）与
 `supervisor.py`（拓扑依赖并行）已具备进程内并行子代理。
 
-补齐项：
+交付：
 
-- [ ] 编码类并行任务可选 git worktree 隔离执行（每子代理独立工作区，结果以 diff 汇总）
-- [ ] 子代理执行证据链（sub_run 与父 run 的关联已在 run_id 命名体现，需落 evidence）
+- [x] 工作区 contextvar 化（新模块 `core/workspace.py`）：loop.py / codex_tools.py /
+  power_tools.py 全部从模块级常量改为每任务可覆盖解析，asyncio 任务间隔离
+- [x] `run_parallel_agents(use_worktrees=True)`：每子代理独立 git worktree + 临时分支执行，
+  结束采集各自 diff（stat + 全文截断）→ 清理 worktree/分支；主工作区零污染；
+  非 git 工作区诚实降级（isolated=False）
+- [x] 端点参数：`POST /agents/parallel-run` 增 `use_worktrees`
+- [x] 子代理执行留证：worktree 路径 / diff_stat / isolated 进 ParallelRunResult.to_dict
+
+证据：`tests/test_parallel_worktrees.py` 6 项（含真实 git 仓库双子代理隔离、主工作区
+git status 零污染断言、分支/worktree 清理断言、降级路径）。
 
 ## V3-4 X-Agent as MCP Server ✅（2026-08-05）
 

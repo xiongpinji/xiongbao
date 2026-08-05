@@ -23,6 +23,10 @@ router = APIRouter(tags=["automation"])
 class ParallelRunIn(BaseModel):
     tasks: list[dict] = Field(..., min_length=1, max_length=5)
     coordinator_goal: str = ""
+    use_worktrees: bool = Field(
+        default=False,
+        description="git worktree 隔离：每子代理独立工作区执行，结果附 diff（需 git 仓库）",
+    )
 
 
 @router.post("/agents/parallel-run", summary="多 Agent 并行执行")
@@ -42,7 +46,8 @@ async def parallel_run(
     if not sub_tasks:
         return {"error": "至少需要一个有效子任务"}
     result = await run_parallel_agents(
-        sub_tasks, principal, coordinator_goal=body.coordinator_goal
+        sub_tasks, principal, coordinator_goal=body.coordinator_goal,
+        use_worktrees=body.use_worktrees,
     )
     return result.to_dict()
 

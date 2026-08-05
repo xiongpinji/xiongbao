@@ -21,7 +21,8 @@ from typing import Any
 from xagent.adapters.tools.base import Tool, ToolContext, ToolResult, ToolSpec
 
 # 安全工作目录（文件操作限制在此目录下）
-_WORKSPACE = Path(os.environ.get("XAGENT_WORKSPACE", Path.home() / "xagent_workspace"))
+from xagent.core.workspace import get_workspace as _ws_resolve  # V3-3: 每任务可覆盖
+
 _MAX_OUTPUT = 4000  # 输出截断长度（工具结果给 LLM 看的上限）
 _TIMEOUT = 30  # python_exec 命令超时秒数
 _SHELL_TIMEOUT = 120  # shell_exec 超时（安装依赖等耗时操作）
@@ -227,7 +228,7 @@ class ShellExecTool:
                 ),
             )
 
-        cwd = args.get("working_dir") or str(_WORKSPACE)
+        cwd = args.get("working_dir") or str(_ws_resolve())
 
         try:
             out, err, rc = await asyncio.to_thread(
@@ -467,7 +468,7 @@ class FileReadTool:
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         path = Path(args.get("path", ""))
         if not path.is_absolute():
-            path = _WORKSPACE / path
+            path = _ws_resolve() / path
         if not path.exists():
             return ToolResult(ok=False, error=f"文件不存在: {path}")
         if not path.is_file():
@@ -497,7 +498,7 @@ class FileWriteTool:
         path = Path(args.get("path", ""))
         content = args.get("content", "")
         if not path.is_absolute():
-            path = _WORKSPACE / path
+            path = _ws_resolve() / path
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             # ── 原子写入：先写临时文件再 rename（防止崩溃时文件损坏） ──
@@ -540,7 +541,7 @@ class FileListTool:
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         path = Path(args.get("path", "") or ".")
         if not path.is_absolute():
-            path = _WORKSPACE / path
+            path = _ws_resolve() / path
         if not path.exists():
             return ToolResult(ok=False, error=f"目录不存在: {path}")
         if not path.is_dir():
@@ -567,7 +568,7 @@ def power_tools() -> list[Tool]:
     （XAGENT_TOOLS__ENABLE_SHELL / XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false），
     工具列表喂给 LLM 时直接不可见；仅显式开启时才注册。
     """
-    _WORKSPACE.mkdir(parents=True, exist_ok=True)
+    _ws_resolve().mkdir(parents=True, exist_ok=True)
     from xagent.infra.logging import get_logger
     from xagent.infra.settings import get_settings
 
