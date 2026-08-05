@@ -682,6 +682,7 @@ class SkillStore:
         n_variants: int = EVOLVE_DEFAULT_VARIANTS,
         threshold: float = EVOLVE_ACCEPT_THRESHOLD,
         llm: Any | None = None,
+        require_review: bool = False,
     ) -> dict[str, Any] | None:
         """自动进化闭环：变体生成 → 评测打分 → 显著优胜才通过 evolve 替换入库。
 
@@ -732,13 +733,29 @@ class SkillStore:
         best = max(scored, key=lambda x: x["score"])
         result["best_score"] = best["score"]
 
-        # 4. 优胜入库：显著优于父代才通过 evolve 替换
+        # 4. 优胜判定：显著优于父代才准许入库
         if best["score"] - parent_eval["score"] >= threshold:
             v = best["variant"]
             reason = (
                 f"auto_evolve: score {parent_eval['score']:.2f} -> {best['score']:.2f} "
                 f"(threshold +{threshold:.2f}, eval={parent_eval['eval_mode']})"
             )
+            # 人工审核模式（对标 Hermes GEPA 人工 PR 门禁）：评测通过不直接替换，
+            # 挂起为待审核条目，由 approve_evolution 人工批准后才走 evolve 版本化。
+            if require_review:
+                pending_id = self._add_pending_evolution(
+                    skill_id=skill_id, variant=v,
+                    parent_eval=parent_eval, best_eval=best["eval"],
+                    threshold=threshold, reason=reason,
+                )
+                result["adopted"] = False
+                result["reason"] = f"pending_review:{pending_id}"
+                result["pending_id"] = pending_id
+                logger.info(
+                    "skill_evolve_pending_review", skill_id=skill_id,
+                    pending_id=pending_id, best_score=best["score"],
+                )
+                return result
             self.evolve_skill(
                 skill_id,
                 description=v["description"],
@@ -765,6 +782,155 @@ class SkillStore:
                 threshold=threshold,
             )
         return result
+
+    # ─── 自进化：人工审核队列（pending evolution） ───
+
+    @property
+    def _pending_path(self) -> Path:
+        return self._dir / "_pending_evolutions.json"
+
+    def _load_pending(self) -> dict[str, Any]:
+        try:
+            return json.loads(self._pending_path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — 文件不存在/损坏按空队列处理
+            return {}
+
+    def _save_pending(self, pending: dict[str, Any]) -> None:
+        self._pending_path.write_text(
+            json.dumps(pending, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    def _add_pending_evolution(
+        self,
+        *,
+        skill_id: str,
+        variant: dict[str, Any],
+        parent_eval: dict[str, Any],
+        best_eval: dict[str, Any],
+        threshold: float,
+        reason: str,
+    ) -> str:
+        pending = self._load_pending()
+        pending_id = uuid.uuid4().hex[:12]
+        pending[pending_id] = {
+            "pending_id": pending_id,
+            "skill_id": skill_id,
+            "variant": variant,
+            "parent_eval": parent_eval,
+            "best_eval": best_eval,
+            "threshold": threshold,
+            "reason": reason,
+            "created_at": time.time(),
+        }
+        self._save_pending(pending)
+        return pending_id
+
+    def list_pending_evolutions(self) -> list[dict[str, Any]]:
+        """列出待人工审核的进化条目（按创建时间倒序）。"""
+        items = list(self._load_pending().values())
+        return sorted(items, key=lambda x: -x.get("created_at", 0))
+
+    def approve_evolution(self, pending_id: str) -> dict[str, Any] | None:
+        """人工批准：把挂起的优胜变体走 evolve_skill 版本化入库。"""
+        pending = self._load_pending()
+        entry = pending.pop(pending_id, None)
+        if entry is None:
+            return None
+        v = entry["variant"]
+        evolved = self.evolve_skill(
+            entry["skill_id"],
+            description=v["description"],
+            system_prompt_hint=v["system_prompt_hint"],
+            steps=v["steps"],
+            trigger_pattern=v["trigger_pattern"],
+            change_reason=f"approved: {entry['reason']}",
+        )
+        self._save_pending(pending)
+        if evolved is None:
+            return None
+        logger.info(
+            "skill_evolve_approved", skill_id=entry["skill_id"], pending_id=pending_id
+        )
+        return {"approved": True, "skill_id": entry["skill_id"],
+                "skill": evolved.to_dict()}
+
+    def reject_evolution(self, pending_id: str) -> bool:
+        """人工拒绝：丢弃挂起变体（技能不变）。"""
+        pending = self._load_pending()
+        if pending.pop(pending_id, None) is None:
+            return False
+        self._save_pending(pending)
+        logger.info("skill_evolve_rejected", pending_id=pending_id)
+        return True
+
+    # ─── 自进化：失败反思提炼（从失败学习） ───
+
+    async def distill_from_failure(
+        self,
+        goal: str,
+        error: str,
+        tools_used: list[str] | None = None,
+        llm: Any | None = None,
+    ) -> Skill | None:
+        """失败任务反思提炼（对标 GEPA 反思式失败分析的轻量版）。
+
+        从失败目标 + 错误信息提炼"如何避免该类失败"的技能候选，
+        过同一 gate_candidate 门禁后入库（source=failure_distilled）。
+        无 LLM / 提炼失败 / 不过门禁均返回 None（记日志，绝不污染技能库）。
+        """
+        llm = self._resolve_llm(llm)
+        if llm is None:
+            return None
+        import re as _re
+        prompt = (
+            "你是一个失败分析专家。以下任务执行失败，分析失败根因并提炼一个"
+            "\"如何避免该类失败\"的技能（面向未来同类任务的避坑规程）。\n"
+            "输出严格 JSON（无其他文字）：\n"
+            '{"name": "技能名(体现避坑主题)", "description": "何时使用+避免什么失败", '
+            '"trigger_pattern": "触发关键词(|分隔)", '
+            '"system_prompt_hint": "避坑执行规程", "steps": []}\n\n'
+            f"失败任务目标: {goal[:300]}\n"
+            f"失败信息: {error[:500]}\n"
+            f"涉及工具: {', '.join(tools_used or [])[:200]}"
+        )
+        try:
+            from xagent.adapters.llm import Message as LLMMessage
+            resp = await llm.complete([LLMMessage(role="user", content=prompt)])
+            raw = (resp.content or "").strip()
+            m = _re.search(r"\{[\s\S]*\}", raw)
+            if not m:
+                return None
+            data = json.loads(m.group())
+        except Exception as e:
+            logger.debug("skill_failure_distill_failed", error=str(e))
+            return None
+        candidate = {
+            "name": str(data.get("name", "")).strip(),
+            "description": str(data.get("description", "")).strip(),
+            "trigger_pattern": str(data.get("trigger_pattern", "")).strip(),
+            "system_prompt_hint": str(data.get("system_prompt_hint", "")).strip(),
+            "steps": data.get("steps") if isinstance(data.get("steps"), list) else [],
+            "source_task": f"failure: {goal[:200]}",
+        }
+        ok, reason = self.gate_candidate(candidate, goal)
+        if not ok:
+            logger.info(
+                "skill_gate_reject", reason=reason,
+                name=candidate.get("name", ""), source="failure_distilled",
+            )
+            return None
+        skill = self.create_skill(
+            name=candidate["name"],
+            description=candidate["description"],
+            trigger_pattern=candidate["trigger_pattern"],
+            steps=candidate["steps"],
+            system_prompt_hint=candidate["system_prompt_hint"],
+            tags=["failure_distilled"],
+            source="failure_distilled",
+            source_task=candidate["source_task"],
+        )
+        logger.info("skill_failure_distilled", skill_id=skill.skill_id, name=skill.name)
+        return skill
 
     # ─── 自进化：淘汰机制 ───
 

@@ -1238,6 +1238,7 @@ async def run_agent(
         _tool_stats: dict[str, int] = {}  # tool_name -> call_count
         _tool_success: int = 0
         _tool_fail: int = 0
+        _loop_error: str = ""  # 循环级异常信息（空 = 主循环未崩溃），供失败反思提炼
         _trace_seq: int = 0  # 链路追踪序号计数器
         _tool_success_by_type: dict[str, int] = {}  # tool_name -> success_count
         _tool_fail_by_type: dict[str, int] = {}  # tool_name -> fail_count
@@ -2157,6 +2158,7 @@ async def run_agent(
                 )
             await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
+            _loop_error = str(loop_exc)[:300]
             # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
             if not state.final_answer:
                 # 从消息历史中提取最后的工具结果作为回答
@@ -2220,7 +2222,17 @@ async def run_agent(
     # ── 自动写入记忆库 ──
     await _save_to_memory(goal, state.final_answer, principal.tenant_id)
     # ── 自动技能提炼（Skill 自进化） ──
-    await _auto_extract_skill(goal, state.final_answer, state.step, events)
+    if _loop_error:
+        # 失败反思提炼（V3-2c）：循环级异常 → 从失败学习，提炼避坑技能
+        try:
+            from xagent.core.skills import get_skill_store as _get_skills
+
+            _tools_tried = [e.tool for e in events if getattr(e, "tool", None)]
+            await _get_skills().distill_from_failure(goal, _loop_error, tools_used=_tools_tried)
+        except Exception:  # noqa: S110  失败反思失败不影响主流程
+            pass
+    else:
+        await _auto_extract_skill(goal, state.final_answer, state.step, events)
 
     # ── 任务完成摘要增强：添加 diff 统计 + 执行统计 ──
     if state.final_answer:

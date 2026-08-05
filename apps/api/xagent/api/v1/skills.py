@@ -135,6 +135,10 @@ class EvolveAutoIn(BaseModel):
     threshold: float = Field(
         default=0.1, ge=0.0, le=1.0, description="采纳阈值（变体须领先父代的分差）"
     )
+    require_review: bool = Field(
+        default=False,
+        description="人工审核模式：评测通过后挂起待审，须 approve 才入库（对标 GEPA 人工 PR）",
+    )
 
 
 @router.post("/{skill_id}/evolve-auto", summary="自动进化闭环（变体生成→评测→优胜入库）")
@@ -147,10 +151,62 @@ async def evolve_auto(
     body = body or EvolveAutoIn()
     result = await store.evolve_auto(
         skill_id, n_variants=body.n_variants, threshold=body.threshold,
+        require_review=body.require_review,
     )
     if result is None:
         raise HTTPException(404, f"skill '{skill_id}' not found")
+    # 变体评测留证（V3-2a）：全量结果落 evidence_records，可回溯每次进化判定
+    try:
+        from xagent.infra.db import get_sessionmaker
+        from xagent.infra.repos.evidence import persist_evidence_bundle
+
+        async with get_sessionmaker()() as session:
+            await persist_evidence_bundle(
+                session,
+                tenant_id=principal.tenant_id,
+                run_id="",
+                task_id=skill_id,
+                records=[{"kind": "skill.evolve_auto", "payload": result}],
+            )
+            await session.commit()
+    except Exception:  # noqa: S110  证据写入失败不影响进化主流程
+        pass
     return result
+
+
+# ─── 进化人工审核队列（V3-2b） ───
+
+
+@router.get("/evolutions/pending", summary="列出待人工审核的进化条目")
+async def list_pending_evolutions(
+    principal: Principal = Depends(require_permission("system", "read")),
+):
+    store = get_skill_store()
+    items = store.list_pending_evolutions()
+    return {"pending": items, "total": len(items)}
+
+
+@router.post("/evolutions/{pending_id}/approve", summary="批准进化（优胜变体入库）")
+async def approve_evolution(
+    pending_id: str,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    store = get_skill_store()
+    result = store.approve_evolution(pending_id)
+    if result is None:
+        raise HTTPException(404, f"pending evolution '{pending_id}' not found")
+    return result
+
+
+@router.post("/evolutions/{pending_id}/reject", summary="拒绝进化（丢弃变体）")
+async def reject_evolution(
+    pending_id: str,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    store = get_skill_store()
+    if not store.reject_evolution(pending_id):
+        raise HTTPException(404, f"pending evolution '{pending_id}' not found")
+    return {"rejected": True, "pending_id": pending_id}
 
 
 # ─── 淘汰/恢复 ───
