@@ -130,7 +130,7 @@
 - **P2 容量实证第一轮闭环**：三瓶颈（bcrypt 同步阻塞 / skills 双重序列化 / 限流硬编码）全部修复并实测——login c=50 3.2→54.8 RPS（17×）、skills c=50 31.5→162.3 RPS（5.2×）、限流 XAGENT_SECURITY__RATE_LIMIT_* 全项可配
 - **P2 正式压测**：10min soak 142,720 请求全 200 无泄漏迹象；Postgres 目标配置不劣于 SQLite；4 worker 形态 canvas c=10 达 606 RPS（6.4×）— `audit-20260802/LOAD_TEST_FORMAL_20260803.md`
 - **CI 门禁补强**：PR #7 新候选 backend/frontend/license-gate/e2e-api 全绿（run 30829673045）；e2e-api 与 backend 解耦防止连带 SKIPPED 掩盖 API 漂移；/perf 端点存量 bug 修复
-- **多实例共享状态（限流/登录锁定/调度锁）已同机两实例实测**（HA_MULTI_INSTANCE_VERIFY_20260803）；**共享 Postgres 数据一致性 + JWT 无状态会话已同机两实例实测**（P2_MULTI_INSTANCE_CONSISTENCY_20260804）；多机 HA/Redis 自身高可用仍未演练；**lite 模式内存 UserStore 不跨实例**（full 模式由 Keycloak 承担）；**L2 E2B 未实测**（无 key）；**非当前机器的目标环境演练仍未做**——维持原边界不外推
+- **多实例共享状态（限流/登录锁定/调度锁）已同机两实例实测**（HA_MULTI_INSTANCE_VERIFY_20260803）；**共享 Postgres 数据一致性 + JWT 无状态会话已同机两实例实测**（P2_MULTI_INSTANCE_CONSISTENCY_20260804）；多机 HA/Redis 自身高可用仍未演练；~~lite 模式内存 UserStore 不跨实例~~（2026-08-05 已 DB 化修复）；**L2 E2B 未实测**（无 key）；**非当前机器的目标环境演练仍未做**——维持原边界不外推
 
 ---
 
