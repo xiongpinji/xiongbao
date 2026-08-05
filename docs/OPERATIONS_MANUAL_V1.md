@@ -236,10 +236,19 @@ docker compose exec -T postgres pg_dump -U xagent xagent > "backups\xagent-$stam
 
 当前必须明确：
 
-- Grafana / 完整告警体系未在仓库内闭环为正式交付 gate；
-- SLO / RTO / RPO 尚未形成正式签字版；
-- 负载测试与容量建议尚未闭环为正式发布证据；
+- ~~Grafana / 完整告警体系未在仓库内闭环为正式交付 gate~~（2026-08-03 已闭环：Alertmanager webhook 联动 + Helm 缺省接线 + 告警落 evidence_records）；
+- ~~负载测试与容量建议尚未闭环~~（2026-08-03 已闭环：10min soak + Postgres 基线 + 多 worker 扩展性实测）；
 - 当前更适合试点 / 受控交付值守，不应口头承诺成熟 SaaS 级运维体系。
+
+## 8. RTO / RPO 初版（v1.0.0 发布版）
+
+| 项 | 初版定义 | 依据 |
+|---|---|---|
+| RTO（恢复时间目标） | **单机形态 ≤ 30 分钟**：Compose `full` 栈重建 + `alembic upgrade head` + 备份恢复 | `scripts/restore.py` + RELEASE_RUNBOOK_V1 回滚步骤；同机 full-mode 等价环境实跑（R31） |
+| RPO（恢复点目标） | **≤ 6 小时**：证据归档 CronJob 默认每 6 小时（prod values `evidenceArchive.schedule: 0 */6 * * *`）；DB 备份按 `scripts/backup.py` 手工/计划执行 | 备份覆盖 Postgres + Qdrant + 审计链 |
+
+明确排除：多机热备 / 跨 AZ 容灾不在本版 RTO/RPO 承诺范围（多机 HA 未演练）。
+签字版 SLO 随首个试点环境实测后另行冻结。
 
 ---
 

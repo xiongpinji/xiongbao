@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xagent"
-version = "0.1.0"
+version = "1.0.0"
 description = "X-Agent — 面向企业的自主智能体框架（开源重构版）"
 readme = "README.md"
 requires-python = ">=3.11"
