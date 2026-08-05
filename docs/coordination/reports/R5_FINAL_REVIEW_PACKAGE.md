@@ -70,6 +70,8 @@
 - **签发边界维持 §0.4 不外推**（多机 HA / E2B / 目标环境 / SaaS 级容量不承诺），另增：P3 短剧变体已暂停（owner 决策 2026-08-04）。
 
 > **owner 决策记录（2026-08-04 晚）**：owner 确认将 §0.4 三项确认与签发延伸至上述 delta 后的 HEAD，授权以 **merge commit** 方式合并 PR #7 至 `master`。签发边界不外推（同上）。
+>
+> **合并执行记录（2026-08-05 00:56 UTC）**：合并前最终 CI run `30964570430`（HEAD `c198a3a`）全绿；PR #7 已以 merge commit `c2260cd285df4d8521878780edba8b818c64e066` 合入 `master`，状态 MERGED。候选分支保留（repo 未开 deleteBranchOnMerge）。
 
 ---
 
