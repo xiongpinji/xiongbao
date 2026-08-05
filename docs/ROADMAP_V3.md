@@ -49,15 +49,21 @@
 - [ ] 编码类并行任务可选 git worktree 隔离执行（每子代理独立工作区，结果以 diff 汇总）
 - [ ] 子代理执行证据链（sub_run 与父 run 的关联已在 run_id 命名体现，需落 evidence）
 
-## V3-4 X-Agent as MCP Server — 待启动
+## V3-4 X-Agent as MCP Server ✅（2026-08-05）
 
 现状：MCP client 完备（stdio/sse/streamable_http，工具发现注册进 ToolRegistry）；
 仅有若干独立 stdio 小 server（filesystem/github/playwright）。
 
-补齐项：
+交付：
 
-- [ ] 主服务能力以 MCP server（streamable HTTP）暴露：run 任务、code-review、skills match/exec
-- [ ] 外部 agent（Claude Code / Codex）可直接把 X-Agent 当工具源调用
+- [x] `adapters/mcp/platform_server.py`（MCPServer 高层 API）：四个平台工具
+  `xagent_run` / `xagent_code_review` / `xagent_skill_match` / `xagent_skill_import`
+- [x] 双传输：stdio（宿主 agent 拉起）+ streamable HTTP（`--http --port`，无状态模式，
+  默认仅绑 127.0.0.1，`XAGENT_PLATFORM_MCP_TOKEN` 可选 Bearer 校验）
+- [x] 安全边界：run/review 走平台既有权限与工具注册表，安全默认不变
+
+证据：`tests/test_platform_mcp_server.py` 9 项（工具注册面/参数校验/导入+匹配链路/
+评审无 LLM 诚实降级/Bearer 中间件 401·200/HTTP 应用构建）。
 
 ## 维护约定
 
