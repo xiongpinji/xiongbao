@@ -57,6 +57,40 @@ def _text_similarity(a: str, b: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
+# ─── LLM 输出 JSON 鲁棒提取（真实模型输出常带噪：尾逗号/多余文本/截断） ───
+
+
+def _parse_llm_json(raw: str, *, expect: str = "object") -> Any | None:
+    """从 LLM 输出提取 JSON。依次尝试：整串解析 → 贪心块 → 非贪心块 → 去尾逗号。
+
+    expect: "object"（{}）或 "array"（[]）。失败返回 None（调用方降级处理）。
+    """
+    import re as _re
+
+    text = (raw or "").strip()
+    if not text:
+        return None
+    open_c, close_c = ("{", "}") if expect == "object" else ("[", "]")
+
+    candidates: list[str] = []
+    if text.startswith(open_c):
+        candidates.append(text)
+    m = _re.search(rf"\{open_c}[\s\S]*\{close_c}", text)
+    if m:
+        candidates.append(m.group())
+    m = _re.search(rf"\{open_c}[\s\S]*?\{close_c}", text)
+    if m:
+        candidates.append(m.group())
+
+    for cand in candidates:
+        for variant in (cand, _re.sub(r",(\s*[}\]])", r"\1", cand)):
+            try:
+                return json.loads(variant)
+            except (json.JSONDecodeError, ValueError):
+                continue
+    return None
+
+
 @dataclass
 class SkillVersion:
     """技能版本快照。"""
@@ -595,7 +629,6 @@ class SkillStore:
 
     async def generate_eval_tasks(self, skill: Skill, llm: Any) -> dict[str, list[str]] | None:
         """由 LLM 基于技能描述生成合成评测任务：应命中 goal 3-5 个 + 不应命中 2-3 个。"""
-        import re as _re
         prompt = (
             "你是一个技能评测专家。根据以下技能，生成评测样例，输出严格 JSON（无其他文字）：\n"
             '{"positive": ["应触发此技能的任务目标", ...], "negative": ["不应触发的任务目标", ...]}\n'
@@ -609,10 +642,9 @@ class SkillStore:
             from xagent.adapters.llm import Message as LLMMessage
             resp = await llm.complete([LLMMessage(role="user", content=prompt)])
             raw = (resp.content or "").strip()
-            m = _re.search(r"\{[\s\S]*\}", raw)
-            if not m:
+            data = _parse_llm_json(raw, expect="object")
+            if data is None:
                 return None
-            data = json.loads(m.group())
             positive = [str(g).strip() for g in data.get("positive", []) if str(g).strip()][:5]
             negative = [str(g).strip() for g in data.get("negative", []) if str(g).strip()][:3]
             if not positive and not negative:
@@ -633,7 +665,6 @@ class SkillStore:
         if llm is None:
             logger.debug("skill_variants_skip", reason="no_llm", skill_id=skill.skill_id)
             return []
-        import re as _re
         prompt = (
             "你是一个技能进化专家。针对以下技能，生成 "
             f"{n} 个改进变体（如：优化触发关键词提高命中精度/补充执行步骤/优化提示词）。\n"
@@ -651,11 +682,10 @@ class SkillStore:
             from xagent.adapters.llm import Message as LLMMessage
             resp = await llm.complete([LLMMessage(role="user", content=prompt)])
             raw = (resp.content or "").strip()
-            m = _re.search(r"\[[\s\S]*\]", raw)
-            if not m:
+            data = _parse_llm_json(raw, expect="array")
+            if data is None:
                 logger.debug("skill_variants_skip", reason="llm_no_json", skill_id=skill.skill_id)
                 return []
-            data = json.loads(m.group())
         except Exception as e:
             logger.debug("skill_variants_skip", reason="llm_failed", error=str(e))
             return []
@@ -881,14 +911,15 @@ class SkillStore:
         llm = self._resolve_llm(llm)
         if llm is None:
             return None
-        import re as _re
         prompt = (
             "你是一个失败分析专家。以下任务执行失败，分析失败根因并提炼一个"
             "\"如何避免该类失败\"的技能（面向未来同类任务的避坑规程）。\n"
             "输出严格 JSON（无其他文字）：\n"
             '{"name": "技能名(体现避坑主题)", "description": "何时使用+避免什么失败", '
             '"trigger_pattern": "触发关键词(|分隔)", '
-            '"system_prompt_hint": "避坑执行规程", "steps": []}\n\n'
+            '"system_prompt_hint": "避坑执行规程", "steps": []}\n'
+            "注意：trigger_pattern 必须从下方任务目标原文中选取 2-4 个关键词"
+            "（中文 2-4 字词或英文单词），确保同类目标再次出现时能被子串匹配命中。\n\n"
             f"失败任务目标: {goal[:300]}\n"
             f"失败信息: {error[:500]}\n"
             f"涉及工具: {', '.join(tools_used or [])[:200]}"
@@ -897,10 +928,9 @@ class SkillStore:
             from xagent.adapters.llm import Message as LLMMessage
             resp = await llm.complete([LLMMessage(role="user", content=prompt)])
             raw = (resp.content or "").strip()
-            m = _re.search(r"\{[\s\S]*\}", raw)
-            if not m:
+            data = _parse_llm_json(raw, expect="object")
+            if data is None or not isinstance(data, dict):
                 return None
-            data = json.loads(m.group())
         except Exception as e:
             logger.debug("skill_failure_distill_failed", error=str(e))
             return None
@@ -912,6 +942,13 @@ class SkillStore:
             "steps": data.get("steps") if isinstance(data.get("steps"), list) else [],
             "source_task": f"failure: {goal[:200]}",
         }
+        # 触发词可命中性兜底（真实模型常无视 prompt 约束自选触发词）：
+        # 从目标原文派生关键词并入 trigger_pattern——避坑技能必须在同类目标
+        # 再次出现时能被命中，同时保证门禁 trigger_not_matchable 不误杀。
+        goal_kws = sorted(_tokenize(goal))[:4]
+        existing = [k for k in candidate["trigger_pattern"].split("|") if k.strip()]
+        merged = existing + [k for k in goal_kws if k not in {e.lower() for e in existing}]
+        candidate["trigger_pattern"] = "|".join(merged)
         ok, reason = self.gate_candidate(candidate, goal)
         if not ok:
             logger.info(
