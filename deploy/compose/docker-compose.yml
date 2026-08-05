@@ -173,6 +173,36 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  # X-Agent Platform MCP Server（V3-4，可选）：把平台能力以 MCP 暴露给外部 agent。
+  # 启用：docker compose --profile mcp up -d platform-mcp
+  # 设 XAGENT_PLATFORM_MCP_TOKEN 后强制 Bearer 校验（写 deploy/compose/.env）。
+  platform-mcp:
+    profiles: ["mcp"]
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8100:8100"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - XAGENT_MODE=full
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
+      - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
+      - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+      - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
+      - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
+      - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
+      - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
+      - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:-}
+    command: >
+      sh -c "python -m xagent.adapters.mcp.platform_server --http --host 0.0.0.0 --port 8100"
+    restart: unless-stopped
+
   # X-Agent Celery worker（后台长任务）
   worker:
     build:
