@@ -49,6 +49,30 @@
 
 ---
 
+### 0.5 签发后 delta 披露与合并就绪附录（2026-08-04，待 owner 签发延伸）
+
+§0.4 签发对象为 HEAD `2aae3a2`（代码有效候选 `cfb973d`）。此后分支继续推进至 `41b383f`，按本包自身纪律，**原签发不自动覆盖新 HEAD**，合并前需 owner 明确延伸。delta 完整披露如下：
+
+- 范围：`2aae3a2..41b383f` 共 22 提交（`2aae3a2` 已验证为当前 HEAD 祖先）。
+- 代码类提交（6 个，均有本地门禁 + 远端 CI 证据）：
+  - `5e37959` style(ruff)：43 项安全自动修复（330→287），不改行为；
+  - `813ffb1` feat(ops)：P1 告警联动（Alertmanager webhook 端点 + Helm 接线）；
+  - `1dd4e02` feat(ops)：P1 run/workflow 证据链自动生成 + 归档接通；
+  - `0a43de5` / `f83ac75` feat(spine)：P4 自动推进循环 + review 闭环 + release 收口；
+  - `dd8c18b` feat(web)：P4 GoalBoard 治理视图操作入口；
+  - `073541b` / `bb250c2` test：P0/P1 补证 43 项新测试（纯加法）；
+  - `f95d26e` ci：新增 `config-governance` 门禁 job（纯加法）。
+- 文档/口径类提交（其余）：SOT 勾选、交付模板集、变体包、签发留档。
+- 远端 CI 覆盖：run `30842484189`（8/3，P1 告警联动节点）与 run **`30963854108`（8/4，最终 HEAD `41b383f`，backend/frontend/license-gate/config-governance/e2e-api 全绿**；promptfoo-eval/load-test/docker-build 按既有规则不适用于 PR，与历次签发口径一致）。
+- 本地门禁：全量 pytest 628 通过 / 0 失败 / 8 跳过；前端 tsc 0 错误；eslint 0 错误；ruff 无新增（证据：`audit-20260802/P4_FINAL_VERIFY_20260804.md`、`P0_CONFIG_GOVERNANCE_CLOSEOUT_20260804.md`、`P1_OPS_AUTOMATION_VERIFY_20260804.md` 及各 pytest 日志）。
+- 同机两实例实测新增证据（8/4）：共享 Postgres 数据一致性 + JWT 无状态会话（`audit-20260802/P2_MULTI_INSTANCE_CONSISTENCY_20260804.md`）；新发现 lite 内存 UserStore 不跨实例，已入 KNOWN_ISSUES §2.4，不影响 full 模式交付口径。
+- PR #7 当前状态：MERGEABLE / CLEAN，无冲突，无 review 记录。
+- **签发边界维持 §0.4 不外推**（多机 HA / E2B / 目标环境 / SaaS 级容量不承诺），另增：P3 短剧变体已暂停（owner 决策 2026-08-04）。
+
+> 待 owner 决策：是否将 §0.4 三项确认与签发延伸至 HEAD `41b383f` 并合并 PR #7。
+
+---
+
 ## 1. 当前审查对象
 
 ### 候选主线
