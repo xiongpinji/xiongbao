@@ -24,18 +24,20 @@
   191+ 技能）可直接导入；重复/缺字段/超容量逐条拒绝并给原因。
 - 证据：`tests/test_skill_import.py` 10 项。
 
-## V3-2 技能进化闭环硬化（轻量 GEPA 补全）— 进行中
+## V3-2 技能进化闭环硬化（轻量 GEPA 补全）✅（2026-08-05）
 
 现状（v2 已有雏形）：`generate_variants` / `generate_eval_tasks` / `evaluate_fields` /
 `evolve_auto`（变体得分 ≥ 父代+0.1 自动采纳）。
 
 补齐项：
 
-- [ ] 变体独立留证：每次 evolve_auto 的候选变体 + 评测分数落证据（evidence_records），可回溯
-- [ ] 人工审核流：评测通过 → `pending_review` → 人工 approve 才 evolve（对标 Hermes 人工 PR 门禁；
-  保留当前自动采纳为可选模式）
-- [ ] 失败轨迹反思：auto_distill 输入纳入失败 run 的结构化原因（为什么失败），
-  从"只从成功提炼"补到"从失败学习"
+- [x] 变体独立留证：evolve-auto 端点每次判定全量落 evidence_records（kind=skill.evolve_auto），可回溯
+- [x] 人工审核流：`require_review=true` 评测通过 → 挂起 `_pending_evolutions.json` → 人工 approve 才 evolve（对标 Hermes 人工 PR 门禁；
+  保留当前自动采纳为可选模式）。端点：`GET /skills/evolutions/pending` + approve/reject；队列落盘跨重启
+- [x] 失败轨迹反思：`distill_from_failure`（失败根因分析→避坑技能候选→同一门禁入库，source=failure_distilled），
+  已接线 loop.py 循环级异常路径（成功走 auto_distill / 失败走反思），从"只从成功提炼"补到"从失败学习"
+
+证据：`tests/test_skill_evolve_review.py` 9 项（挂起/批准/拒绝/跨重启持久化/向后兼容/失败提炼三态）。
 
 ## V3-3 并行子代理 worktree 隔离 — 待启动
 
