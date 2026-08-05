@@ -224,7 +224,7 @@ def verify_id_token(token: str, *, nonce: str, sec) -> dict[str, Any]:
     return claims
 
 
-def _provision_and_session(claims: dict[str, Any], *, issuer: str) -> dict[str, Any]:
+async def _provision_and_session(claims: dict[str, Any], *, issuer: str) -> dict[str, Any]:
     """JIT 开户 + 角色映射 + 签发 X-Agent JWT 会话 + 审计。"""
     from xagent.enterprise.audit import get_audit_log
 
@@ -236,10 +236,10 @@ def _provision_and_session(claims: dict[str, Any], *, issuer: str) -> dict[str, 
     roles = [str(r) for r in (realm.get("roles") or [])] or ["member"]
 
     store = get_user_store()
-    jit_created = store.get(user_id) is None
+    jit_created = await store.aget(user_id) is None
     if jit_created:
         # 随机口令占位：SSO 用户不走本地口令登录
-        store.add(
+        await store.aadd(
             user_id,
             tenant_id,
             roles,
@@ -287,4 +287,4 @@ async def handle_callback(*, code: str, state: str) -> dict[str, Any]:
     if not id_token:
         raise OidcExchangeError("token 端点响应缺少 id_token")
     claims = verify_id_token(id_token, nonce=nonce, sec=sec)
-    return _provision_and_session(claims, issuer=disc.issuer)
+    return await _provision_and_session(claims, issuer=disc.issuer)

@@ -137,5 +137,24 @@ def _lite_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     _tasks._task_tenants.clear()
     _tasks._task_metadata.clear()
+    # UserStore DB 化后的隔离补充：users 表位于每进程共享库，跨测试残留会让
+    # 后续测试读到前面测试注册的账号（与纯内存时代的隔离语义不一致）。
+    # 每测试清空 users 表；dispose_engine 避免连接跨事件循环复用。
+    try:
+        import asyncio as _asyncio
+
+        from sqlalchemy import delete as _sql_delete
+        from xagent.infra.db import dispose_engine, get_sessionmaker
+        from xagent.infra.models.user import User as _UserRow
+
+        async def _wipe_users() -> None:
+            async with get_sessionmaker()() as _s:
+                await _s.execute(_sql_delete(_UserRow))
+                await _s.commit()
+            await dispose_engine()
+
+        _asyncio.run(_wipe_users())
+    except Exception:  # noqa: BLE001 — users 表尚未建（未启动 app 的测试）等场景不阻断
+        pass
     yield
     get_settings.cache_clear()

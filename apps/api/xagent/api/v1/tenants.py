@@ -33,7 +33,7 @@ async def list_users(
     store = get_user_store()
     users = [
         {"user_id": u.user_id, "tenant_id": u.tenant_id, "roles": u.roles, "email": u.email}
-        for u in store._users.values()
+        for u in await store.alist()
         if u.tenant_id == principal.tenant_id
     ]
     return {"users": users, "count": len(users)}
@@ -46,7 +46,9 @@ async def create_user(
 ) -> dict:
     store = get_user_store()
     try:
-        u = store.add(body.username, principal.tenant_id, body.roles, body.password, body.email)
+        u = await store.aadd(
+            body.username, principal.tenant_id, body.roles, body.password, body.email
+        )
     except UserExistsError as exc:
         raise HTTPException(409, "用户名已存在") from exc
     return {"user_id": u.user_id, "tenant_id": u.tenant_id, "roles": u.roles}
@@ -59,15 +61,10 @@ async def update_user_roles(
     principal: Principal = Depends(require_permission("system", "manage")),
 ) -> dict:
     store = get_user_store()
-    u = store.get(user_id)
+    u = await store.aget(user_id)
     if not u or u.tenant_id != principal.tenant_id:
         raise HTTPException(404, "用户不存在")
-    # 重建用户（dataclass 不可变）
-    from xagent.enterprise.auth.users import User
-    store._users[user_id] = User(
-        user_id=u.user_id, tenant_id=u.tenant_id, roles=body.roles,
-        password_hash=u.password_hash, email=u.email,
-    )
+    await store.aupdate_roles(user_id, body.roles)
     return {"user_id": user_id, "roles": body.roles}
 
 
@@ -77,12 +74,12 @@ async def delete_user(
     principal: Principal = Depends(require_permission("system", "manage")),
 ) -> dict:
     store = get_user_store()
-    u = store.get(user_id)
+    u = await store.aget(user_id)
     if not u or u.tenant_id != principal.tenant_id:
         raise HTTPException(404, "用户不存在")
     if user_id == principal.user_id:
         raise HTTPException(400, "不能删除自己")
-    del store._users[user_id]
+    await store.adelete(user_id)
     return {"deleted": user_id}
 
 

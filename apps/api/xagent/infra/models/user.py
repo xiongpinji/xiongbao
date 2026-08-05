@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from xagent.infra.db import Base
@@ -30,4 +30,7 @@ class User(Base):
     # 逗号分隔的角色；进程内 UserStore 仍是 lite 主路径，此表为持久化镜像
     roles: Mapped[str] = mapped_column(String(256), default="member")
     password_hash: Mapped[str] = mapped_column(String(256), default="")
+    email: Mapped[str] = mapped_column(String(256), default="")
+    # 默认/初始口令登录标记：改密后清除（与 UserStore 内存态语义一致）
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
