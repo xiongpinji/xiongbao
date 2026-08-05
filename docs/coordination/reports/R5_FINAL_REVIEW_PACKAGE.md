@@ -72,6 +72,8 @@
 > **owner 决策记录（2026-08-04 晚）**：owner 确认将 §0.4 三项确认与签发延伸至上述 delta 后的 HEAD，授权以 **merge commit** 方式合并 PR #7 至 `master`。签发边界不外推（同上）。
 >
 > **合并执行记录（2026-08-05 00:56 UTC）**：合并前最终 CI run `30964570430`（HEAD `c198a3a`）全绿；PR #7 已以 merge commit `c2260cd285df4d8521878780edba8b818c64e066` 合入 `master`，状态 MERGED。候选分支保留（repo 未开 deleteBranchOnMerge）。
+>
+> **合并后 master push 门禁修复（2026-08-05）**：master 首次 push 触发 push-only 两 job 首跑即败（run `30964877982`）——`load-test` k6 手动 gpg/apt 安装 keyserver 失效、`promptfoo-eval` 启动命令 `xagent serve --host/--port` 与 CLI 现状脱节（该子命令已无此二参）。修复（`f503442`）：k6 改用官方 `grafana/setup-k6-action@v1`、启动命令对齐 e2e-api 的 `uvicorn xagent.main:app`。复验 run **`30965333163` 全 job 绿**（backend/frontend/license-gate/config-governance/e2e-api/promptfoo-eval/load-test 全 success；docker-build 按既有条件仅 `refs/heads/main` 触发，master 上恒 skipped——存量口径，未动）。
 
 ---
 
