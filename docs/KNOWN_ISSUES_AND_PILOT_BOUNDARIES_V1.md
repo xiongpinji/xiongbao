@@ -88,6 +88,7 @@ Roadmap v2 P0 已完成：
 
 - 客户现场 K8s 集群级变更窗口治理
 - 企业级多实例演练
+- lite 模式内存 UserStore 不跨实例共享（注册/改密不落 DB；多实例部署须用 full 模式 + Keycloak 或将用户存储 DB 化）— 2026-08-04 P2 实测发现
 
 ## 2.5 支持范围优先围绕 Compose full 模式
 
