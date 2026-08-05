@@ -25,7 +25,7 @@
 |---|---|---|
 | 短剧/内容工厂 | creative-studio 域、媒体 provider 链、行业技能包 | 主线已有，需打包为独立变体（待整体移植完成后启动） |
 | 研发效能（Codex 对标） | code_review、AGENTS.md 分层指令、权限模式 | ✅ 变体包 v1 已建立（variants/dev-effectiveness/：裁剪决策 + 口径页 + 演示脚本）— 2026-08-04 |
-| 企业内部助手 | SSO/OIDC 必配、审计保留加长、知识库预置 | 待做 |
+| 企业内部助手 | SSO/OIDC 必配、审计保留加长、知识库预置 | ✅ 变体包 v1 已建立（variants/enterprise-assistant/：裁剪决策 + 口径页 + 演示脚本）— 2026-08-04 |
 
 ## 4. 变体验收
 
