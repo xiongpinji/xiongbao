@@ -206,6 +206,45 @@ async def delete_skill(
     return {"deleted": True, "skill_id": skill_id}
 
 
+# ─── SKILL.md 导入（agentskills.io 生态兼容）───
+
+
+class SkillMdImportIn(BaseModel):
+    content: str = Field(..., min_length=1, description="SKILL.md 全文（含 frontmatter）")
+    origin: str = Field(default="", description="来源标识（如 repo 路径/tap 名）")
+
+
+class SkillMdBatchImportIn(BaseModel):
+    items: list[SkillMdImportIn] = Field(..., min_length=1, description="批量导入项")
+
+
+@router.post("/import/skillmd", summary="导入单个 SKILL.md（过质量门禁）")
+async def import_skillmd_endpoint(
+    body: SkillMdImportIn,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    from xagent.core.skills.importer import import_skillmd
+
+    store = get_skill_store()
+    skill, reason = import_skillmd(store, body.content, body.origin)
+    if skill is None:
+        return {"imported": False, "reason": reason}
+    return {"imported": True, "skill": skill.to_dict()}
+
+
+@router.post("/import/skillmd/batch", summary="批量导入 SKILL.md（逐条过门禁）")
+async def import_skillmd_batch_endpoint(
+    body: SkillMdBatchImportIn,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    from xagent.core.skills.importer import import_skillmd_batch
+
+    store = get_skill_store()
+    return import_skillmd_batch(
+        store, [item.model_dump() for item in body.items]
+    )
+
+
 # ─── 匹配测试 ───
 
 
