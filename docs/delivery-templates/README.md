@@ -9,5 +9,6 @@
 | 标准恢复包 | [RECOVERY_PACK_TEMPLATE.md](RECOVERY_PACK_TEMPLATE.md) | 灾难恢复动作集与演练纪律 |
 | 标准角色包 | [ROLE_PACK.md](ROLE_PACK.md) | TL/QA/DevOps/Owner 职责矩阵与人力模式 |
 | 行业变体指南 | [INDUSTRY_VARIANT_GUIDE.md](INDUSTRY_VARIANT_GUIDE.md) | 行业/场景变体的裁剪矩阵与验收 |
+| 研发效能变体包 v1 | [variants/dev-effectiveness/](variants/dev-effectiveness/README.md) | Codex 对标场景：裁剪决策 + 口径页 + 演示脚本 |
 
 使用顺序建议：角色包定人 → 试点包开张 → 升级包迭代 → 恢复包兜底；做行业复制时先读变体指南。
