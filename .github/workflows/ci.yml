@@ -138,6 +138,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build web dist（web Dockerfile 依赖宿主机预构建 dist/）
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: npm ci & build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
       - name: Build & Push Web image
         uses: docker/build-push-action@v5
         with:
