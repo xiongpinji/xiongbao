@@ -43,6 +43,8 @@ dependencies = [
     "httpx>=0.27",
     "structlog>=24.4",
     "tenacity>=9.0",
+    # ---- MCP（Model Context Protocol：client + platform server，V3-4 起为核心依赖）----
+    "mcp>=2.0",
 ]
 
 [project.optional-dependencies]
