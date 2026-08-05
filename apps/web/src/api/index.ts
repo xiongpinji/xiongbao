@@ -542,6 +542,33 @@ export const retireSkill = (id: string) => api.post(`/skills/${id}/retire`).then
 export const restoreSkill = (id: string) => api.post(`/skills/${id}/restore`).then((r) => r.data);
 export const retireLowPerformers = () => api.post("/skills/retire-low-performers").then((r) => r.data);
 
+// ---- 技能导入与进化审核（V3-1/V3-2）----
+
+export interface PendingEvolution {
+  pending_id: string;
+  skill_id: string;
+  variant: { description?: string; trigger_pattern?: string; system_prompt_hint?: string };
+  parent_eval: { score?: number };
+  best_eval: { score?: number };
+  reason: string;
+  created_at: number;
+}
+
+export const importSkillMd = (content: string, origin = "web-manual") =>
+  api.post<{ imported: boolean; reason?: string; skill?: SkillView }>(
+    "/skills/import/skillmd", { content, origin },
+  ).then((r) => r.data);
+export const evolveAutoSkill = (id: string, requireReview = true) =>
+  api.post<{ adopted: boolean; reason: string; pending_id?: string }>(
+    `/skills/${id}/evolve-auto`, { require_review: requireReview },
+  ).then((r) => r.data);
+export const listPendingEvolutions = () =>
+  api.get<{ pending: PendingEvolution[]; total: number }>("/skills/evolutions/pending").then((r) => r.data);
+export const approveEvolution = (id: string) =>
+  api.post(`/skills/evolutions/${id}/approve`).then((r) => r.data);
+export const rejectEvolution = (id: string) =>
+  api.post(`/skills/evolutions/${id}/reject`).then((r) => r.data);
+
 // ---- 定时调度 ----
 export interface ScheduledJobView {
   job_id: string;

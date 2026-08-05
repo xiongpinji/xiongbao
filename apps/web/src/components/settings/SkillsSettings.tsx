@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  createSkill, deleteSkill, listSkills, retireSkill, restoreSkill,
+  approveEvolution, createSkill, deleteSkill, evolveAutoSkill, importSkillMd,
+  listPendingEvolutions, listSkills, rejectEvolution, retireSkill, restoreSkill,
   retireLowPerformers, skillStats,
-  type SkillView, type SkillStats,
+  type PendingEvolution, type SkillView, type SkillStats,
 } from "../../api";
 import { SectionTitle } from "./GeneralSettings";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -10,7 +11,10 @@ import { useConfirm } from "../../hooks/useConfirm";
 const SOURCE_LABELS: Record<string, string> = {
   manual: "手动",
   auto_extracted: "自动提炼",
+  auto_distilled: "自动提炼",
+  failure_distilled: "失败反思",
   evolved: "演化",
+  import: "导入",
 };
 
 export default function SkillsSettings() {
@@ -19,6 +23,9 @@ export default function SkillsSettings() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [pending, setPending] = useState<PendingEvolution[]>([]);
   const [showRetired, setShowRetired] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", trigger_pattern: "", tags: "" });
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,9 +39,12 @@ export default function SkillsSettings() {
 
   const refresh = useCallback(async () => {
     try {
-      const [data, st] = await Promise.all([listSkills(showRetired), skillStats()]);
+      const [data, st, pe] = await Promise.all([
+        listSkills(showRetired), skillStats(), listPendingEvolutions(),
+      ]);
       setSkills(data);
       setStats(st);
+      setPending(pe.pending);
       setError(null);
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : String(e));
@@ -101,6 +111,67 @@ export default function SkillsSettings() {
     }
   };
 
+  const handleImport = async () => {
+    if (!importText.trim()) return;
+    setLoading(true);
+    try {
+      const res = await importSkillMd(importText);
+      if (!res.imported) {
+        showError(`导入被门禁拒绝: ${res.reason || "未知原因"}`);
+        return;
+      }
+      setImportText("");
+      setShowImport(false);
+      await refresh();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEvolveAuto = async (id: string) => {
+    setLoading(true);
+    try {
+      const res = await evolveAutoSkill(id, true);
+      if (res.pending_id) {
+        await refresh();
+      } else {
+        showError(`未产生待审核变体: ${res.reason}`);
+      }
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (pendingId: string) => {
+    setLoading(true);
+    try {
+      await approveEvolution(pendingId);
+      await refresh();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async (pendingId: string) => {
+    const ok = await confirm({ title: "拒绝进化", message: "确定丢弃该优胜变体？技能保持现状。", danger: true, confirmText: "拒绝" });
+    if (!ok) return;
+    setLoading(true);
+    try {
+      await rejectEvolution(pendingId);
+      await refresh();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRetireLow = async () => {
     const ok = await confirm({ title: "淘汰低效技能", message: "将自动淘汰成功率低于阈值的技能，确定继续？", danger: true, confirmText: "淘汰" });
     if (!ok) return;
@@ -130,7 +201,14 @@ export default function SkillsSettings() {
           </button>
           <button
             type="button"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => { setShowImport(!showImport); setShowForm(false); }}
+            className="rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
+          >
+            {showImport ? "取消" : "导入 SKILL.md"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowForm(!showForm); setShowImport(false); }}
             className="rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
           >
             {showForm ? "取消" : "+ 新建技能"}
@@ -156,6 +234,71 @@ export default function SkillsSettings() {
       )}
 
       {error && <div className="rounded-lg bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
+
+      {/* 待审核进化队列（V3-2 人工门禁） */}
+      {pending.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.04] p-5">
+          <div className="text-sm font-medium text-purple-300">待审核进化（{pending.length}）</div>
+          {pending.map((p) => (
+            <div key={p.pending_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-neutral-300">
+                  得分 {p.parent_eval?.score?.toFixed(2) ?? "?"} → {p.best_eval?.score?.toFixed(2) ?? "?"}
+                  <span className="ml-2 text-neutral-500">{p.reason}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(p.pending_id)}
+                    disabled={loading}
+                    className="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-400 transition hover:bg-emerald-500/20"
+                  >
+                    批准入库
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReject(p.pending_id)}
+                    disabled={loading}
+                    className="rounded-lg bg-red-500/10 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-500/20"
+                  >
+                    拒绝
+                  </button>
+                </div>
+              </div>
+              {p.variant?.description && (
+                <div className="mt-2 text-xs text-neutral-400 line-clamp-2">变体描述: {p.variant.description}</div>
+              )}
+              {p.variant?.trigger_pattern && (
+                <div className="mt-1 text-[11px] text-neutral-500">变体触发: {p.variant.trigger_pattern}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SKILL.md 导入表单（V3-1 生态兼容） */}
+      {showImport && (
+        <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
+          <div className="text-xs text-neutral-400">
+            粘贴 SKILL.md 全文（agentskills.io 格式，兼容 Hermes / Claude Code 技能库）。导入强制过质量门禁：字段完整、触发可命中、去重、容量。
+          </div>
+          <textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder={'---\nname: my-skill\ndescription: Use when ...\n---\n# 正文规程...'}
+            rows={10}
+            className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 font-mono text-xs text-white outline-none transition-colors focus:border-white/25"
+          />
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={loading || !importText.trim()}
+            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
+          >
+            {loading ? "导入中..." : "过门禁并导入"}
+          </button>
+        </div>
+      )}
 
       {/* 创建表单 */}
       {showForm && (
@@ -269,14 +412,25 @@ export default function SkillsSettings() {
                     恢复
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleRetire(skill.skill_id)}
-                    disabled={loading}
-                    className="rounded-lg bg-orange-500/10 px-2.5 py-1 text-xs text-orange-400 transition hover:bg-orange-500/20"
-                  >
-                    淘汰
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleEvolveAuto(skill.skill_id)}
+                      disabled={loading}
+                      title="生成改进变体并评测，优胜者进待审核队列"
+                      className="rounded-lg bg-purple-500/10 px-2.5 py-1 text-xs text-purple-400 transition hover:bg-purple-500/20"
+                    >
+                      自动进化
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRetire(skill.skill_id)}
+                      disabled={loading}
+                      className="rounded-lg bg-orange-500/10 px-2.5 py-1 text-xs text-orange-400 transition hover:bg-orange-500/20"
+                    >
+                      淘汰
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
