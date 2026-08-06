@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：P0 发布可信基线。
+- 当前阶段：P1 开发任务闭环。
 - 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - 当前分支：`feature/webapi-release-hardening`。
@@ -14,15 +14,14 @@
 
 ## In Progress
 
-- [P1-A] worktree 结果持久模型与 Git 生命周期 | 状态：CLAIMED | Owner：Codex | 依赖：P0-E | 验收：成功任务持久保留 commit/worktree/branch/full patch，并支持安全 approve/reject/apply/conflict/cancel 状态链。
+- [P1-B] Web 开发任务控制台 | 状态：CLAIMED | Owner：Codex | 依赖：P1-A | 验收：列表、详情、完整 patch 和合法状态动作可见，所有变更二次确认。
 
 ## Ready
 
-- 暂无；P1-A 通过后再将 P1-B 转 READY。
+- 暂无；P1-B 完成并通过 P1 阶段审计后再将 P2-A 转 READY。
 
 ## Queued
 
-- [P1-B] review/apply API 与 Web 开发任务控制台 | 状态：QUEUED | 依赖：P1-A。
 - [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：QUEUED | 依赖：P1-B。
 - [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：QUEUED | 依赖：P2-A。
 - [P2-C] 数据库 checkpoint、恢复/回滚与 Web 时间线 | 状态：QUEUED | 依赖：P2-B。
@@ -31,6 +30,7 @@
 
 ## Done
 
+- [P1-A] worktree 结果持久模型、Git 生命周期与审查 API | 状态：DONE | 证据：完成 tenant-scoped 持久记录、成功结果 commit/worktree/branch/full patch 保留、approve/reject/apply/conflict/expire/cancel 状态链；API 实测租户隔离、显式 task ID 确认、路径脱敏与审计，相关后端测试 18/18 通过。
 - [P0-A] 流式并发工具执行正确性 | 状态：DONE | 证据：新增测试先失败于两个 `_tool_success` `UnboundLocalError`，修复后定向测试 1/1、编排回归 11/11 通过，`F823` 为 0；双工具真实结果为 `a`/`b`，最终统计为 2 次调用、成功率 100%。
 - [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：DONE | 证据：基线测试先因脚本不存在失败；修复后相关测试 12/12、关键规则 `F821,F822,F823,B023` 通过，完整 Ruff `279 <= 286`、mypy `73 <= 74`；CI 已移除静态检查 `|| true` 并通过 YAML 解析。
 - [P0-C] Web 测试入口与排除模块边界 | 状态：DONE | 证据：导航测试先因 `taskId=creative` 失败；修复后默认 `npm test` 自动执行 2 个文件共 11 项，lint `0 error / 100 warnings`，typecheck/build 通过；短剧、画布、剪辑旧路由统一进入排除说明页，构建无 `CreativeStudioPage`/`EditorPage` chunk，CI 已加入 Web 单元测试。

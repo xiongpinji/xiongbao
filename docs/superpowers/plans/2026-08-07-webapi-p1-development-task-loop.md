@@ -80,11 +80,11 @@
 - 修改：`apps/api/xagent/api/v1/automation.py`
 - 创建：`apps/api/tests/test_development_tasks_api.py`
 
-- [ ] 先写 API 失败测试：list/detail tenant 隔离；approve/reject/apply/cancel 缺显式确认返回 422；patch 不暴露路径。
-- [ ] GET `/development-tasks`、`/{id}`、`/{id}/patch` 使用 `agent:read`。
-- [ ] POST approve 使用 `code_review:execute`；reject/apply/cancel 使用 `agent:execute`，body 必须携带 task id 确认值。
-- [ ] 所有动作写现有 audit chain；404 不泄露另一 tenant 的存在。
-- [ ] parallel-run 响应返回 development task id，便于 Web 跳转。
+- [x] 先写 API 失败测试：list/detail tenant 隔离；approve/reject/apply/cancel 缺显式确认返回 422；patch 不暴露路径。
+- [x] GET `/development-tasks`、`/{id}`、`/{id}/patch` 使用 `agent:read`。
+- [x] POST approve 使用 `code_review:execute`；reject/apply/cancel 使用 `agent:execute`，body 必须携带 task id 确认值。
+- [x] 所有动作写现有 audit chain；404 不泄露另一 tenant 的存在。
+- [x] parallel-run 响应返回 development task id，便于 Web 跳转。
 
 ## 任务 5：Web 开发任务控制台
 

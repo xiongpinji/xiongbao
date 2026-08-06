@@ -13,6 +13,7 @@ from xagent.api.v1 import (
     code_review,
     creative_studio,
     data_io,
+    development_tasks,
     editor,
     knowledge,
     marketplace,
@@ -41,6 +42,7 @@ api_v1.include_router(runs.router)
 api_v1.include_router(spine.router)
 api_v1.include_router(canvas.router)
 api_v1.include_router(code_review.router)
+api_v1.include_router(development_tasks.router)
 api_v1.include_router(creative_studio.router)
 api_v1.include_router(editor.router)
 api_v1.include_router(open_source.router)
