@@ -38,6 +38,14 @@ def _visible_pending(store: SkillStore, tenant_id: str) -> list[dict]:
     ]
 
 
+def _list_view(skill) -> dict:
+    value = skill.to_dict()
+    hint = str(value.get("system_prompt_hint", ""))
+    value["system_prompt_truncated"] = len(hint) > 500
+    value["system_prompt_hint"] = hint[:500]
+    return value
+
+
 @router.get("", summary="列出所有技能")
 async def list_skills(
     include_retired: bool = False,
@@ -52,7 +60,7 @@ async def list_skills(
         )
         # separators 与 starlette JSONResponse 一致（紧凑），保持响应字节级口径
         body = json.dumps(
-            {"skills": [s.to_dict() for s in skills], "total": len(skills)},
+            {"skills": [_list_view(skill) for skill in skills], "total": len(skills)},
             ensure_ascii=False, separators=(",", ":"),
         ).encode("utf-8")
         _list_cache.clear()

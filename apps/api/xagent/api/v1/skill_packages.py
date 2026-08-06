@@ -13,6 +13,7 @@ from xagent.core.skills import get_skill_store
 from xagent.domains.skill_packages import (
     SkillPackageLimits,
     SkillPackageRecord,
+    discard_skill_package_import,
     get_skill_package,
     import_skill_package_zip,
     list_skill_packages,
@@ -81,7 +82,6 @@ async def import_package(
             packages_root=PACKAGES_ROOT,
             limits=limits,
         )
-        await session.commit()
     except ValueError as exc:
         code = (
             status.HTTP_409_CONFLICT
@@ -89,6 +89,14 @@ async def import_package(
             else status.HTTP_422_UNPROCESSABLE_CONTENT
         )
         raise HTTPException(code, str(exc)) from exc
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        await discard_skill_package_import(
+            get_skill_store(), package, packages_root=PACKAGES_ROOT
+        )
+        raise
     get_audit_log().record(
         tenant_id=principal.tenant_id,
         actor=principal.user_id,

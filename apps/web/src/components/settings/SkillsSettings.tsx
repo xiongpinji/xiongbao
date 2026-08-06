@@ -5,6 +5,13 @@ import {
   retireLowPerformers, skillStats,
   type PendingEvolution, type SkillView, type SkillStats,
 } from "../../api";
+import {
+  importSkillPackage,
+  listSkillPackages,
+  shortSkillPackageHash,
+  skillPackageFilePaths,
+  type SkillPackageView,
+} from "../../api/skillPackages";
 import { SectionTitle } from "./GeneralSettings";
 import { useConfirm } from "../../hooks/useConfirm";
 
@@ -15,6 +22,7 @@ const SOURCE_LABELS: Record<string, string> = {
   failure_distilled: "失败反思",
   evolved: "演化",
   import: "导入",
+  package_import: "技能包",
 };
 
 export default function SkillsSettings() {
@@ -25,6 +33,8 @@ export default function SkillsSettings() {
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
+  const [packageFile, setPackageFile] = useState<File | null>(null);
+  const [packages, setPackages] = useState<SkillPackageView[]>([]);
   const [pending, setPending] = useState<PendingEvolution[]>([]);
   const [showRetired, setShowRetired] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", trigger_pattern: "", tags: "" });
@@ -39,12 +49,13 @@ export default function SkillsSettings() {
 
   const refresh = useCallback(async () => {
     try {
-      const [data, st, pe] = await Promise.all([
-        listSkills(showRetired), skillStats(), listPendingEvolutions(),
+      const [data, st, pe, packageData] = await Promise.all([
+        listSkills(showRetired), skillStats(), listPendingEvolutions(), listSkillPackages(),
       ]);
       setSkills(data);
       setStats(st);
       setPending(pe.pending);
+      setPackages(packageData);
       setError(null);
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : String(e));
@@ -122,6 +133,20 @@ export default function SkillsSettings() {
       }
       setImportText("");
       setShowImport(false);
+      await refresh();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePackageImport = async () => {
+    if (!packageFile) return;
+    setLoading(true);
+    try {
+      await importSkillPackage(packageFile);
+      setPackageFile(null);
       await refresh();
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : String(e));
@@ -279,6 +304,31 @@ export default function SkillsSettings() {
       {/* SKILL.md 导入表单（V3-1 生态兼容） */}
       {showImport && (
         <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
+          <div className="space-y-3 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
+            <div>
+              <div className="text-sm font-medium text-emerald-300">完整技能包 ZIP</div>
+              <div className="mt-1 text-xs text-neutral-400">
+                保留 SKILL.md、references、scripts 和 assets。脚本只存储，不会在导入时自动执行。
+              </div>
+            </div>
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(event) => setPackageFile(event.target.files?.[0] ?? null)}
+              className="block w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-xs file:text-neutral-200"
+            />
+            <button
+              type="button"
+              onClick={handlePackageImport}
+              disabled={loading || !packageFile}
+              className="rounded-lg bg-emerald-400 px-5 py-2 text-sm font-medium text-black transition hover:bg-emerald-300 disabled:opacity-40"
+            >
+              {loading ? "导入中..." : "安全校验并导入 ZIP"}
+            </button>
+          </div>
+          <div className="border-t border-white/[0.06] pt-3 text-xs text-neutral-500">
+            兼容入口：仅粘贴单个 SKILL.md，不包含 references、scripts 或 assets。
+          </div>
           <div className="text-xs text-neutral-400">
             粘贴 SKILL.md 全文（agentskills.io 格式，兼容 Hermes / Claude Code 技能库）。导入强制过质量门禁：字段完整、触发可命中、去重、容量。
           </div>
@@ -299,6 +349,46 @@ export default function SkillsSettings() {
           </button>
         </div>
       )}
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-white">完整技能包</span>
+          <span className="text-xs text-neutral-500">共 {packages.length} 个包</span>
+        </div>
+        {packages.length === 0 && (
+          <div className="rounded-lg border border-dashed border-white/[0.08] p-4 text-xs text-neutral-500">
+            暂无完整技能包，可从上方导入 ZIP。
+          </div>
+        )}
+        {packages.map((pkg) => (
+          <div key={pkg.package_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-white">{pkg.name}</span>
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+                  v{pkg.version}
+                </span>
+              </div>
+              <span className="font-mono text-[11px] text-neutral-500" title={pkg.content_hash}>
+                SHA-256 {shortSkillPackageHash(pkg.content_hash)}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-400">
+              <span>来源：{pkg.source || "未标注"}</span>
+              <span>{pkg.file_count} 个文件</span>
+              <span>{pkg.total_size.toLocaleString()} bytes</span>
+            </div>
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-neutral-400">查看 manifest</summary>
+              <div className="mt-2 space-y-1 rounded-md bg-black/20 p-3 font-mono text-[11px] text-neutral-400">
+                {skillPackageFilePaths(pkg.manifest).map((path) => (
+                  <div key={path}>{path}</div>
+                ))}
+              </div>
+            </details>
+          </div>
+        ))}
+      </div>
 
       {/* 创建表单 */}
       {showForm && (
@@ -444,7 +534,9 @@ export default function SkillsSettings() {
             </div>
             {skill.description && <div className="mt-2 text-xs text-neutral-400 line-clamp-2">{skill.description}</div>}
             {skill.system_prompt_hint && (
-              <div className="mt-1 text-[11px] text-neutral-500 italic">提示: {skill.system_prompt_hint}</div>
+              <div className="mt-1 line-clamp-3 text-[11px] text-neutral-500 italic">
+                提示: {skill.system_prompt_hint}{skill.system_prompt_truncated ? "…" : ""}
+              </div>
             )}
             <div className="mt-2 flex items-center gap-4 text-[11px] text-neutral-500">
               <span>触发: {skill.trigger_pattern || "—"}</span>

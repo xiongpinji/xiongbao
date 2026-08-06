@@ -515,6 +515,7 @@ export interface SkillView {
   source: string;
   source_task: string;
   system_prompt_hint: string;
+  system_prompt_truncated?: boolean;
   steps: { tool: string; order?: number }[];
   history: { version: number; description: string; changed_at: number; change_reason: string }[];
   is_active: boolean;

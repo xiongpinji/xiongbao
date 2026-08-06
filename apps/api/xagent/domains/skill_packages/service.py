@@ -363,6 +363,24 @@ async def import_skill_package_directory(
     )
 
 
+async def discard_skill_package_import(
+    store: Any,
+    package: SkillPackageRecord,
+    *,
+    packages_root: Path = DEFAULT_PACKAGES_ROOT,
+) -> None:
+    """补偿尚未提交的导入，只删除该 package_id 对应的受控目录。"""
+    store.delete(package.skill_id)
+
+    def remove_materialized_package() -> None:
+        root = Path(package.root_path).resolve()
+        expected_root = (packages_root / package.package_id).resolve()
+        if root == expected_root and root.is_dir():
+            shutil.rmtree(root)
+
+    await asyncio.to_thread(remove_materialized_package)
+
+
 async def list_skill_packages(
     session: AsyncSession, tenant_id: str
 ) -> list[SkillPackageRecord]:

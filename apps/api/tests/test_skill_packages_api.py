@@ -7,6 +7,7 @@ from zipfile import ZipFile
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from xagent.core.skills import SkillStore
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.jwt_auth import create_access_token
@@ -25,6 +26,7 @@ metadata:
 # API Package
 
 Read references/guide.md and return the complete validation result.
+{"validate every release artifact before publication. " * 30}
 """
     output = BytesIO()
     with ZipFile(output, "w") as archive:
@@ -112,6 +114,21 @@ async def test_zip_upload_list_detail_and_tenant_isolation(package_client) -> No
     assert package["skill_id"] not in {
         skill["skill_id"] for skill in other_skills.json()["skills"]
     }
+    own_skills = await client.get(
+        "/api/v1/skills", headers=_headers("tenant-package-a")
+    )
+    own_skill = next(
+        skill
+        for skill in own_skills.json()["skills"]
+        if skill["skill_id"] == package["skill_id"]
+    )
+    assert own_skill["system_prompt_truncated"] is True
+    assert len(own_skill["system_prompt_hint"]) == 500
+    full_skill = await client.get(
+        f"/api/v1/skills/{package['skill_id']}",
+        headers=_headers("tenant-package-a"),
+    )
+    assert len(full_skill.json()["system_prompt_hint"]) > 500
 
 
 async def test_upload_rejects_path_traversal(package_client) -> None:
@@ -126,3 +143,30 @@ async def test_upload_rejects_path_traversal(package_client) -> None:
     )
     assert response.status_code == 422
     assert "unsafe_path" in response.json()["detail"]
+
+
+async def test_commit_failure_removes_package_files_and_runtime_skill(
+    package_client, tmp_path, monkeypatch
+) -> None:
+    client, store = package_client
+
+    async def fail_commit(_session) -> None:
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(AsyncSession, "commit", fail_commit)
+    with pytest.raises(RuntimeError, match="commit failed"):
+        await client.post(
+            "/api/v1/skill-packages/import",
+            files={
+                "file": (
+                    "commit-failure.zip",
+                    _archive("commit-failure"),
+                    "application/zip",
+                )
+            },
+            headers=_headers("tenant-package-commit-failure"),
+        )
+
+    assert store.match("commit failure", tenant_id="tenant-package-commit-failure") == []
+    packages_root = tmp_path / "packages"
+    assert not packages_root.exists() or list(packages_root.iterdir()) == []
