@@ -507,7 +507,7 @@ git commit -m "ci(发布): 统一 Web API 版本并门禁 Release"
 - 修改：`docs/coordination/WEB_API_RELEASE_TASK_BOARD.md`
 - 创建：`docs/coordination/reports/WEB_API_P0_RELEASE_FOUNDATION_EVIDENCE.md`
 
-- [ ] **步骤 1：运行后端 P0 验证**
+- [x] **步骤 1：运行后端 P0 验证**
 
 ```powershell
 python -m pytest apps/api/tests/test_orchestration.py apps/api/tests/test_static_quality_gate.py apps/api/tests/test_verify_release_versions.py -q
@@ -516,7 +516,7 @@ python scripts/check_static_quality.py
 python scripts/verify_release_versions.py --tag v1.0.0
 ```
 
-- [ ] **步骤 2：运行前端 P0 验证**
+- [x] **步骤 2：运行前端 P0 验证**
 
 ```powershell
 Set-Location apps/web
@@ -526,7 +526,7 @@ npm run typecheck
 npm run build
 ```
 
-- [ ] **步骤 3：运行仓库一致性检查**
+- [x] **步骤 3：运行仓库一致性检查**
 
 ```powershell
 git diff --check HEAD~4..HEAD
@@ -537,11 +537,11 @@ rg -n "CreativeStudioPage|EditorPage" apps/web/dist/assets
 
 预期：diff check 退出 0；工作树无未提交改动；CI 不含 Ruff/mypy `|| true`；production assets 不含排除页面 chunk。
 
-- [ ] **步骤 4：写证据报告并更新任务板**
+- [x] **步骤 4：写证据报告并更新任务板**
 
 证据报告逐命令记录退出码、通过数、静态错误基线、Web warning 数和剩余风险。P0-A 至 P0-E 全部有证据后转 DONE；P1-A 转 READY。
 
-- [ ] **步骤 5：提交 P0 证据**
+- [x] **步骤 5：提交 P0 证据**
 
 ```powershell
 git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md docs/coordination/reports/WEB_API_P0_RELEASE_FOUNDATION_EVIDENCE.md

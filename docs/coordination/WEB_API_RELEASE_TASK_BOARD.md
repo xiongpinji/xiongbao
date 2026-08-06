@@ -14,15 +14,14 @@
 
 ## In Progress
 
-- [P0-E] P0 发布证据与阶段审计 | 状态：CLAIMED | Owner：Codex | 依赖：P0-A,P0-B,P0-C,P0-D | 验收：P0 相关后端测试、前端 test/lint/typecheck/build、静态门禁和 workflow 结构检查全部有新鲜证据。
+- 暂无；下一执行包为 P1-A。
 
 ## Ready
 
-- 暂无；P0-E 审计通过后再将 P1-A 转 READY。
+- [P1-A] worktree 结果持久模型与 Git 生命周期 | 状态：READY | 依赖：P0-E | 下一步：先形成 P1 实现计划和失败测试，再转 CLAIMED。
 
 ## Queued
 
-- [P1-A] worktree 结果持久模型与 Git 生命周期 | 状态：QUEUED | 依赖：P0-E。
 - [P1-B] review/apply API 与 Web 开发任务控制台 | 状态：QUEUED | 依赖：P1-A。
 - [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：QUEUED | 依赖：P1-B。
 - [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：QUEUED | 依赖：P2-A。
@@ -36,6 +35,7 @@
 - [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：DONE | 证据：基线测试先因脚本不存在失败；修复后相关测试 12/12、关键规则 `F821,F822,F823,B023` 通过，完整 Ruff `279 <= 286`、mypy `73 <= 74`；CI 已移除静态检查 `|| true` 并通过 YAML 解析。
 - [P0-C] Web 测试入口与排除模块边界 | 状态：DONE | 证据：导航测试先因 `taskId=creative` 失败；修复后默认 `npm test` 自动执行 2 个文件共 11 项，lint `0 error / 100 warnings`，typecheck/build 通过；短剧、画布、剪辑旧路由统一进入排除说明页，构建无 `CreativeStudioPage`/`EditorPage` chunk，CI 已加入 Web 单元测试。
 - [P0-D] Web/API 版本事实源与 CI 后发布 | 状态：DONE | 证据：版本测试先因脚本不存在失败；API/Web/README 与 `v1.0.0` 一致性测试通过，Release job 的 `needs` 已验证覆盖 9 个 Web/API gate；文档明确短剧/桌面排除且现有旧标签不得移动或复用。
+- [P0-E] P0 发布证据与阶段审计 | 状态：DONE | 证据：后端 13/13、Web 11/11、关键 Ruff 0、完整 Ruff `279 <= 286`、mypy `73 <= 74`、lint `0/100`、typecheck/build、Git/CI/产物一致性全部通过；详见 `docs/coordination/reports/WEB_API_P0_RELEASE_FOUNDATION_EVIDENCE.md`。
 
 ## 基线证据
 
