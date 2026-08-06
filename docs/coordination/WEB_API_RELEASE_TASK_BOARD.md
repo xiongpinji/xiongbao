@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：P1 开发任务闭环。
+- 当前阶段：P1 已验收，准备进入 P2 Hermes 能力补齐。
 - 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - 当前分支：`feature/webapi-release-hardening`。
@@ -14,15 +14,14 @@
 
 ## In Progress
 
-- [P1-B] Web 开发任务控制台 | 状态：CLAIMED | Owner：Codex | 依赖：P1-A | 验收：列表、详情、完整 patch 和合法状态动作可见，所有变更二次确认。
+- 暂无。
 
 ## Ready
 
-- 暂无；P1-B 完成并通过 P1 阶段审计后再将 P2-A 转 READY。
+- [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：READY | 依赖：P1-B。
 
 ## Queued
 
-- [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：QUEUED | 依赖：P1-B。
 - [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：QUEUED | 依赖：P2-A。
 - [P2-C] 数据库 checkpoint、恢复/回滚与 Web 时间线 | 状态：QUEUED | 依赖：P2-B。
 - [P2-D] MCP 会话、运行、审批与事件接口 | 状态：QUEUED | 依赖：P2-C。
@@ -30,6 +29,7 @@
 
 ## Done
 
+- [P1-B] review/apply API 与 Web 开发任务控制台 | 状态：DONE | 证据：相关后端 31/31、Web 14/14、lint 0/100、typecheck/build、fresh migration 和真实 Playwright 导航验证通过；浏览器发现的侧栏入口缺失已修复；详见 `docs/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md`。
 - [P1-A] worktree 结果持久模型、Git 生命周期与审查 API | 状态：DONE | 证据：完成 tenant-scoped 持久记录、成功结果 commit/worktree/branch/full patch 保留、approve/reject/apply/conflict/expire/cancel 状态链；API 实测租户隔离、显式 task ID 确认、路径脱敏与审计，相关后端测试 18/18 通过。
 - [P0-A] 流式并发工具执行正确性 | 状态：DONE | 证据：新增测试先失败于两个 `_tool_success` `UnboundLocalError`，修复后定向测试 1/1、编排回归 11/11 通过，`F823` 为 0；双工具真实结果为 `a`/`b`，最终统计为 2 次调用、成功率 100%。
 - [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：DONE | 证据：基线测试先因脚本不存在失败；修复后相关测试 12/12、关键规则 `F821,F822,F823,B023` 通过，完整 Ruff `279 <= 286`、mypy `73 <= 74`；CI 已移除静态检查 `|| true` 并通过 YAML 解析。

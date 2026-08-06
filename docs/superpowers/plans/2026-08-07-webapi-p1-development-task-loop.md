@@ -110,8 +110,8 @@
 - 修改：`docs/coordination/WEB_API_RELEASE_TASK_BOARD.md`
 - 创建：`docs/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md`
 
-- [ ] 后端运行 development task、parallel worktree、API、code review 相关测试。
-- [ ] 运行 migration fresh upgrade、关键 Ruff、静态质量基线。
-- [ ] Web 运行 test/lint/typecheck/build。
-- [ ] 在临时 Git repo 实跑 create → awaiting_review → approve → apply，以及 create → reject、冲突 → abort。
-- [ ] 证据报告记录退出码、状态链、commit/patch/worktree 清理和剩余风险；P1-A/P1-B 转 DONE，P2-A 转 READY。
+- [x] 后端运行 development task、parallel worktree、API、code review 相关测试。
+- [x] 运行 migration fresh upgrade、关键 Ruff、静态质量基线。
+- [x] Web 运行 test/lint/typecheck/build，并以 Playwright 验证真实导航与页面。
+- [x] 在临时 Git repo 实跑 create → awaiting_review → approve → apply，以及 create → reject、冲突 → abort。
+- [x] 证据报告记录退出码、状态链、commit/patch/worktree 清理和剩余风险；P1-A/P1-B 转 DONE，P2-A 转 READY。
