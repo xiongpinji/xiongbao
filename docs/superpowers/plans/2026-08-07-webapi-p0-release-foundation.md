@@ -191,7 +191,7 @@ git commit -m "fix(编排): 修复流式并发工具结果统计"
 - 修改：`.github/workflows/ci.yml:28-35`
 - 修改：`apps/api/xagent/core/orchestration/loop.py:1834,2054`
 
-- [ ] **步骤 1：编写基线比较失败测试**
+- [x] **步骤 1：编写基线比较失败测试**
 
 脚本暴露纯函数：
 
@@ -210,7 +210,7 @@ def exceeded(current: dict[str, int], baseline: dict[str, int]) -> dict[str, tup
 
 测试通过 `importlib.util.spec_from_file_location` 从仓库根的 `scripts/check_static_quality.py` 加载模块；仓库根由 `Path(__file__).resolve().parents[3]` 确定，不要求把 `scripts/` 变成运行时 Python 包。
 
-- [ ] **步骤 2：运行测试验证脚本尚不存在**
+- [x] **步骤 2：运行测试验证脚本尚不存在**
 
 运行：
 
@@ -220,7 +220,7 @@ python -m pytest apps/api/tests/test_static_quality_gate.py -q
 
 预期：FAIL，`ModuleNotFoundError` 或导入目标不存在。
 
-- [ ] **步骤 3：实现静态质量脚本与基线**
+- [x] **步骤 3：实现静态质量脚本与基线**
 
 `.quality-baseline.json` 固定当前新鲜基线：
 
@@ -233,7 +233,7 @@ python -m pytest apps/api/tests/test_static_quality_gate.py -q
 
 脚本从仓库根定位 `apps/api`，分别运行 Ruff JSON 输出和 mypy 文本输出；任一当前计数超过基线时退出 1。命令本身缺失或输出不可解析时同样退出 1，禁止误报通过。
 
-- [ ] **步骤 4：修复剩余关键 B023**
+- [x] **步骤 4：修复剩余关键 B023**
 
 将两处循环内 lambda 显式绑定模型：
 
@@ -245,7 +245,7 @@ lambda selected_model=target_model: llm.complete_with_tools(
 
 提示工程路径使用同样绑定方式。运行关键 Ruff 集合，预期 0。
 
-- [ ] **步骤 5：修改 CI**
+- [x] **步骤 5：修改 CI**
 
 后端 job 使用：
 
@@ -260,7 +260,7 @@ lambda selected_model=target_model: llm.complete_with_tools(
 
 删除 Ruff/mypy 的 `|| true`。完整检查由基线脚本执行并阻止新增，不把 286/74 写成零错误。
 
-- [ ] **步骤 6：验证并提交 P0-B**
+- [x] **步骤 6：验证并提交 P0-B**
 
 运行：
 

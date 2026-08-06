@@ -1586,40 +1586,45 @@ async def run_agent(
                                   return_exceptions=True,
                               )
                               # 合并结果（按原始顺序）
-                              _results = []
+                              _parallel_results = []
                               _read_idx, _edit_idx = 0, 0
                               for n, i, a in _parsed_calls:
                                   if n in _EDIT_TOOLS:
-                                      _results.append(_edit_results[_edit_idx])
+                                      _parallel_results.append(_edit_results[_edit_idx])
                                       _edit_idx += 1
                                   else:
-                                      _results.append(_read_results[_read_idx])
+                                      _parallel_results.append(_read_results[_read_idx])
                                       _read_idx += 1
                           else:
-                              _results = await asyncio.gather(
+                              _parallel_results = await asyncio.gather(
                                   *[_exec_one(n, i, a, _semaphore) for n, i, a in _parsed_calls],
                                   return_exceptions=True,
                               )
-                          for (_p_name, _p_id, _p_args), _res in zip(_parsed_calls, _results):
-                              if isinstance(_res, Exception):
-                                  result_text = f"[错误] {type(_res).__name__}: {_res}"
+                          for (_p_name, _p_id, _p_args), _parallel_result in zip(
+                              _parsed_calls, _parallel_results
+                          ):
+                              if isinstance(_parallel_result, BaseException):
+                                  result_text = (
+                                      f"[错误] {type(_parallel_result).__name__}: "
+                                      f"{_parallel_result}"
+                                  )
                                   _tool_fail += 1
                                   _tool_fail_by_type[_p_name] = _tool_fail_by_type.get(_p_name, 0) + 1
                                   _tool_stats[_p_name] = _tool_stats.get(_p_name, 0) + 1
                                   _consecutive_errors += 1
                               else:
-                                  result_text = _res.text
-                                  if _res.executed:
+                                  result_text = _parallel_result.text
+                                  if _parallel_result.executed:
                                       _tool_stats[_p_name] = _tool_stats.get(_p_name, 0) + 1
-                                      if _res.succeeded is True:
+                                      if _parallel_result.succeeded is True:
                                           _tool_success += 1
                                           _tool_success_by_type[_p_name] = _tool_success_by_type.get(_p_name, 0) + 1
-                                      elif _res.succeeded is False:
+                                      elif _parallel_result.succeeded is False:
                                           _tool_fail += 1
                                           _tool_fail_by_type[_p_name] = _tool_fail_by_type.get(_p_name, 0) + 1
-                                  if _res.elapsed_seconds is not None:
+                                  if _parallel_result.elapsed_seconds is not None:
                                       _tool_time_by_type.setdefault(_p_name, []).append(
-                                          _res.elapsed_seconds
+                                          _parallel_result.elapsed_seconds
                                       )
                                   if result_text.startswith("[错误]") or result_text.startswith("[拒绝]"):
                                       _consecutive_errors += 1
@@ -1873,7 +1878,9 @@ async def run_agent(
               elif use_native_tools:
                   # ── 非流式原生工具路径（回退） ──
                   resp = await _llm_call_with_retry(
-                      lambda: llm.complete_with_tools(state.messages, specs, model=target_model),
+                      lambda selected_model=target_model: llm.complete_with_tools(
+                          state.messages, specs, model=selected_model
+                      ),
                       description="complete_with_tools",
                   )
                   # Token 用量追踪
@@ -2093,7 +2100,9 @@ async def run_agent(
               else:
                   # ── 提示工程路径（mock / 不支持工具） ──
                   resp = await _llm_call_with_retry(
-                      lambda: llm.complete(state.messages, model=target_model),
+                      lambda selected_model=target_model: llm.complete(
+                          state.messages, model=selected_model
+                      ),
                       description="complete",
                   )
                   state.total_prompt_tokens += resp.prompt_tokens
