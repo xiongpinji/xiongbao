@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from xagent.adapters.mcp import platform_server
 from xagent.core.skills import SkillStore
@@ -38,7 +40,21 @@ def test_tools_registered() -> None:
     tools = platform_server.server._tool_manager.list_tools()
     names = {t.name for t in tools}
     assert names == {
-        "xagent_run", "xagent_code_review", "xagent_skill_match", "xagent_skill_import",
+        "xagent_run",
+        "xagent_code_review",
+        "xagent_skill_match",
+        "xagent_skill_import",
+        "xagent_conversation_list",
+        "xagent_conversation_get",
+        "xagent_conversation_message",
+        "xagent_run_get",
+        "xagent_run_cancel",
+        "xagent_run_events",
+        "xagent_approval_list",
+        "xagent_approval_resolve",
+        "xagent_scheduler_job_read",
+        "xagent_scheduler_run_read",
+        "xagent_skill_package_read",
     }
 
 
@@ -136,3 +152,21 @@ def test_build_http_app_constructs() -> None:
     """HTTP 应用可构建（stateless streamable HTTP），带不带 token 均可。"""
     assert platform_server.build_http_app(token="") is not None
     assert platform_server.build_http_app(token="t") is not None
+
+
+def test_http_token_required_for_non_loopback_bind() -> None:
+    assert platform_server._http_token_required("0.0.0.0", "") is True
+    assert platform_server._http_token_required("::", "") is True
+    assert platform_server._http_token_required("127.0.0.1", "") is False
+    assert platform_server._http_token_required("localhost", "") is False
+    assert platform_server._http_token_required("0.0.0.0", "secret") is False
+
+
+def test_main_rejects_unauthenticated_non_loopback_http(monkeypatch) -> None:
+    monkeypatch.delenv("XAGENT_PLATFORM_MCP_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["platform-server", "--http", "--host", "0.0.0.0"],
+    )
+    assert platform_server.main() == 2
