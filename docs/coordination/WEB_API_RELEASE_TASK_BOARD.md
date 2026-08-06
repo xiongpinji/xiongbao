@@ -14,11 +14,11 @@
 
 ## In Progress
 
-- 暂无；下一执行包为 P1-A。
+- [P1-A] worktree 结果持久模型与 Git 生命周期 | 状态：CLAIMED | Owner：Codex | 依赖：P0-E | 验收：成功任务持久保留 commit/worktree/branch/full patch，并支持安全 approve/reject/apply/conflict/cancel 状态链。
 
 ## Ready
 
-- [P1-A] worktree 结果持久模型与 Git 生命周期 | 状态：READY | 依赖：P0-E | 下一步：先形成 P1 实现计划和失败测试，再转 CLAIMED。
+- 暂无；P1-A 通过后再将 P1-B 转 READY。
 
 ## Queued
 
