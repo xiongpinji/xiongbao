@@ -8,10 +8,13 @@ from xagent.domains.scheduled_jobs.models import (
 )
 from xagent.domains.scheduled_jobs.service import (
     claim_due_job,
+    claim_due_retry,
+    complete_scheduled_job_run,
     create_scheduled_job,
     get_scheduled_job,
     list_scheduled_job_runs,
     list_scheduled_jobs,
+    recover_expired_job_runs,
 )
 
 __all__ = [
@@ -20,8 +23,11 @@ __all__ = [
     "ScheduledJobRecord",
     "ScheduledJobRunRecord",
     "claim_due_job",
+    "claim_due_retry",
+    "complete_scheduled_job_run",
     "create_scheduled_job",
     "get_scheduled_job",
     "list_scheduled_job_runs",
     "list_scheduled_jobs",
+    "recover_expired_job_runs",
 ]

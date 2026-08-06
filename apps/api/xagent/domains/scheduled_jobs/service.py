@@ -173,3 +173,128 @@ async def claim_due_job(
     session.add(run)
     await session.flush()
     return ClaimedScheduledJob(job=_job_record(job), run=_run_record(run))
+
+
+async def recover_expired_job_runs(session: AsyncSession, *, now: datetime) -> int:
+    """将过期 running lease 标记为 interrupted，并立即进入重试队列。"""
+    result = await session.execute(
+        update(ScheduledJobRunORM)
+        .where(
+            ScheduledJobRunORM.status == "running",
+            ScheduledJobRunORM.lease_expires_at.is_not(None),
+            ScheduledJobRunORM.lease_expires_at < now,
+        )
+        .values(
+            status="interrupted",
+            error="worker lease expired",
+            next_retry_at=now,
+            lease_expires_at=None,
+        )
+        .returning(ScheduledJobRunORM.run_id)
+    )
+    return len(result.scalars().all())
+
+
+async def claim_due_retry(
+    session: AsyncSession,
+    *,
+    now: datetime,
+    lease_seconds: int,
+    claim_token: str,
+) -> ClaimedScheduledJob | None:
+    candidate = (
+        await session.execute(
+            select(
+                ScheduledJobRunORM.run_id,
+                ScheduledJobRunORM.job_id,
+                ScheduledJobRunORM.scheduled_for,
+                ScheduledJobRunORM.attempt,
+            )
+            .where(
+                ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
+                ScheduledJobRunORM.next_retry_at.is_not(None),
+                ScheduledJobRunORM.next_retry_at <= now,
+            )
+            .order_by(ScheduledJobRunORM.next_retry_at)
+            .limit(1)
+        )
+    ).first()
+    if candidate is None:
+        return None
+    previous_run_id, job_id, scheduled_for, previous_attempt = candidate
+    claimed = await session.execute(
+        update(ScheduledJobRunORM)
+        .where(
+            ScheduledJobRunORM.run_id == previous_run_id,
+            ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
+            ScheduledJobRunORM.next_retry_at <= now,
+        )
+        .values(status="retried", next_retry_at=None)
+        .returning(ScheduledJobRunORM.run_id)
+    )
+    if claimed.scalar_one_or_none() is None:
+        return None
+    job = await session.get(ScheduledJobORM, job_id)
+    if job is None or not job.enabled or previous_attempt > job.max_retries:
+        return None
+    run = ScheduledJobRunORM(
+        run_id=uuid.uuid4().hex,
+        job_id=job.job_id,
+        tenant_id=job.tenant_id,
+        scheduled_for=scheduled_for,
+        status="running",
+        attempt=previous_attempt + 1,
+        claim_token=claim_token,
+        claimed_at=now,
+        lease_expires_at=now + timedelta(seconds=max(1, lease_seconds)),
+        started_at=now,
+    )
+    session.add(run)
+    await session.flush()
+    return ClaimedScheduledJob(job=_job_record(job), run=_run_record(run))
+
+
+async def complete_scheduled_job_run(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    succeeded: bool,
+    now: datetime,
+    result: str = "",
+    error: str = "",
+    agent_run_id: str = "",
+) -> ScheduledJobRunRecord:
+    row = await session.scalar(
+        select(ScheduledJobRunORM).where(
+            ScheduledJobRunORM.tenant_id == tenant_id,
+            ScheduledJobRunORM.run_id == run_id,
+        )
+    )
+    if row is None:
+        raise LookupError(run_id)
+    if row.status != "running":
+        raise ValueError(f"调度运行 {run_id} 状态为 {row.status}，无法完成")
+    job = await session.get(ScheduledJobORM, row.job_id)
+    if job is None or job.tenant_id != tenant_id:
+        raise LookupError(row.job_id)
+
+    row.finished_at = now
+    row.lease_expires_at = None
+    row.agent_run_id = agent_run_id
+    if succeeded:
+        row.status = "succeeded"
+        row.result = result[:4000]
+        row.error = ""
+        row.next_retry_at = None
+    elif row.attempt <= job.max_retries:
+        row.status = "retry_wait"
+        row.error = error[:4000]
+        delay = job.retry_backoff_seconds * (2 ** (row.attempt - 1))
+        row.next_retry_at = now + timedelta(seconds=delay)
+    else:
+        row.status = "failed"
+        row.error = error[:4000]
+        row.next_retry_at = None
+    await session.flush()
+    return _run_record(row)
