@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -144,17 +144,20 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if self.store.is_in_progress(key):
             return JSONResponse(
                 status_code=409,
-                content={"error": "duplicate_in_progress", "detail": "Same request is being processed"},
+                content={
+                    "error": "duplicate_in_progress",
+                    "detail": "Same request is being processed",
+                },
             )
 
-        event = self.store.mark_progress(key)
+        self.store.mark_progress(key)
         try:
             response = await call_next(request)
 
             # 缓存成功响应
             if response.status_code < 500:
                 body = b""
-                async for chunk in response.body_iterator:
+                async for chunk in cast(Any, response).body_iterator:
                     body += chunk if isinstance(chunk, bytes) else chunk.encode()
 
                 self.store.set(key, CachedResponse(

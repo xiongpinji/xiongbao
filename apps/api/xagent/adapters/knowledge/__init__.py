@@ -48,15 +48,17 @@ class KnowledgeRetriever:
         return self._ready
 
     async def insert(self, text: str) -> None:
-        if not self._ready:
+        rag = self._rag
+        if not self._ready or rag is None:
             return
-        self._rag.insert(text)
+        rag.insert(text)
 
     async def query(self, text: str, mode: str = "hybrid") -> str:
-        if not self._ready:
+        rag = self._rag
+        if not self._ready or rag is None:
             return ""
         try:
-            return self._rag.query(text, mode=mode)
+            return rag.query(text, mode=mode)
         except Exception as exc:
             logger.warning("knowledge_query_failed", error=str(exc))
             return ""

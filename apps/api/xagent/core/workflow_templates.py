@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from builtins import list as list_type
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -62,7 +63,7 @@ class WorkflowTemplateStore:
         return None
 
     def save(
-        self, tenant_id: str, name: str, nodes: list[dict], edges: list[dict],
+        self, tenant_id: str, name: str, nodes: list_type[dict], edges: list_type[dict],
         template_id: str | None = None,
     ) -> WorkflowTemplate:
         """保存或更新模板。若 template_id 存在则版本+1。"""

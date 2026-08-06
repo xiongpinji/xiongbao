@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import shutil
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -98,7 +99,7 @@ async def add_server(
     )
     mgr.add_server(cfg)
     # 如果 enabled，立即尝试连接
-    result = {"status": "added", "name": body.name}
+    result: dict[str, Any] = {"status": "added", "name": body.name}
     if body.enabled:
         conn = await mgr.connect_server(body.name)
         result["connection"] = _honest_connection(mgr, body.name, conn)

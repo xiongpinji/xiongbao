@@ -32,6 +32,7 @@ __all__ = [
     "Tenant",
     "SubscriptionORM",
     "BillingRecordORM",
+    "TenantUsageORM",
     "CheckpointORM",
     "AuditEventORM",
     "WorkflowRunORM",

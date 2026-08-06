@@ -52,7 +52,7 @@ def get_composio_tools() -> list[Tool]:
 
         toolset = ComposioToolSet()
         actions = toolset.get_actions()
-        tools = [
+        tools: list[Tool] = [
             ComposioTool(
                 action_name=a.get("name", ""),
                 description=a.get("description", ""),

@@ -83,7 +83,11 @@ class ConnectionManager:
         payload = json.dumps({"event": event, "data": data}, ensure_ascii=False)
         for cid in conn_ids:
             conn = self._connections.get(cid)
-            if conn and conn.user_id == user_id and conn.ws.client_state == WebSocketState.CONNECTED:
+            if (
+                conn
+                and conn.user_id == user_id
+                and conn.ws.client_state == WebSocketState.CONNECTED
+            ):
                 try:
                     await conn.ws.send_text(payload)
                 except Exception:  # noqa: S110
@@ -134,9 +138,9 @@ async def websocket_endpoint(ws: WebSocket, token: str = ""):
     tenant_id = "default"
     if token and settings.security.require_auth:
         try:
-            payload = decode_token(token)
-            user_id = payload.get("sub", "anonymous")
-            tenant_id = payload.get("tenant_id", "default")
+            principal = decode_token(token)
+            user_id = principal.user_id
+            tenant_id = principal.tenant_id
         except Exception:
             await ws.close(code=4001, reason="Invalid token")
             return

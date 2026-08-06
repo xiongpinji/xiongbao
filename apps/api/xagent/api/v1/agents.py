@@ -378,7 +378,7 @@ async def run(
         )
         result_payload = result.to_dict()
         delivery_summary = _build_delivery_summary(result.run_id, result_payload)
-        validation_summary = {"risks": []}
+        validation_summary: dict[str, Any] = {"risks": []}
         preview_summary = {
             "final_answer": str(result_payload.get("final_answer") or "")[:160],
             "steps_count": _build_result_summary(result_payload)["steps_count"],
@@ -460,7 +460,7 @@ async def run(
         raise
     except Exception as exc:
         await session.rollback()
-        if _is_runtime_persistence_schema_mismatch(exc):
+        if _is_runtime_persistence_schema_mismatch(exc) and result is not None:
             result_payload = result.to_dict()
         else:
             failure_error = str(exc)
@@ -524,6 +524,11 @@ async def run(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail={"run_id": run_id, "error": failure_error},
             ) from exc
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"run_id": run_id, "error": "agent run did not produce a result"},
+        )
     # 账单落库（best-effort）
     await persist_billing_record(
         session,

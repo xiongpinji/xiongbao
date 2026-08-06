@@ -28,10 +28,11 @@ class OpenFGAEnforcer:
         return self._client is not None
 
     def check(self, principal: Principal, resource: str, action: str) -> bool:
-        if not self.available:
+        client = self._client
+        if client is None:
             return False
         try:
-            resp = self._client.check(
+            resp = client.check(
                 user=f"user:{principal.user_id}",
                 relation=action,
                 object=f"resource:{resource}",

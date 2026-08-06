@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from enum import Enum
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,8 +54,8 @@ def _goal_from_orm(row: GoalORM) -> Goal:
         owner_id=row.owner_id,
         title=row.title,
         description=row.description,
-        phase=_safe_goal_phase(row.phase),
-        status=_safe_goal_status(row.status),
+        phase=cast(SpinePhase, _safe_goal_phase(row.phase)),
+        status=cast(GoalStatus, _safe_goal_status(row.status)),
         created_at=_serialize_timestamp(row.created_at),
         updated_at=_serialize_timestamp(row.updated_at),
     )

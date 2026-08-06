@@ -413,9 +413,9 @@ async def auto_decompose_and_run(
     try:
         resp = await llm.complete([Message(role="user", content=decompose_prompt)])
         lines = [
-            l.strip().lstrip("0123456789.-) ")
-            for l in (resp.content or "").splitlines()
-            if l.strip() and len(l.strip()) > 5
+            line.strip().lstrip("0123456789.-) ")
+            for line in (resp.content or "").splitlines()
+            if line.strip() and len(line.strip()) > 5
         ]
         if len(lines) < 2:
             return None  # 分解失败，回退单 Agent

@@ -9,14 +9,14 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class RecoveryAction(str, Enum):
+class RecoveryAction(StrEnum):
     """恢复动作类型。"""
 
     LLM_FALLBACK = "llm_fallback"
@@ -26,7 +26,7 @@ class RecoveryAction(str, Enum):
     MANUAL_OVERRIDE = "manual_override"
 
 
-class RecoverySeverity(str, Enum):
+class RecoverySeverity(StrEnum):
     """恢复事件严重级别。"""
 
     INFO = "info"

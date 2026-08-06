@@ -148,7 +148,7 @@ class WorkflowEngine:
 
             failed_step: WorkflowStep | None = None
             for step, result in zip(batch, results, strict=True):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     step.error = str(result)
                     step.status = StepStatus.failed
                     step.finished_at = datetime.now(UTC)

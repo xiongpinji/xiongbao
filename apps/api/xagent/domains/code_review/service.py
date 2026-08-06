@@ -211,7 +211,7 @@ async def run_review(
     findings: list[Finding] = []
     failed_dimensions: list[str] = []
     for dim, res in zip(DIMENSIONS, results, strict=True):
-        if isinstance(res, Exception):
+        if isinstance(res, BaseException):
             logger.warning("review_dimension_failed", dimension=dim, error=str(res))
             failed_dimensions.append(dim)
         else:

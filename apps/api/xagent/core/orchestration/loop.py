@@ -101,7 +101,7 @@ async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
             delay = _LLM_RETRY_BASE_DELAY * (2 ** attempt)
             # 自适应重试：指数退避 + 随机抖动（防雷群效应）
             import random as _rnd_retry
-            delay += _rnd_retry.uniform(0, delay * 0.3)
+            delay += _rnd_retry.uniform(0, delay * 0.3)  # noqa: S311 - 仅用于退避抖动
             logger.warning(
                 "llm_retry",
                 attempt=attempt + 1,
@@ -204,12 +204,12 @@ def _format_tool_result(tool_name: str, result_text: str, args: dict) -> str:
     # code_search 结果：添加匹配数 + 文件列表摘要
     if tool_name == "code_search":
         _lines = result_text.strip().split("\n")
-        _match_count = len([l for l in _lines if l.strip()])
+        _match_count = len([line for line in _lines if line.strip()])
         # 提取涉及的文件（假设格式为 "file:line:content" 或类似）
         _files = set()
-        for l in _lines[:50]:
-            if ":" in l:
-                _f = l.split(":")[0].strip()
+        for line in _lines[:50]:
+            if ":" in line:
+                _f = line.split(":")[0].strip()
                 if _f and not _f.startswith(" "):
                     _files.add(_f)
         _file_list = ", ".join(list(_files)[:5])
@@ -655,25 +655,27 @@ def _truncate_tool_output(text: str, tool_name: str, goal: str = "") -> str:
         _keywords = [w.lower() for w in _re_tr.findall(r'[\w\u4e00-\u9fff]{2,}', goal)][:8]
         lines = text.split("\n")
         _relevant = []
-        for i, l in enumerate(lines):
-            _ll = l.lower()
+        for i, line in enumerate(lines):
+            _ll = line.lower()
             if any(k in _ll for k in _keywords):
-                _relevant.append((i, l))
+                _relevant.append((i, line))
         if _relevant and len(_relevant) < len(lines) * 0.6:
             # 保留相关行 + 上下文各 2 行
             _keep_indices = set()
             for idx, _ in _relevant:
                 for j in range(max(0, idx - 2), min(len(lines), idx + 3)):
                     _keep_indices.add(j)
-            _kept = [lines[i] if i in _keep_indices else None for i in range(len(lines))]
+            _kept: list[str | None] = [
+                lines[i] if i in _keep_indices else None for i in range(len(lines))
+            ]
             # 压缩连续 None
             _result_lines = []
             _gap = 0
-            for l in _kept:
-                if l is not None:
+            for _kept_line in _kept:
+                if _kept_line is not None:
                     if _gap > 0:
                         _result_lines.append(f"  ... [{_gap} 行省略] ...")
-                    _result_lines.append(l)
+                    _result_lines.append(_kept_line)
                     _gap = 0
                 else:
                     _gap += 1
@@ -685,7 +687,9 @@ def _truncate_tool_output(text: str, tool_name: str, goal: str = "") -> str:
         # 提取关键行：错误/警告/成功指标
         lines = text.split("\n")
         _key_patterns = ("error", "warning", "failed", "success", "passed", "✓", "✗", "Traceback")
-        _key_lines = [l for l in lines if any(p in l.lower() for p in _key_patterns)][:10]
+        _key_lines = [
+            line for line in lines if any(pattern in line.lower() for pattern in _key_patterns)
+        ][:10]
         _key_summary = "\n".join(_key_lines) if _key_lines else ""
         # 保留头部 1200 + 尾部 1800
         head = text[:1200]
@@ -1405,7 +1409,8 @@ async def run_agent(
                           tool_calls_buf = {}
                           _last_chunk_time = time.perf_counter()
                           _first_chunk_received = False
-                          async for chunk in llm.stream_with_tools(
+                          stream_llm: Any = llm
+                          async for chunk in stream_llm.stream_with_tools(
                               state.messages, specs, model=target_model
                           ):
                               _now = time.perf_counter()
@@ -1456,7 +1461,9 @@ async def run_agent(
                           _delay = _LLM_RETRY_BASE_DELAY * (2 ** _stream_attempt)
                           # 自适应重试：指数退避 + 随机抖动
                           import random as _rnd_stream
-                          _delay += _rnd_stream.uniform(0, _delay * 0.3)
+                          _delay += _rnd_stream.uniform(  # noqa: S311 - 仅用于退避抖动
+                              0, _delay * 0.3
+                          )
                           logger.warning("stream_retry", attempt=_stream_attempt + 1, delay=_delay, error=str(_stream_exc)[:150])
                           await asyncio.sleep(_delay)
 
@@ -1603,7 +1610,7 @@ async def run_agent(
                               _loop_detected = False  # 使用不同工具后重置
                           
                           # 先推送所有 tool_call 事件
-                          for tc_name, tc_id, tc_args in _parsed_calls:
+                          for tc_name, _tc_id, tc_args in _parsed_calls:
                               _trace_seq += 1
                               await _emit(StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step, trace_id=f"s{state.step}-{_trace_seq}"))
 
@@ -1623,7 +1630,7 @@ async def run_agent(
                               # 合并结果（按原始顺序）
                               _parallel_results = []
                               _read_idx, _edit_idx = 0, 0
-                              for n, i, a in _parsed_calls:
+                              for n, _call_id, _call_args in _parsed_calls:
                                   if n in _EDIT_TOOLS:
                                       _parallel_results.append(_edit_results[_edit_idx])
                                       _edit_idx += 1
@@ -1636,7 +1643,7 @@ async def run_agent(
                                   return_exceptions=True,
                               )
                           for (_p_name, _p_id, _p_args), _parallel_result in zip(
-                              _parsed_calls, _parallel_results
+                              _parsed_calls, _parallel_results, strict=True
                           ):
                               if isinstance(_parallel_result, BaseException):
                                   result_text = (
@@ -1901,12 +1908,12 @@ async def run_agent(
                               role="user",
                               content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
                           ))
-                          state.final_answer = None
+                          state.final_answer = ""
                           continue
 
                       state.finished = True
                       await _emit(
-                          StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
+                          StepEvent(kind=StepKind.final, content=_fa, step=state.step)
                       )
                       break
 
@@ -1965,8 +1972,8 @@ async def run_agent(
                               *[_exec_one_ns(tc) for tc in resp.tool_calls],
                               return_exceptions=True,
                           )
-                          for tc, _res in zip(resp.tool_calls, _ns_results):
-                              if isinstance(_res, Exception):
+                          for tc, _res in zip(resp.tool_calls, _ns_results, strict=True):
+                              if isinstance(_res, BaseException):
                                   result_text = f"[错误] {type(_res).__name__}: {_res}"
                                   _consecutive_errors += 1
                               else:
@@ -2310,7 +2317,7 @@ async def run_agent(
         try:
             from xagent.core.skills import get_skill_store as _get_skills
 
-            _tools_tried = [e.tool for e in events if getattr(e, "tool", None)]
+            _tools_tried = [e.tool for e in events if isinstance(e.tool, str) and e.tool]
             await _get_skills().distill_from_failure(goal, _loop_error, tools_used=_tools_tried)
         except Exception:  # noqa: S110  失败反思失败不影响主流程
             pass

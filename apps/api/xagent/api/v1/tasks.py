@@ -478,6 +478,7 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
         return rec.to_dict()
 
     # full / Celery 的主事实来源是持久化 agent_tasks；内存索引只做短时缓存桥接。
+    metadata: dict[str, Any] | None = None
     persisted = await load_persisted_agent_task(task_id, tenant_id)
     if persisted is not None:
         metadata = _remember_task(

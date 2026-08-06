@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -34,7 +35,7 @@ def _target_model(cfg: LLMSettings) -> str:
 
 async def _warmup_via_proxy(cfg: LLMSettings, *, timeout_seconds: float | None = None) -> None:
     client = LiteLLMClient(cfg)
-    call_kwargs: dict[str, float] = {}
+    call_kwargs: dict[str, Any] = {}
     if timeout_seconds is not None:
         call_kwargs["timeout"] = timeout_seconds
     await client.complete(
@@ -79,6 +80,7 @@ async def warmup_ollama_model(cfg: LLMSettings) -> WarmupResult:
     deadline = time.monotonic() + wait_budget if wait_budget > 0 else None
     last_error: Exception | None = None
 
+    attempt_timeout: float
     while True:
         if deadline is None:
             attempt_timeout = cfg.request_timeout_seconds

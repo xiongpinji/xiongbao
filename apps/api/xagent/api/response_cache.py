@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import time
 from dataclasses import dataclass, field
+from typing import Any, cast
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -94,11 +95,11 @@ class ResponseCacheMiddleware(BaseHTTPMiddleware):
 
         # 读取 body
         body = b""
-        async for chunk in response.body_iterator:
+        async for chunk in cast(Any, response).body_iterator:
             body += chunk if isinstance(chunk, bytes) else chunk.encode()
 
         # 计算 ETag
-        etag = f'"{hashlib.md5(body).hexdigest()[:16]}"'
+        etag = f'"{hashlib.sha256(body).hexdigest()[:16]}"'
 
         # 条件请求检查
         if_none_match = request.headers.get("if-none-match")

@@ -69,7 +69,7 @@ class MCPManager:
             try:
                 data = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
                 for item in data:
-                    cfg = MCPServerConfig(**{k: v for k, v in item.items()})
+                    cfg = MCPServerConfig(**dict(item.items()))
                     self.servers[cfg.name] = cfg
             except Exception as e:
                 logger.warning("mcp_config_load_failed", error=str(e))

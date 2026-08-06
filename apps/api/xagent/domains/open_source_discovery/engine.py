@@ -189,18 +189,18 @@ class DiscoveryEngine:
             meta["cached"] = True
             return results, meta
 
-        seen: dict[str, Candidate] = {}
+        seen: dict[tuple[str, str], Candidate] = {}
         providers_ok: list[str] = []
         providers_failed: list[str] = []
         for p in self._providers:
             try:
-                results = await p.search(query, limit=limit)
+                candidates = await p.search(query, limit=limit)
                 providers_ok.append(p.name)
             except Exception as exc:  # 单个 provider 失败不阻断
                 logger.warning("osd_provider_failed", provider=p.name, error=str(exc))
                 providers_failed.append(p.name)
                 continue
-            for c in results:
+            for c in candidates:
                 key = (c.source, c.name.lower())
                 # 去重：同名同源取 stars 更高的
                 if key not in seen or c.stars > seen[key].stars:
@@ -215,7 +215,9 @@ class DiscoveryEngine:
         has_mock_data = any(c.candidate.source == "mock" for c in result)
         degraded = has_mock_data or (real_all_failed and not result)
         if has_mock_data:
-            degraded_reason = "所有真实源失败或无结果，结果含 MockProvider 示例数据（非真实开源项目）"
+            degraded_reason = (
+                "所有真实源失败或无结果，结果含 MockProvider 示例数据（非真实开源项目）"
+            )
         elif degraded:
             degraded_reason = "所有真实源请求失败，无可用结果"
         else:

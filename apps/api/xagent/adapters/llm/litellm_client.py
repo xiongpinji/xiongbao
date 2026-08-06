@@ -258,7 +258,7 @@ class LiteLLMClient(LLMClient):
                 # 新 assistant 出现前，先把上一个 assistant 的未配对 tool_calls 补齐
                 _flush_pending()
                 entry["tool_calls"] = m.tool_calls
-                _pending.extend(tc.get("id") for tc in m.tool_calls if tc.get("id"))
+                _pending.extend(str(tc["id"]) for tc in m.tool_calls if tc.get("id"))
             elif m.role == "tool":
                 if m.tool_call_id and m.tool_call_id in _pending:
                     _pending.remove(m.tool_call_id)

@@ -35,8 +35,10 @@ async def _ensure_browser():
         return _page
     try:
         from playwright.async_api import async_playwright
-    except ImportError:
-        raise RuntimeError("playwright not installed. Run: pip install playwright && playwright install chromium")
+    except ImportError as exc:
+        raise RuntimeError(
+            "playwright not installed. Run: pip install playwright && playwright install chromium"
+        ) from exc
     _playwright = await async_playwright().start()
     headless = os.environ.get("PW_HEADLESS", "true").lower() != "false"
     _browser = await _playwright.chromium.launch(headless=headless)

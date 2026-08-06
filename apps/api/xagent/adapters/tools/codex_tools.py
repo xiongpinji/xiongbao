@@ -263,8 +263,8 @@ class FileEditTool:
             _normalized_content = content.replace("\r\n", "\n")
             _normalized_old = old_text.replace("\r\n", "\n")
             # 去除每行尾部空白
-            _norm_lines = [l.rstrip() for l in _normalized_content.split("\n")]
-            _old_norm_lines = [l.rstrip() for l in _normalized_old.split("\n")]
+            _norm_lines = [line.rstrip() for line in _normalized_content.split("\n")]
+            _old_norm_lines = [line.rstrip() for line in _normalized_old.split("\n")]
             _norm_content_joined = "\n".join(_norm_lines)
             _norm_old_joined = "\n".join(_old_norm_lines)
             if _norm_old_joined and _norm_content_joined.count(_norm_old_joined) > 0:

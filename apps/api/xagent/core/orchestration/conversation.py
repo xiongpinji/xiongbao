@@ -75,7 +75,7 @@ class ConversationManager:
 
     def list_sessions(self, tenant_id: str, limit: int = 50) -> list[dict[str, Any]]:
         """同步列出缓存中的会话（API 层会调用异步 DB 版本）。"""
-        results = []
+        results: list[dict[str, Any]] = []
         for _sid, sess in self._cache.items():
             if sess.tenant_id != tenant_id:
                 continue
@@ -87,7 +87,7 @@ class ConversationManager:
                 "created_at": sess.created_at,
                 "last_active": sess.last_active,
             })
-        results.sort(key=lambda x: x["last_active"], reverse=True)
+        results.sort(key=lambda x: float(x["last_active"]), reverse=True)
         return results[:limit]
 
     def delete(self, conversation_id: str, tenant_id: str | None = None) -> bool:

@@ -17,8 +17,10 @@ import os as _os
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import cast
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from xagent.infra.secrets import resolve_settings_secrets
 
@@ -37,8 +39,11 @@ def _detect_project_root(start: Path) -> Path:
 
 
 _PROJECT_ROOT = _detect_project_root(Path(__file__).resolve().parent)
-_ENV_FILE = Path(_os.environ["XAGENT_ENV_FILE"]) if _os.environ.get("XAGENT_ENV_FILE") else _PROJECT_ROOT / ".env"
-from pydantic_settings import BaseSettings, SettingsConfigDict
+_ENV_FILE = (
+    Path(_os.environ["XAGENT_ENV_FILE"])
+    if _os.environ.get("XAGENT_ENV_FILE")
+    else _PROJECT_ROOT / ".env"
+)
 
 _INSECURE_JWT_SECRETS = {
     "",
@@ -285,7 +290,7 @@ class Settings(BaseSettings):
 
         无 ``SECRETREF:`` 前缀的值原样保留，现有行为不变。
         """
-        return resolve_settings_secrets(self)
+        return cast(Settings, resolve_settings_secrets(self))
 
     @property
     def is_lite(self) -> bool:

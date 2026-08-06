@@ -1,4 +1,42 @@
 {
-  "ruff": 286,
-  "mypy": 74
+  "ruff_line_length": {
+    "count": 189,
+    "sha256": "77e326a2b78d4f5346a549389ab4bc1841a8fac58aa901f8a89e18e456c63110",
+    "owner": "backend-platform",
+    "reason": "历史长行需要按模块拆分格式化，避免在发布加固中制造大面积无关差异",
+    "expires_on": "2026-09-30",
+    "scope": "Ruff E501 的精确文件、规则、行列指纹"
+  },
+  "ruff_exception_fallback": {
+    "count": 17,
+    "sha256": "e901bd5b5144697ef1193ff8846c672bdeb41a6496ca3c96f02e8837c27482fc",
+    "owner": "backend-runtime",
+    "reason": "存量 best-effort 降级路径需要逐项补结构化日志与故障注入测试",
+    "expires_on": "2026-09-30",
+    "scope": "Ruff S110/S112 的精确文件、规则、行列指纹"
+  },
+  "ruff_controlled_subprocess": {
+    "count": 15,
+    "sha256": "a3374d2e036fee367f4881f0a6f22b8641f361e50c6db631d92817e725654263",
+    "owner": "agent-runtime",
+    "reason": "开发任务运行器的 Git 与验证命令需迁移到统一异步受控执行器",
+    "expires_on": "2026-09-30",
+    "scope": "Ruff S603/S604/S607 的精确文件、规则、行列指纹"
+  },
+  "ruff_async_blocking": {
+    "count": 6,
+    "sha256": "23bde60b6eb3d6360da999d691f089c2cf2387c8ab0cc877c2b469fd4e1fe30f",
+    "owner": "agent-runtime",
+    "reason": "存量同步文件与进程调用需迁移到线程池或异步进程接口并做并发回归",
+    "expires_on": "2026-09-30",
+    "scope": "Ruff ASYNC221/ASYNC230/ASYNC240 的精确文件、规则、行列指纹"
+  },
+  "mypy_short_drama_excluded": {
+    "count": 4,
+    "sha256": "4be9c4ff75c9cb73f9c6987dfb2f7fa2f401200efba8c866087ac767a11aa95d",
+    "owner": "creative-studio",
+    "reason": "用户明确将独立运行的短剧项目排除，待其稳定后按独立接入计划处理",
+    "expires_on": "2026-12-31",
+    "scope": "仅 creative_studio 路径中的 4 个 mypy 问题；其他 Web/API 问题为零容忍"
+  }
 }

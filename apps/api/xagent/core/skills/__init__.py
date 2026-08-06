@@ -959,7 +959,7 @@ class SkillStore:
         except Exception as e:
             logger.debug("skill_failure_distill_failed", error=str(e))
             return None
-        candidate = {
+        candidate: dict[str, Any] = {
             "name": str(data.get("name", "")).strip(),
             "description": str(data.get("description", "")).strip(),
             "trigger_pattern": str(data.get("trigger_pattern", "")).strip(),

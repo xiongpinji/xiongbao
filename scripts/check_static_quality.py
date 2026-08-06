@@ -1,32 +1,150 @@
-"""阻止 Ruff 与 mypy 存量问题数量反弹。"""
+"""以精确指纹约束 Ruff 与 mypy 的限时存量豁免。"""
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
+import shutil
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 
-def parse_ruff_count(output: str) -> int:
-    findings = json.loads(output)
-    if not isinstance(findings, list):
+RUFF_GROUPS = {
+    "ruff_line_length": {"E501"},
+    "ruff_exception_fallback": {"S110", "S112"},
+    "ruff_controlled_subprocess": {"S603", "S604", "S607"},
+    "ruff_async_blocking": {"ASYNC221", "ASYNC230", "ASYNC240"},
+}
+MYPY_SHORT_DRAMA_PREFIXES = (
+    "xagent/api/v1/creative_studio.py",
+    "xagent/domains/creative_studio/",
+)
+
+
+def _stable_digest(findings: list[dict[str, Any]]) -> str:
+    payload = json.dumps(
+        sorted(findings, key=lambda item: json.dumps(item, sort_keys=True)),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _relative_source_path(filename: str) -> str:
+    normalized = filename.replace("\\", "/")
+    marker = "/apps/api/"
+    if marker in normalized:
+        return normalized.split(marker, 1)[1]
+    return normalized.removeprefix("./")
+
+
+def parse_ruff_findings(output: str) -> dict[str, list[dict[str, Any]]]:
+    raw = json.loads(output)
+    if not isinstance(raw, list):
         raise ValueError("Ruff JSON 输出必须是数组")
-    return len(findings)
+    groups = {name: [] for name in RUFF_GROUPS}
+    for item in raw:
+        code = str(item.get("code") or "")
+        group = next((name for name, codes in RUFF_GROUPS.items() if code in codes), None)
+        if group is None:
+            raise ValueError(f"存在未分类 Ruff 问题: {code}")
+        location = item.get("location") or {}
+        groups[group].append(
+            {
+                "path": _relative_source_path(str(item.get("filename") or "")),
+                "code": code,
+                "row": int(location.get("row") or 0),
+                "column": int(location.get("column") or 0),
+            }
+        )
+    return groups
 
 
-def parse_mypy_count(output: str) -> int:
-    return sum(1 for line in output.splitlines() if ": error:" in line)
+_MYPY_ERROR = re.compile(
+    r"^(?P<path>.+?):(?P<row>\d+): error: .+?\s+\[(?P<code>[^\]]+)\]\s*$"
+)
 
 
-def exceeded(
-    current: dict[str, int], baseline: dict[str, int]
-) -> dict[str, tuple[int, int]]:
+def parse_mypy_findings(output: str) -> dict[str, list[dict[str, Any]]]:
+    findings: list[dict[str, Any]] = []
+    for line in output.splitlines():
+        if ": error:" not in line:
+            continue
+        match = _MYPY_ERROR.match(line.strip())
+        if match is None:
+            raise ValueError(f"无法解析 mypy 问题: {line}")
+        path = _relative_source_path(match.group("path"))
+        if not path.startswith(MYPY_SHORT_DRAMA_PREFIXES):
+            raise ValueError(f"Web/API 范围出现未豁免 mypy 问题: {path}")
+        findings.append(
+            {
+                "path": path,
+                "code": match.group("code"),
+                "row": int(match.group("row")),
+            }
+        )
+    return {"mypy_short_drama_excluded": findings}
+
+
+def summarize(groups: dict[str, list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
     return {
-        name: (current[name], limit)
-        for name, limit in baseline.items()
-        if current[name] > limit
+        name: {"count": len(findings), "sha256": _stable_digest(findings)}
+        for name, findings in groups.items()
     }
+
+
+def validate_baseline(
+    current: dict[str, dict[str, Any]],
+    baseline: dict[str, Any],
+    *,
+    today: date,
+) -> list[str]:
+    errors: list[str] = []
+    if set(current) != set(baseline):
+        return ["质量豁免分组与当前扫描分组不一致"]
+    required = {"count", "sha256", "owner", "reason", "expires_on", "scope"}
+    for name, actual in current.items():
+        expected = baseline[name]
+        if not isinstance(expected, dict) or set(expected) != required:
+            errors.append(f"{name}: 豁免元数据字段不完整")
+            continue
+        try:
+            expiry = date.fromisoformat(str(expected["expires_on"]))
+        except ValueError:
+            errors.append(f"{name}: expires_on 不是 ISO 日期")
+            continue
+        if today > expiry:
+            errors.append(f"{name}: 豁免已于 {expiry.isoformat()} 到期")
+        for field in ("owner", "reason", "scope"):
+            if not isinstance(expected[field], str) or not expected[field].strip():
+                errors.append(f"{name}: {field} 不能为空")
+        if actual != {"count": expected["count"], "sha256": expected["sha256"]}:
+            errors.append(
+                f"{name}: 精确指纹不匹配，当前 {actual['count']} / {actual['sha256']}"
+            )
+    return errors
+
+
+def _tool_command(tool: str, *args: str) -> list[str]:
+    if tool == "mypy":
+        bootstrap = (
+            "import runpy,sys,sysconfig;"
+            "sys.path.append(sysconfig.get_paths()['purelib']);"
+            "module=sys.argv.pop(1);"
+            "runpy.run_module(module,run_name='__main__')"
+        )
+        return [sys.executable, "-S", "-c", bootstrap, tool, *args]
+    suffix = ".exe" if sys.platform == "win32" else ""
+    adjacent = Path(sys.executable).with_name(f"{tool}{suffix}")
+    executable = str(adjacent) if adjacent.is_file() else shutil.which(tool)
+    if not executable:
+        raise RuntimeError(f"找不到静态检查工具: {tool}")
+    return [executable, *args]
 
 
 def _run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -52,54 +170,43 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     api_root = repo_root / "apps" / "api"
     baseline_path = repo_root / ".quality-baseline.json"
-
     try:
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
-        if not isinstance(baseline, dict):
-            raise ValueError("质量基线必须是 JSON 对象")
-        expected_keys = {"ruff", "mypy"}
-        if set(baseline) != expected_keys or not all(
-            isinstance(value, int) and value >= 0 for value in baseline.values()
-        ):
-            raise ValueError("质量基线必须只包含非负整数 ruff 和 mypy")
-
         ruff = _run(
-            [
-                sys.executable,
-                "-m",
-                "ruff",
-                "check",
-                "xagent",
-                "tests",
-                "--output-format",
-                "json",
-            ],
+            _tool_command("ruff", "check", "xagent", "tests", "--output-format", "json"),
             cwd=api_root,
         )
         mypy = _run(
-            [
-                sys.executable,
-                "-m",
-                "mypy",
-                "xagent",
-                "--ignore-missing-imports",
-            ],
+            _tool_command("mypy", "xagent", "--ignore-missing-imports"),
             cwd=api_root,
         )
-        current = {
-            "ruff": parse_ruff_count(ruff.stdout),
-            "mypy": parse_mypy_count(mypy.stdout + "\n" + mypy.stderr),
-        }
-    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        current = summarize(
+            {
+                **parse_ruff_findings(ruff.stdout),
+                **parse_mypy_findings(mypy.stdout + "\n" + mypy.stderr),
+            }
+        )
+        errors = validate_baseline(current, baseline, today=date.today())
+    except (
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+        subprocess.SubprocessError,
+    ) as exc:
         print(f"静态质量门禁执行失败: {exc}", file=sys.stderr)
         return 1
 
-    regressions = exceeded(current, baseline)
-    for name in ("ruff", "mypy"):
-        print(f"{name}: {current[name]} <= {baseline[name]}")
-    if regressions:
-        for name, (count, limit) in regressions.items():
-            print(f"静态质量反弹: {name}={count}, baseline={limit}", file=sys.stderr)
+    for name, actual in current.items():
+        meta = baseline.get(name, {})
+        print(
+            f"{name}: {actual['count']} findings, sha256={actual['sha256']}, "
+            f"owner={meta.get('owner')}, "
+            f"expires_on={meta.get('expires_on')}"
+        )
+    if errors:
+        for error in errors:
+            print(f"静态质量门禁失败: {error}", file=sys.stderr)
         return 1
     return 0
 

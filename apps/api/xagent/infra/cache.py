@@ -58,7 +58,10 @@ class RedisCache:
         self._client = redis.from_url(redis_url, decode_responses=True)
 
     async def get(self, key: str) -> str | None:
-        return await self._client.get(key)
+        value = await self._client.get(key)
+        if value is None or isinstance(value, str):
+            return value
+        return value.decode()
 
     async def set(self, key: str, value: str, ttl: int | None = None) -> None:
         await self._client.set(key, value, ex=ttl)

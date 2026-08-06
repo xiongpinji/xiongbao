@@ -55,7 +55,7 @@ class TestLayeredInstructions:
         ws = tmp_path / "ws"
         _write(ws / "src" / "AGENTS.md", "SRC-RULE")
         layers = load_layers(ws, task_paths=["src/mod/x.py"], user_dir=tmp_path / "nohome")
-        assert [l.level for l in layers] == ["subdir"]
+        assert [layer.level for layer in layers] == ["subdir"]
         assert layers[0].content == "SRC-RULE"
 
     def test_path_outside_workspace_ignored(self, tmp_path):
@@ -67,7 +67,7 @@ class TestLayeredInstructions:
         out = get_layered_instructions(ws, task_paths=["../"], user_dir=tmp_path / "nohome")
         assert "OUTSIDE-RULE" not in out
         layers = load_layers(ws, task_paths=["../../etc"], user_dir=tmp_path / "nohome")
-        assert all(l.level != "subdir" for l in layers)
+        assert all(layer.level != "subdir" for layer in layers)
 
     def test_missing_layers_skipped(self, tmp_path):
         """缺层时跳过，不报错。"""

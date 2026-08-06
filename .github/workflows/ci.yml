@@ -57,6 +57,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Exact lint exemption gate
+        run: npm run lint:release
+
       - name: Unit test
         run: npm test
 

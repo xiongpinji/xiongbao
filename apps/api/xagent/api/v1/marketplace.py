@@ -162,30 +162,38 @@ async def browse_market(
         try:
             from xagent.infra.repos import marketplace as repo
 
-            entries = repo.list_entries_sync(q=q, tag=tag, sort=sort)
+            db_entries = repo.list_entries_sync(q=q, tag=tag, sort=sort)
             return {
                 "entries": [
-                    _entry_from_dict(e).to_dict() for e in entries[:limit]
+                    _entry_from_dict(e).to_dict() for e in db_entries[:limit]
                 ],
-                "total": len(entries),
+                "total": len(db_entries),
                 "degraded": False,
             }
         except Exception as exc:
             _degrade("browse", exc)
-    entries = [e for e in _market.values() if e.status == "published"]
+    memory_entries = [e for e in _market.values() if e.status == "published"]
     if q:
         q_lower = q.lower()
-        entries = [e for e in entries if q_lower in e.name.lower() or q_lower in e.description.lower()]
+        memory_entries = [
+            e
+            for e in memory_entries
+            if q_lower in e.name.lower() or q_lower in e.description.lower()
+        ]
     if tag:
-        entries = [e for e in entries if tag in e.tags]
+        memory_entries = [e for e in memory_entries if tag in e.tags]
     # 排序
     if sort == "rating":
-        entries.sort(key=lambda e: e.rating, reverse=True)
+        memory_entries.sort(key=lambda e: e.rating, reverse=True)
     elif sort == "newest":
-        entries.sort(key=lambda e: e.published_at, reverse=True)
+        memory_entries.sort(key=lambda e: e.published_at, reverse=True)
     else:
-        entries.sort(key=lambda e: e.downloads, reverse=True)
-    return {"entries": [e.to_dict() for e in entries[:limit]], "total": len(entries), "degraded": True}
+        memory_entries.sort(key=lambda e: e.downloads, reverse=True)
+    return {
+        "entries": [e.to_dict() for e in memory_entries[:limit]],
+        "total": len(memory_entries),
+        "degraded": True,
+    }
 
 
 @router.get("/{entry_id}", summary="条目详情")
@@ -278,16 +286,19 @@ async def install_entry(
             raise
         except Exception as exc:
             _degrade("install", exc)
-    entry = _market.get(entry_id)
-    if not entry:
+    memory_entry = _market.get(entry_id)
+    if not memory_entry:
         raise HTTPException(404, "条目不存在")
-    entry.downloads += 1
+    memory_entry.downloads += 1
     return {
         "installed": True,
         "entry_id": entry_id,
-        "name": entry.name,
-        "version": entry.version,
-        "message": f"已安装 {entry.name} v{entry.version} 到租户 {principal.tenant_id}",
+        "name": memory_entry.name,
+        "version": memory_entry.version,
+        "message": (
+            f"已安装 {memory_entry.name} v{memory_entry.version} 到租户 "
+            f"{principal.tenant_id}"
+        ),
         "degraded": True,
     }
 

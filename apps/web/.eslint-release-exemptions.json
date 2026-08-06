@@ -1,0 +1,18 @@
+{
+  "react_compiler_migration": {
+    "count": 90,
+    "sha256": "c31f3944da23a13f33f6894f49f08db48874a257df3885bb2d4897e8b2ed486b",
+    "owner": "web-platform",
+    "reason": "React Hooks 7 compiler checks require component state-boundary refactoring and browser regression",
+    "expires_on": "2026-09-30",
+    "scope": "Exact file, rule, line, and column fingerprint for compiler migration warnings"
+  },
+  "react_effect_dependencies": {
+    "count": 10,
+    "sha256": "f141d7dd1aa57d1ba82351f4f4824b2d1981b8c7a224aeb51836e2c520eb4e77",
+    "owner": "web-platform",
+    "reason": "Legacy effects need dependency stabilization without changing request or subscription timing",
+    "expires_on": "2026-09-30",
+    "scope": "Exact file, rule, line, and column fingerprint for exhaustive-deps warnings"
+  }
+}
