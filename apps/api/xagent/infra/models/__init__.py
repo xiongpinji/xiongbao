@@ -15,6 +15,7 @@ from xagent.infra.models.development_task import DevelopmentTaskORM
 from xagent.infra.models.evidence import EvidenceORM
 from xagent.infra.models.marketplace import MarketEntryORM
 from xagent.infra.models.memory import MemoryMetaORM
+from xagent.infra.models.scheduled_job import ScheduledJobORM, ScheduledJobRunORM
 from xagent.infra.models.spine import (
     DeliveryTaskORM,
     GoalORM,
@@ -39,6 +40,8 @@ __all__ = [
     "ConversationORM",
     "ConversationMessageORM",
     "DevelopmentTaskORM",
+    "ScheduledJobORM",
+    "ScheduledJobRunORM",
     "GoalORM",
     "InitiativeORM",
     "DeliveryTaskORM",
