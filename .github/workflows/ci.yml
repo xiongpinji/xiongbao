@@ -326,3 +326,33 @@ jobs:
         run: npm install -g promptfoo
       - name: Run eval
         run: promptfoo eval -c .promptfoo/config.yaml --no-cache
+
+  release-version:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify release versions
+        run: python scripts/verify_release_versions.py --tag "${GITHUB_REF_NAME}"
+
+  release:
+    needs:
+      - backend
+      - frontend
+      - license-gate
+      - config-governance
+      - docker-build
+      - e2e-api
+      - load-test
+      - promptfoo-eval
+      - release-version
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub Release
+        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

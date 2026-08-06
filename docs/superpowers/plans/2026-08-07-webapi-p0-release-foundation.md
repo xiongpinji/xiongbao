@@ -416,7 +416,7 @@ git commit -m "feat(Web): 收紧 Web API 发布入口与测试范围"
 - 修改：`docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md`
 - 修改：`.github/workflows/ci.yml`
 
-- [ ] **步骤 1：编写版本校验失败测试**
+- [x] **步骤 1：编写版本校验失败测试**
 
 测试在临时目录写入 API `pyproject.toml`、Web `package.json` 和 README，通过纯函数验证：
 
@@ -429,7 +429,7 @@ assert "tag" in "\n".join(verify_versions(root, tag="v1.0.1"))
 
 测试同样通过 `importlib.util.spec_from_file_location` 加载仓库根的 `scripts/verify_release_versions.py`，避免改变应用包结构。
 
-- [ ] **步骤 2：运行测试验证脚本尚不存在**
+- [x] **步骤 2：运行测试验证脚本尚不存在**
 
 运行：
 
@@ -439,11 +439,11 @@ python -m pytest apps/api/tests/test_verify_release_versions.py -q
 
 预期：FAIL，版本校验模块不存在。
 
-- [ ] **步骤 3：实现版本校验脚本**
+- [x] **步骤 3：实现版本校验脚本**
 
 脚本使用 `tomllib` 读取 API 版本、`json` 读取 Web 版本、正则读取 README `当前 Web/API 版本`。传入 `--tag` 时去掉 `v` 后比较。任一不一致打印逐项错误并退出 1。
 
-- [ ] **步骤 4：修正文档口径**
+- [x] **步骤 4：修正文档口径**
 
 README 顶部改为：
 
@@ -453,7 +453,7 @@ README 顶部改为：
 
 状态事实源明确：当前增强阶段只验收 Web/API；短剧与桌面端不构成本阶段发布结论。
 
-- [ ] **步骤 5：增加 tag 版本 job 与 Release job**
+- [x] **步骤 5：增加 tag 版本 job 与 Release job**
 
 新增 `release-version` job，仅 tag push 执行：
 
@@ -481,7 +481,7 @@ release:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-- [ ] **步骤 6：验证并提交 P0-D**
+- [x] **步骤 6：验证并提交 P0-D**
 
 运行：
 

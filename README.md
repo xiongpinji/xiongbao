@@ -2,9 +2,11 @@
 
 > 面向企业的自主智能体框架 —— **编排内核 + 适配层 + 独有语义**，底座全部采用 MIT/Apache 开源组件。
 
-**当前版本：0.1.0**（单一事实源 `apps/api/pyproject.toml`；`xagent.__version__` 与 CLI `xagent --version` 同源）
+**当前 Web/API 版本：1.0.0**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
 
-这是 X-Agent 的全新净重写版本。设计原则：不重复造轮子，把成熟能力（LLM 路由、记忆、可观测、沙箱、编排、SSO、授权、MCP）交给生产级开源组件，X-Agent 只保留并强化自己的差异化语义（工作流结构化视图、短剧工厂、开源候选发现、多租户审计黑板）。
+当前增强与发布验收范围仅为 **Web/API**。短剧由独立项目运行，稳定后按集成规格接入；Tauri 桌面端暂不纳入本阶段发布结论。仓库中保留的相关源码属于后续接入资产，不代表当前 Web/API 已发布能力。
+
+X-Agent 的设计原则是不重复造轮子，把成熟能力（LLM 路由、记忆、可观测、沙箱、编排、SSO、授权、MCP）交给生产级开源组件，当前 Web/API 重点强化工作流结构化视图、开发任务闭环、持久调度、技能与会话恢复。
 
 ## 当前状态口径（2026-08-03）
 
@@ -20,7 +22,7 @@ xagent/
 │   ├── api/          # FastAPI 后端：薄路由 + 编排内核(core) + 适配层(adapters) + 独有域(domains)
 │   ├── worker/       # 后台任务 / 工作流 worker
 │   ├── web/          # React18 + Vite + Tailwind 前端工作台
-│   └── desktop/      # Tauri 桌面壳
+│   └── desktop/      # Tauri 桌面壳（源码保留；不在当前 Web/API 发布范围）
 ├── deploy/
 │   ├── compose/      # 单机 docker-compose（默认交付形态）
 │   └── helm/         # K8s Helm chart（api/worker/web/依赖件，dev~enterprise 五套 values）
@@ -152,11 +154,11 @@ curl http://localhost:8000/ready
 
 ## 前端工作台（2026-06-22 起 ZCode 风格重构）
 
-前端已重构为 **ZCode 风格暗色折叠 AI 工作台**：
+当前 Web/API 前端为 **ZCode 风格暗色折叠 AI 工作台**：
 
-- 主导航默认折叠，仅保留：新建任务 / 搜索 / 技能 / 对话 / 智能体 / 短剧工厂 / 工作流 / 设置。
-- 知识库、开源发现迁入 **设置 → 索引库**；视频剪辑合并进短剧工厂的 **剪辑节点 / 导出节点**。
-- 短剧工厂升级为 **自由拖拽画布工作流系统**：右键添加 11 类短剧节点，节点连线即工作流 `depends_on`，「运行画布」触发真实 `WorkflowEngine`，关键帧 / 视频走 `media task` 轮询，剪辑 / 导出走真实 timeline API；`/editor` 保留为 `?timeline_id=` 高级模式。
+- 主导航发布面只保留对话、目标任务板、工作流、智能体与设置等 Web/API 能力。
+- 知识库与开源发现保留在 **设置 → 索引库**。
+- `/creative`、`/creative/canvas`、`/canvas`、`/editor` 当前统一显示排除说明，不加载短剧或剪辑运行页面。
 
 详见：
 
@@ -174,7 +176,7 @@ Phase 0-5 描述功能骨架与历史建设路线，不等同于当前正式 GA 
 - Phase 3：短剧工厂 + 多模态 + 开源发现 + 插件单内核（历史已实现）
 - Phase 4：React 前端 + Tauri 桌面（历史已实现）
 - Phase 5：企业硬化 + 计费 + 交付骨架（历史已实现）
-- 当前收口：远端 CI、目标环境演练、PR 审查包、关键页面验收记录
+- 当前收口：Web/API 发布门禁、开发任务闭环、持久调度、技能、会话恢复与最终发布级审计
 
 详见 `docs/ARCHITECTURE.md`、`docs/ROADMAP.md` 与 `docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md`。
 
