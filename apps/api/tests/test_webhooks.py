@@ -35,3 +35,34 @@ async def test_emit_reports_not_configured() -> None:
     assert delivery.target_count == 0
     assert delivery.delivered_count == 0
     assert delivery.errors == ()
+
+
+async def test_persisted_webhooks_can_restore_all_tenants(tmp_path, monkeypatch) -> None:
+    from xagent.core import persistence
+
+    monkeypatch.setattr(persistence, "DB_PATH", tmp_path / "webhooks.db")
+    await persistence.save_webhook(
+        {
+            "webhook_id": "hook-a",
+            "tenant_id": "tenant-a",
+            "url": "https://a.invalid/hook",
+            "events": ["*"],
+        }
+    )
+    await persistence.save_webhook(
+        {
+            "webhook_id": "hook-b",
+            "tenant_id": "tenant-b",
+            "url": "https://b.invalid/hook",
+            "events": ["scheduler.job_run.completed"],
+        }
+    )
+
+    assert {hook["webhook_id"] for hook in await persistence.load_webhooks()} == {
+        "hook-a",
+        "hook-b",
+    }
+    assert [
+        hook["webhook_id"]
+        for hook in await persistence.load_webhooks("tenant-a")
+    ] == ["hook-a"]

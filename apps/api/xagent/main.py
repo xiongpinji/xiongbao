@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
         from xagent.core.knowledge import Document, get_knowledge_base
         from xagent.core.persistence import load_documents, load_webhooks
         from xagent.core.webhooks import WebhookConfig, get_webhook_manager
-        hooks = await load_webhooks("default")
+        hooks = await load_webhooks()
         wm = get_webhook_manager()
         for h in hooks:
             wm._hooks[h["webhook_id"]] = WebhookConfig(

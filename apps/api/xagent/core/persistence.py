@@ -165,13 +165,19 @@ async def save_webhook(hook: dict[str, Any]) -> None:
         await db.close()
 
 
-async def load_webhooks(tenant_id: str) -> list[dict[str, Any]]:
+async def load_webhooks(tenant_id: str | None = None) -> list[dict[str, Any]]:
     db = await get_db()
     try:
-        cursor = await db.execute(
-            "SELECT * FROM webhooks WHERE tenant_id = ? AND enabled = 1",
-            (tenant_id,),
-        )
+        if tenant_id is None:
+            cursor = await db.execute(
+                "SELECT * FROM webhooks WHERE enabled = 1 ORDER BY webhook_id"
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT * FROM webhooks WHERE tenant_id = ? AND enabled = 1 "
+                "ORDER BY webhook_id",
+                (tenant_id,),
+            )
         rows = await cursor.fetchall()
         return [
             {
