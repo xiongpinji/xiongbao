@@ -29,6 +29,7 @@ class TaskStatus(str, Enum):  # noqa: UP042
     running = "running"
     succeeded = "succeeded"
     failed = "failed"
+    cancelled = "cancelled"
 
 
 @dataclass
@@ -75,6 +76,7 @@ class TaskRunner:
 
     def __init__(self) -> None:
         self._tasks: dict[str, TaskRecord] = {}
+        self._handles: dict[str, asyncio.Task[Any]] = {}
 
     def submit(
         self,
@@ -95,7 +97,9 @@ class TaskRunner:
             input_payload=deepcopy(input_payload or {}),
         )
         self._tasks[task_id] = rec
-        asyncio.create_task(self._run(task_id, coro_factory, rec))
+        self._handles[task_id] = asyncio.create_task(
+            self._run(task_id, coro_factory, rec)
+        )
         return task_id
 
     async def _run(self, task_id, coro_factory, rec: TaskRecord) -> None:
@@ -104,12 +108,16 @@ class TaskRunner:
         try:
             rec.result = await coro_factory()
             rec.status = TaskStatus.succeeded
+        except asyncio.CancelledError:
+            rec.status = TaskStatus.cancelled
+            rec.error = "cancelled"
         except Exception as exc:
             rec.status = TaskStatus.failed
             rec.error = str(exc)
             logger.warning("worker_task_failed", task_id=task_id, error=str(exc))
         finally:
             rec.finished_at = datetime.now(UTC).isoformat()
+            self._handles.pop(task_id, None)
 
     def get(self, task_id: str, tenant_id: str) -> TaskRecord | None:
         rec = self._tasks.get(task_id)
@@ -119,6 +127,17 @@ class TaskRunner:
 
     def list(self, tenant_id: str) -> list[TaskRecord]:
         return [r for r in self._tasks.values() if r.tenant_id == tenant_id]
+
+    def cancel(self, task_id: str, tenant_id: str) -> bool:
+        rec = self.get(task_id, tenant_id)
+        handle = self._handles.get(task_id)
+        if rec is None or handle is None or handle.done():
+            return False
+        handle.cancel()
+        rec.status = TaskStatus.cancelled
+        rec.error = "cancelled"
+        rec.finished_at = datetime.now(UTC).isoformat()
+        return True
 
 
 @lru_cache

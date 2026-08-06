@@ -23,7 +23,7 @@ from xagent.infra.settings import get_settings
 logger = get_logger("xagent.celery")
 
 _celery_app = None
-_TERMINAL_STATUSES = {"succeeded", "failed"}
+_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled"}
 
 
 def _is_schema_mismatch(exc: Exception, table_name: str) -> bool:

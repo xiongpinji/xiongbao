@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
@@ -544,4 +544,72 @@ async def get_runtime_run_detail(
         "delivery": delivery,
         "related_tasks": related_tasks,
         "spine": spine,
+    }
+
+
+async def cancel_runtime_run(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    tenant_id: str,
+) -> dict[str, Any]:
+    """取消可寻址的 inproc/Celery run；不把无法取消伪报为成功。"""
+    detail = await get_runtime_run_detail(session, run_id=run_id, tenant_id=tenant_id)
+    if detail is None:
+        return {"cancelled": False, "error": "run_not_found"}
+    task = detail.get("task") or {}
+    status = str(task.get("status") or "").lower()
+    if status in {"succeeded", "failed", "cancelled"}:
+        return {
+            "cancelled": False,
+            "error": "run_terminal",
+            "status": status,
+        }
+    task_id = str(task.get("task_id") or run_id)
+    backend = str(task.get("backend") or "").lower()
+
+    from xagent.worker import get_task_runner
+
+    cancelled = get_task_runner().cancel(task_id, tenant_id)
+    next_status = "cancelled"
+    if not cancelled and backend == "celery":
+        from xagent.worker.celery_app import get_celery_app
+
+        celery_app = get_celery_app()
+        if celery_app is not None:
+            try:
+                celery_app.control.revoke(task_id, terminate=False)
+            except Exception:  # noqa: BLE001 — 远端 broker 失败必须结构化返回
+                return {
+                    "cancelled": False,
+                    "error": "celery_cancel_failed",
+                    "status": status or "unknown",
+                    "backend": "celery",
+                }
+            cancelled = True
+            next_status = "cancellation_requested"
+    if not cancelled:
+        return {
+            "cancelled": False,
+            "error": "run_not_cancellable",
+            "status": status or "unknown",
+            "backend": backend or "unknown",
+        }
+
+    rows = await session.scalars(
+        select(AgentTaskORM).where(
+            AgentTaskORM.tenant_id == tenant_id,
+            or_(AgentTaskORM.run_id == run_id, AgentTaskORM.task_id == task_id),
+        )
+    )
+    for row in rows:
+        row.status = next_status
+        row.error = "cancelled by MCP" if next_status == "cancelled" else ""
+    await session.flush()
+    return {
+        "cancelled": True,
+        "run_id": run_id,
+        "task_id": task_id,
+        "status": next_status,
+        "backend": backend or "inproc",
     }

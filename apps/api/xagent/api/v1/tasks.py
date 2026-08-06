@@ -130,11 +130,15 @@ async def _sync_finished_task_status_if_needed(
     record = get_task_runner().get(task_id, principal.tenant_id)
     if record is None:
         return
-    if record.status.value not in {"succeeded", "failed"}:
+    if record.status.value not in {"succeeded", "failed", "cancelled"}:
         return
 
     next_status = "review" if record.status.value == "succeeded" else "recovery"
-    blocker_reason = str(record.error or "") if record.status.value == "failed" else ""
+    blocker_reason = (
+        str(record.error or "")
+        if record.status.value in {"failed", "cancelled"}
+        else ""
+    )
     async with get_sessionmaker()() as session:
         await update_task_status_by_run_id(
             session,
@@ -513,6 +517,7 @@ async def get_task_runtime_view(task_id: str, tenant_id: str) -> dict[str, Any] 
                 "SUCCESS": "succeeded",
                 "FAILURE": "failed",
                 "RETRY": "running",
+                "REVOKED": "cancelled",
             }
             task_status = status_map.get(async_result.state, async_result.state.lower())
             result = async_result.result if async_result.successful() else {}

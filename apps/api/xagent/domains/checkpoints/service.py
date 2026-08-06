@@ -54,6 +54,11 @@ def _redact_value(value: Any) -> Any:
     return redact_checkpoint_text(str(value))[:_MAX_CONTENT_CHARS]
 
 
+def redact_checkpoint_payload(value: Any) -> Any:
+    """递归脱敏将要离开运行时边界的 checkpoint/event payload。"""
+    return _redact_value(value)
+
+
 def _normalize_changed_files(changed_files: list[str], workspace: Path) -> list[str]:
     root = workspace.resolve()
     normalized: list[str] = []
