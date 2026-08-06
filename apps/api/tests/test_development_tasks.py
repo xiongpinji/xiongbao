@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from xagent.domains.development_tasks.git_lifecycle import development_task_paths
 from xagent.domains.development_tasks.models import (
     DevelopmentTaskCreate,
     DevelopmentTaskStatus,
@@ -75,3 +76,12 @@ async def test_development_task_persists_and_is_tenant_isolated(tmp_path: Path) 
         assert persisted.test_summary == '{"passed": 1}'
 
     await engine.dispose()
+
+
+def test_development_task_paths_reject_path_traversal(tmp_path: Path) -> None:
+    try:
+        development_task_paths(tmp_path / "repo", "../escape")
+    except ValueError as exc:
+        assert "不安全字符" in str(exc)
+    else:
+        raise AssertionError("路径逃逸任务 ID 必须被拒绝")

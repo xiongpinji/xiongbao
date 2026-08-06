@@ -9,10 +9,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from xagent.core.orchestration import run_agent
@@ -45,9 +45,11 @@ class SubTaskResult:
     duration_ms: float = 0
     # ── V3-3 worktree 隔离字段 ──
     isolated: bool = False       # 是否在独立 git worktree 中执行
-    worktree_path: str = ""      # 执行用 worktree（已清理，仅留记录）
+    worktree_path: str = ""      # 执行用 worktree（成功时保留到审查动作）
     diff_stat: str = ""          # 该子代理的改动统计（git diff --stat）
     diff: str = ""               # 改动全文（截断 4000 字符）
+    development_task_id: str = ""
+    development_task_status: str = ""
 
 
 @dataclass
@@ -72,9 +74,10 @@ class ParallelRunResult:
                     "error": r.error,
                     "duration_ms": round(r.duration_ms, 1),
                     "isolated": r.isolated,
-                    "worktree_path": r.worktree_path,
                     "diff_stat": r.diff_stat,
                     "diff": r.diff,
+                    "development_task_id": r.development_task_id,
+                    "development_task_status": r.development_task_status,
                 }
                 for r in self.sub_results
             ],
@@ -93,9 +96,8 @@ async def run_parallel_agents(
 ) -> ParallelRunResult:
     """并行执行多个子 Agent 任务，汇总结果。
 
-    use_worktrees=True（V3-3，对标 Codex multi-agent worktrees）：
-    每个子代理在当前工作区的独立 git worktree 中执行（独立分支），
-    结束后采集各自 diff 并清理 worktree；主工作区不被并行写入污染。
+    use_worktrees=True 时每个子代理从固定基线建立独立 git worktree；
+    成功结果提交并保留等待审查，失败结果记录后清理。
     当前工作区不是 git 仓库时降级为非隔离执行（记日志，诚实标记 isolated=False）。
     """
     run_id = uuid.uuid4().hex
@@ -105,44 +107,69 @@ async def run_parallel_agents(
         sub_tasks = sub_tasks[:MAX_PARALLEL_AGENTS]
         logger.warning("parallel_truncated", max=MAX_PARALLEL_AGENTS)
 
-    # worktree 隔离前置：当前工作区必须是 git 仓库
-    main_ws: Path | None = None
-    worktree_base: Path | None = None
+    repository_baseline = None
     if use_worktrees:
         from xagent.core.workspace import get_workspace
+        from xagent.domains.development_tasks.git_lifecycle import inspect_repository
 
-        main_ws = get_workspace()
-        rc, _ = await _git(main_ws, "rev-parse", "--is-inside-work-tree")
-        if rc == 0:
-            worktree_base = main_ws.parent / ".xagent-worktrees"
-        else:
+        repository_baseline = await inspect_repository(get_workspace())
+        if repository_baseline is None:
             logger.warning(
                 "parallel_worktree_degraded",
-                reason="workspace_not_git_repo", workspace=str(main_ws),
+                reason="workspace_not_git_repo",
+                workspace=str(get_workspace()),
             )
 
     async def _run_one(idx: int, task: SubTask) -> SubTaskResult:
         sub_run_id = f"{run_id}_sub{idx}"
         t0 = datetime.now(UTC)
-        wt_path: Path | None = None
-        branch = f"agent/{run_id[:8]}-sub{idx}"
+        development_task_id = uuid.uuid4().hex
+        branch = f"agent/{development_task_id}"
+        task_paths = None
+        task_persisted = False
+        keep_worktree = False
         wt_token = None
         try:
-            # V3-3：建独立 worktree 并切换本任务工作区（contextvar 任务级隔离）
-            if worktree_base is not None:
-                from xagent.core.workspace import get_workspace, set_workspace
+            if repository_baseline is not None:
+                from datetime import timedelta
 
-                wt_path = worktree_base / f"{run_id[:8]}-sub{idx}"
-                rc, out = await _git(
-                    get_workspace(), "worktree", "add", "-b", branch, str(wt_path), "HEAD"
+                from xagent.core.workspace import set_workspace
+                from xagent.domains.development_tasks import (
+                    DevelopmentTaskCreate,
+                    create_development_task,
                 )
-                if rc == 0:
-                    wt_token = set_workspace(wt_path)
-                else:
-                    logger.warning(
-                        "parallel_worktree_add_failed", sub_run_id=sub_run_id, detail=out[:200]
+                from xagent.domains.development_tasks.git_lifecycle import (
+                    create_task_worktree,
+                    development_task_paths,
+                )
+                from xagent.infra.db import get_sessionmaker
+
+                task_paths = development_task_paths(
+                    repository_baseline.root, development_task_id
+                )
+                await create_task_worktree(repository_baseline, task_paths, branch)
+                async with get_sessionmaker()() as session:
+                    await create_development_task(
+                        session,
+                        DevelopmentTaskCreate(
+                            task_id=development_task_id,
+                            parent_run_id=run_id,
+                            sub_run_id=sub_run_id,
+                            tenant_id=principal.tenant_id,
+                            owner_id=principal.user_id,
+                            goal=task.goal,
+                            main_workspace=str(repository_baseline.root),
+                            base_commit=repository_baseline.commit,
+                            target_branch=repository_baseline.branch,
+                            work_branch=branch,
+                            worktree_path=str(task_paths.worktree),
+                            patch_path=str(task_paths.patch),
+                            expires_at=datetime.now(UTC) + timedelta(days=7),
+                        ),
                     )
-                    wt_path = None
+                    await session.commit()
+                task_persisted = True
+                wt_token = set_workspace(task_paths.worktree)
             try:
                 result = await asyncio.wait_for(
                     run_agent(
@@ -161,10 +188,36 @@ async def run_parallel_agents(
                     reset_workspace(wt_token)
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             rd = result.to_dict()
-            # 采集该子代理 worktree 的改动（先 add -A 让未跟踪文件也进 diff）
             diff_stat, diff_text = "", ""
-            if wt_path is not None:
-                diff_stat, diff_text = await _collect_worktree_diff(wt_path)
+            if task_paths is not None and repository_baseline is not None:
+                from xagent.domains.development_tasks import (
+                    DevelopmentTaskStatus,
+                    update_development_task,
+                )
+                from xagent.domains.development_tasks.git_lifecycle import (
+                    finalize_task_worktree,
+                )
+                from xagent.infra.db import get_sessionmaker
+
+                finalized = await finalize_task_worktree(
+                    repository_baseline, task_paths, development_task_id
+                )
+                diff_stat = finalized.diff_stat
+                diff_text = finalized.patch_text[:_DIFF_MAX_CHARS]
+                async with get_sessionmaker()() as session:
+                    await update_development_task(
+                        session,
+                        principal.tenant_id,
+                        development_task_id,
+                        status=DevelopmentTaskStatus.awaiting_review,
+                        result_commit=finalized.result_commit,
+                        diff_stat=diff_stat,
+                        test_summary=json.dumps(
+                            {"agent_status": "succeeded", "steps": rd.get("steps", 0)}
+                        ),
+                    )
+                    await session.commit()
+                keep_worktree = True
             return SubTaskResult(
                 goal=task.goal,
                 run_id=sub_run_id,
@@ -174,30 +227,66 @@ async def run_parallel_agents(
                 if isinstance(rd.get("steps"), int)
                 else len(rd.get("steps") or []),
                 duration_ms=elapsed,
-                isolated=wt_path is not None,
-                worktree_path=str(wt_path) if wt_path else "",
+                isolated=task_paths is not None,
+                worktree_path=str(task_paths.worktree) if task_paths else "",
                 diff_stat=diff_stat,
                 diff=diff_text,
+                development_task_id=development_task_id if task_persisted else "",
+                development_task_status="awaiting_review" if task_persisted else "",
             )
         except TimeoutError:
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
+            if task_persisted:
+                await _mark_development_task(
+                    principal.tenant_id,
+                    development_task_id,
+                    "timeout",
+                    f"超时(>{SUB_TASK_TIMEOUT}s)",
+                )
             return SubTaskResult(
-                goal=task.goal, run_id=sub_run_id, status="timeout",
-                error=f"超时(>{SUB_TASK_TIMEOUT}s)", duration_ms=elapsed,
-                isolated=wt_path is not None,
-                worktree_path=str(wt_path) if wt_path else "",
+                goal=task.goal,
+                run_id=sub_run_id,
+                status="timeout",
+                error=f"超时(>{SUB_TASK_TIMEOUT}s)",
+                duration_ms=elapsed,
+                isolated=task_paths is not None,
+                worktree_path=str(task_paths.worktree) if task_paths else "",
+                development_task_id=development_task_id if task_persisted else "",
+                development_task_status="timeout" if task_persisted else "",
             )
         except Exception as exc:
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
+            if task_persisted:
+                await _mark_development_task(
+                    principal.tenant_id,
+                    development_task_id,
+                    "failed",
+                    str(exc)[:500],
+                )
             return SubTaskResult(
-                goal=task.goal, run_id=sub_run_id, status="failed",
-                error=str(exc)[:500], duration_ms=elapsed,
-                isolated=wt_path is not None,
-                worktree_path=str(wt_path) if wt_path else "",
+                goal=task.goal,
+                run_id=sub_run_id,
+                status="failed",
+                error=str(exc)[:500],
+                duration_ms=elapsed,
+                isolated=task_paths is not None,
+                worktree_path=str(task_paths.worktree) if task_paths else "",
+                development_task_id=development_task_id if task_persisted else "",
+                development_task_status="failed" if task_persisted else "",
             )
         finally:
-            if wt_path is not None and main_ws is not None:
-                await _cleanup_worktree(main_ws, wt_path, branch)
+            if (
+                task_paths is not None
+                and repository_baseline is not None
+                and not keep_worktree
+            ):
+                from xagent.domains.development_tasks.git_lifecycle import (
+                    cleanup_task_worktree,
+                )
+
+                await cleanup_task_worktree(
+                    repository_baseline.root, task_paths, branch
+                )
 
     # 并行调度所有子任务
     results = await asyncio.gather(
@@ -229,47 +318,27 @@ async def run_parallel_agents(
     )
 
 
-# ═══════════════════════════════════════════════════════════
-#  worktree 隔离的 git 助手（V3-3）
-# ═══════════════════════════════════════════════════════════
-
 _DIFF_MAX_CHARS = 4000
 
 
-async def _git(cwd: Path, *args: str) -> tuple[int, str]:
-    """异步执行 git 命令，返回 (returncode, stdout+stderr)。"""
-    proc = await asyncio.create_subprocess_exec(
-        "git", *args,
-        cwd=str(cwd),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
+async def _mark_development_task(
+    tenant_id: str, task_id: str, status: str, error: str
+) -> None:
+    from xagent.domains.development_tasks import (
+        DevelopmentTaskStatus,
+        update_development_task,
     )
-    out, _ = await proc.communicate()
-    return proc.returncode or 0, out.decode(errors="replace")
+    from xagent.infra.db import get_sessionmaker
 
-
-async def _collect_worktree_diff(wt_path: Path) -> tuple[str, str]:
-    """采集 worktree 内的全部改动（add -A 后 vs HEAD），返回 (stat, diff 截断)。"""
-    rc, _ = await _git(wt_path, "add", "-A")
-    if rc != 0:
-        return "", ""
-    _, stat = await _git(wt_path, "diff", "--cached", "--stat", "HEAD")
-    _, full = await _git(wt_path, "diff", "--cached", "HEAD")
-    return stat.strip(), full[:_DIFF_MAX_CHARS]
-
-
-async def _cleanup_worktree(main_ws: Path, wt_path: Path, branch: str) -> None:
-    """清理 worktree 与临时分支（best-effort，一律从主仓库执行 git）。"""
-    try:
-        await _git(main_ws, "worktree", "remove", "--force", str(wt_path))
-        if await asyncio.to_thread(wt_path.exists):
-            import shutil
-
-            shutil.rmtree(wt_path, ignore_errors=True)
-            await _git(main_ws, "worktree", "prune")
-        await _git(main_ws, "branch", "-D", branch)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("parallel_worktree_cleanup_failed", detail=str(exc)[:200])
+    async with get_sessionmaker()() as session:
+        await update_development_task(
+            session,
+            tenant_id,
+            task_id,
+            status=DevelopmentTaskStatus(status),
+            error=error,
+        )
+        await session.commit()
 
 
 # ═══════════════════════════════════════════════════════════

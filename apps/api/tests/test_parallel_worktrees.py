@@ -14,7 +14,9 @@ from pathlib import Path
 from xagent.core import workspace as ws_mod
 from xagent.core.orchestration import parallel
 from xagent.core.orchestration.parallel import SubTask, run_parallel_agents
+from xagent.domains.development_tasks import get_development_task
 from xagent.enterprise.auth.principal import Principal
+from xagent.infra.db import Base, get_engine, get_sessionmaker
 
 
 def _principal() -> Principal:
@@ -103,6 +105,8 @@ async def test_parallel_with_worktrees_isolation(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         parallel, "run_agent", _make_fake_run_agent(write_file="out.txt")
     )
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
     try:
         result = await run_parallel_agents(
             [SubTask(goal="task one"), SubTask(goal="task two")],
@@ -116,13 +120,24 @@ async def test_parallel_with_worktrees_isolation(tmp_path, monkeypatch) -> None:
     assert len(result.sub_results) == 2
     for sub in result.sub_results:
         assert sub.isolated is True
+        assert sub.development_task_id
+        assert sub.development_task_status == "awaiting_review"
         assert ".xagent-worktrees" in sub.worktree_path
-        # 各自 worktree 的 diff 已采集（out.txt 新增）
+        # 各自 worktree 的完整结果被保留等待审查。
         assert "out.txt" in sub.diff_stat
         assert "out.txt" in sub.diff
-        # worktree 已清理
-        assert not Path(sub.worktree_path).exists()
-    # 主工作区零污染：无 out.txt、git 状态干净、无残留分支
+        assert Path(sub.worktree_path).exists()
+        async with get_sessionmaker()() as session:
+            record = await get_development_task(
+                session, "default", sub.development_task_id
+            )
+        assert record is not None
+        assert record.status.value == "awaiting_review"
+        assert record.result_commit
+        assert Path(record.patch_path).is_file()
+        assert "out.txt" in Path(record.patch_path).read_text(encoding="utf-8")
+
+    # 主工作区零污染：无 out.txt、git 状态干净；临时分支保留等待审查。
     assert not (repo / "out.txt").exists()
     status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True,
@@ -131,7 +146,7 @@ async def test_parallel_with_worktrees_isolation(tmp_path, monkeypatch) -> None:
     branches = subprocess.run(
         ["git", "branch", "--list", "agent/*"], cwd=repo, capture_output=True, text=True,
     ).stdout.strip()
-    assert branches == ""
+    assert len(branches.splitlines()) == 2
 
 
 async def test_parallel_worktree_degrades_outside_git_repo(tmp_path, monkeypatch) -> None:
@@ -148,6 +163,41 @@ async def test_parallel_worktree_degrades_outside_git_repo(tmp_path, monkeypatch
         ws_mod.reset_workspace(ws_token)
     assert result.status == "succeeded"
     assert result.sub_results[0].isolated is False  # 诚实降级标记
+
+
+async def test_parallel_worktree_failure_is_recorded_and_cleaned(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "repo"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+
+    async def _failing_run_agent(*args, **kwargs):  # noqa: ARG001
+        raise RuntimeError("agent failed")
+
+    monkeypatch.setattr(parallel, "run_agent", _failing_run_agent)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="will fail")], _principal(), use_worktrees=True
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert not Path(sub.worktree_path).exists()
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(session, "default", sub.development_task_id)
+    assert record is not None
+    assert record.status.value == "failed"
+    branches = subprocess.run(
+        ["git", "branch", "--list", "agent/*"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert branches == ""
 
 
 async def test_parallel_default_no_worktrees(tmp_path, monkeypatch) -> None:
@@ -182,3 +232,4 @@ async def test_parallel_worktree_result_serializable(tmp_path, monkeypatch) -> N
     d = result.to_dict()
     assert d["sub_results"][0]["isolated"] is True
     assert "f.md" in d["sub_results"][0]["diff_stat"]
+    assert "worktree_path" not in d["sub_results"][0]

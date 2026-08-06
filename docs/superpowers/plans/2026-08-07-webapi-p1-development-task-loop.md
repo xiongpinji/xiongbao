@@ -16,7 +16,7 @@
 ## 约束与取舍
 
 - 复用 `core/orchestration/parallel.py`、现有 RBAC、审计链和异步 SQLAlchemy，不再建立第二套任务运行时。
-- patch 保存到主仓库 `.xagent_runtime/development-tasks/<task_id>.patch`；worktree 保存到主仓库同级 `.xagent-worktrees/<task_id>`。所有路径先解析并验证位于受控根下。
+- patch 保存到主仓库同级 `.xagent-development-tasks/<task_id>.patch`；worktree 保存到同级 `.xagent-worktrees/<task_id>`。两者均不依赖目标仓库 `.gitignore`，所有路径先解析并验证位于受控根下。
 - API 不返回内部绝对路径，只返回任务元数据和按权限读取的 patch 内容。
 - P1 不自动 merge/rebase、不覆盖脏工作区、不自动解决冲突。
 - 现有非 worktree 并行模式保持兼容；只有 `use_worktrees=true` 创建开发任务记录。
@@ -48,12 +48,12 @@
 - 修改：`apps/api/xagent/core/orchestration/parallel.py`
 - 修改：`apps/api/tests/test_parallel_worktrees.py`
 
-- [ ] 先把现有“成功后已清理”的测试改为失败契约：成功结果必须为 `awaiting_review`，worktree/branch/patch/commit 均存在，主工作区仍干净。
-- [ ] 创建 `DevelopmentTaskPaths` 并验证 worktree/patch 解析路径不能逃逸受控根。
-- [ ] worktree 固定从 base commit 创建；完成后 `git add -A`、创建结果 commit、生成完整 `--binary` patch；API preview 仍最多 4000 字符。
-- [ ] 并行结果增加 `development_task_id` 和 `development_task_status`。
-- [ ] Agent failed/timeout/cancelled 时写终态并清理临时 Git 资产；不得留下无记录目录。
-- [ ] 验证成功保留、失败清理、无 Git 仓库诚实降级和序列化回归。
+- [x] 先把现有“成功后已清理”的测试改为失败契约：成功结果必须为 `awaiting_review`，worktree/branch/patch/commit 均存在，主工作区仍干净。
+- [x] 创建 `DevelopmentTaskPaths` 并验证 worktree/patch 解析路径不能逃逸受控根。
+- [x] worktree 固定从 base commit 创建；完成后 `git add -A`、创建结果 commit、生成完整 `--binary` patch；API preview 仍最多 4000 字符。
+- [x] 并行结果增加 `development_task_id` 和 `development_task_status`。
+- [x] Agent failed/timeout 时写终态并清理临时 Git 资产；cancelled 在任务 3 接入运行注册表时完成。
+- [x] 验证成功保留、失败清理、无 Git 仓库诚实降级和序列化回归。
 
 ## 任务 3：Approve、Reject、Apply、Conflict、Cancel
 
