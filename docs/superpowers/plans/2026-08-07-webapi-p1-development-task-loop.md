@@ -34,11 +34,11 @@
 - 修改：`apps/api/xagent/infra/models/__init__.py`
 - 创建：`apps/api/tests/test_development_tasks.py`
 
-- [ ] 先写失败测试：创建 `running` 记录，更新为 `awaiting_review`，重新开 session 后按 tenant 查询仍存在；另一 tenant 查询不到。
-- [ ] ORM 字段覆盖 task/run/tenant/owner、goal/status、workspace/base/target/work branch、worktree/result commit、diff stat、patch/test/conflict/error、创建/更新/审查/应用/过期时间。
-- [ ] domain service 只接受显式 tenant，提供 create/get/list/update；状态序列化使用固定字符串枚举。
-- [ ] migration 以 `20260805_users_persist` 为 parent，并安全创建索引。
-- [ ] 验证：`pytest test_development_tasks.py -q`、migration upgrade/head、关键 Ruff。
+- [x] 先写失败测试：创建 `running` 记录，更新为 `awaiting_review`，重新开 session 后按 tenant 查询仍存在；另一 tenant 查询不到。
+- [x] ORM 字段覆盖 task/run/tenant/owner、goal/status、workspace/base/target/work branch、worktree/result commit、diff stat、patch/test/conflict/error、创建/更新/审查/应用/过期时间。
+- [x] domain service 只接受显式 tenant，提供 create/get/list/update；状态序列化使用固定字符串枚举。
+- [x] migration 以 `20260805_users_persist` 为 parent，并安全创建索引。
+- [x] 验证：`pytest test_development_tasks.py -q`、migration upgrade/head、关键 Ruff。
 
 ## 任务 2：受控 Git 资产与保留生命周期
 
