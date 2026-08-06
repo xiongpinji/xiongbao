@@ -15,7 +15,7 @@
 
 ## In Progress
 
-- [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：CLAIMED | Owner：Codex | 依赖：P2-A。
+- [P2-C] 数据库 checkpoint、恢复/回滚与 Web 时间线 | 状态：CLAIMED | Owner：Codex | 依赖：P2-B。
 
 ## Ready
 
@@ -23,12 +23,12 @@
 
 ## Queued
 
-- [P2-C] 数据库 checkpoint、恢复/回滚与 Web 时间线 | 状态：QUEUED | 依赖：P2-B。
 - [P2-D] MCP 会话、运行、审批与事件接口 | 状态：QUEUED | 依赖：P2-C。
 - [R1] Web/API 发布级全量审计与 Release gate 实跑 | 状态：QUEUED | 依赖：P2-D。
 
 ## Done
 
+- [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：DONE | 证据：数据库 package 事实源、完整 SKILL.md/references/scripts/assets、ZIP/目录大小与路径门禁、租户 API、完整正文运行时、Web manifest/hash 和 commit 失败补偿均成立；后端关联 45 项通过/1 项环境权限跳过、Web 19/19、目标 Ruff/mypy 0、全仓 Ruff `271 <= 286`、mypy `65 <= 74`、fresh migration 和真实 Playwright 同链路通过；详见 `docs/coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE.md`。
 - [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：DONE | 证据：数据库 Job/Run、原子 claim、Redis 所有者租约、启动恢复、有界退避、暂停边界、终态 Webhook 独立回执、多租户重启恢复、租户 API 和 Web 控制台均已成立；后端关联 26/26、Web 17/17、目标 Ruff/mypy 0、fresh migration、typecheck/build 和真实 Playwright 同链路通过；详见 `docs/coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE.md`。
 - [P1-B] review/apply API 与 Web 开发任务控制台 | 状态：DONE | 证据：相关后端 31/31、Web 14/14、lint 0/100、typecheck/build、fresh migration 和真实 Playwright 导航验证通过；浏览器发现的侧栏入口缺失已修复；详见 `docs/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md`。
 - [P1-A] worktree 结果持久模型、Git 生命周期与审查 API | 状态：DONE | 证据：完成 tenant-scoped 持久记录、成功结果 commit/worktree/branch/full patch 保留、approve/reject/apply/conflict/expire/cancel 状态链；API 实测租户隔离、显式 task ID 确认、路径脱敏与审计，相关后端测试 18/18 通过。
@@ -49,6 +49,7 @@
 - mypy：门禁上限 74 项，P0-B 新鲜结果 73 项。
 - `npm ci`：6 个开发依赖漏洞（3 moderate / 3 high），另行纳入依赖审计，不用 `--force` 自动升级。
 - P2-A 新鲜结果：后端关联 26/26、Web 17/17、Ruff `276 <= 286`、mypy `67 <= 74`、lint 0 error / 100 warnings、fresh migration 到 `20260807_durable_scheduler`。
+- P2-B 新鲜结果：后端关联 45 项通过/1 项环境权限跳过、Web 19/19、Ruff `271 <= 286`、mypy `65 <= 74`、lint 0 error / 100 warnings、fresh migration 到 `20260807_skill_packages`。
 
 ## 状态规则
 
