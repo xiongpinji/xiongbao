@@ -109,6 +109,7 @@ TAG_METADATA = [
     {"name": "stream", "description": "SSE 流式对话"},
     {"name": "tasks", "description": "后台任务管理"},
     {"name": "runs", "description": "Run Console 执行记录"},
+    {"name": "checkpoints", "description": "会话断点、恢复与受控回滚"},
     {"name": "workflows", "description": "工作流编排与执行"},
     {"name": "skills", "description": "Skill 自进化管理"},
     {"name": "knowledge", "description": "RAG 知识库"},

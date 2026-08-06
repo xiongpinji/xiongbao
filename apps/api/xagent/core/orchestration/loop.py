@@ -1019,6 +1019,10 @@ async def run_agent(
     run_id: str | None = None,
     conversation_id: str | None = None,
     permission_mode: str = "full-auto",
+    resume_messages: list[dict[str, Any]] | None = None,
+    resume_step: int = 0,
+    resume_changed_files: list[str] | None = None,
+    resume_from_checkpoint_id: str = "",
 ) -> AgentRun:
     """运行一次 agent 任务，返回含事件序列的结果。
 
@@ -1042,7 +1046,21 @@ async def run_agent(
 
     # ── 多轮对话：加载历史 ──
     conv_mgr = get_conversation_manager()
-    conv_session = conv_mgr.get_or_create(conversation_id, principal.tenant_id)
+    conv_session = (
+        conv_mgr.get(conversation_id, principal.tenant_id) if conversation_id else None
+    )
+    if conversation_id and conv_session is None:
+        from xagent.core.orchestration.conversation import load_conversation_from_db
+        from xagent.infra.db import get_sessionmaker
+
+        async with get_sessionmaker()() as conversation_db:
+            conv_session = await load_conversation_from_db(
+                conversation_db, principal.tenant_id, conversation_id
+            )
+        if conv_session is not None:
+            conv_mgr.restore(conv_session)
+    if conv_session is None:
+        conv_session = conv_mgr.get_or_create(conversation_id, principal.tenant_id)
     history = conv_session.get_history(max_turns=8)
 
     # ── 自动记忆注入：检索相关记忆 ──
@@ -1050,10 +1068,21 @@ async def run_agent(
 
     # 构建消息列表：system + 历史 + 当前 goal
     messages: list[Message] = []
-    # 历史消息放在 goal 之前
-    messages.extend(history)
+    if resume_messages is not None:
+        for item in resume_messages:
+            messages.append(
+                Message(
+                    role=str(item.get("role") or "user"),
+                    content=str(item.get("content") or ""),
+                    tool_call_id=item.get("tool_call_id"),
+                    name=item.get("name"),
+                    tool_calls=item.get("tool_calls"),
+                )
+            )
+    else:
+        messages.extend(history)
     # ── 多轮对话上下文注入：历史较长时添加摘要提示 ──
-    if len(history) >= 6:
+    if resume_messages is None and len(history) >= 6:
         _hist_topics = []
         for m in history[-6:]:
             if m.role == "user" and m.content:
@@ -1073,6 +1102,7 @@ async def run_agent(
         role_name=role.name,
         tenant_id=principal.tenant_id,
         messages=messages,
+        step=max(0, resume_step),
     )
     events: list[StepEvent] = []
 
@@ -1215,7 +1245,7 @@ async def run_agent(
         _edit_count = 0  # 跟踪编辑次数，首次编辑时创建分支
 
         # ── 文件变更追踪（任务结束时生成 diff 摘要） ──
-        _changed_files: list[str] = []
+        _changed_files: list[str] = list(resume_changed_files or [])
 
         # ── 错误自恢复计数器 ──
         _consecutive_errors = 0
@@ -1345,7 +1375,7 @@ async def run_agent(
                       should_checkpoint,
                   )
                   if should_checkpoint(state.step):
-                      save_checkpoint(
+                      await save_checkpoint(
                           conv_session.conversation_id, resolved_run_id, state.step,
                           [{"role": m.role, "content": m.content[:500],
                             **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
@@ -1353,6 +1383,9 @@ async def run_agent(
                             **({"name": m.name} if m.name else {})}
                            for m in state.messages],
                           _changed_files, goal,
+                          tenant_id=principal.tenant_id,
+                          workspace=get_workspace(),
+                          parent_checkpoint_id=resume_from_checkpoint_id,
                       )
               except Exception:  # noqa: S110
                   pass
@@ -2187,7 +2220,7 @@ async def run_agent(
             # 保存 checkpoint 以便恢复
             try:
                 from xagent.core.orchestration.checkpoint import save_checkpoint
-                save_checkpoint(
+                await save_checkpoint(
                     conv_session.conversation_id, resolved_run_id, state.step,
                     [{"role": m.role, "content": m.content[:500],
                       **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
@@ -2195,6 +2228,9 @@ async def run_agent(
                       **({"name": m.name} if m.name else {})}
                      for m in state.messages[-20:]],
                     _changed_files, goal,
+                    tenant_id=principal.tenant_id,
+                    workspace=get_workspace(),
+                    parent_checkpoint_id=resume_from_checkpoint_id,
                 )
             except Exception:  # noqa: S110
                 pass
@@ -2254,12 +2290,6 @@ async def run_agent(
     # ── 保存对话历史 ──
     conv_session.add_user(goal)
     conv_session.add_assistant(state.final_answer)
-    # ── 清理 checkpoint（任务成功完成） ──
-    try:
-        from xagent.core.orchestration.checkpoint import clear_checkpoints
-        clear_checkpoints(conv_session.conversation_id)
-    except Exception:  # noqa: S110
-        pass
     # ── 持久化到 DB ──
     try:
         from xagent.core.orchestration.conversation import persist_conversation, persist_message

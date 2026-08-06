@@ -10,6 +10,7 @@ from xagent.api.v1 import (
     billing,
     bulk,
     canvas,
+    checkpoints,
     code_review,
     creative_studio,
     data_io,
@@ -42,6 +43,7 @@ api_v1.include_router(workflows.router)
 api_v1.include_router(runs.router)
 api_v1.include_router(spine.router)
 api_v1.include_router(canvas.router)
+api_v1.include_router(checkpoints.router)
 api_v1.include_router(code_review.router)
 api_v1.include_router(development_tasks.router)
 api_v1.include_router(creative_studio.router)

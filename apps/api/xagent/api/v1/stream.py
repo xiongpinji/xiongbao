@@ -12,7 +12,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -41,8 +41,13 @@ class StreamRunIn(BaseModel):
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
     conversation_id: str | None = None
-    mode: str = Field(default="full-auto", description="Permission mode: suggest | auto-edit | full-auto")
-    strategy: str = Field(default="react", description="Execution strategy: react | plan-execute")
+    mode: str = Field(
+        default="full-auto",
+        description="Permission mode: suggest | auto-edit | full-auto",
+    )
+    strategy: str = Field(
+        default="react", description="Execution strategy: react | plan-execute"
+    )
 
 
 def _build_input_payload(goal: str, role: str | None, caps: list[str]) -> dict:
@@ -104,7 +109,15 @@ async def _event_stream(
     """跑 agent 并把事件逐条以 SSE 实时推送（step 级流式）。"""
     run_id = uuid.uuid4().hex
     resolved_conv_id = conversation_id or uuid.uuid4().hex
-    yield _sse("started", {"goal": goal, "run_id": run_id, "conversation_id": resolved_conv_id, "strategy": strategy})
+    yield _sse(
+        "started",
+        {
+            "goal": goal,
+            "run_id": run_id,
+            "conversation_id": resolved_conv_id,
+            "strategy": strategy,
+        },
+    )
 
     # Plan-and-Execute 模式：先生成计划并推送给前端
     if strategy == "plan-execute":
@@ -116,7 +129,15 @@ async def _event_stream(
             tool_names = list(get_registry().list_names())
             plan = await generate_plan(goal, tool_names, llm)
             yield _sse("plan", {
-                "steps": [{"id": s.id, "description": s.description, "tool_hint": s.tool_hint, "depends_on": s.depends_on} for s in plan.steps],
+                "steps": [
+                    {
+                        "id": s.id,
+                        "description": s.description,
+                        "tool_hint": s.tool_hint,
+                        "depends_on": s.depends_on,
+                    }
+                    for s in plan.steps
+                ],
                 "total": len(plan.steps),
             })
             # 将计划注入目标上下文
@@ -347,8 +368,29 @@ async def stream_run(
     request: Request,
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> StreamingResponse:
+    if body.conversation_id:
+        from xagent.core.orchestration.conversation import load_conversation_from_db
+
+        async with get_sessionmaker()() as session:
+            try:
+                await load_conversation_from_db(
+                    session, principal.tenant_id, body.conversation_id
+                )
+            except LookupError as exc:
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND, "对话不存在或无权访问"
+                ) from exc
     return StreamingResponse(
-        _event_stream(body.goal, principal, body.role, body.capabilities, body.conversation_id, request, body.mode, body.strategy),
+        _event_stream(
+            body.goal,
+            principal,
+            body.role,
+            body.capabilities,
+            body.conversation_id,
+            request,
+            body.mode,
+            body.strategy,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -378,16 +420,30 @@ async def get_conversation_messages(
     conversation_id: str,
     principal: Principal = Depends(require_permission("agent", "execute")),
 ):
-    from xagent.core.orchestration.conversation import load_messages_from_db
+    from xagent.core.orchestration.conversation import load_conversation_from_db
 
     async with get_sessionmaker()() as session:
-        messages = await load_messages_from_db(session, conversation_id)
+        try:
+            conversation = await load_conversation_from_db(
+                session, principal.tenant_id, conversation_id
+            )
+        except LookupError as exc:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "对话不存在或无权访问"
+            ) from exc
+        messages = (
+            [{"role": item.role, "content": item.content} for item in conversation.messages]
+            if conversation is not None
+            else []
+        )
     # 如果 DB 无数据，尝试内存缓存
     if not messages:
         mgr = get_conversation_manager()
-        sess = mgr.get(conversation_id)
+        sess = mgr.get(conversation_id, principal.tenant_id)
         if sess:
             messages = [{"role": m.role, "content": m.content} for m in sess.messages]
+    if conversation is None and not messages:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "对话不存在或无权访问")
     return {"messages": messages}
 
 
@@ -398,12 +454,16 @@ async def delete_conversation(
 ):
     from xagent.core.orchestration.conversation import delete_conversation_from_db
 
-    mgr = get_conversation_manager()
-    mgr.delete(conversation_id)
     async with get_sessionmaker()() as session:
-        await delete_conversation_from_db(session, conversation_id)
+        deleted = await delete_conversation_from_db(
+            session, principal.tenant_id, conversation_id
+        )
         await session.commit()
-    return {"deleted": True}
+    if not deleted:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "对话不存在或无权访问")
+    mgr = get_conversation_manager()
+    mgr.delete(conversation_id, principal.tenant_id)
+    return {"deleted": deleted}
 
 
 # ═══════════════════════════════════════════════════════════

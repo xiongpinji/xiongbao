@@ -46,16 +46,20 @@ async def run_agent(
     run_id: str | None = None,
     conversation_id: str | None = None,
     permission_mode: str = "full-auto",
+    resume_messages: list[dict[str, Any]] | None = None,
+    resume_step: int = 0,
+    resume_changed_files: list[str] | None = None,
+    resume_from_checkpoint_id: str = "",
 ) -> AgentRun:
     """运行一次 agent 任务。DeerFlow(opt-in) > LangGraph > 内置循环。"""
-    if _has_deerflow():
+    if resume_messages is None and _has_deerflow():
         from xagent.core.orchestration.deerflow_loop import run_agent_deerflow
         return await run_agent_deerflow(
             goal, principal=principal, role_name=role_name,
             capabilities=capabilities, model=model, on_event=on_event,
             session=session, run_id=run_id,
         )
-    if _has_langgraph():
+    if resume_messages is None and _has_langgraph():
         from xagent.core.orchestration.langgraph_loop import run_agent_langgraph
         return await run_agent_langgraph(
             goal, principal=principal, role_name=role_name,
@@ -68,6 +72,10 @@ async def run_agent(
         capabilities=capabilities, model=model, on_event=on_event,
         session=session, run_id=run_id, conversation_id=conversation_id,
         permission_mode=permission_mode,
+        resume_messages=resume_messages,
+        resume_step=resume_step,
+        resume_changed_files=resume_changed_files,
+        resume_from_checkpoint_id=resume_from_checkpoint_id,
     )
 
 
