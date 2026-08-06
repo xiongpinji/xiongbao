@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from xagent.domains.scheduled_jobs.models import ClaimedScheduledJob
 from xagent.infra.logging import get_logger
 
 logger = get_logger("xagent.scheduler")
@@ -192,6 +193,16 @@ class Scheduler:
         if self._running:
             return
         self._init_job_lock()
+        from xagent.domains.scheduled_jobs import recover_expired_job_runs
+        from xagent.infra.db import get_sessionmaker
+
+        async with get_sessionmaker()() as session:
+            recovered = await recover_expired_job_runs(
+                session, now=datetime.now(UTC)
+            )
+            await session.commit()
+        if recovered:
+            logger.warning("scheduler_runs_recovered", count=recovered)
         self._running = True
         self._task = asyncio.create_task(self._loop())
         logger.info("scheduler_started", jobs=len(self._jobs))
@@ -243,20 +254,12 @@ class Scheduler:
         tick = 0
         while self._running:
             try:
-                now = time.time()
-                for job in list(self._jobs.values()):
-                    if not job.enabled or job.next_run > now:
-                        continue
-                    # 多实例防重：抢不到分布式锁说明其他实例正在执行，跳过
-                    if not await self._try_acquire_job_lock(job):
-                        continue
-                    # 触发执行
-                    await self._execute_job(job)
-                    # 更新下次运行时间
-                    job.last_run = now
-                    job.next_run = now + job.interval_seconds
-                    job.run_count += 1
-                    self._persist(job)
+                # 每个 tick 最多处理 20 个已到期 run，避免恢复时洪峰。
+                for _ in range(20):
+                    claimed = await self._claim_next_durable_run()
+                    if claimed is None:
+                        break
+                    await self._execute_durable_run(claimed)
                 # P4 goal/taskboard 自动推进：每 2 个周期（~60s）一次 tick；
                 # 无候选 goal 时为空转，开销可忽略
                 tick += 1
@@ -268,6 +271,83 @@ class Scheduler:
             except Exception as exc:
                 logger.error("scheduler_loop_error", error=str(exc))
             await asyncio.sleep(30)
+
+    async def _claim_next_durable_run(self) -> ClaimedScheduledJob | None:
+        from xagent.domains.scheduled_jobs import claim_due_job, claim_due_retry
+        from xagent.infra.db import get_sessionmaker
+
+        now = datetime.now(UTC)
+        async with get_sessionmaker()() as session:
+            claimed = await claim_due_retry(
+                session,
+                now=now,
+                lease_seconds=360,
+                claim_token=uuid.uuid4().hex,
+            )
+            if claimed is None:
+                claimed = await claim_due_job(
+                    session,
+                    now=now,
+                    lease_seconds=360,
+                    claim_token=uuid.uuid4().hex,
+                )
+            await session.commit()
+            return claimed
+
+    async def _execute_durable_run(self, claimed: ClaimedScheduledJob) -> None:
+        from xagent.core.orchestration import run_agent
+        from xagent.domains.scheduled_jobs import complete_scheduled_job_run
+        from xagent.enterprise.auth.principal import Principal
+        from xagent.infra.db import get_sessionmaker
+
+        principal = Principal(
+            user_id=claimed.job.owner_id or "scheduler",
+            tenant_id=claimed.job.tenant_id,
+            roles=frozenset({"admin"}),
+        )
+        succeeded = False
+        result_text = ""
+        error = ""
+        agent_run_id = ""
+        try:
+            result = await asyncio.wait_for(
+                run_agent(
+                    claimed.job.goal,
+                    principal=principal,
+                    role_name=claimed.job.role or None,
+                ),
+                timeout=300,
+            )
+            payload = result.to_dict()
+            result_text = str(payload.get("final_answer") or "")
+            agent_run_id = str(payload.get("run_id") or "")
+            succeeded = True
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+            logger.error(
+                "durable_job_run_failed",
+                job_id=claimed.job.job_id,
+                run_id=claimed.run.run_id,
+                error=error,
+            )
+        async with get_sessionmaker()() as session:
+            completed = await complete_scheduled_job_run(
+                session,
+                tenant_id=claimed.job.tenant_id,
+                run_id=claimed.run.run_id,
+                succeeded=succeeded,
+                now=datetime.now(UTC),
+                result=result_text,
+                error=error,
+                agent_run_id=agent_run_id,
+            )
+            await session.commit()
+        logger.info(
+            "durable_job_run_completed",
+            job_id=claimed.job.job_id,
+            run_id=claimed.run.run_id,
+            status=completed.status,
+        )
 
     async def _execute_job(self, job: ScheduledJob) -> None:
         """执行单个定时任务（隔离在线程池中，避免破坏主事件循环）。"""

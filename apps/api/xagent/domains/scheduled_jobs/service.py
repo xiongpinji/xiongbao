@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import overload
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.domains.scheduled_jobs.models import (
@@ -118,6 +118,36 @@ async def list_scheduled_job_runs(
         query = query.where(ScheduledJobRunORM.job_id == job_id)
     rows = await session.scalars(query.order_by(ScheduledJobRunORM.created_at.desc()))
     return [_run_record(row) for row in rows]
+
+
+async def set_scheduled_job_enabled(
+    session: AsyncSession, tenant_id: str, job_id: str, enabled: bool
+) -> ScheduledJobRecord | None:
+    row = await session.scalar(
+        select(ScheduledJobORM).where(
+            ScheduledJobORM.tenant_id == tenant_id,
+            ScheduledJobORM.job_id == job_id,
+        )
+    )
+    if row is None:
+        return None
+    row.enabled = enabled
+    await session.flush()
+    return _job_record(row)
+
+
+async def delete_scheduled_job(
+    session: AsyncSession, tenant_id: str, job_id: str
+) -> bool:
+    result = await session.execute(
+        delete(ScheduledJobORM)
+        .where(
+            ScheduledJobORM.tenant_id == tenant_id,
+            ScheduledJobORM.job_id == job_id,
+        )
+        .returning(ScheduledJobORM.job_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def claim_due_job(

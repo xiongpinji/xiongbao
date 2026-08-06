@@ -17,7 +17,7 @@ from xagent.domains.scheduled_jobs import (
     list_scheduled_jobs,
     recover_expired_job_runs,
 )
-from xagent.infra.db import Base
+from xagent.infra.db import Base, get_engine, get_sessionmaker
 
 
 async def test_job_persists_is_tenant_isolated_and_claims_once(tmp_path: Path) -> None:
@@ -82,6 +82,53 @@ async def test_job_persists_is_tenant_isolated_and_claims_once(tmp_path: Path) -
     assert [run.run_id for run in runs] == [first.run.run_id]
 
     await engine.dispose()
+
+
+async def test_scheduler_executes_claimed_run_and_persists_result(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from xagent.core.scheduler import Scheduler
+
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    now = datetime.now(UTC)
+    async with get_sessionmaker()() as session:
+        await create_scheduled_job(
+            session,
+            ScheduledJobCreate(
+                job_id="job-execute",
+                tenant_id="tenant-execute",
+                owner_id="owner-execute",
+                name="execute",
+                goal="execute durable job",
+                interval_seconds=300,
+                next_run=now,
+            ),
+        )
+        claimed = await claim_due_job(
+            session, now=now, lease_seconds=60, claim_token="worker-execute"
+        )
+        await session.commit()
+    assert claimed is not None
+
+    class FakeRun:
+        def to_dict(self):
+            return {"run_id": "agent-run-1", "final_answer": "durable result"}
+
+    async def fake_run_agent(*args, **kwargs):
+        return FakeRun()
+
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", fake_run_agent)
+    scheduler = Scheduler(storage_dir=tmp_path / "legacy-json")
+    await scheduler._execute_durable_run(claimed)
+
+    async with get_sessionmaker()() as session:
+        history = await list_scheduled_job_runs(
+            session, "tenant-execute", "job-execute"
+        )
+    assert history[0].status == "succeeded"
+    assert history[0].agent_run_id == "agent-run-1"
+    assert history[0].result == "durable result"
 
 
 async def test_expired_lease_recovers_and_retries_with_bounded_backoff(
