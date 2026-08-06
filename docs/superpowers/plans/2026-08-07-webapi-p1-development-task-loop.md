@@ -64,12 +64,12 @@
 - 修改：`apps/api/xagent/core/orchestration/parallel.py`
 - 修改：`apps/api/tests/test_development_tasks.py`
 
-- [ ] 先写状态机失败测试：非法迁移拒绝；approve 不改主分支；reject 清理；apply cherry-pick；冲突 abort 后主工作区无未合并文件。
-- [ ] approve 只写状态与 reviewed_at。
-- [ ] reject/expire 清理 worktree/branch并保留 patch/记录。
-- [ ] apply 要求 `approved`、目标 workspace 为干净 Git repo；cherry-pick 成功后写 applied commit/时间并清理。
-- [ ] cherry-pick 冲突收集 unmerged files、执行 `--abort`、写 `conflict`。
-- [ ] 进程内运行注册表支持 cancel 当前 asyncio task；DB 写 `cancelled`，跨重启不作虚假保证。
+- [x] 先写状态机失败测试：非法迁移拒绝；approve 不改主分支；reject 清理；apply cherry-pick；冲突 abort 后主工作区无未合并文件。
+- [x] approve 只写状态与 reviewed_at。
+- [x] reject/expire 清理 worktree/branch并保留 patch/记录。
+- [x] apply 要求 `approved`、目标 workspace 为干净 Git repo；cherry-pick 成功后写 applied commit/时间并清理。
+- [x] cherry-pick 冲突收集 unmerged files、执行 `--abort`、写 `conflict`。
+- [x] 进程内运行注册表支持 cancel 当前 asyncio task；DB 写 `cancelled`，跨重启不作虚假保证。
 
 ## 任务 4：租户隔离 API 与审计
 

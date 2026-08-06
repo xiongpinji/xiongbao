@@ -32,6 +32,17 @@ class WorktreeResult:
     patch_text: str
 
 
+@dataclass(frozen=True)
+class ApplyResult:
+    applied_commit: str = ""
+    conflict_files: tuple[str, ...] = ()
+    error: str = ""
+
+    @property
+    def succeeded(self) -> bool:
+        return bool(self.applied_commit)
+
+
 async def run_git(cwd: Path, *args: str) -> tuple[int, str]:
     proc = await asyncio.create_subprocess_exec(
         "git",
@@ -146,7 +157,65 @@ async def cleanup_task_worktree(
     repo_root: Path,
     paths: DevelopmentTaskPaths,
     branch: str,
+    *,
+    strict: bool = True,
 ) -> None:
-    await run_git(repo_root, "worktree", "remove", "--force", str(paths.worktree))
+    rc, output = await run_git(
+        repo_root, "worktree", "remove", "--force", str(paths.worktree)
+    )
+    if rc != 0 and await asyncio.to_thread(paths.worktree.exists) and strict:
+        raise RuntimeError(f"清理 worktree 失败: {output.strip()[:300]}")
     await run_git(repo_root, "worktree", "prune")
-    await run_git(repo_root, "branch", "-D", branch)
+    rc, output = await run_git(repo_root, "branch", "-D", branch)
+    if rc != 0 and strict:
+        _, existing = await run_git(repo_root, "branch", "--list", branch)
+        if existing.strip():
+            raise RuntimeError(f"清理临时分支失败: {output.strip()[:300]}")
+
+
+def validate_record_paths(
+    repo_root: Path,
+    task_id: str,
+    worktree_path: str,
+    patch_path: str,
+) -> DevelopmentTaskPaths:
+    expected = development_task_paths(repo_root, task_id)
+    if Path(worktree_path).resolve() != expected.worktree:
+        raise ValueError("持久记录 worktree 路径不在受控位置")
+    if Path(patch_path).resolve() != expected.patch:
+        raise ValueError("持久记录 patch 路径不在受控位置")
+    return expected
+
+
+async def apply_result_commit(
+    repo_root: Path,
+    target_branch: str,
+    result_commit: str,
+) -> ApplyResult:
+    rc, branch = await run_git(repo_root, "branch", "--show-current")
+    if rc != 0 or branch.strip() != target_branch:
+        raise RuntimeError(
+            f"主工作区分支不匹配: current={branch.strip() or 'HEAD'}, target={target_branch}"
+        )
+    rc, status = await run_git(repo_root, "status", "--porcelain")
+    if rc != 0:
+        raise RuntimeError(f"读取主工作区状态失败: {status.strip()[:300]}")
+    if status.strip():
+        raise RuntimeError("主工作区存在未提交改动，拒绝 apply")
+
+    rc, output = await run_git(repo_root, "cherry-pick", result_commit)
+    if rc != 0:
+        _, conflicts = await run_git(
+            repo_root, "diff", "--name-only", "--diff-filter=U"
+        )
+        await run_git(repo_root, "cherry-pick", "--abort")
+        return ApplyResult(
+            conflict_files=tuple(
+                line.strip() for line in conflicts.splitlines() if line.strip()
+            ),
+            error=output.strip()[:1000],
+        )
+    rc, applied_commit = await run_git(repo_root, "rev-parse", "HEAD")
+    if rc != 0:
+        raise RuntimeError(f"读取 applied commit 失败: {applied_commit.strip()[:300]}")
+    return ApplyResult(applied_commit=applied_commit.strip())

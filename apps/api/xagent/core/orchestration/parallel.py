@@ -25,6 +25,15 @@ logger = get_logger("xagent.parallel")
 MAX_PARALLEL_AGENTS = 5
 # 单个子任务超时
 SUB_TASK_TIMEOUT = 180
+_RUNNING_DEVELOPMENT_TASKS: dict[str, asyncio.Task[Any]] = {}
+
+
+def cancel_running_development_task(task_id: str) -> bool:
+    task = _RUNNING_DEVELOPMENT_TASKS.get(task_id)
+    if task is None or task.done():
+        return False
+    task.cancel()
+    return True
 
 
 @dataclass
@@ -169,6 +178,9 @@ async def run_parallel_agents(
                     )
                     await session.commit()
                 task_persisted = True
+                current_task = asyncio.current_task()
+                if current_task is not None:
+                    _RUNNING_DEVELOPMENT_TASKS[development_task_id] = current_task
                 wt_token = set_workspace(task_paths.worktree)
             try:
                 result = await asyncio.wait_for(
@@ -234,6 +246,26 @@ async def run_parallel_agents(
                 development_task_id=development_task_id if task_persisted else "",
                 development_task_status="awaiting_review" if task_persisted else "",
             )
+        except asyncio.CancelledError:
+            elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
+            if task_persisted:
+                await _mark_development_task(
+                    principal.tenant_id,
+                    development_task_id,
+                    "cancelled",
+                    "任务已由用户取消",
+                )
+            return SubTaskResult(
+                goal=task.goal,
+                run_id=sub_run_id,
+                status="cancelled",
+                error="任务已由用户取消",
+                duration_ms=elapsed,
+                isolated=task_paths is not None,
+                worktree_path=str(task_paths.worktree) if task_paths else "",
+                development_task_id=development_task_id if task_persisted else "",
+                development_task_status="cancelled" if task_persisted else "",
+            )
         except TimeoutError:
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             if task_persisted:
@@ -275,6 +307,7 @@ async def run_parallel_agents(
                 development_task_status="failed" if task_persisted else "",
             )
         finally:
+            _RUNNING_DEVELOPMENT_TASKS.pop(development_task_id, None)
             if (
                 task_paths is not None
                 and repository_baseline is not None
@@ -285,7 +318,7 @@ async def run_parallel_agents(
                 )
 
                 await cleanup_task_worktree(
-                    repository_baseline.root, task_paths, branch
+                    repository_baseline.root, task_paths, branch, strict=False
                 )
 
     # 并行调度所有子任务

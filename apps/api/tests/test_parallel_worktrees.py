@@ -13,8 +13,15 @@ from pathlib import Path
 
 from xagent.core import workspace as ws_mod
 from xagent.core.orchestration import parallel
-from xagent.core.orchestration.parallel import SubTask, run_parallel_agents
-from xagent.domains.development_tasks import get_development_task
+from xagent.core.orchestration.parallel import (
+    SubTask,
+    cancel_running_development_task,
+    run_parallel_agents,
+)
+from xagent.domains.development_tasks import (
+    get_development_task,
+    list_development_tasks,
+)
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.db import Base, get_engine, get_sessionmaker
 
@@ -198,6 +205,44 @@ async def test_parallel_worktree_failure_is_recorded_and_cleaned(tmp_path, monke
         text=True,
     ).stdout.strip()
     assert branches == ""
+
+
+async def test_parallel_worktree_running_task_can_be_cancelled(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "repo-cancel"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+    started = asyncio.Event()
+
+    async def _blocking_run_agent(*args, **kwargs):  # noqa: ARG001
+        started.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(parallel, "run_agent", _blocking_run_agent)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        parallel_task = asyncio.create_task(
+            run_parallel_agents(
+                [SubTask(goal="cancel me")], _principal(), use_worktrees=True
+            )
+        )
+        await asyncio.wait_for(started.wait(), timeout=5)
+        async with get_sessionmaker()() as session:
+            running = await list_development_tasks(session, "default")
+        task_id = next(task.task_id for task in running if task.goal == "cancel me")
+        assert cancel_running_development_task(task_id) is True
+        result = await parallel_task
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert sub.status == "cancelled"
+    assert sub.development_task_status == "cancelled"
+    assert not Path(sub.worktree_path).exists()
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(session, "default", task_id)
+    assert record is not None
+    assert record.status.value == "cancelled"
 
 
 async def test_parallel_default_no_worktrees(tmp_path, monkeypatch) -> None:

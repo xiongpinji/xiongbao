@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -28,6 +31,18 @@ _MUTABLE_FIELDS = {
     "expires_at",
     "worktree_path",
 }
+
+
+class DevelopmentTaskNotFoundError(LookupError):
+    pass
+
+
+class DevelopmentTaskTransitionError(ValueError):
+    pass
+
+
+class DevelopmentTaskApplyError(RuntimeError):
+    pass
 
 
 def _to_record(row: DevelopmentTaskORM) -> DevelopmentTaskRecord:
@@ -130,3 +145,167 @@ async def update_development_task(
         setattr(row, name, value)
     await session.flush()
     return _to_record(row)
+
+
+async def _require_task(
+    session: AsyncSession, tenant_id: str, task_id: str
+) -> DevelopmentTaskRecord:
+    record = await get_development_task(session, tenant_id, task_id)
+    if record is None:
+        raise DevelopmentTaskNotFoundError(task_id)
+    return record
+
+
+def _require_status(
+    record: DevelopmentTaskRecord, *allowed: DevelopmentTaskStatus
+) -> None:
+    if record.status not in allowed:
+        expected = ", ".join(status.value for status in allowed)
+        raise DevelopmentTaskTransitionError(
+            f"任务 {record.task_id} 状态为 {record.status.value}，要求 {expected}"
+        )
+
+
+async def approve_development_task(
+    session: AsyncSession,
+    tenant_id: str,
+    task_id: str,
+    *,
+    reviewer_id: str,
+) -> DevelopmentTaskRecord:
+    record = await _require_task(session, tenant_id, task_id)
+    _require_status(record, DevelopmentTaskStatus.awaiting_review)
+    updated = await update_development_task(
+        session,
+        tenant_id,
+        task_id,
+        status=DevelopmentTaskStatus.approved,
+        reviewed_by=reviewer_id,
+        reviewed_at=datetime.now(UTC),
+        error="",
+    )
+    assert updated is not None
+    return updated
+
+
+async def reject_development_task(
+    session: AsyncSession,
+    tenant_id: str,
+    task_id: str,
+    *,
+    actor_id: str,
+) -> DevelopmentTaskRecord:
+    record = await _require_task(session, tenant_id, task_id)
+    _require_status(
+        record,
+        DevelopmentTaskStatus.awaiting_review,
+        DevelopmentTaskStatus.approved,
+        DevelopmentTaskStatus.conflict,
+    )
+    from xagent.domains.development_tasks.git_lifecycle import (
+        cleanup_task_worktree,
+        validate_record_paths,
+    )
+
+    repo_root = Path(record.main_workspace)
+    paths = validate_record_paths(
+        repo_root, record.task_id, record.worktree_path, record.patch_path
+    )
+    await cleanup_task_worktree(repo_root, paths, record.work_branch)
+    updated = await update_development_task(
+        session,
+        tenant_id,
+        task_id,
+        status=DevelopmentTaskStatus.rejected,
+        reviewed_by=actor_id,
+        reviewed_at=datetime.now(UTC),
+        error="",
+    )
+    assert updated is not None
+    return updated
+
+
+async def expire_development_task(
+    session: AsyncSession,
+    tenant_id: str,
+    task_id: str,
+) -> DevelopmentTaskRecord:
+    record = await _require_task(session, tenant_id, task_id)
+    _require_status(
+        record,
+        DevelopmentTaskStatus.awaiting_review,
+        DevelopmentTaskStatus.approved,
+        DevelopmentTaskStatus.conflict,
+    )
+    from xagent.domains.development_tasks.git_lifecycle import (
+        cleanup_task_worktree,
+        validate_record_paths,
+    )
+
+    repo_root = Path(record.main_workspace)
+    paths = validate_record_paths(
+        repo_root, record.task_id, record.worktree_path, record.patch_path
+    )
+    await cleanup_task_worktree(repo_root, paths, record.work_branch)
+    updated = await update_development_task(
+        session,
+        tenant_id,
+        task_id,
+        status=DevelopmentTaskStatus.expired,
+        error="审查期限已过期",
+    )
+    assert updated is not None
+    return updated
+
+
+async def apply_development_task(
+    session: AsyncSession,
+    tenant_id: str,
+    task_id: str,
+    *,
+    actor_id: str,
+) -> DevelopmentTaskRecord:
+    record = await _require_task(session, tenant_id, task_id)
+    _require_status(record, DevelopmentTaskStatus.approved)
+    from xagent.domains.development_tasks.git_lifecycle import (
+        apply_result_commit,
+        cleanup_task_worktree,
+        validate_record_paths,
+    )
+
+    repo_root = Path(record.main_workspace)
+    paths = validate_record_paths(
+        repo_root, record.task_id, record.worktree_path, record.patch_path
+    )
+    try:
+        result = await apply_result_commit(
+            repo_root, record.target_branch, record.result_commit
+        )
+    except RuntimeError as exc:
+        raise DevelopmentTaskApplyError(str(exc)) from exc
+    if not result.succeeded:
+        updated = await update_development_task(
+            session,
+            tenant_id,
+            task_id,
+            status=DevelopmentTaskStatus.conflict,
+            conflict_files=json.dumps(list(result.conflict_files), ensure_ascii=False),
+            error=result.error,
+        )
+        assert updated is not None
+        return updated
+
+    await cleanup_task_worktree(repo_root, paths, record.work_branch)
+    updated = await update_development_task(
+        session,
+        tenant_id,
+        task_id,
+        status=DevelopmentTaskStatus.applied,
+        applied_commit=result.applied_commit,
+        applied_at=datetime.now(UTC),
+        reviewed_by=record.reviewed_by or actor_id,
+        conflict_files="[]",
+        error="",
+    )
+    assert updated is not None
+    return updated
