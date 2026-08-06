@@ -14,11 +14,10 @@
 
 ## In Progress
 
-- [P0-A] 流式并发工具执行正确性 | 状态：CLAIMED | Owner：Codex | 验收：双工具流式调用返回真实结果，无 `UnboundLocalError`，回归测试先红后绿。
+- [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：CLAIMED | Owner：Codex | 依赖：P0-A | 验收：`F821,F822,F823,B023` 为 0；完整 Ruff/mypy 不得超过 286/74。
 
 ## Ready
 
-- [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：READY | 依赖：P0-A | 验收：`F821,F822,F823,B023` 为 0；完整 Ruff/mypy 不得超过 286/74。
 - [P0-C] Web 测试入口与排除模块边界 | 状态：READY | 依赖：P0-B | 验收：Web 默认入口不展示或进入短剧/剪辑模块；全部 Web 单元测试被默认 test 命令执行。
 - [P0-D] Web/API 版本事实源与 CI 后发布 | 状态：READY | 依赖：P0-B,P0-C | 验收：API/Web/README/tag 版本一致；Release job 只在全部 Web/API gate 成功后运行。
 - [P0-E] P0 发布证据与阶段审计 | 状态：READY | 依赖：P0-A,P0-B,P0-C,P0-D | 验收：P0 相关后端测试、前端 test/lint/typecheck/build、静态门禁和 workflow 结构检查全部有新鲜证据。
@@ -33,14 +32,18 @@
 - [P2-D] MCP 会话、运行、审批与事件接口 | 状态：QUEUED | 依赖：P2-C。
 - [R1] Web/API 发布级全量审计与 Release gate 实跑 | 状态：QUEUED | 依赖：P2-D。
 
+## Done
+
+- [P0-A] 流式并发工具执行正确性 | 状态：DONE | 证据：新增测试先失败于两个 `_tool_success` `UnboundLocalError`，修复后定向测试 1/1、编排回归 11/11 通过，`F823` 为 0；双工具真实结果为 `a`/`b`，最终统计为 2 次调用、成功率 100%。
+
 ## 基线证据
 
-- 后端编排测试：10/10 通过。
+- 后端编排测试：11/11 通过。
 - Web 单元测试：默认脚本当前只执行 3 项，3/3 通过；P0-C 必须修复默认覆盖范围。
 - Web lint：0 error / 100 warnings。
 - Web typecheck：通过。
 - Web build：通过。
-- Ruff：286 项；关键集合 `F821,F822,F823,B023` 为 5 项。
+- Ruff：完整基线 286 项；P0-A 后关键集合由 5 项降为 2 项，剩余均为 P0-B 的 `target_model` 闭包 `B023`。
 - mypy：74 项。
 - `npm ci`：6 个开发依赖漏洞（3 moderate / 3 high），另行纳入依赖审计，不用 `--force` 自动升级。
 

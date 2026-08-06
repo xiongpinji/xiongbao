@@ -16,6 +16,7 @@ import os
 import re
 import time
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +69,18 @@ _CHARS_PER_TOKEN = 4  # 粗略估算比例
 # ── 多模型降级：主模型连续失败 N 次后切换到备用模型 ──
 _FALLBACK_MODEL = os.environ.get("XAGENT_FALLBACK_MODEL", "")  # 空=不降级
 _MODEL_FALLBACK_THRESHOLD = 3  # 连续失败次数阈值
+
+
+@dataclass(frozen=True)
+class _ToolExecutionOutcome:
+    """并发工具执行结果；统计由调用方在聚合阶段统一更新。"""
+
+    name: str
+    call_id: str
+    text: str
+    executed: bool = False
+    succeeded: bool | None = None
+    elapsed_seconds: float | None = None
 
 
 async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
@@ -1452,23 +1465,38 @@ async def run_agent(
                           # ══ 并行路径：asyncio.gather 并发执行（带限流） ══
                           _semaphore = asyncio.Semaphore(_MAX_CONCURRENT_TOOLS)
 
-                          async def _exec_one(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
-                              """Execute single tool, return (name, id, result_text)."""
-                              async with _semaphore:  # 限流保护
+                          async def _exec_one(
+                              tc_name: str,
+                              tc_id: str,
+                              tc_args: dict,
+                              semaphore: asyncio.Semaphore,
+                          ) -> _ToolExecutionOutcome:
+                              """Execute one tool under the supplied concurrency limit."""
+                              async with semaphore:
                                   return await _exec_one_inner(tc_name, tc_id, tc_args)
 
-                          async def _exec_one_inner(tc_name: str, tc_id: str, tc_args: dict) -> tuple[str, str, str]:
-                              """Execute single tool, return (name, id, result_text)."""
+                          async def _exec_one_inner(
+                              tc_name: str, tc_id: str, tc_args: dict
+                          ) -> _ToolExecutionOutcome:
+                              """Execute one tool without mutating aggregate counters."""
                               if not role.can_use(tc_name):
-                                  return (tc_name, tc_id, f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}")
+                                  return _ToolExecutionOutcome(
+                                      tc_name,
+                                      tc_id,
+                                      f"[拒绝] 角色 {role.name} 无权使用工具 {tc_name}",
+                                  )
                               # ── 工具参数预校验：拦截无效调用 ──
                               _val_err = _validate_tool_args(tc_name, tc_args, specs)
                               if _val_err:
-                                  return (tc_name, tc_id, f"[参数错误] {_val_err}")
+                                  return _ToolExecutionOutcome(
+                                      tc_name, tc_id, f"[参数错误] {_val_err}"
+                                  )
                               # ── 工具调用去重：同工具+同参数跳过 ──
                               _dedup_key = f"{tc_name}:{json.dumps(tc_args, sort_keys=True, ensure_ascii=False)[:200]}"
                               if _dedup_key in _recent_tool_calls:
-                                  return (tc_name, tc_id, _recent_tool_calls[_dedup_key])
+                                  return _ToolExecutionOutcome(
+                                      tc_name, tc_id, _recent_tool_calls[_dedup_key]
+                                  )
                               # ── file_read 缓存：同文件不重复读取（带 TTL） ──
                               if tc_name == "file_read":
                                   _cache_key = tc_args.get("path", "")
@@ -1476,7 +1504,9 @@ async def run_agent(
                                       # 检查 TTL
                                       _cache_age = time.time() - _file_read_cache_time.get(_cache_key, 0)
                                       if _cache_age < _CACHE_TTL:
-                                          return (tc_name, tc_id, _file_read_cache[_cache_key])
+                                          return _ToolExecutionOutcome(
+                                              tc_name, tc_id, _file_read_cache[_cache_key]
+                                          )
                                       else:
                                           # 缓存过期，删除
                                           _file_read_cache.pop(_cache_key, None)
@@ -1485,10 +1515,6 @@ async def run_agent(
                               _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
                               r = await asyncio.wait_for(tools.call(tc_name, tc_args, ctx), timeout=_tool_timeout)
                               _elapsed = time.perf_counter() - _t0
-                              # 工具耗时统计
-                              if tc_name not in _tool_time_by_type:
-                                  _tool_time_by_type[tc_name] = []
-                              _tool_time_by_type[tc_name].append(_elapsed)
                               if _elapsed > _SLOW_TOOL_THRESHOLD:
                                   logger.warning("Slow tool: %s took %.1fs", tc_name, _elapsed)
                               if r.ok:
@@ -1499,27 +1525,28 @@ async def run_agent(
                                       if _ck:
                                           _file_read_cache[_ck] = txt
                                           _file_read_cache_time[_ck] = time.time()
-                                  _tool_success += 1
-                                  _tool_success_by_type[tc_name] = _tool_success_by_type.get(tc_name, 0) + 1
                               else:
                                   txt = f"[错误] {r.error}"
                                   # 错误上下文增强：文件操作时提示工作目录
                                   if tc_name in ("file_read", "file_write", "file_edit") and "not found" in txt.lower():
                                       txt += f"\n[提示] 工作目录: {get_workspace()}"
-                                  _tool_fail += 1
-                                  _tool_fail_by_type[tc_name] = _tool_fail_by_type.get(tc_name, 0) + 1
                                   # ── 重复错误检测 ──
                                   _err_sig = f"{tc_name}:{str(r.error)[:80]}"
                                   _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
-                              # 统计工具调用次数
-                              _tool_stats[tc_name] = _tool_stats.get(tc_name, 0) + 1
                               # 记录去重缓存（带大小限制）
                               if len(_recent_tool_calls) >= _DEDUP_CACHE_MAX:
                                   # 淘汰最旧的条目
                                   _oldest_key = next(iter(_recent_tool_calls))
                                   _recent_tool_calls.pop(_oldest_key, None)
                               _recent_tool_calls[_dedup_key] = txt
-                              return (tc_name, tc_id, txt)
+                              return _ToolExecutionOutcome(
+                                  tc_name,
+                                  tc_id,
+                                  txt,
+                                  executed=True,
+                                  succeeded=r.ok,
+                                  elapsed_seconds=_elapsed,
+                              )
 
                           # ── 工具调用链优化：检测循环模式 ──
                           _current_tools = [n for n, _, _ in _parsed_calls]
@@ -1549,13 +1576,13 @@ async def run_agent(
                           if _has_dependency:
                               # 阶段1：只读工具并行
                               _read_results = await asyncio.gather(
-                                  *[_exec_one(n, i, a) for n, i, a in _read_calls],
+                                  *[_exec_one(n, i, a, _semaphore) for n, i, a in _read_calls],
                                   return_exceptions=True,
                               )
                               # 阶段2：编辑工具并行（不同文件）或顺序
                               _edit_calls_full = [(n, i, a) for n, i, a in _parsed_calls if n in _EDIT_TOOLS]
                               _edit_results = await asyncio.gather(
-                                  *[_exec_one(n, i, a) for n, i, a in _edit_calls_full],
+                                  *[_exec_one(n, i, a, _semaphore) for n, i, a in _edit_calls_full],
                                   return_exceptions=True,
                               )
                               # 合并结果（按原始顺序）
@@ -1570,15 +1597,30 @@ async def run_agent(
                                       _read_idx += 1
                           else:
                               _results = await asyncio.gather(
-                                  *[_exec_one(n, i, a) for n, i, a in _parsed_calls],
+                                  *[_exec_one(n, i, a, _semaphore) for n, i, a in _parsed_calls],
                                   return_exceptions=True,
                               )
                           for (_p_name, _p_id, _p_args), _res in zip(_parsed_calls, _results):
                               if isinstance(_res, Exception):
                                   result_text = f"[错误] {type(_res).__name__}: {_res}"
+                                  _tool_fail += 1
+                                  _tool_fail_by_type[_p_name] = _tool_fail_by_type.get(_p_name, 0) + 1
+                                  _tool_stats[_p_name] = _tool_stats.get(_p_name, 0) + 1
                                   _consecutive_errors += 1
                               else:
-                                  _, _, result_text = _res
+                                  result_text = _res.text
+                                  if _res.executed:
+                                      _tool_stats[_p_name] = _tool_stats.get(_p_name, 0) + 1
+                                      if _res.succeeded is True:
+                                          _tool_success += 1
+                                          _tool_success_by_type[_p_name] = _tool_success_by_type.get(_p_name, 0) + 1
+                                      elif _res.succeeded is False:
+                                          _tool_fail += 1
+                                          _tool_fail_by_type[_p_name] = _tool_fail_by_type.get(_p_name, 0) + 1
+                                  if _res.elapsed_seconds is not None:
+                                      _tool_time_by_type.setdefault(_p_name, []).append(
+                                          _res.elapsed_seconds
+                                      )
                                   if result_text.startswith("[错误]") or result_text.startswith("[拒绝]"):
                                       _consecutive_errors += 1
                                   else:

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message
+from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
+from xagent.adapters.tools.base import ToolResult
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
 from xagent.core.orchestration.loop import run_agent as run_agent_builtin
@@ -200,6 +202,67 @@ class _NativeToolLLM(LLMClient):
         return True
 
 
+class _ParallelEchoRegistry:
+    """返回真实回显结果，用于覆盖流式并发工具路径。"""
+
+    def specs(self) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "echo",
+                    "description": "回显文本",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}},
+                    },
+                },
+            }
+        ]
+
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        return ToolResult(ok=True, output=args["text"])
+
+
+class _StreamingParallelLLM(LiteLLMClient):
+    """第一轮流式返回两个工具调用，第二轮返回最终回答。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.second_call_messages: list[Message] = []
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": "call_a",
+                        "function": {"name": "echo", "arguments": '{"text":"a"}'},
+                    },
+                    {
+                        "index": 1,
+                        "id": "call_b",
+                        "function": {"name": "echo", "arguments": '{"text":"b"}'},
+                    },
+                ],
+                finished=True,
+            )
+            return
+        self.second_call_messages = list(messages)
+        yield StreamChunk(delta_content="并发工具执行完成。", finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="并发工具执行完成。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
 async def test_native_tool_exception_backfills_tool_message(monkeypatch) -> None:
     """工具执行抛异常（超时等）时：run 不应中途崩溃，且第二轮 LLM 调用前
     必须回填与 assistant tool_calls 配对的 tool 消息（DeepSeek 硬性要求）。"""
@@ -221,3 +284,24 @@ async def test_native_tool_exception_backfills_tool_message(monkeypatch) -> None
     )
     assert any("[错误]" in m.content for m in tool_msgs)
     assert run.final_answer
+
+
+async def test_streaming_parallel_tools_return_real_results(monkeypatch) -> None:
+    llm = _StreamingParallelLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry", lambda: _ParallelEchoRegistry()
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin("并发调用两个 echo", principal=principal, role_name="general")
+
+    results = [event.content for event in run.events if event.kind == StepKind.tool_result]
+    assert results == ["a", "b"]
+    assert all("UnboundLocalError" not in str(value) for value in results)
+    assert "2 次工具调用, 成功率 100%" in run.final_answer
+    assert {
+        message.tool_call_id
+        for message in llm.second_call_messages
+        if message.role == "tool"
+    } == {"call_a", "call_b"}

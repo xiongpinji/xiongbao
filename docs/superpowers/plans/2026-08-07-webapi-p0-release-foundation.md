@@ -38,7 +38,7 @@
 - 修改：`apps/api/xagent/core/orchestration/loop.py:13-25,1451-1588`
 - 测试：`apps/api/tests/test_orchestration.py`
 
-- [ ] **步骤 1：编写流式双工具失败测试**
+- [x] **步骤 1：编写流式双工具失败测试**
 
 在 `test_orchestration.py` 增加一个 `LiteLLMClient` 测试替身。第一轮流返回两个 `echo` tool call，第二轮返回最终回答；工具注册表对两个调用分别返回 `a`、`b`。
 
@@ -109,7 +109,7 @@ async def test_streaming_parallel_tools_return_real_results(monkeypatch) -> None
     assert {message.tool_call_id for message in llm.second_call_messages if message.role == "tool"} == {"call_a", "call_b"}
 ```
 
-- [ ] **步骤 2：运行测试验证正确失败**
+- [x] **步骤 2：运行测试验证正确失败**
 
 运行：
 
@@ -120,7 +120,7 @@ $env:PYTHONPATH = (Resolve-Path apps/api)
 
 预期：FAIL；tool result 包含 `UnboundLocalError: cannot access local variable '_tool_success'`，证明覆盖真实缺陷。
 
-- [ ] **步骤 3：增加显式执行结果模型**
+- [x] **步骤 3：增加显式执行结果模型**
 
 在 `loop.py` 增加：
 
@@ -139,7 +139,7 @@ class _ToolExecutionOutcome:
 
 `_exec_one_inner` 返回 `_ToolExecutionOutcome`，不再直接执行 `_tool_success += 1` 或 `_tool_fail += 1`。拒绝、参数错误和缓存命中使用 `executed=False`；真实工具调用使用 `executed=True` 并携带 `succeeded`、耗时和文本。
 
-- [ ] **步骤 4：在聚合阶段更新统计**
+- [x] **步骤 4：在聚合阶段更新统计**
 
 `asyncio.gather` 返回后，在原始 call 顺序的聚合循环中统一更新：
 
@@ -162,18 +162,19 @@ else:
 
 将 semaphore 作为 `_exec_one` 的显式参数传入，避免闭包捕获循环变量。
 
-- [ ] **步骤 5：运行红绿与相关回归**
+- [x] **步骤 5：运行红绿与相关回归**
 
 运行：
 
 ```powershell
 python -m pytest apps/api/tests/test_orchestration.py -q
-ruff check apps/api/xagent/core/orchestration/loop.py apps/api/tests/test_orchestration.py --select F821,F822,F823,B023
+ruff check apps/api/xagent/core/orchestration/loop.py apps/api/tests/test_orchestration.py --select F823
 ```
 
-预期：编排测试全部通过；关键 Ruff 集合为 0。
+预期：编排测试全部通过；本任务直接触发的 `F823` 为 0。完整
+`F821,F822,F823,B023` 集合由任务 2 在修复两处模型降级闭包后统一清零。
 
-- [ ] **步骤 6：提交 P0-A**
+- [x] **步骤 6：提交 P0-A**
 
 ```powershell
 git add apps/api/xagent/core/orchestration/loop.py apps/api/tests/test_orchestration.py docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
