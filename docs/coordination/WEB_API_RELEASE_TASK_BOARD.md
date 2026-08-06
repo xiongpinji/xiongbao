@@ -15,7 +15,7 @@
 
 ## In Progress
 
-- [P2-D] MCP 会话、运行、审批与事件接口 | 状态：CLAIMED | Owner：Codex | 依赖：P2-C。
+- [R1] Web/API 发布级全量审计与 Release gate 实跑 | 状态：CLAIMED | Owner：Codex | 依赖：P2-D。
 
 ## Ready
 
@@ -23,10 +23,11 @@
 
 ## Queued
 
-- [R1] Web/API 发布级全量审计与 Release gate 实跑 | 状态：QUEUED | 依赖：P2-D。
+- 暂无。
 
 ## Done
 
+- [P2-D] MCP 会话、运行、审批与事件接口 | 状态：DONE | 证据：15 个租户受控 MCP 工具、统一 Principal/RBAC/tenant/audit、精确确认的取消与审批、事件/技能包脱敏、MCP run 持久同链、非回环 HTTP 强制 token 均成立；MCP 合同 18/18、Runtime/worker 37/37、目标 Ruff/mypy 0、全仓 Ruff `262 <= 286`、mypy `65 <= 74`、fresh migration、真实 MCP 协议工具发现/会话读取和 401 鉴权通过；详见 `docs/coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE.md`。
 - [P2-C] 数据库 checkpoint、恢复/回滚与 Web 时间线 | 状态：DONE | 证据：数据库 checkpoint、脱敏与 workspace 相对路径、每 5 步/取消落库、租户会话恢复、父子 run 谱系、原子重复恢复阻断、开发任务约束的 commit/patch 回滚和 Web 时间线均成立；后端关联 11/11、Runtime 23/23、Web 21/21、全仓 Ruff `262 <= 286`、mypy `65 <= 74`、fresh migration 和真实 Playwright 恢复同链通过；详见 `docs/coordination/reports/WEB_API_P2C_CHECKPOINT_RECOVERY_EVIDENCE.md`。
 - [P2-B] 完整 Skill Package 导入、存储与安全门禁 | 状态：DONE | 证据：数据库 package 事实源、完整 SKILL.md/references/scripts/assets、ZIP/目录大小与路径门禁、租户 API、完整正文运行时、Web manifest/hash 和 commit 失败补偿均成立；后端关联 45 项通过/1 项环境权限跳过、Web 19/19、目标 Ruff/mypy 0、全仓 Ruff `271 <= 286`、mypy `65 <= 74`、fresh migration 和真实 Playwright 同链路通过；详见 `docs/coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE.md`。
 - [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：DONE | 证据：数据库 Job/Run、原子 claim、Redis 所有者租约、启动恢复、有界退避、暂停边界、终态 Webhook 独立回执、多租户重启恢复、租户 API 和 Web 控制台均已成立；后端关联 26/26、Web 17/17、目标 Ruff/mypy 0、fresh migration、typecheck/build 和真实 Playwright 同链路通过；详见 `docs/coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE.md`。
@@ -51,6 +52,7 @@
 - P2-A 新鲜结果：后端关联 26/26、Web 17/17、Ruff `276 <= 286`、mypy `67 <= 74`、lint 0 error / 100 warnings、fresh migration 到 `20260807_durable_scheduler`。
 - P2-B 新鲜结果：后端关联 45 项通过/1 项环境权限跳过、Web 19/19、Ruff `271 <= 286`、mypy `65 <= 74`、lint 0 error / 100 warnings、fresh migration 到 `20260807_skill_packages`。
 - P2-C 新鲜结果：后端关联 11/11、Runtime 23/23、Web 21/21、Ruff `262 <= 286`、mypy `65 <= 74`、lint 0 error / 100 warnings、fresh migration 到 `20260807_checkpoints`，真实恢复 run 完成。
+- P2-D 新鲜结果：MCP 定向合同 18/18、Runtime/worker 37/37、目标 Ruff/mypy 0、全仓 Ruff `262 <= 286`、mypy `65 <= 74`；fresh migration 后真实 MCP Streamable HTTP 列出 15 个工具、读取同租户会话，无凭证请求返回 401。
 
 ## 状态规则
 
