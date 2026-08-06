@@ -11,7 +11,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
-from xagent.core.skills import get_skill_store
+from xagent.core.skills import SkillStore, get_skill_store
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 
@@ -20,13 +20,22 @@ router = APIRouter(prefix="/skills", tags=["skills"])
 
 # ─── 查询 ───
 
-# list 响应缓存：key=(store.version, include_retired)。
+# list 响应缓存：key=(store.version, include_retired, tenant_id)。
 # 压测诊断（2026-08-03）：每请求 90 技能双重序列化（dataclasses.asdict 深拷贝 +
 # FastAPI jsonable_encoder 逐字段遍历）消耗 ~20ms CPU 阻塞事件循环，是 skills
 # 端点 ~48 RPS 硬顶的根源（并非此前猜测的目录扫描——SkillStore 本身全内存）。
 # 预编码为 JSON bytes 并以 Response 直接返回，可跳过 jsonable_encoder；
 # 库任何写操作（_persist/delete）递增 version 使缓存整体失效。
-_list_cache: dict[tuple[int, bool], bytes] = {}
+_list_cache: dict[tuple[int, bool, str], bytes] = {}
+
+
+def _visible_pending(store: SkillStore, tenant_id: str) -> list[dict]:
+    return [
+        item
+        for item in store.list_pending_evolutions()
+        if store.get_for_tenant(str(item.get("skill_id", "")), tenant_id)
+        is not None
+    ]
 
 
 @router.get("", summary="列出所有技能")
@@ -35,10 +44,12 @@ async def list_skills(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    key = (store.version, include_retired)
+    key = (store.version, include_retired, principal.tenant_id)
     body = _list_cache.get(key)
     if body is None:
-        skills = store.list_all(include_retired=include_retired)
+        skills = store.list_all(
+            include_retired=include_retired, tenant_id=principal.tenant_id
+        )
         # separators 与 starlette JSONResponse 一致（紧凑），保持响应字节级口径
         body = json.dumps(
             {"skills": [s.to_dict() for s in skills], "total": len(skills)},
@@ -54,7 +65,7 @@ async def skill_stats(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    return store.stats()
+    return store.stats(tenant_id=principal.tenant_id)
 
 
 @router.get("/{skill_id}", summary="获取技能详情")
@@ -63,7 +74,7 @@ async def get_skill(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    skill = store.get(skill_id)
+    skill = store.get_for_tenant(skill_id, principal.tenant_id)
     if not skill:
         raise HTTPException(404, f"skill '{skill_id}' not found")
     return skill.to_dict()
@@ -95,6 +106,7 @@ async def create_skill(
         steps=body.steps,
         tags=body.tags,
         source="manual",
+        tenant_id=principal.tenant_id,
     )
     return {"created": True, "skill": skill.to_dict()}
 
@@ -117,6 +129,8 @@ async def evolve_skill(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    if store.get_for_tenant(skill_id, principal.tenant_id) is None:
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     skill = store.evolve_skill(
         skill_id=skill_id,
         description=body.description,
@@ -148,6 +162,8 @@ async def evolve_auto(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    if store.get_for_tenant(skill_id, principal.tenant_id) is None:
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     body = body or EvolveAutoIn()
     result = await store.evolve_auto(
         skill_id, n_variants=body.n_variants, threshold=body.threshold,
@@ -182,7 +198,7 @@ async def list_pending_evolutions(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    items = store.list_pending_evolutions()
+    items = _visible_pending(store, principal.tenant_id)
     return {"pending": items, "total": len(items)}
 
 
@@ -192,6 +208,16 @@ async def approve_evolution(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    pending = next(
+        (
+            item
+            for item in _visible_pending(store, principal.tenant_id)
+            if item.get("pending_id") == pending_id
+        ),
+        None,
+    )
+    if pending is None:
+        raise HTTPException(404, f"pending evolution '{pending_id}' not found")
     result = store.approve_evolution(pending_id)
     if result is None:
         raise HTTPException(404, f"pending evolution '{pending_id}' not found")
@@ -204,6 +230,16 @@ async def reject_evolution(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    pending = next(
+        (
+            item
+            for item in _visible_pending(store, principal.tenant_id)
+            if item.get("pending_id") == pending_id
+        ),
+        None,
+    )
+    if pending is None:
+        raise HTTPException(404, f"pending evolution '{pending_id}' not found")
     if not store.reject_evolution(pending_id):
         raise HTTPException(404, f"pending evolution '{pending_id}' not found")
     return {"rejected": True, "pending_id": pending_id}
@@ -218,7 +254,7 @@ async def retire_skill(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
-    skill = store.get(skill_id)
+    skill = store.get_for_tenant(skill_id, principal.tenant_id)
     if not skill:
         raise HTTPException(404, f"skill '{skill_id}' not found")
     skill.retired = True
@@ -232,7 +268,7 @@ async def restore_skill(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
-    if not store.get(skill_id):
+    if not store.get_for_tenant(skill_id, principal.tenant_id):
         raise HTTPException(404, f"skill '{skill_id}' not found")
     ok = store.restore_skill(skill_id)
     return {"restored": ok, "skill_id": skill_id}
@@ -243,7 +279,7 @@ async def retire_low_performers(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
-    retired = store.retire_low_performers()
+    retired = store.retire_low_performers(tenant_id=principal.tenant_id)
     return {"retired_count": len(retired), "retired_ids": retired}
 
 
@@ -256,6 +292,8 @@ async def delete_skill(
     principal: Principal = Depends(require_permission("system", "manage")),
 ):
     store = get_skill_store()
+    if store.get_for_tenant(skill_id, principal.tenant_id) is None:
+        raise HTTPException(404, f"skill '{skill_id}' not found")
     deleted = store.delete(skill_id)
     if not deleted:
         raise HTTPException(404, f"skill '{skill_id}' not found")
@@ -282,7 +320,9 @@ async def import_skillmd_endpoint(
     from xagent.core.skills.importer import import_skillmd
 
     store = get_skill_store()
-    skill, reason = import_skillmd(store, body.content, body.origin)
+    skill, reason = import_skillmd(
+        store, body.content, body.origin, tenant_id=principal.tenant_id
+    )
     if skill is None:
         return {"imported": False, "reason": reason}
     return {"imported": True, "skill": skill.to_dict()}
@@ -297,7 +337,9 @@ async def import_skillmd_batch_endpoint(
 
     store = get_skill_store()
     return import_skillmd_batch(
-        store, [item.model_dump() for item in body.items]
+        store,
+        [item.model_dump() for item in body.items],
+        tenant_id=principal.tenant_id,
     )
 
 
@@ -314,9 +356,11 @@ async def match_skills(
     principal: Principal = Depends(require_permission("system", "read")),
 ):
     store = get_skill_store()
-    matched = store.match(body.goal)
+    matched = store.match(body.goal, tenant_id=principal.tenant_id)
     return {
         "goal": body.goal,
         "matched": [s.to_dict() for s in matched],
-        "prompt_injection": store.build_prompt_injection(body.goal),
+        "prompt_injection": store.build_prompt_injection(
+            body.goal, tenant_id=principal.tenant_id
+        ),
     }

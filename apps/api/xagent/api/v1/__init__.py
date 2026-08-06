@@ -23,6 +23,7 @@ from xagent.api.v1 import (
     ops,
     runs,
     skills,
+    skill_packages,
     spine,
     stream,
     system,
@@ -52,6 +53,7 @@ api_v1.include_router(system.router)
 api_v1.include_router(automation.router)
 api_v1.include_router(mcp.router)
 api_v1.include_router(skills.router)
+api_v1.include_router(skill_packages.router)
 api_v1.include_router(tenants.router)
 api_v1.include_router(knowledge.router)
 api_v1.include_router(marketplace.router)

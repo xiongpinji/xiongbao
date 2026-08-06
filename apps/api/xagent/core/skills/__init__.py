@@ -121,6 +121,8 @@ class Skill:
     source: str = "manual"          # manual | auto_extracted | auto_distilled | evolved
     source_task: str = ""           # 来源任务摘要
     history: list[dict[str, Any]] = field(default_factory=list)  # 版本历史
+    tenant_id: str = ""             # 空值表示历史全局技能
+    package_id: str = ""            # 完整 Skill Package 关联
 
     @property
     def success_rate(self) -> float:
@@ -165,10 +167,11 @@ class SkillStore:
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))
                 # 兼容旧格式（无新字段）
-                valid_keys = {k for k in Skill.__dataclass_fields__}  # type: ignore
+                valid_keys = set(Skill.__dataclass_fields__)
                 skill = Skill(**{k: v for k, v in data.items() if k in valid_keys})
                 self._cache[skill.skill_id] = skill
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("skill_load_failed", path=str(f), error=str(exc))
                 continue
         logger.info("skills_loaded", count=len(self._cache))
 
@@ -189,6 +192,8 @@ class SkillStore:
         tags: list[str] | None = None,
         source: str = "manual",
         source_task: str = "",
+        tenant_id: str = "",
+        package_id: str = "",
     ) -> Skill:
         """从成功的任务中提炼新技能。"""
         skill = Skill(
@@ -201,18 +206,22 @@ class SkillStore:
             tags=tags or [],
             source=source,
             source_task=source_task,
+            tenant_id=tenant_id,
+            package_id=package_id,
         )
         self._cache[skill.skill_id] = skill
         self._persist(skill)
         logger.info("skill_created", skill_id=skill.skill_id, name=name, source=source)
         return skill
 
-    def match(self, goal: str) -> list[Skill]:
+    def match(self, goal: str, tenant_id: str | None = None) -> list[Skill]:
         """根据目标文本匹配可用技能（关键词匹配，排除已淘汰）。"""
         matches = []
         goal_lower = goal.lower()
         for skill in self._cache.values():
             if skill.retired:
+                continue
+            if tenant_id is not None and skill.tenant_id not in {"", tenant_id}:
                 continue
             keywords = skill.trigger_pattern.lower().split("|")
             if any(kw.strip() in goal_lower for kw in keywords if kw.strip()):
@@ -237,8 +246,18 @@ class SkillStore:
     def get(self, skill_id: str) -> Skill | None:
         return self._cache.get(skill_id)
 
-    def list_all(self, include_retired: bool = False) -> list[Skill]:
-        skills = self._cache.values()
+    def get_for_tenant(self, skill_id: str, tenant_id: str) -> Skill | None:
+        skill = self._cache.get(skill_id)
+        if skill is None or skill.tenant_id not in {"", tenant_id}:
+            return None
+        return skill
+
+    def list_all(
+        self, include_retired: bool = False, tenant_id: str | None = None
+    ) -> list[Skill]:
+        skills = list(self._cache.values())
+        if tenant_id is not None:
+            skills = [skill for skill in skills if skill.tenant_id in {"", tenant_id}]
         if not include_retired:
             skills = [s for s in skills if not s.retired]
         return sorted(skills, key=lambda s: s.use_count, reverse=True)
@@ -597,7 +616,11 @@ class SkillStore:
                 str(fields.get("source_task", "")),
                 str(fields.get("name", "")),
             ])
-            match_accuracy = 1.0 if self._match_trigger(fields.get("trigger_pattern", ""), ref) else 0.0
+            match_accuracy = (
+                1.0
+                if self._match_trigger(fields.get("trigger_pattern", ""), ref)
+                else 0.0
+            )
         completeness = self._completeness_score(fields)
         history = success_rate if has_history else 0.5
         score = (
@@ -631,8 +654,10 @@ class SkillStore:
         """由 LLM 基于技能描述生成合成评测任务：应命中 goal 3-5 个 + 不应命中 2-3 个。"""
         prompt = (
             "你是一个技能评测专家。根据以下技能，生成评测样例，输出严格 JSON（无其他文字）：\n"
-            '{"positive": ["应触发此技能的任务目标", ...], "negative": ["不应触发的任务目标", ...]}\n'
-            f"positive 生成 {EVAL_POSITIVE_GOALS} 个（语义多样），negative 生成 {EVAL_NEGATIVE_GOALS} 个"
+            '{"positive": ["应触发目标", ...], '
+            '"negative": ["不应触发目标", ...]}\n'
+            f"positive 生成 {EVAL_POSITIVE_GOALS} 个（语义多样），"
+            f"negative 生成 {EVAL_NEGATIVE_GOALS} 个"
             "（与技能无关但领域相近）。\n\n"
             f"技能名称: {skill.name}\n"
             f"技能描述: {skill.description[:300]}\n"
@@ -980,10 +1005,12 @@ class SkillStore:
             logger.info("skill_retired", skill_id=skill.skill_id, name=skill.name,
                        success_rate=f"{skill.success_rate:.0%}")
 
-    def retire_low_performers(self) -> list[str]:
+    def retire_low_performers(self, tenant_id: str | None = None) -> list[str]:
         """批量检查并淘汰低效技能，返回被淘汰的 ID 列表。"""
         retired = []
         for skill in self._cache.values():
+            if tenant_id is not None and skill.tenant_id not in {"", tenant_id}:
+                continue
             if skill.retired:
                 continue
             if skill.use_count >= RETIRE_MIN_USES and skill.success_rate < RETIRE_THRESHOLD:
@@ -1007,14 +1034,17 @@ class SkillStore:
 
     # ─── Prompt 注入 ───
 
-    def build_prompt_injection(self, goal: str) -> str:
+    def build_prompt_injection(self, goal: str, tenant_id: str | None = None) -> str:
         """为匹配的技能生成 system prompt 注入段。"""
-        matched = self.match(goal)
+        matched = self.match(goal, tenant_id=tenant_id)
         if not matched:
             return ""
         parts = ["## 可用技能（历史成功经验）"]
         for s in matched:
-            parts.append(f"- **{s.name}** (v{s.version}, 成功率{s.success_rate:.0%}): {s.description}")
+            parts.append(
+                f"- **{s.name}** (v{s.version}, 成功率{s.success_rate:.0%}): "
+                f"{s.description}"
+            )
             if s.system_prompt_hint:
                 parts.append(f"  提示: {s.system_prompt_hint}")
             if s.steps:
@@ -1024,18 +1054,23 @@ class SkillStore:
 
     # ─── 统计 ───
 
-    def stats(self) -> dict[str, Any]:
+    def stats(self, tenant_id: str | None = None) -> dict[str, Any]:
         """技能库统计信息。"""
-        active = [s for s in self._cache.values() if not s.retired]
-        retired = [s for s in self._cache.values() if s.retired]
+        visible = [
+            skill
+            for skill in self._cache.values()
+            if tenant_id is None or skill.tenant_id in {"", tenant_id}
+        ]
+        active = [s for s in visible if not s.retired]
+        retired = [s for s in visible if s.retired]
         return {
-            "total": len(self._cache),
+            "total": len(visible),
             "active": len(active),
             "retired": len(retired),
             "auto_extracted": len([s for s in active if s.source == "auto_extracted"]),
             "auto_distilled": len([s for s in active if s.source == "auto_distilled"]),
             "evolved": len([s for s in active if s.source == "evolved"]),
-            "total_uses": sum(s.use_count for s in self._cache.values()),
+            "total_uses": sum(s.use_count for s in visible),
             "avg_success_rate": (
                 sum(s.success_rate for s in active) / len(active) if active else 0
             ),

@@ -1126,7 +1126,9 @@ async def run_agent(
     # 注入匹配的技能（Skill 系统）
     try:
         from xagent.core.skills import get_skill_store
-        skill_hint = get_skill_store().build_prompt_injection(goal)
+        skill_hint = get_skill_store().build_prompt_injection(
+            goal, tenant_id=principal.tenant_id
+        )
         if skill_hint:
             system += f"\n\n{skill_hint}"
     except Exception:  # noqa: S110

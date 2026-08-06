@@ -96,8 +96,12 @@ async def test_zip_import_preserves_complete_package_and_is_tenant_isolated(
     assert not (packages_root / "executed.marker").exists()
     skill = store.get(package.skill_id)
     assert skill is not None
+    assert skill.tenant_id == "tenant-a"
+    assert skill.package_id == package.package_id
     assert long_body.strip() in skill.system_prompt_hint
     assert len(skill.system_prompt_hint) > 3000
+    assert store.match("release audit", tenant_id="tenant-b") == []
+    assert store.match("release audit", tenant_id="tenant-a")[0].skill_id == skill.skill_id
 
     async with sessions() as session:
         assert await get_skill_package(session, "tenant-b", package.package_id) is None

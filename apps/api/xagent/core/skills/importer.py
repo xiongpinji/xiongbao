@@ -119,7 +119,9 @@ def candidate_from_skillmd(content: str, origin: str = "") -> dict[str, Any]:
     }
 
 
-def import_skillmd(store: Any, content: str, origin: str = "") -> tuple[Any | None, str]:
+def import_skillmd(
+    store: Any, content: str, origin: str = "", tenant_id: str = ""
+) -> tuple[Any | None, str]:
     """导入单个 SKILL.md：映射 → 质量门禁 → 入库。
 
     Returns:
@@ -141,13 +143,14 @@ def import_skillmd(store: Any, content: str, origin: str = "") -> tuple[Any | No
         tags=candidate["tags"],
         source="import",
         source_task=candidate["source_task"],
+        tenant_id=tenant_id,
     )
     logger.info("skillmd_imported", skill_id=skill.skill_id, name=skill.name, origin=origin)
     return skill, ""
 
 
 def import_skillmd_batch(
-    store: Any, items: list[dict[str, str]]
+    store: Any, items: list[dict[str, str]], tenant_id: str = ""
 ) -> dict[str, Any]:
     """批量导入。items: [{"origin": "path/name", "content": "..."}]."""
     results = []
@@ -158,7 +161,7 @@ def import_skillmd_batch(
         if not content.strip():
             results.append({"origin": origin, "status": "rejected", "reason": "empty_content"})
             continue
-        skill, reason = import_skillmd(store, content, origin)
+        skill, reason = import_skillmd(store, content, origin, tenant_id)
         if skill is not None:
             imported += 1
             results.append(

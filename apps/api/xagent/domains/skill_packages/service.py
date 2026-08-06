@@ -306,6 +306,8 @@ async def _import_entries(
             tags=candidate["tags"],
             source="package_import",
             source_task=source,
+            tenant_id=tenant_id,
+            package_id=package_id,
         )
     except Exception:
         await asyncio.to_thread(shutil.rmtree, final_root)
