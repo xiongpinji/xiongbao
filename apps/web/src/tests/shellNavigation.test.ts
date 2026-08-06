@@ -138,6 +138,13 @@ describe("shell navigation integration", () => {
     );
   });
 
+  it("excludes creative studio from the Web API release navigation", () => {
+    assert(
+      PRIMARY_SHELL_SURFACES.every((surface) => surface.taskId !== "creative"),
+      "Creative studio must not appear in the Web/API release navigation",
+    );
+  });
+
   it("retains goalId in goal board navigation routes", () => {
     const navigation = buildPrimaryNavigation(
       [{ id: "goal-board:phase-alpha", route: "/goal-board?goalId=phase-alpha" }],

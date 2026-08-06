@@ -292,7 +292,7 @@ git commit -m "ci(质量): 阻断关键静态错误并固定基线"
 - 修改：`apps/web/src/shell/shellRoutes.ts`
 - 修改：`.github/workflows/ci.yml`
 
-- [ ] **步骤 1：增加发布导航失败测试**
+- [x] **步骤 1：增加发布导航失败测试**
 
 在 `shellNavigation.test.ts` 增加：
 
@@ -305,7 +305,7 @@ it("excludes creative studio from the Web API release navigation", () => {
 });
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -315,7 +315,7 @@ npm test -- shellNavigation.test.ts
 
 预期：FAIL，当前 `PRIMARY_SHELL_SURFACES` 包含 `taskId=creative`。
 
-- [ ] **步骤 3：实现全量 Web 测试入口**
+- [x] **步骤 3：实现全量 Web 测试入口**
 
 `run-all-tests.mjs` 枚举 `src/tests` 下所有 `.test.ts` 和 `.test.tsx`，逐个调用现有 `run-tests.mjs`；任一文件失败即退出非零。`package.json` 调整为：
 
@@ -355,7 +355,7 @@ for (const testFile of testFiles) {
 }
 ```
 
-- [ ] **步骤 4：收紧 Web 路由和导航**
+- [x] **步骤 4：收紧 Web 路由和导航**
 
 `ExcludedModulePage` 固定显示：
 
@@ -377,7 +377,7 @@ export default function ExcludedModulePage() {
 
 在 `App.tsx` 将 `/creative`、`/creative/canvas`、`/canvas`、`/editor` 映射到此页，并删除 Creative/Editor 的 lazy import 与全屏分支。`shellRoutes.ts` 删除 creative 主 surface。`ProfessionalModePage` 只保留 workflow 模式和 `WorkflowsPage`，不保留短剧 tab 或剪辑链接。
 
-- [ ] **步骤 5：把 Web test 加入 CI**
+- [x] **步骤 5：把 Web test 加入 CI**
 
 在 frontend job 的 typecheck 前增加：
 
@@ -386,7 +386,7 @@ export default function ExcludedModulePage() {
   run: npm test
 ```
 
-- [ ] **步骤 6：验证并提交 P0-C**
+- [x] **步骤 6：验证并提交 P0-C**
 
 运行：
 

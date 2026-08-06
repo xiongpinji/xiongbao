@@ -14,11 +14,10 @@
 
 ## In Progress
 
-- [P0-C] Web 测试入口与排除模块边界 | 状态：CLAIMED | Owner：Codex | 依赖：P0-B | 验收：Web 默认入口不展示或进入短剧/剪辑模块；全部 Web 单元测试被默认 test 命令执行。
+- [P0-D] Web/API 版本事实源与 CI 后发布 | 状态：CLAIMED | Owner：Codex | 依赖：P0-B,P0-C | 验收：API/Web/README/tag 版本一致；Release job 只在全部 Web/API gate 成功后运行。
 
 ## Ready
 
-- [P0-D] Web/API 版本事实源与 CI 后发布 | 状态：READY | 依赖：P0-B,P0-C | 验收：API/Web/README/tag 版本一致；Release job 只在全部 Web/API gate 成功后运行。
 - [P0-E] P0 发布证据与阶段审计 | 状态：READY | 依赖：P0-A,P0-B,P0-C,P0-D | 验收：P0 相关后端测试、前端 test/lint/typecheck/build、静态门禁和 workflow 结构检查全部有新鲜证据。
 
 ## Queued
@@ -35,11 +34,12 @@
 
 - [P0-A] 流式并发工具执行正确性 | 状态：DONE | 证据：新增测试先失败于两个 `_tool_success` `UnboundLocalError`，修复后定向测试 1/1、编排回归 11/11 通过，`F823` 为 0；双工具真实结果为 `a`/`b`，最终统计为 2 次调用、成功率 100%。
 - [P0-B] 关键 Ruff 阻断与静态质量基线 | 状态：DONE | 证据：基线测试先因脚本不存在失败；修复后相关测试 12/12、关键规则 `F821,F822,F823,B023` 通过，完整 Ruff `279 <= 286`、mypy `73 <= 74`；CI 已移除静态检查 `|| true` 并通过 YAML 解析。
+- [P0-C] Web 测试入口与排除模块边界 | 状态：DONE | 证据：导航测试先因 `taskId=creative` 失败；修复后默认 `npm test` 自动执行 2 个文件共 11 项，lint `0 error / 100 warnings`，typecheck/build 通过；短剧、画布、剪辑旧路由统一进入排除说明页，构建无 `CreativeStudioPage`/`EditorPage` chunk，CI 已加入 Web 单元测试。
 
 ## 基线证据
 
 - 后端编排测试：11/11 通过。
-- Web 单元测试：默认脚本当前只执行 3 项，3/3 通过；P0-C 必须修复默认覆盖范围。
+- Web 单元测试：默认脚本自动发现 2 个测试文件，共 11/11 通过。
 - Web lint：0 error / 100 warnings。
 - Web typecheck：通过。
 - Web build：通过。

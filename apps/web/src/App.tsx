@@ -8,8 +8,7 @@ import LoginPage from "./pages/LoginPage";
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const AgentsPage = lazy(() => import("./pages/AgentsPage"));
 const ProfessionalModePage = lazy(() => import("./pages/ProfessionalModePage"));
-const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
-const EditorPage = lazy(() => import("./pages/EditorPage"));
+const ExcludedModulePage = lazy(() => import("./pages/ExcludedModulePage"));
 const OpenSourcePage = lazy(() => import("./pages/OpenSourcePage"));
 const MemoryPage = lazy(() => import("./pages/MemoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -42,10 +41,10 @@ function NotFound() {
   );
 }
 
-function ProfessionalRedirect({ mode }: { mode: "drama" | "workflow" }) {
+function ProfessionalRedirect() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  params.set("mode", mode);
+  params.set("mode", "workflow");
   return <Navigate to={`/professional?${params.toString()}${location.hash}`} replace />;
 }
 
@@ -53,14 +52,11 @@ export default function App() {
   const location = useLocation();
   const loggedIn = isLoggedIn();
 
-  // 全屏画布模式绕过 AppShell，需单独同步标题
   useEffect(() => {
-    if (location.pathname === "/creative/canvas") {
-      document.title = "短剧工厂 · X-Agent";
-    } else if (!loggedIn) {
+    if (!loggedIn) {
       document.title = "登录 · X-Agent";
     }
-  }, [location.pathname, loggedIn]);
+  }, [loggedIn]);
 
   if (!loggedIn) {
     return (
@@ -68,19 +64,6 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="*" element={<LoginPage />} />
       </Routes>
-    );
-  }
-
-  if (location.pathname === "/creative/canvas") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/creative/canvas" element={<CreativeStudioPage variant="canvas" />} />
-            <Route path="*" element={<Navigate to="/creative/canvas" replace />} />
-          </Routes>
-        </Suspense>
-      </ErrorBoundary>
     );
   }
 
@@ -98,16 +81,17 @@ export default function App() {
           <Route path="/supervisor" element={<SupervisorPage />} />
           <Route path="/goal-board" element={<GoalBoardPage />} />
           <Route path="/professional" element={<ProfessionalModePage />} />
-          <Route path="/workflows" element={<ProfessionalRedirect mode="workflow" />} />
-          <Route path="/creative" element={<Navigate to="/creative/canvas" replace />} />
+          <Route path="/workflows" element={<ProfessionalRedirect />} />
+          <Route path="/creative" element={<ExcludedModulePage />} />
+          <Route path="/creative/canvas" element={<ExcludedModulePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/runs/:runId" element={<RunPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/audit" element={<AuditPage />} />
 
           {/* 兼容旧入口：不再显示在主导航中。 */}
-          <Route path="/canvas" element={<Navigate to="/creative/canvas" replace />} />
-          <Route path="/editor" element={<EditorPage />} />
+          <Route path="/canvas" element={<ExcludedModulePage />} />
+          <Route path="/editor" element={<ExcludedModulePage />} />
           <Route path="/open-source" element={<OpenSourcePage />} />
           <Route path="/memory" element={<MemoryPage />} />
           <Route path="*" element={<NotFound />} />

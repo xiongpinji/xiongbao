@@ -115,17 +115,6 @@ export const PRIMARY_SHELL_SURFACES: ShellRouteSnapshot[] = [
     status: "ready",
   },
   {
-    taskId: "creative",
-    kind: "creative",
-    route: "/creative/canvas",
-    title: "短剧工厂",
-    subtitle: "从剧本到分镜、生成与剪辑的专业流程",
-    badge: "专业模式",
-    pinned: true,
-    isPrimary: true,
-    status: "ready",
-  },
-  {
     taskId: "agents",
     kind: "agent",
     route: "/agents",
@@ -212,13 +201,12 @@ export function resolveShellRoute(pathname: string, search: string): ShellRouteS
   }
 
   if (pathname === "/professional") {
-    const mode = params.get("mode") === "workflow" ? "workflow" : "drama";
     return {
-      taskId: mode === "workflow" ? "workflows" : "creative",
-      kind: mode === "workflow" ? "workflow" : "creative",
-      route: `/professional?mode=${mode}`,
-      title: mode === "workflow" ? "工作流" : "短剧工厂",
-      subtitle: mode === "workflow" ? "编排任务、审批节点与执行状态" : "从剧本到分镜、生成与剪辑的专业流程",
+      taskId: "workflows",
+      kind: "workflow",
+      route: "/professional?mode=workflow",
+      title: "工作流",
+      subtitle: "编排任务、审批节点与执行状态",
       badge: "专业模式",
       pinned: true,
       isPrimary: true,
@@ -228,20 +216,6 @@ export function resolveShellRoute(pathname: string, search: string): ShellRouteS
 
   if (pathname === "/goal-board") {
     return createGoalBoardShellRoute(params.get("goalId"));
-  }
-
-  if (pathname === "/editor") {
-    return {
-      taskId: "editor",
-      kind: "creative",
-      route: "/editor",
-      title: "剪辑工作台",
-      subtitle: "时间线、素材轨道与剪映草稿导出",
-      badge: "Studio",
-      pinned: false,
-      isPrimary: false,
-      status: "ready",
-    };
   }
 
   if (pathname === "/memory") {
