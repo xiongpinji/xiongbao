@@ -3,9 +3,10 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：P1 已验收，准备进入 P2 Hermes 能力补齐。
+- 当前阶段：P2 Hermes 持久自治闭环。
 - 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
+- P2 计划：`docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md`。
 - 当前分支：`feature/webapi-release-hardening`。
 - 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening`。
 - 排除范围：短剧业务链路、Tauri 桌面端、多机 HA、E2B 和客户现场演练。
@@ -14,11 +15,11 @@
 
 ## In Progress
 
-- 暂无。
+- [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：CLAIMED | Owner：Codex | 依赖：P1-B。
 
 ## Ready
 
-- [P2-A] durable scheduler、运行历史、重试恢复与 Web 页面 | 状态：READY | 依赖：P1-B。
+- 暂无；P2-A 通过后再将 P2-B 转 READY。
 
 ## Queued
 
