@@ -97,11 +97,11 @@
 - 修改：`apps/web/src/tests/shellNavigation.test.ts`
 - 创建：`apps/web/src/tests/developmentTasks.test.ts`
 
-- [ ] 先写导航与状态动作失败测试。
-- [ ] 主导航增加“开发任务”，route `/development-tasks`，使用 workflow 类型而非新增无关 shell 抽象。
-- [ ] 列表显示状态、目标、耗时/更新时间、base/result commit；详情显示 diff stat、完整 patch、测试摘要、冲突文件。
-- [ ] 按状态只展示合法动作；approve/reject/apply/cancel 均二次确认，并显示服务端错误。
-- [ ] Web 默认测试入口自动发现新测试；lint warning 不得超过 100。
+- [x] 先写导航与状态动作失败测试。
+- [x] 主导航增加“开发任务”，route `/development-tasks`，使用 workflow 类型而非新增无关 shell 抽象。
+- [x] 列表显示状态、目标和更新时间，详情显示 base/result commit、diff stat、完整 patch、测试摘要、冲突文件。当前后端模型无 duration 字段，不在 Web 伪造耗时。
+- [x] 按状态只展示合法动作；approve/reject/apply/cancel 均二次确认，并显示服务端错误。
+- [x] Web 默认测试入口自动发现新测试；lint 保持 0 error / 100 warnings，typecheck 与 build 通过。
 
 ## 任务 6：P1 审计与证据
 

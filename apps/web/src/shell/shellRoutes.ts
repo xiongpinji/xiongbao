@@ -115,6 +115,17 @@ export const PRIMARY_SHELL_SURFACES: ShellRouteSnapshot[] = [
     status: "ready",
   },
   {
+    taskId: "development-tasks",
+    kind: "workflow",
+    route: "/development-tasks",
+    title: "开发任务",
+    subtitle: "审查隔离产物并受控应用代码变更",
+    badge: "Git",
+    pinned: true,
+    isPrimary: true,
+    status: "ready",
+  },
+  {
     taskId: "agents",
     kind: "agent",
     route: "/agents",

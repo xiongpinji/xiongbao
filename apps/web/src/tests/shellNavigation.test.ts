@@ -138,6 +138,13 @@ describe("shell navigation integration", () => {
     );
   });
 
+  it("includes development tasks in primary Web API navigation", () => {
+    const surface = PRIMARY_SHELL_SURFACES.find((item) => item.taskId === "development-tasks");
+    assert(surface, "Development tasks surface should be present in primary navigation");
+    assert(surface.kind === "workflow", `Expected workflow kind, received ${surface.kind}`);
+    assert(surface.route === "/development-tasks", `Unexpected route ${surface.route}`);
+  });
+
   it("excludes creative studio from the Web API release navigation", () => {
     assert(
       PRIMARY_SHELL_SURFACES.every((surface) => surface.taskId !== "creative"),
