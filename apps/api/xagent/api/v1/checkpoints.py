@@ -208,6 +208,10 @@ async def resume_checkpoint(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "checkpoint 不存在或无权访问"
         ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "checkpoint 已在恢复中或已创建恢复 run"
+        ) from exc
     await session.commit()
     get_audit_log().record(
         tenant_id=principal.tenant_id,

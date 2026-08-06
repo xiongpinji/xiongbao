@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.domains.checkpoints.models import CheckpointRecord
@@ -166,9 +166,31 @@ async def create_resume_checkpoint(
     checkpoint_id: str,
     new_run_id: str,
 ) -> CheckpointRecord:
-    parent = await get_checkpoint(session, tenant_id, checkpoint_id)
-    if parent is None:
+    parent_row = await session.scalar(
+        select(CheckpointORM).where(
+            CheckpointORM.tenant_id == tenant_id,
+            CheckpointORM.checkpoint_id == checkpoint_id,
+        )
+    )
+    if parent_row is None:
         raise LookupError(checkpoint_id)
+    parent = _record(parent_row)
+    if parent.resumed_run_id:
+        raise ValueError("checkpoint_already_resumed")
+    if parent.status in {"pending", "running"}:
+        raise ValueError("checkpoint_resume_in_progress")
+    claimed = await session.execute(
+        update(CheckpointORM)
+        .where(
+            CheckpointORM.tenant_id == tenant_id,
+            CheckpointORM.checkpoint_id == checkpoint_id,
+            CheckpointORM.resumed_run_id == "",
+            CheckpointORM.status.not_in(("pending", "running")),
+        )
+        .values(resumed_run_id=new_run_id)
+    )
+    if getattr(claimed, "rowcount", 0) != 1:
+        raise ValueError("checkpoint_already_resumed")
     row = CheckpointORM(
         checkpoint_id=uuid.uuid4().hex,
         tenant_id=tenant_id,
@@ -182,10 +204,6 @@ async def create_resume_checkpoint(
         changed_files_json=json.dumps(parent.changed_files, ensure_ascii=False),
     )
     session.add(row)
-    await session.flush()
-    parent_row = await session.get(CheckpointORM, parent.checkpoint_id)
-    assert parent_row is not None
-    parent_row.resumed_run_id = new_run_id
     await session.flush()
     return _record(row)
 

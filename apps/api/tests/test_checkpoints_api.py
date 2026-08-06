@@ -95,6 +95,13 @@ async def test_list_detail_resume_are_tenant_scoped_and_preserve_parent(
     assert child["parent_checkpoint_id"] == checkpoint.checkpoint_id
     assert child["run_id"] != checkpoint.run_id
     assert resumed == [(child["checkpoint_id"], "tenant-checkpoint-a")]
+    duplicate = await client.post(
+        f"/api/v1/checkpoints/{checkpoint.checkpoint_id}/resume",
+        json={"confirm_checkpoint_id": checkpoint.checkpoint_id},
+        headers=_headers("tenant-checkpoint-a"),
+    )
+    assert duplicate.status_code == 409
+    assert resumed == [(child["checkpoint_id"], "tenant-checkpoint-a")]
     events = get_audit_log().list("tenant-checkpoint-a")
     assert events[-1].action == "checkpoint.resume"
 
