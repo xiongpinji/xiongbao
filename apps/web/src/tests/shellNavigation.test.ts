@@ -145,6 +145,12 @@ describe("shell navigation integration", () => {
     assert(surface.route === "/development-tasks", `Unexpected route ${surface.route}`);
   });
 
+  it("includes durable scheduler in primary Web API navigation", () => {
+    const surface = PRIMARY_SHELL_SURFACES.find((item) => item.taskId === "scheduler");
+    assert(surface, "Scheduler surface should be present in primary navigation");
+    assert(surface.route === "/scheduler", `Unexpected route ${surface.route}`);
+  });
+
   it("excludes creative studio from the Web API release navigation", () => {
     assert(
       PRIMARY_SHELL_SURFACES.every((surface) => surface.taskId !== "creative"),

@@ -22,6 +22,7 @@ from xagent.domains.scheduled_jobs import (
     get_scheduled_job,
     list_scheduled_job_runs,
     list_scheduled_jobs,
+    request_manual_job_run,
     set_scheduled_job_enabled,
 )
 from xagent.enterprise.audit import get_audit_log
@@ -112,6 +113,10 @@ class JobToggleIn(BaseModel):
 
 
 class JobDeleteIn(BaseModel):
+    confirm_job_id: str = Field(min_length=1)
+
+
+class JobRunIn(BaseModel):
     confirm_job_id: str = Field(min_length=1)
 
 
@@ -221,6 +226,24 @@ async def list_job_runs(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "调度任务不存在")
     runs = await list_scheduled_job_runs(session, principal.tenant_id, job_id)
     return {"runs": [asdict(run) for run in runs]}
+
+
+@router.post("/scheduler/jobs/{job_id}/run", summary="手动触发调度任务")
+async def run_job_now(
+    job_id: str,
+    body: JobRunIn,
+    principal: Principal = Depends(require_permission("agent", "execute")),
+    session: AsyncSession = Depends(get_session),
+):
+    _confirm_job(job_id, body.confirm_job_id)
+    run = await request_manual_job_run(
+        session, principal.tenant_id, job_id, now=datetime.now(UTC)
+    )
+    if run is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "调度任务不存在")
+    await session.commit()
+    _audit_job(principal, "run_requested", job_id)
+    return asdict(run)
 
 
 # ─── 策略自适应 ───

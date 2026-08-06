@@ -16,6 +16,7 @@ from xagent.domains.scheduled_jobs.service import (
     list_scheduled_job_runs,
     list_scheduled_jobs,
     recover_expired_job_runs,
+    request_manual_job_run,
     set_scheduled_job_enabled,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "list_scheduled_job_runs",
     "list_scheduled_jobs",
     "recover_expired_job_runs",
+    "request_manual_job_run",
     "set_scheduled_job_enabled",
 ]

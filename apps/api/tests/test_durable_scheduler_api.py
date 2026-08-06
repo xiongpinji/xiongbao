@@ -60,6 +60,14 @@ async def test_scheduler_api_is_tenant_isolated_and_requires_confirmation(
     assert toggled.status_code == 200
     assert toggled.json()["enabled"] is False
 
+    requested = await client.post(
+        f"/api/v1/scheduler/jobs/{job_id}/run",
+        json={"confirm_job_id": job_id},
+        headers=_auth("scheduler-a"),
+    )
+    assert requested.status_code == 200
+    assert requested.json()["status"] == "retry_wait"
+
     cross_tenant = await client.get(
         f"/api/v1/scheduler/jobs/{job_id}/runs", headers=_auth("scheduler-b")
     )

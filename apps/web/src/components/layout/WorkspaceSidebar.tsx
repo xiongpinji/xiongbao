@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bot,
+  CalendarClock,
   CreditCard,
   GitPullRequest,
   Grid2X2,
@@ -111,6 +112,7 @@ export default function WorkspaceSidebar({ collapsed, onToggle }: { collapsed: b
         <NavItem to="/goal-board" icon={Target} label="目标看板" active={location.pathname === "/goal-board"} />
         <NavItem to="/professional?mode=workflow" icon={Grid2X2} label="工作流" active={location.pathname === "/professional"} />
         <NavItem to="/development-tasks" icon={GitPullRequest} label="开发任务" active={location.pathname === "/development-tasks"} />
+        <NavItem to="/scheduler" icon={CalendarClock} label="调度中心" active={location.pathname === "/scheduler"} />
         <NavItem to="/agents" icon={Bot} label="智能体" active={location.pathname === "/agents"} />
         <NavItem to="/settings" icon={Wrench} label="设置" active={location.pathname === "/settings"} />
       </nav>

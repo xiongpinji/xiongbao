@@ -150,6 +150,32 @@ async def delete_scheduled_job(
     return result.scalar_one_or_none() is not None
 
 
+async def request_manual_job_run(
+    session: AsyncSession, tenant_id: str, job_id: str, *, now: datetime
+) -> ScheduledJobRunRecord | None:
+    job = await session.scalar(
+        select(ScheduledJobORM).where(
+            ScheduledJobORM.tenant_id == tenant_id,
+            ScheduledJobORM.job_id == job_id,
+        )
+    )
+    if job is None:
+        return None
+    run = ScheduledJobRunORM(
+        run_id=uuid.uuid4().hex,
+        job_id=job.job_id,
+        tenant_id=job.tenant_id,
+        scheduled_for=now,
+        status="retry_wait",
+        attempt=0,
+        next_retry_at=now,
+        error="manual run requested",
+    )
+    session.add(run)
+    await session.flush()
+    return _run_record(run)
+
+
 async def claim_due_job(
     session: AsyncSession,
     *,
@@ -265,7 +291,7 @@ async def claim_due_retry(
     if claimed.scalar_one_or_none() is None:
         return None
     job = await session.get(ScheduledJobORM, job_id)
-    if job is None or not job.enabled or previous_attempt > job.max_retries:
+    if job is None or (not job.enabled and previous_attempt > 0) or previous_attempt > job.max_retries:
         return None
     run = ScheduledJobRunORM(
         run_id=uuid.uuid4().hex,

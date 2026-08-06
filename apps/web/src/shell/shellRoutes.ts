@@ -126,6 +126,17 @@ export const PRIMARY_SHELL_SURFACES: ShellRouteSnapshot[] = [
     status: "ready",
   },
   {
+    taskId: "scheduler",
+    kind: "workflow",
+    route: "/scheduler",
+    title: "调度中心",
+    subtitle: "持久任务、运行历史与重试恢复",
+    badge: "Cron",
+    pinned: true,
+    isPrimary: true,
+    status: "ready",
+  },
+  {
     taskId: "agents",
     kind: "agent",
     route: "/agents",

@@ -18,6 +18,7 @@ const BillingPage = lazy(() => import("./pages/BillingPage"));
 const AuditPage = lazy(() => import("./pages/AuditPage"));
 const SupervisorPage = lazy(() => import("./pages/SupervisorPage"));
 const DevelopmentTasksPage = lazy(() => import("./pages/DevelopmentTasksPage"));
+const SchedulerPage = lazy(() => import("./pages/SchedulerPage"));
 
 function PageFallback() {
   return (
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="/supervisor" element={<SupervisorPage />} />
           <Route path="/goal-board" element={<GoalBoardPage />} />
           <Route path="/development-tasks" element={<DevelopmentTasksPage />} />
+          <Route path="/scheduler" element={<SchedulerPage />} />
           <Route path="/professional" element={<ProfessionalModePage />} />
           <Route path="/workflows" element={<ProfessionalRedirect />} />
           <Route path="/creative" element={<ExcludedModulePage />} />
