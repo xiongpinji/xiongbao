@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import overload
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.domains.scheduled_jobs.models import (
@@ -182,18 +182,24 @@ async def claim_due_job(
     now: datetime,
     lease_seconds: int,
     claim_token: str,
+    job_id: str | None = None,
 ) -> ClaimedScheduledJob | None:
     """原子推进 next_run 后创建一个 run；一次只补最近的到期执行。"""
+    candidate_query = (
+        select(
+            ScheduledJobORM.job_id,
+            ScheduledJobORM.next_run,
+            ScheduledJobORM.interval_seconds,
+        )
+        .where(ScheduledJobORM.enabled.is_(True), ScheduledJobORM.next_run <= now)
+        .order_by(ScheduledJobORM.next_run)
+        .limit(1)
+    )
+    if job_id is not None:
+        candidate_query = candidate_query.where(ScheduledJobORM.job_id == job_id)
     candidate = (
         await session.execute(
-            select(
-                ScheduledJobORM.job_id,
-                ScheduledJobORM.next_run,
-                ScheduledJobORM.interval_seconds,
-            )
-            .where(ScheduledJobORM.enabled.is_(True), ScheduledJobORM.next_run <= now)
-            .order_by(ScheduledJobORM.next_run)
-            .limit(1)
+            candidate_query
         )
     ).first()
     if candidate is None:
@@ -257,22 +263,34 @@ async def claim_due_retry(
     now: datetime,
     lease_seconds: int,
     claim_token: str,
+    job_id: str | None = None,
 ) -> ClaimedScheduledJob | None:
+    candidate_query = (
+        select(
+            ScheduledJobRunORM.run_id,
+            ScheduledJobRunORM.job_id,
+            ScheduledJobRunORM.scheduled_for,
+            ScheduledJobRunORM.attempt,
+        )
+        .join(ScheduledJobORM, ScheduledJobORM.job_id == ScheduledJobRunORM.job_id)
+        .where(
+            ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
+            ScheduledJobRunORM.next_retry_at.is_not(None),
+            ScheduledJobRunORM.next_retry_at <= now,
+            or_(
+                ScheduledJobORM.enabled.is_(True),
+                ScheduledJobRunORM.attempt == 0,
+            ),
+            ScheduledJobRunORM.attempt <= ScheduledJobORM.max_retries,
+        )
+        .order_by(ScheduledJobRunORM.next_retry_at)
+        .limit(1)
+    )
+    if job_id is not None:
+        candidate_query = candidate_query.where(ScheduledJobRunORM.job_id == job_id)
     candidate = (
         await session.execute(
-            select(
-                ScheduledJobRunORM.run_id,
-                ScheduledJobRunORM.job_id,
-                ScheduledJobRunORM.scheduled_for,
-                ScheduledJobRunORM.attempt,
-            )
-            .where(
-                ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
-                ScheduledJobRunORM.next_retry_at.is_not(None),
-                ScheduledJobRunORM.next_retry_at <= now,
-            )
-            .order_by(ScheduledJobRunORM.next_retry_at)
-            .limit(1)
+            candidate_query
         )
     ).first()
     if candidate is None:
@@ -284,6 +302,14 @@ async def claim_due_retry(
             ScheduledJobRunORM.run_id == previous_run_id,
             ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
             ScheduledJobRunORM.next_retry_at <= now,
+            exists().where(
+                ScheduledJobORM.job_id == ScheduledJobRunORM.job_id,
+                ScheduledJobRunORM.attempt <= ScheduledJobORM.max_retries,
+                or_(
+                    ScheduledJobORM.enabled.is_(True),
+                    ScheduledJobRunORM.attempt == 0,
+                ),
+            ),
         )
         .values(status="retried", next_retry_at=None)
         .returning(ScheduledJobRunORM.run_id)
@@ -291,7 +317,7 @@ async def claim_due_retry(
     if claimed.scalar_one_or_none() is None:
         return None
     job = await session.get(ScheduledJobORM, job_id)
-    if job is None or (not job.enabled and previous_attempt > 0) or previous_attempt > job.max_retries:
+    if job is None:
         return None
     run = ScheduledJobRunORM(
         run_id=uuid.uuid4().hex,
@@ -308,6 +334,34 @@ async def claim_due_retry(
     session.add(run)
     await session.flush()
     return ClaimedScheduledJob(job=_job_record(job), run=_run_record(run))
+
+
+async def get_due_retry_job_id(session: AsyncSession, *, now: datetime) -> str | None:
+    return await session.scalar(
+        select(ScheduledJobRunORM.job_id)
+        .join(ScheduledJobORM, ScheduledJobORM.job_id == ScheduledJobRunORM.job_id)
+        .where(
+            ScheduledJobRunORM.status.in_(("interrupted", "retry_wait")),
+            ScheduledJobRunORM.next_retry_at.is_not(None),
+            ScheduledJobRunORM.next_retry_at <= now,
+            or_(
+                ScheduledJobORM.enabled.is_(True),
+                ScheduledJobRunORM.attempt == 0,
+            ),
+            ScheduledJobRunORM.attempt <= ScheduledJobORM.max_retries,
+        )
+        .order_by(ScheduledJobRunORM.next_retry_at)
+        .limit(1)
+    )
+
+
+async def get_due_job_id(session: AsyncSession, *, now: datetime) -> str | None:
+    return await session.scalar(
+        select(ScheduledJobORM.job_id)
+        .where(ScheduledJobORM.enabled.is_(True), ScheduledJobORM.next_run <= now)
+        .order_by(ScheduledJobORM.next_run)
+        .limit(1)
+    )
 
 
 async def complete_scheduled_job_run(
@@ -352,5 +406,31 @@ async def complete_scheduled_job_run(
         row.status = "failed"
         row.error = error[:4000]
         row.next_retry_at = None
+    await session.flush()
+    return _run_record(row)
+
+
+async def set_scheduled_job_run_notification(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    run_id: str,
+    status: str,
+    error: str = "",
+) -> ScheduledJobRunRecord:
+    row = await session.scalar(
+        select(ScheduledJobRunORM).where(
+            ScheduledJobRunORM.tenant_id == tenant_id,
+            ScheduledJobRunORM.run_id == run_id,
+        )
+    )
+    if row is None:
+        raise LookupError(run_id)
+    if row.status not in {"succeeded", "failed"}:
+        raise ValueError(f"调度运行 {run_id} 尚未终态，不能写通知结果")
+    if status not in {"not_configured", "delivered", "failed"}:
+        raise ValueError(f"无效通知状态: {status}")
+    row.notification_status = status
+    row.notification_error = error[:4000]
     await session.flush()
     return _run_record(row)

@@ -69,6 +69,33 @@ class RedisJobLock:
             logger.warning("scheduler_lock_redis_error", job_id=job_id, error=str(exc))
             return False
 
+    async def release(self, job_id: str) -> bool:
+        """仅释放当前实例持有的锁。"""
+        from redis.exceptions import WatchError
+
+        key = self.KEY_PREFIX + job_id
+        pipe = self._client.pipeline()
+        try:
+            while True:
+                try:
+                    await pipe.watch(key)
+                    if await pipe.get(key) != self._instance_id:
+                        await pipe.unwatch()
+                        return False
+                    pipe.multi()
+                    pipe.delete(key)
+                    result = await pipe.execute()
+                    return bool(result[0])
+                except WatchError:
+                    continue
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "scheduler_lock_release_error", job_id=job_id, error=str(exc)
+            )
+            return False
+        finally:
+            await pipe.reset()
+
 
 @dataclass
 class ScheduledJob:
@@ -131,7 +158,12 @@ class Scheduler:
                 data = json.loads(f.read_text(encoding="utf-8"))
                 job = ScheduledJob(**data)
                 self._jobs[job.job_id] = job
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "scheduler_legacy_job_load_failed",
+                    path=str(f),
+                    error=str(exc),
+                )
                 continue
         logger.info("scheduler_loaded", jobs=len(self._jobs))
 
@@ -273,11 +305,50 @@ class Scheduler:
             await asyncio.sleep(30)
 
     async def _claim_next_durable_run(self) -> ClaimedScheduledJob | None:
-        from xagent.domains.scheduled_jobs import claim_due_job, claim_due_retry
+        from xagent.domains.scheduled_jobs import (
+            claim_due_job,
+            claim_due_retry,
+            get_due_job_id,
+            get_due_retry_job_id,
+        )
         from xagent.infra.db import get_sessionmaker
 
         now = datetime.now(UTC)
         async with get_sessionmaker()() as session:
+            if self._lock is not None:
+                job_id = await get_due_retry_job_id(session, now=now)
+                retry = job_id is not None
+                if job_id is None:
+                    job_id = await get_due_job_id(session, now=now)
+                if job_id is None:
+                    return None
+                if not await self._lock.acquire(job_id, 360):
+                    logger.info("durable_job_skipped_lock_held", job_id=job_id)
+                    return None
+                try:
+                    if retry:
+                        claimed = await claim_due_retry(
+                            session,
+                            now=now,
+                            lease_seconds=360,
+                            claim_token=uuid.uuid4().hex,
+                            job_id=job_id,
+                        )
+                    else:
+                        claimed = await claim_due_job(
+                            session,
+                            now=now,
+                            lease_seconds=360,
+                            claim_token=uuid.uuid4().hex,
+                            job_id=job_id,
+                        )
+                    await session.commit()
+                except Exception:
+                    await self._lock.release(job_id)
+                    raise
+                if claimed is None:
+                    await self._lock.release(job_id)
+                return claimed
             claimed = await claim_due_retry(
                 session,
                 now=now,
@@ -305,49 +376,98 @@ class Scheduler:
             tenant_id=claimed.job.tenant_id,
             roles=frozenset({"admin"}),
         )
-        succeeded = False
-        result_text = ""
-        error = ""
-        agent_run_id = ""
         try:
-            result = await asyncio.wait_for(
-                run_agent(
-                    claimed.job.goal,
-                    principal=principal,
-                    role_name=claimed.job.role or None,
-                ),
-                timeout=300,
-            )
-            payload = result.to_dict()
-            result_text = str(payload.get("final_answer") or "")
-            agent_run_id = str(payload.get("run_id") or "")
-            succeeded = True
-        except Exception as exc:  # noqa: BLE001
-            error = str(exc)
-            logger.error(
-                "durable_job_run_failed",
-                job_id=claimed.job.job_id,
-                run_id=claimed.run.run_id,
-                error=error,
-            )
-        async with get_sessionmaker()() as session:
-            completed = await complete_scheduled_job_run(
-                session,
-                tenant_id=claimed.job.tenant_id,
-                run_id=claimed.run.run_id,
-                succeeded=succeeded,
-                now=datetime.now(UTC),
-                result=result_text,
-                error=error,
-                agent_run_id=agent_run_id,
-            )
-            await session.commit()
+            succeeded = False
+            result_text = ""
+            error = ""
+            agent_run_id = ""
+            try:
+                result = await asyncio.wait_for(
+                    run_agent(
+                        claimed.job.goal,
+                        principal=principal,
+                        role_name=claimed.job.role or None,
+                    ),
+                    timeout=300,
+                )
+                payload = result.to_dict()
+                result_text = str(payload.get("final_answer") or "")
+                agent_run_id = str(payload.get("run_id") or "")
+                succeeded = True
+            except Exception as exc:  # noqa: BLE001
+                error = str(exc)
+                logger.error(
+                    "durable_job_run_failed",
+                    job_id=claimed.job.job_id,
+                    run_id=claimed.run.run_id,
+                    error=error,
+                )
+            async with get_sessionmaker()() as session:
+                completed = await complete_scheduled_job_run(
+                    session,
+                    tenant_id=claimed.job.tenant_id,
+                    run_id=claimed.run.run_id,
+                    succeeded=succeeded,
+                    now=datetime.now(UTC),
+                    result=result_text,
+                    error=error,
+                    agent_run_id=agent_run_id,
+                )
+                await session.commit()
+        finally:
+            if self._lock is not None:
+                await self._lock.release(claimed.job.job_id)
         logger.info(
             "durable_job_run_completed",
             job_id=claimed.job.job_id,
             run_id=claimed.run.run_id,
             status=completed.status,
         )
+        if completed.status in {"succeeded", "failed"}:
+            await self._notify_terminal_run(
+                claimed, completed.status, completed.agent_run_id
+            )
+
+    async def _notify_terminal_run(
+        self, claimed: ClaimedScheduledJob, status: str, agent_run_id: str
+    ) -> None:
+        from xagent.core.webhooks import get_webhook_manager
+        from xagent.domains.scheduled_jobs import set_scheduled_job_run_notification
+        from xagent.infra.db import get_sessionmaker
+
+        try:
+            delivery = await get_webhook_manager().emit(
+                claimed.job.tenant_id,
+                "scheduler.job_run.completed",
+                {
+                    "job_id": claimed.job.job_id,
+                    "run_id": claimed.run.run_id,
+                    "status": status,
+                    "attempt": claimed.run.attempt,
+                    "agent_run_id": agent_run_id,
+                },
+            )
+            if delivery.target_count == 0:
+                notification_status = "not_configured"
+                notification_error = ""
+            elif delivery.errors:
+                notification_status = "failed"
+                notification_error = "; ".join(delivery.errors)
+            else:
+                notification_status = "delivered"
+                notification_error = ""
+        except Exception as exc:  # noqa: BLE001
+            notification_status = "failed"
+            notification_error = str(exc)
+        async with get_sessionmaker()() as session:
+            await set_scheduled_job_run_notification(
+                session,
+                tenant_id=claimed.job.tenant_id,
+                run_id=claimed.run.run_id,
+                status=notification_status,
+                error=notification_error,
+            )
+            await session.commit()
 
     async def _execute_job(self, job: ScheduledJob) -> None:
         """执行单个定时任务（隔离在线程池中，避免破坏主事件循环）。"""

@@ -33,6 +33,13 @@ class WebhookConfig:
         return d
 
 
+@dataclass(frozen=True)
+class WebhookDeliveryResult:
+    target_count: int
+    delivered_count: int
+    errors: tuple[str, ...] = ()
+
+
 class WebhookManager:
     """Webhook 注册 + 触发。"""
 
@@ -81,7 +88,9 @@ class WebhookManager:
             pass
         return True
 
-    async def emit(self, tenant_id: str, event: str, payload: dict) -> None:
+    async def emit(
+        self, tenant_id: str, event: str, payload: dict
+    ) -> WebhookDeliveryResult:
         """触发事件 → 推送所有匹配的 webhook。"""
         targets = [
             h for h in self._hooks.values()
@@ -89,7 +98,7 @@ class WebhookManager:
             and ("*" in h.events or event in h.events)
         ]
         if not targets:
-            return
+            return WebhookDeliveryResult(target_count=0, delivered_count=0)
 
         body = json.dumps({
             "event": event,
@@ -97,6 +106,8 @@ class WebhookManager:
             "data": payload,
         }, ensure_ascii=False)
 
+        delivered = 0
+        errors: list[str] = []
         async with httpx.AsyncClient(timeout=10) as client:
             for hook in targets:
                 headers = {"Content-Type": "application/json"}
@@ -107,15 +118,31 @@ class WebhookManager:
                     headers["X-Webhook-Signature"] = f"sha256={sig}"
                 try:
                     resp = await client.post(hook.url, content=body, headers=headers)
-                    logger.info(
-                        "webhook_delivered", webhook_id=hook.webhook_id,
-                        status=resp.status_code, event=event,
-                    )
+                    if 200 <= resp.status_code < 300:
+                        delivered += 1
+                        logger.info(
+                            "webhook_delivered", webhook_id=hook.webhook_id,
+                            status=resp.status_code, event_name=event,
+                        )
+                    else:
+                        error = f"{hook.webhook_id}: HTTP {resp.status_code}"
+                        errors.append(error)
+                        logger.warning(
+                            "webhook_failed", webhook_id=hook.webhook_id,
+                            error=error, event_name=event,
+                        )
                 except Exception as exc:
+                    error = f"{hook.webhook_id}: {str(exc)[:200]}"
+                    errors.append(error)
                     logger.warning(
                         "webhook_failed", webhook_id=hook.webhook_id,
-                        error=str(exc)[:200], event=event,
+                        error=error, event_name=event,
                     )
+        return WebhookDeliveryResult(
+            target_count=len(targets),
+            delivered_count=delivered,
+            errors=tuple(errors),
+        )
 
 
 _manager: WebhookManager | None = None

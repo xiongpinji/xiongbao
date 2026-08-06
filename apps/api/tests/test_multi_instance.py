@@ -205,6 +205,15 @@ async def test_redis_job_lock_mutual_exclusion(fake_redis) -> None:
     assert 0 < ttl <= 300_000
 
 
+async def test_redis_job_lock_only_owner_can_release(fake_redis) -> None:
+    lock_a = RedisJobLock("redis://unused", instance_id="a", client=fake_redis)
+    lock_b = RedisJobLock("redis://unused", instance_id="b", client=fake_redis)
+    assert await lock_a.acquire("job-release", lease_seconds=300) is True
+    assert await lock_b.release("job-release") is False
+    assert await lock_a.release("job-release") is True
+    assert await lock_b.acquire("job-release", lease_seconds=300) is True
+
+
 async def test_redis_job_lock_degrades_closed_on_error() -> None:
     """Redis 挂掉：acquire 返回 False（宁可不触发也不重复触发）。"""
     lock = RedisJobLock("redis://unused", client=_BrokenRedis())
