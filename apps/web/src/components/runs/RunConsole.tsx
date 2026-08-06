@@ -6,6 +6,7 @@ import RunArtifactsPanel from "./RunArtifactsPanel.tsx";
 import RunEvidencePanel from "./RunEvidencePanel.tsx";
 import RunTimelinePanel from "./RunTimelinePanel.tsx";
 import ConversationalCommand from "../chat/ConversationalCommand.tsx";
+import CheckpointTimeline from "../checkpoints/CheckpointTimeline.tsx";
 
 function formatTaskLabel(detail: RunDetail): string {
   const kind = detail.task?.kind || detail.delivery.kind || "runtime.run";
@@ -127,6 +128,8 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
         ]}
         onSubmit={(value) => answerRunQuestion(detail, value)}
       />
+
+      <CheckpointTimeline runId={detail.run_id} />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div className="space-y-4">

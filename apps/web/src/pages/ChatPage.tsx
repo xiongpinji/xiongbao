@@ -11,6 +11,7 @@ import { useShellActions, useShellStore } from "../shell/useShellStore";
 import { MarkdownRenderer } from "../components/chat/MarkdownRenderer";
 import { copyToClipboard } from "../lib/clipboard";
 import { useEscapeClose } from "../hooks/useEscapeClose";
+import CheckpointTimeline from "../components/checkpoints/CheckpointTimeline.tsx";
 
 /* ================================================================== */
 /*  类型                                                               */
@@ -488,6 +489,11 @@ export default function ChatPage() {
                 <RotateCw size={11} />
                 重试
               </button>
+            </div>
+          )}
+          {conversationId && (
+            <div className="mt-6">
+              <CheckpointTimeline conversationId={conversationId} compact />
             </div>
           )}
         </div>
