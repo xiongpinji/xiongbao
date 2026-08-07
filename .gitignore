@@ -56,6 +56,10 @@ logs/
 tests/e2e/test-results/
 tests/e2e/playwright-report/
 tests/e2e/specs/debug_login.spec.ts
+.playwright-cli/
+output/playwright/r1-run-console.png
+output/playwright/r1-run-console-final.png
+output/playwright/r1-session-restored.png
 
 # ---- Local automation ----
 .claude/
