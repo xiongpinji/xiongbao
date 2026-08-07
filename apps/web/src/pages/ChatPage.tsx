@@ -12,6 +12,10 @@ import { MarkdownRenderer } from "../components/chat/MarkdownRenderer";
 import { copyToClipboard } from "../lib/clipboard";
 import { useEscapeClose } from "../hooks/useEscapeClose";
 import CheckpointTimeline from "../components/checkpoints/CheckpointTimeline.tsx";
+import {
+  resolveInitialConversationId,
+  shouldResetChatSession,
+} from "./chatSessionLifecycle";
 
 /* ================================================================== */
 /*  类型                                                               */
@@ -57,7 +61,12 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [steps, setSteps] = useState<StepInfo[]>([]);
-  const [conversationId, setConversationId] = useState<string | null>(activeConversationId);
+  const [conversationId, setConversationId] = useState<string | null>(() =>
+    resolveInitialConversationId(
+      activeConversationId,
+      localStorage.getItem("xagent_conversation_id"),
+    ),
+  );
   const [streamingText, setStreamingText] = useState("");
   const [completedSegments, setCompletedSegments] = useState<string[]>([]);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
@@ -71,6 +80,7 @@ export default function ChatPage() {
   const modelRef = useRef<HTMLDivElement>(null);
   // regenerate 的最新引用（供稳定回调使用，避免每次渲染创建新闭包）
   const regenerateRef = useRef<() => Promise<void>>(async () => {});
+  const previousChatSessionKeyRef = useRef<string | null>(null);
 
   // 加载当前模型
   useEffect(() => {
@@ -100,9 +110,12 @@ export default function ChatPage() {
   }, [conversationId, setActiveConversationId]);
 
   useEffect(() => {
+    const previousSessionKey = previousChatSessionKeyRef.current;
+    previousChatSessionKeyRef.current = chatSessionKey;
+    if (!shouldResetChatSession(previousSessionKey, chatSessionKey)) return;
     setGoal(""); setMessages([]); setLoading(false);
     setError(null); setConversationId(null); setSteps([]); setStreamingText("");
-    setCompletedSegments([]);
+    setCompletedSegments([]); setLoadingHistory(false);
   }, [chatSessionVersion, chatSessionKey]);
 
   // 当侧栏选择对话时同步
