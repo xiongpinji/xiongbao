@@ -5,7 +5,7 @@ WORKDIR /app
 
 # 系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libffi-dev curl && rm -rf /var/lib/apt/lists/*
+    build-essential libffi-dev curl git && rm -rf /var/lib/apt/lists/*
 
 # 先复制元数据 + 源码（pyproject 引用 README，需一并复制）
 COPY pyproject.toml README.md ./
