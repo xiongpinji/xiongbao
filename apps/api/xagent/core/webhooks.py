@@ -46,7 +46,7 @@ class WebhookManager:
     def __init__(self) -> None:
         self._hooks: dict[str, WebhookConfig] = {}
 
-    def register(
+    async def register(
         self, tenant_id: str, url: str, events: list[str], secret: str = "",
     ) -> WebhookConfig:
         hook = WebhookConfig(
@@ -57,35 +57,24 @@ class WebhookManager:
             secret=secret,
         )
         self._hooks[hook.webhook_id] = hook
-        # 持久化
-        try:
-            import asyncio
-
-            from xagent.core.persistence import save_webhook
-            asyncio.get_event_loop().create_task(save_webhook({
-                "webhook_id": hook.webhook_id, "tenant_id": tenant_id,
-                "url": url, "events": events, "secret": secret,
-            }))
-        except Exception:  # noqa: S110
-            pass
+        from xagent.core.persistence import save_webhook
+        await save_webhook({
+            "webhook_id": hook.webhook_id, "tenant_id": tenant_id,
+            "url": url, "events": events, "secret": secret,
+        })
         logger.info("webhook_registered", webhook_id=hook.webhook_id, url=url)
         return hook
 
     def list(self, tenant_id: str) -> list[WebhookConfig]:
         return [h for h in self._hooks.values() if h.tenant_id == tenant_id]
 
-    def delete(self, webhook_id: str, tenant_id: str) -> bool:
+    async def delete(self, webhook_id: str, tenant_id: str) -> bool:
         hook = self._hooks.get(webhook_id)
         if not hook or hook.tenant_id != tenant_id:
             return False
         del self._hooks[webhook_id]
-        try:
-            import asyncio
-
-            from xagent.core.persistence import delete_webhook
-            asyncio.get_event_loop().create_task(delete_webhook(webhook_id))
-        except Exception:  # noqa: S110
-            pass
+        from xagent.core.persistence import delete_webhook
+        await delete_webhook(webhook_id)
         return True
 
     async def emit(

@@ -286,7 +286,7 @@ async def create_webhook(
 ) -> dict:
     from xagent.core.webhooks import get_webhook_manager
     mgr = get_webhook_manager()
-    hook = mgr.register(
+    hook = await mgr.register(
         tenant_id=principal.tenant_id,
         url=body.url,
         events=body.events,
@@ -302,6 +302,6 @@ async def delete_webhook(
 ) -> dict:
     from xagent.core.webhooks import get_webhook_manager
     mgr = get_webhook_manager()
-    if not mgr.delete(webhook_id, principal.tenant_id):
+    if not await mgr.delete(webhook_id, principal.tenant_id):
         raise HTTPException(404, "Webhook 不存在")
     return {"deleted": webhook_id}

@@ -7,7 +7,7 @@ from xagent.core.webhooks import WebhookManager
 
 async def test_emit_reports_http_failure() -> None:
     manager = WebhookManager()
-    hook = manager.register(
+    hook = await manager.register(
         "tenant-webhook",
         "https://example.invalid/hook",
         ["scheduler.job_run.completed"],
@@ -66,3 +66,23 @@ async def test_persisted_webhooks_can_restore_all_tenants(tmp_path, monkeypatch)
         hook["webhook_id"]
         for hook in await persistence.load_webhooks("tenant-a")
     ] == ["hook-a"]
+
+
+async def test_register_and_delete_are_durable_before_return(tmp_path, monkeypatch) -> None:
+    from xagent.core import persistence
+
+    monkeypatch.setattr(persistence, "DB_PATH", tmp_path / "durable-webhooks.db")
+    manager = WebhookManager()
+
+    hook = await manager.register(
+        "tenant-durable",
+        "https://durable.invalid/hook",
+        ["scheduler.job_run.completed"],
+    )
+    assert [
+        saved["webhook_id"]
+        for saved in await persistence.load_webhooks("tenant-durable")
+    ] == [hook.webhook_id]
+
+    assert await manager.delete(hook.webhook_id, "tenant-durable")
+    assert await persistence.load_webhooks("tenant-durable") == []
