@@ -8,6 +8,11 @@ import RunTimelinePanel from "./RunTimelinePanel.tsx";
 import ConversationalCommand from "../chat/ConversationalCommand.tsx";
 import CheckpointTimeline from "../checkpoints/CheckpointTimeline.tsx";
 
+export const RUN_CONSOLE_HEADER_LAYOUT =
+  "flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between";
+export const RUN_CONSOLE_RUN_ID_LAYOUT =
+  "mt-2 break-all text-2xl font-semibold tracking-tight text-white";
+
 function formatTaskLabel(detail: RunDetail): string {
   const kind = detail.task?.kind || detail.delivery.kind || "runtime.run";
   const status = detail.task?.status || detail.workflow?.status || detail.delivery.status || "unknown";
@@ -78,8 +83,8 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
+        <div className={RUN_CONSOLE_HEADER_LAYOUT}>
+          <div className="min-w-0 xl:flex-1">
             <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-neutral-500">
               Run Console
               {!isRunTerminal(detail) && (
@@ -92,10 +97,10 @@ export default function RunConsole({ detail }: { detail: RunDetail }) {
                 </span>
               )}
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">{detail.run_id}</h1>
+            <h1 className={RUN_CONSOLE_RUN_ID_LAYOUT}>{detail.run_id}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-400">{summaryText(detail)}</p>
           </div>
-          <div className="grid gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-sm text-neutral-300 sm:grid-cols-2 lg:min-w-[320px]">
+          <div className="grid gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-sm text-neutral-300 sm:grid-cols-2 xl:min-w-[320px]">
             <div>
               <div className="text-xs text-neutral-500">租户</div>
               <div className="mt-1 font-mono text-[11px] text-neutral-300">{detail.tenant_id || "—"}</div>
