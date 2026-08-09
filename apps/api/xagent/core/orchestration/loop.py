@@ -83,6 +83,70 @@ class _ToolExecutionOutcome:
     elapsed_seconds: float | None = None
 
 
+def _checkpoint_message(message: Message) -> dict[str, Any]:
+    item: dict[str, Any] = {"role": message.role, "content": message.content[:500]}
+    if message.tool_calls:
+        item["tool_calls"] = message.tool_calls
+    if message.tool_call_id:
+        item["tool_call_id"] = message.tool_call_id
+    if message.name:
+        item["name"] = message.name
+    return item
+
+
+async def _replace_checkpoint_snapshot_for_run_step(
+    *,
+    tenant_id: str,
+    conversation_id: str,
+    run_id: str,
+    step: int,
+    messages: list[dict[str, Any]],
+    changed_files: list[str],
+    goal: str,
+    workspace: Path,
+    parent_checkpoint_id: str = "",
+) -> bool:
+    from sqlalchemy import select
+
+    from xagent.domains.checkpoints import redact_checkpoint_text
+    from xagent.domains.checkpoints.service import (
+        _MAX_CONTENT_CHARS,
+        _MAX_JSON_BYTES,
+        _MAX_MESSAGES,
+        _normalize_changed_files,
+        redact_checkpoint_payload,
+    )
+    from xagent.infra.db import get_sessionmaker
+    from xagent.infra.models.checkpoint import CheckpointORM
+
+    async with get_sessionmaker()() as session:
+        row = await session.scalar(
+            select(CheckpointORM)
+            .where(
+                CheckpointORM.tenant_id == tenant_id,
+                CheckpointORM.run_id == run_id,
+                CheckpointORM.step == max(0, step),
+            )
+            .order_by(CheckpointORM.created_at.desc())
+        )
+        if row is None:
+            return False
+        safe_messages = redact_checkpoint_payload(messages[-_MAX_MESSAGES:])
+        messages_json = json.dumps(safe_messages, ensure_ascii=False, default=str)
+        if len(messages_json.encode("utf-8")) > _MAX_JSON_BYTES:
+            raise ValueError("checkpoint_messages_too_large")
+        row.conversation_id = conversation_id
+        row.parent_checkpoint_id = parent_checkpoint_id
+        row.status = "available"
+        row.goal = redact_checkpoint_text(goal)[:_MAX_CONTENT_CHARS]
+        row.messages_json = messages_json
+        row.changed_files_json = json.dumps(
+            _normalize_changed_files(changed_files, workspace), ensure_ascii=False
+        )
+        await session.commit()
+        return True
+
+
 async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
     """LLM 调用包装器：失败时指数退避重试。
 
@@ -1384,11 +1448,7 @@ async def run_agent(
                   if should_checkpoint(state.step):
                       await save_checkpoint(
                           conv_session.conversation_id, resolved_run_id, state.step,
-                          [{"role": m.role, "content": m.content[:500],
-                            **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
-                            **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
-                            **({"name": m.name} if m.name else {})}
-                           for m in state.messages],
+                          [_checkpoint_message(m) for m in state.messages],
                           _changed_files, goal,
                           tenant_id=principal.tenant_id,
                           workspace=get_workspace(),
@@ -2238,11 +2298,7 @@ async def run_agent(
                 from xagent.core.orchestration.checkpoint import save_checkpoint
                 await save_checkpoint(
                     conv_session.conversation_id, resolved_run_id, state.step,
-                    [{"role": m.role, "content": m.content[:500],
-                      **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
-                      **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
-                      **({"name": m.name} if m.name else {})}
-                     for m in state.messages[-20:]],
+                    [_checkpoint_message(m) for m in state.messages[-20:]],
                     _changed_files, goal,
                     tenant_id=principal.tenant_id,
                     workspace=get_workspace(),
@@ -2306,29 +2362,45 @@ async def run_agent(
     # ── 保存对话历史 ──
     conv_session.add_user(goal)
     conv_session.add_assistant(state.final_answer)
-    if _terminal_success and state.step > 0 and _last_checkpoint_step != state.step:
+    if _terminal_success and state.step > 0:
         try:
             from xagent.core.orchestration.checkpoint import save_checkpoint
 
-            await save_checkpoint(
-                conv_session.conversation_id,
-                resolved_run_id,
-                state.step,
-                [
-                    {"role": m.role, "content": m.content[:500],
-                     **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
-                     **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
-                     **({"name": m.name} if m.name else {})}
-                    for m in conv_session.messages
-                ],
-                _changed_files,
-                goal,
-                tenant_id=principal.tenant_id,
-                workspace=get_workspace(),
-                parent_checkpoint_id=resume_from_checkpoint_id,
+            messages = [_checkpoint_message(m) for m in conv_session.messages]
+            if _last_checkpoint_step == state.step:
+                replaced = await _replace_checkpoint_snapshot_for_run_step(
+                    tenant_id=principal.tenant_id,
+                    conversation_id=conv_session.conversation_id,
+                    run_id=resolved_run_id,
+                    step=state.step,
+                    messages=messages,
+                    changed_files=_changed_files,
+                    goal=goal,
+                    workspace=get_workspace(),
+                    parent_checkpoint_id=resume_from_checkpoint_id,
+                )
+            else:
+                replaced = False
+            if not replaced:
+                await save_checkpoint(
+                    conv_session.conversation_id,
+                    resolved_run_id,
+                    state.step,
+                    messages,
+                    _changed_files,
+                    goal,
+                    tenant_id=principal.tenant_id,
+                    workspace=get_workspace(),
+                    parent_checkpoint_id=resume_from_checkpoint_id,
+                )
+        except Exception as exc:
+            logger.warning(
+                "terminal_checkpoint_save_failed",
+                run_id=resolved_run_id,
+                step=state.step,
+                error_type=type(exc).__name__,
             )
-        except Exception:  # noqa: S110  checkpoint 失败不影响主流程
-            pass
+            raise RuntimeError("terminal_checkpoint_save_failed") from exc
     # ── 持久化到 DB ──
     try:
         from xagent.core.orchestration.conversation import persist_conversation, persist_message

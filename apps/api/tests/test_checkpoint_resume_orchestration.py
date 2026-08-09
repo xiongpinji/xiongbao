@@ -58,6 +58,93 @@ class _FinalLLM(LLMClient):
         return True
 
 
+class _PromptToolThenFinalLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(
+        self, messages: list[Message], **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            return LLMResponse(
+                content='{"action":"tool","tool":"echo","args":{"text":"pong"}}',
+                model="test",
+            )
+        return LLMResponse(
+            content='{"action":"final","answer":"multi step terminal"}',
+            model="test",
+        )
+
+    async def complete_with_tools(
+        self, messages, tools, **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        raise NotImplementedError
+
+    async def health(self) -> bool:
+        return True
+
+
+class _NativeToolThenFinalLLM(LLMClient):
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(
+        self, messages: list[Message], **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        raise NotImplementedError
+
+    async def complete_with_tools(
+        self, messages, tools, **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(id="call_echo", name="echo", args={"text": "pong"})
+                ],
+            )
+        return LLMResponse(
+            content='{"action":"final","answer":"native terminal complete passed"}',
+            model="test",
+        )
+
+    async def health(self) -> bool:
+        return True
+
+
+class _MaxStepsLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(
+        self, messages: list[Message], **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            return LLMResponse(
+                content='{"action":"tool","tool":"echo","args":{"text":"pong"}}',
+                model="test",
+            )
+        return LLMResponse(content="max steps summary", model="test")
+
+    async def complete_with_tools(
+        self, messages, tools, **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        raise NotImplementedError
+
+    async def health(self) -> bool:
+        return True
+
+
 class _RepeatedToolErrorLLM(LLMClient):
     supports_tools = True
 
@@ -148,8 +235,9 @@ async def test_successful_short_run_saves_single_terminal_checkpoint(
     ]
 
 
-async def test_terminal_checkpoint_does_not_duplicate_periodic_boundary(
-    monkeypatch,
+@pytest.mark.parametrize(("resume_step", "terminal_step"), [(4, 5), (9, 10)])
+async def test_terminal_checkpoint_replaces_periodic_boundary_snapshot(
+    monkeypatch, resume_step, terminal_step
 ) -> None:
     await _prepare_checkpoint_tables()
     monkeypatch.setattr(
@@ -164,13 +252,17 @@ async def test_terminal_checkpoint_does_not_duplicate_periodic_boundary(
     result = await run_agent(
         "finish on checkpoint boundary",
         principal=principal,
-        run_id="terminal-run-boundary",
-        resume_step=4,
+        run_id=f"terminal-run-boundary-{terminal_step}",
+        resume_step=resume_step,
     )
 
-    assert result.steps == 5
+    assert result.steps == terminal_step
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
-    assert [checkpoint.step for checkpoint in checkpoints] == [5]
+    assert [checkpoint.step for checkpoint in checkpoints] == [terminal_step]
+    assert checkpoints[0].messages[-2:] == [
+        {"role": "user", "content": "finish on checkpoint boundary"},
+        {"role": "assistant", "content": "terminal safely"},
+    ]
 
 
 @pytest.mark.parametrize(
@@ -225,5 +317,130 @@ async def test_repeated_error_early_termination_does_not_save_terminal_checkpoin
 
     assert result.steps == 3
     assert result.final_answer.startswith("任务提前终止：同一错误重复出现 3 次。")
+    checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
+    assert checkpoints == []
+
+
+async def test_terminal_checkpoint_failure_is_visible_and_not_success(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: _FinalLLM()
+    )
+    warnings: list[dict] = []
+
+    def fake_warning(event, **kwargs):
+        warnings.append({"event": event, **kwargs})
+
+    async def fail_checkpoint(*args, **kwargs):  # noqa: ARG001
+        raise RuntimeError("secret-token-value must not leak")
+
+    monkeypatch.setattr("xagent.core.orchestration.loop.logger.warning", fake_warning)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.checkpoint.save_checkpoint", fail_checkpoint
+    )
+    principal = Principal(
+        user_id="checkpoint-failure-user",
+        tenant_id="checkpoint-failure-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    with pytest.raises(RuntimeError, match="terminal_checkpoint_save_failed"):
+        await run_agent(
+            "finish but checkpoint write fails",
+            principal=principal,
+            run_id="terminal-checkpoint-failure-run",
+        )
+
+    assert warnings == [
+        {
+            "event": "terminal_checkpoint_save_failed",
+            "run_id": "terminal-checkpoint-failure-run",
+            "step": 1,
+            "error_type": "RuntimeError",
+        }
+    ]
+    assert "secret-token-value" not in str(warnings)
+
+
+async def test_multistep_non_boundary_success_saves_terminal_checkpoint(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    llm = _PromptToolThenFinalLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(
+        user_id="multistep-user",
+        tenant_id="multistep-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "use prompt tool before final",
+        principal=principal,
+        run_id="multistep-terminal-run",
+    )
+
+    assert result.final_answer == "multi step terminal"
+    assert result.steps == 2
+    checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
+    assert [checkpoint.step for checkpoint in checkpoints] == [2]
+    assert checkpoints[0].messages[-2:] == [
+        {"role": "user", "content": "use prompt tool before final"},
+        {"role": "assistant", "content": "multi step terminal"},
+    ]
+
+
+async def test_native_tool_then_final_success_saves_terminal_checkpoint(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    llm = _NativeToolThenFinalLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(
+        user_id="native-terminal-user",
+        tenant_id="native-terminal-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "use native tool before final",
+        principal=principal,
+        run_id="native-terminal-run",
+    )
+
+    assert result.final_answer == "native terminal complete passed"
+    assert result.steps == 2
+    checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
+    assert [checkpoint.step for checkpoint in checkpoints] == [2]
+    assert checkpoints[0].messages[-2:] == [
+        {"role": "user", "content": "use native tool before final"},
+        {"role": "assistant", "content": "native terminal complete passed"},
+    ]
+
+
+async def test_max_steps_exhaustion_does_not_save_terminal_success_checkpoint(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: _MaxStepsLLM()
+    )
+    monkeypatch.setattr("xagent.core.orchestration.loop.MAX_STEPS", 1)
+    principal = Principal(
+        user_id="max-steps-user",
+        tenant_id="max-steps-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "hit max steps before terminal success",
+        principal=principal,
+        run_id="max-steps-run",
+    )
+
+    assert result.final_answer == "max steps summary"
+    assert result.steps == 1
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     assert checkpoints == []
