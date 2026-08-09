@@ -130,7 +130,7 @@ def import_skillmd(
     """
     candidate = candidate_from_skillmd(content, origin)
     goal = f"{candidate['name']} {candidate['description']} {' '.join(candidate['tags'])}"
-    ok, reason = store.gate_candidate(candidate, goal)
+    ok, reason = store.gate_candidate(candidate, goal, tenant_id=tenant_id)
     if not ok:
         logger.info("skillmd_import_reject", origin=origin, reason=reason)
         return None, reason

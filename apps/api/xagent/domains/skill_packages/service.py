@@ -297,7 +297,9 @@ async def _import_entries(
     candidate = candidate_from_skillmd(skillmd, source)
     candidate["system_prompt_hint"] = parsed["body"]
     goal = f"{candidate['name']} {candidate['description']} {' '.join(candidate['tags'])}"
-    accepted, reason = store.gate_candidate(candidate, goal)
+    accepted, reason = store.gate_candidate(
+        candidate, goal, tenant_id=tenant_id
+    )
     if not accepted:
         raise ValueError(f"quality_gate: {reason}")
 

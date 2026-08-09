@@ -95,6 +95,25 @@ def test_import_rejects_duplicate(store: SkillStore) -> None:
     assert reason.startswith("duplicate")
 
 
+def test_import_dedup_scope_survives_store_reload(tmp_path) -> None:
+    storage_dir = tmp_path / "skills"
+    first_store = SkillStore(storage_dir=storage_dir)
+    first, reason = import_skillmd(first_store, SAMPLE, tenant_id="tenant-a")
+    assert first is not None and reason == ""
+
+    reloaded_store = SkillStore(storage_dir=storage_dir)
+    second, reason = import_skillmd(reloaded_store, SAMPLE, tenant_id="tenant-b")
+    assert second is not None and reason == ""
+    assert second.skill_id != first.skill_id
+
+    duplicate, reason = import_skillmd(
+        reloaded_store, SAMPLE, tenant_id="tenant-b"
+    )
+    assert duplicate is None
+    assert reason.startswith(f"duplicate:{second.skill_id}:")
+    assert first.skill_id not in reason
+
+
 def test_import_batch_mixed_results(store: SkillStore) -> None:
     other = """---
 name: gitlab-deploy

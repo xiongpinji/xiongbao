@@ -483,14 +483,19 @@ class SkillStore:
             "source_task": goal[:200],
         }
 
-    def gate_candidate(self, candidate: dict[str, Any], goal: str) -> tuple[bool, str]:
+    def gate_candidate(
+        self,
+        candidate: dict[str, Any],
+        goal: str,
+        tenant_id: str = "",
+    ) -> tuple[bool, str]:
         """入库质量门禁（对标 Hermes：变体须过最小评测才入库）。
 
         检查项：
         1. 字段完整：name/description/trigger_pattern/system_prompt_hint 均非空
         2. 触发模式可被匹配器命中：至少一个关键词出现在来源任务目标中
-        3. 去重：与现有技能 token 相似度低于阈值
-        4. 技能库未满
+        3. 租户内去重：与同租户技能 token 相似度低于阈值
+        4. 全局技能库未满
 
         返回 (是否通过, 失败原因)。
         """
@@ -512,7 +517,7 @@ class SkillStore:
             candidate["name"], candidate["description"], candidate["trigger_pattern"],
         ])
         for s in self._cache.values():
-            if s.retired:
+            if s.retired or s.tenant_id != tenant_id:
                 continue
             sim = _text_similarity(cand_text, f"{s.name} {s.description} {s.trigger_pattern}")
             if sim >= DEDUP_SIMILARITY_THRESHOLD:

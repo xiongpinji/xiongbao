@@ -15,7 +15,7 @@ from xagent.infra.db import Base, get_engine
 from xagent.main import create_app
 
 
-def _archive(name: str = "api-package") -> bytes:
+def _archive(name: str = "api-package", guide: str = "tenant-safe guide") -> bytes:
     skillmd = f"""---
 name: {name}
 description: Use when validating a tenant-scoped package import through the API.
@@ -31,7 +31,7 @@ Read references/guide.md and return the complete validation result.
     output = BytesIO()
     with ZipFile(output, "w") as archive:
         archive.writestr("SKILL.md", skillmd)
-        archive.writestr("references/guide.md", "tenant-safe guide")
+        archive.writestr("references/guide.md", guide)
         archive.writestr("scripts/check.py", "raise SystemExit('never execute')")
     return output.getvalue()
 
@@ -128,6 +128,63 @@ async def test_zip_upload_list_detail_and_tenant_isolation(package_client) -> No
         headers=_headers("tenant-package-a"),
     )
     assert len(full_skill.json()["system_prompt_hint"]) > 500
+
+
+async def test_identical_package_import_is_deduplicated_per_tenant(
+    package_client,
+) -> None:
+    client, _ = package_client
+    archive = _archive("tenant-shared-package")
+    first = await client.post(
+        "/api/v1/skill-packages/import",
+        files={"file": ("shared.zip", archive, "application/zip")},
+        headers=_headers("tenant-package-a"),
+    )
+    assert first.status_code == 201
+    first_skill_id = first.json()["package"]["skill_id"]
+
+    second = await client.post(
+        "/api/v1/skill-packages/import",
+        files={"file": ("shared.zip", archive, "application/zip")},
+        headers=_headers("tenant-package-b"),
+    )
+
+    assert first_skill_id not in second.text
+    assert second.status_code == 201
+    assert second.json()["package"]["skill_id"] != first_skill_id
+
+
+async def test_similar_package_import_is_rejected_within_same_tenant(
+    package_client,
+) -> None:
+    client, _ = package_client
+    first = await client.post(
+        "/api/v1/skill-packages/import",
+        files={
+            "file": (
+                "first.zip",
+                _archive("tenant-duplicate-package", "first guide"),
+                "application/zip",
+            )
+        },
+        headers=_headers("tenant-package-a"),
+    )
+    assert first.status_code == 201
+
+    second = await client.post(
+        "/api/v1/skill-packages/import",
+        files={
+            "file": (
+                "second.zip",
+                _archive("tenant-duplicate-package", "different guide"),
+                "application/zip",
+            )
+        },
+        headers=_headers("tenant-package-a"),
+    )
+
+    assert second.status_code == 422
+    assert second.json()["detail"].startswith("quality_gate: duplicate:")
 
 
 async def test_upload_rejects_path_traversal(package_client) -> None:
