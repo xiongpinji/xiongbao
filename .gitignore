@@ -60,6 +60,8 @@ tests/e2e/specs/debug_login.spec.ts
 output/playwright/r1-run-console.png
 output/playwright/r1-run-console-final.png
 output/playwright/r1-session-restored.png
+output/r2-runtime/
+output/r2-backups/
 
 # ---- Local automation ----
 .claude/
