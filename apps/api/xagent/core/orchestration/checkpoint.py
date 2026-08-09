@@ -9,6 +9,7 @@ from xagent.domains.checkpoints import (
     CheckpointRecord,
     create_checkpoint,
     list_checkpoints,
+    upsert_checkpoint_snapshot,
 )
 from xagent.infra.db import get_sessionmaker
 
@@ -43,6 +44,36 @@ async def save_checkpoint(
         )
         await session.commit()
         return record
+
+
+async def save_checkpoint_snapshot(
+    conversation_id: str,
+    run_id: str,
+    step: int,
+    messages: list[dict[str, Any]],
+    changed_files: list[str],
+    goal: str,
+    *,
+    tenant_id: str,
+    workspace: Path,
+    parent_checkpoint_id: str = "",
+) -> tuple[CheckpointRecord, bool]:
+    """独立事务原子化创建或替换同一运行步骤的 checkpoint 快照。"""
+    async with get_sessionmaker()() as session:
+        record, replaced = await upsert_checkpoint_snapshot(
+            session,
+            tenant_id=tenant_id,
+            conversation_id=conversation_id,
+            run_id=run_id,
+            step=step,
+            goal=goal,
+            messages=messages,
+            changed_files=changed_files,
+            workspace=workspace,
+            parent_checkpoint_id=parent_checkpoint_id,
+        )
+        await session.commit()
+        return record, replaced
 
 
 async def load_checkpoint(

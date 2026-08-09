@@ -99,6 +99,26 @@ def _record(row: CheckpointORM) -> CheckpointRecord:
     )
 
 
+def _prepare_checkpoint_payload(
+    *,
+    goal: str,
+    messages: list[dict[str, Any]],
+    changed_files: list[str],
+    workspace: Path,
+) -> tuple[str, str, str]:
+    safe_messages = _redact_value(messages[-_MAX_MESSAGES:])
+    safe_goal = redact_checkpoint_text(goal)[:_MAX_CONTENT_CHARS]
+    safe_files = _normalize_changed_files(changed_files, workspace)
+    messages_json = json.dumps(safe_messages, ensure_ascii=False, default=str)
+    if len(messages_json.encode("utf-8")) > _MAX_JSON_BYTES:
+        raise ValueError("checkpoint_messages_too_large")
+    return (
+        safe_goal,
+        messages_json,
+        json.dumps(safe_files, ensure_ascii=False),
+    )
+
+
 async def create_checkpoint(
     session: AsyncSession,
     *,
@@ -113,12 +133,12 @@ async def create_checkpoint(
     parent_checkpoint_id: str = "",
     status: str = "available",
 ) -> CheckpointRecord:
-    safe_messages = _redact_value(messages[-_MAX_MESSAGES:])
-    safe_goal = redact_checkpoint_text(goal)[:_MAX_CONTENT_CHARS]
-    safe_files = _normalize_changed_files(changed_files, workspace)
-    messages_json = json.dumps(safe_messages, ensure_ascii=False, default=str)
-    if len(messages_json.encode("utf-8")) > _MAX_JSON_BYTES:
-        raise ValueError("checkpoint_messages_too_large")
+    safe_goal, messages_json, changed_files_json = _prepare_checkpoint_payload(
+        goal=goal,
+        messages=messages,
+        changed_files=changed_files,
+        workspace=workspace,
+    )
     row = CheckpointORM(
         checkpoint_id=uuid.uuid4().hex,
         tenant_id=tenant_id,
@@ -129,11 +149,70 @@ async def create_checkpoint(
         status=status,
         goal=safe_goal,
         messages_json=messages_json,
-        changed_files_json=json.dumps(safe_files, ensure_ascii=False),
+        changed_files_json=changed_files_json,
     )
     session.add(row)
     await session.flush()
     return _record(row)
+
+
+async def upsert_checkpoint_snapshot(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    conversation_id: str,
+    run_id: str,
+    step: int,
+    goal: str,
+    messages: list[dict[str, Any]],
+    changed_files: list[str],
+    workspace: Path,
+    parent_checkpoint_id: str = "",
+    status: str = "available",
+) -> tuple[CheckpointRecord, bool]:
+    safe_step = max(0, step)
+    rows = (
+        await session.scalars(
+            select(CheckpointORM).where(
+                CheckpointORM.tenant_id == tenant_id,
+                CheckpointORM.conversation_id == conversation_id,
+                CheckpointORM.run_id == run_id,
+                CheckpointORM.step == safe_step,
+            )
+        )
+    ).all()
+    if len(rows) > 1:
+        raise ValueError("checkpoint_scope_conflict")
+    if not rows:
+        record = await create_checkpoint(
+            session,
+            tenant_id=tenant_id,
+            conversation_id=conversation_id,
+            run_id=run_id,
+            step=safe_step,
+            goal=goal,
+            messages=messages,
+            changed_files=changed_files,
+            workspace=workspace,
+            parent_checkpoint_id=parent_checkpoint_id,
+            status=status,
+        )
+        return record, False
+
+    safe_goal, messages_json, changed_files_json = _prepare_checkpoint_payload(
+        goal=goal,
+        messages=messages,
+        changed_files=changed_files,
+        workspace=workspace,
+    )
+    row = rows[0]
+    row.parent_checkpoint_id = parent_checkpoint_id
+    row.status = status
+    row.goal = safe_goal
+    row.messages_json = messages_json
+    row.changed_files_json = changed_files_json
+    await session.flush()
+    return _record(row), True
 
 
 async def get_checkpoint(

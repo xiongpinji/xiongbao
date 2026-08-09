@@ -367,6 +367,8 @@ async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
     run_id = kwargs["run_id"]
     assert f'"run_id": "{run_id}"' in stream_resp.text
     assert "event: error" in stream_resp.text
+    assert "event: final" not in stream_resp.text
+    assert "event: done" not in stream_resp.text
     assert "stream exploded" in stream_resp.text
 
     run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
@@ -416,6 +418,7 @@ async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_
     _, kwargs = mocked_run_agent.await_args
     run_id = kwargs["run_id"]
     assert "event: error" in stream_resp.text
+    assert "event: final" not in stream_resp.text
     assert "event: done" not in stream_resp.text
     assert f'"run_id": "{run_id}"' in stream_resp.text
 

@@ -10,6 +10,7 @@ from xagent.domains.checkpoints.service import (
     redact_checkpoint_payload,
     redact_checkpoint_text,
     update_checkpoint_status,
+    upsert_checkpoint_snapshot,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "redact_checkpoint_text",
     "rollback_checkpoint",
     "update_checkpoint_status",
+    "upsert_checkpoint_snapshot",
 ]

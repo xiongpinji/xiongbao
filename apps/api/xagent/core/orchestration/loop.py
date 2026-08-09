@@ -93,60 +93,6 @@ def _checkpoint_message(message: Message) -> dict[str, Any]:
         item["name"] = message.name
     return item
 
-
-async def _replace_checkpoint_snapshot_for_run_step(
-    *,
-    tenant_id: str,
-    conversation_id: str,
-    run_id: str,
-    step: int,
-    messages: list[dict[str, Any]],
-    changed_files: list[str],
-    goal: str,
-    workspace: Path,
-    parent_checkpoint_id: str = "",
-) -> bool:
-    from sqlalchemy import select
-
-    from xagent.domains.checkpoints import redact_checkpoint_text
-    from xagent.domains.checkpoints.service import (
-        _MAX_CONTENT_CHARS,
-        _MAX_JSON_BYTES,
-        _MAX_MESSAGES,
-        _normalize_changed_files,
-        redact_checkpoint_payload,
-    )
-    from xagent.infra.db import get_sessionmaker
-    from xagent.infra.models.checkpoint import CheckpointORM
-
-    async with get_sessionmaker()() as session:
-        row = await session.scalar(
-            select(CheckpointORM)
-            .where(
-                CheckpointORM.tenant_id == tenant_id,
-                CheckpointORM.run_id == run_id,
-                CheckpointORM.step == max(0, step),
-            )
-            .order_by(CheckpointORM.created_at.desc())
-        )
-        if row is None:
-            return False
-        safe_messages = redact_checkpoint_payload(messages[-_MAX_MESSAGES:])
-        messages_json = json.dumps(safe_messages, ensure_ascii=False, default=str)
-        if len(messages_json.encode("utf-8")) > _MAX_JSON_BYTES:
-            raise ValueError("checkpoint_messages_too_large")
-        row.conversation_id = conversation_id
-        row.parent_checkpoint_id = parent_checkpoint_id
-        row.status = "available"
-        row.goal = redact_checkpoint_text(goal)[:_MAX_CONTENT_CHARS]
-        row.messages_json = messages_json
-        row.changed_files_json = json.dumps(
-            _normalize_changed_files(changed_files, workspace), ensure_ascii=False
-        )
-        await session.commit()
-        return True
-
-
 async def _llm_call_with_retry(coro_factory, *, description: str = "llm_call"):
     """LLM 调用包装器：失败时指数退避重试。
 
@@ -1371,6 +1317,7 @@ async def run_agent(
 
         _last_checkpoint_step = 0
         _terminal_success = False
+        _pending_final_event: StepEvent | None = None
 
         # ── 编辑回滚：连续验证失败计数 ──
         _verify_fail_count: int = 0
@@ -1977,8 +1924,8 @@ async def run_agent(
 
                       _terminal_success = True
                       state.finished = True
-                      await _emit(
-                          StepEvent(kind=StepKind.final, content=_fa, step=state.step)
+                      _pending_final_event = StepEvent(
+                          kind=StepKind.final, content=_fa, step=state.step
                       )
                       break
 
@@ -2194,8 +2141,10 @@ async def run_agent(
                       )
                       _terminal_success = True
                       state.finished = True
-                      await _emit(
-                          StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
+                      _pending_final_event = StepEvent(
+                          kind=StepKind.final,
+                          content=state.final_answer,
+                          step=state.step,
                       )
                       break
                   if action.get("action") == "tool":
@@ -2204,7 +2153,9 @@ async def run_agent(
                   state.final_answer = resp.content
                   _terminal_success = True
                   state.finished = True
-                  await _emit(StepEvent(kind=StepKind.final, content=resp.content, step=state.step))
+                  _pending_final_event = StepEvent(
+                      kind=StepKind.final, content=resp.content, step=state.step
+                  )
 
               else:
                   # ── 提示工程路径（mock / 不支持工具） ──
@@ -2228,8 +2179,10 @@ async def run_agent(
                       )
                       _terminal_success = True
                       state.finished = True
-                      await _emit(
-                          StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
+                      _pending_final_event = StepEvent(
+                          kind=StepKind.final,
+                          content=state.final_answer,
+                          step=state.step,
                       )
                       break
 
@@ -2240,7 +2193,9 @@ async def run_agent(
                   state.final_answer = resp.content
                   _terminal_success = True
                   state.finished = True
-                  await _emit(StepEvent(kind=StepKind.final, content=resp.content, step=state.step))
+                  _pending_final_event = StepEvent(
+                      kind=StepKind.final, content=resp.content, step=state.step
+                  )
 
             if not state.finished:
                 # MAX_STEPS 耗尽 — 让 LLM 做最终总结
@@ -2359,40 +2314,28 @@ async def run_agent(
         except Exception:  # noqa: S110  指标失败不影响运行
             pass
 
-    # ── 保存对话历史 ──
-    conv_session.add_user(goal)
-    conv_session.add_assistant(state.final_answer)
+    terminal_messages = [_checkpoint_message(m) for m in conv_session.messages]
+    terminal_messages.extend(
+        [
+            {"role": "user", "content": goal[:500]},
+            {"role": "assistant", "content": state.final_answer[:500]},
+        ]
+    )
     if _terminal_success and state.step > 0:
         try:
-            from xagent.core.orchestration.checkpoint import save_checkpoint
+            from xagent.core.orchestration.checkpoint import save_checkpoint_snapshot
 
-            messages = [_checkpoint_message(m) for m in conv_session.messages]
-            if _last_checkpoint_step == state.step:
-                replaced = await _replace_checkpoint_snapshot_for_run_step(
-                    tenant_id=principal.tenant_id,
-                    conversation_id=conv_session.conversation_id,
-                    run_id=resolved_run_id,
-                    step=state.step,
-                    messages=messages,
-                    changed_files=_changed_files,
-                    goal=goal,
-                    workspace=get_workspace(),
-                    parent_checkpoint_id=resume_from_checkpoint_id,
-                )
-            else:
-                replaced = False
-            if not replaced:
-                await save_checkpoint(
-                    conv_session.conversation_id,
-                    resolved_run_id,
-                    state.step,
-                    messages,
-                    _changed_files,
-                    goal,
-                    tenant_id=principal.tenant_id,
-                    workspace=get_workspace(),
-                    parent_checkpoint_id=resume_from_checkpoint_id,
-                )
+            await save_checkpoint_snapshot(
+                conv_session.conversation_id,
+                resolved_run_id,
+                state.step,
+                terminal_messages,
+                _changed_files,
+                goal,
+                tenant_id=principal.tenant_id,
+                workspace=get_workspace(),
+                parent_checkpoint_id=resume_from_checkpoint_id,
+            )
         except Exception as exc:
             logger.warning(
                 "terminal_checkpoint_save_failed",
@@ -2401,6 +2344,9 @@ async def run_agent(
                 error_type=type(exc).__name__,
             )
             raise RuntimeError("terminal_checkpoint_save_failed") from exc
+    # ── 保存对话历史 ──
+    conv_session.add_user(goal)
+    conv_session.add_assistant(state.final_answer)
     # ── 持久化到 DB ──
     try:
         from xagent.core.orchestration.conversation import persist_conversation, persist_message
@@ -2468,6 +2414,15 @@ async def run_agent(
                 pass
         if _summary_parts:
             state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
+
+    if _pending_final_event is not None:
+        await _emit(
+            StepEvent(
+                kind=StepKind.final,
+                content=state.final_answer,
+                step=_pending_final_event.step,
+            )
+        )
 
     # ── 执行日志：任务完成 ──
     _run_elapsed = time.perf_counter() - _run_start

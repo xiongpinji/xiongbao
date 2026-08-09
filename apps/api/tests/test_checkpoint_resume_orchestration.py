@@ -6,6 +6,7 @@ import asyncio
 
 import pytest
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message, ToolCall
+from xagent.core.orchestration.conversation import get_conversation_manager
 from xagent.core.orchestration.loop import run_agent
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.db import Base, get_engine, get_sessionmaker
@@ -340,17 +341,29 @@ async def test_terminal_checkpoint_failure_is_visible_and_not_success(
     monkeypatch.setattr(
         "xagent.core.orchestration.checkpoint.save_checkpoint", fail_checkpoint
     )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.checkpoint.save_checkpoint_snapshot",
+        fail_checkpoint,
+    )
     principal = Principal(
         user_id="checkpoint-failure-user",
         tenant_id="checkpoint-failure-tenant",
         roles=frozenset({"member"}),
     )
 
+    events = []
+
+    async def collect_event(event):
+        events.append(event.kind.value)
+
+    conversation_id = "terminal-checkpoint-failure-conversation"
     with pytest.raises(RuntimeError, match="terminal_checkpoint_save_failed"):
         await run_agent(
             "finish but checkpoint write fails",
             principal=principal,
             run_id="terminal-checkpoint-failure-run",
+            conversation_id=conversation_id,
+            on_event=collect_event,
         )
 
     assert warnings == [
@@ -362,6 +375,54 @@ async def test_terminal_checkpoint_failure_is_visible_and_not_success(
         }
     ]
     assert "secret-token-value" not in str(warnings)
+    assert "final" not in events
+    session = get_conversation_manager().get(conversation_id, principal.tenant_id)
+    assert session is not None
+    assert session.messages == []
+
+
+async def test_success_final_event_is_emitted_after_terminal_checkpoint(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: _FinalLLM()
+    )
+    import xagent.core.orchestration.checkpoint as checkpoint_module
+
+    original_save = checkpoint_module.save_checkpoint
+    sequence: list[str] = []
+
+    async def record_checkpoint(*args, **kwargs):
+        sequence.append("checkpoint")
+        return await original_save(*args, **kwargs)
+
+    async def collect_event(event):
+        sequence.append(event.kind.value)
+
+    monkeypatch.setattr(checkpoint_module, "save_checkpoint", record_checkpoint)
+    monkeypatch.setattr(
+        checkpoint_module,
+        "save_checkpoint_snapshot",
+        record_checkpoint,
+        raising=False,
+    )
+    principal = Principal(
+        user_id="event-order-user",
+        tenant_id="event-order-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "finish after checkpoint first",
+        principal=principal,
+        run_id="event-order-run",
+        on_event=collect_event,
+    )
+
+    assert result.final_answer == "terminal safely"
+    assert sequence.count("final") == 1
+    assert sequence.index("checkpoint") < sequence.index("final")
 
 
 async def test_multistep_non_boundary_success_saves_terminal_checkpoint(
