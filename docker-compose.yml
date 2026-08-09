@@ -1,4 +1,5 @@
-# X-Agent 生产部署 Docker Compose
+# X-Agent 开发兼容入口（保留现有服务行为）
+# R2/发布等价运行使用 deploy/compose/docker-compose.yml
 # 一键启动：docker compose up -d
 # 包含：API + Web + PostgreSQL + Redis + Qdrant + Prometheus + Grafana
 #

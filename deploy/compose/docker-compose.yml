@@ -1,19 +1,19 @@
 # X-Agent 单机 full 模式编排（含 unified runtime 主链）。
 #
 # 用法：
-#   cp .env.example .env                     # 按需填 LLM / JWT 配置
+#   cp r2.env.example .env                   # 生成并替换所有 __GENERATE__ 值
 #   cd ../../apps/web && npm install && npm run build
 #   cd ../../deploy/compose && docker compose up -d --build
 #
 # 说明：
-# - 此 compose 会同时启动 postgres / redis / qdrant / litellm / langfuse / api / worker / web。
+# - 默认启动 postgres / redis / qdrant / api / worker / web；扩展服务通过 profile 启用。
 # - web 镜像直接复制 apps/web/dist，因此 private deployment 首次启动前需要先本地构建前端。
 # - api / worker 默认通过 host.docker.internal 访问宿主机 Ollama；如改走 LiteLLM Proxy，可在 .env 中设置 XAGENT_LLM__PROXY_URL。
 # - 多实例部署（api 扩为 ≥2 副本）必读 docs/deployment/multi-instance.md：
 #   XAGENT_CACHE__REDIS_URL（登录限流 + 调度器分布式锁）与 XAGENT_MEMORY__QDRANT_URL
 #   在本 compose 中已接好；还需在负载均衡器上为 SSE / WebSocket 开启 sticky session。
 
-name: xagent
+name: ${COMPOSE_PROJECT_NAME:-xagent-r2}
 
 services:
   postgres:
@@ -23,7 +23,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/compose/.env}
       POSTGRES_DB: ${POSTGRES_DB:-xagent}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_POSTGRES_PORT:-15432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
@@ -37,7 +37,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_REDIS_PORT:-16379}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -49,8 +49,8 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "127.0.0.1:6333:6333"  # HTTP
-      - "127.0.0.1:6334:6334"  # gRPC
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_HTTP_PORT:-16333}:6333"  # HTTP
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_GRPC_PORT:-16334}:6334"  # gRPC
     volumes:
       - qdrantdata:/qdrant/storage
     healthcheck:
@@ -61,6 +61,7 @@ services:
 
   # IBM ContextForge MCP 网关（生产级联邦 MCP 网关）
   contextforge:
+    profiles: ["federation"]
     image: ghcr.io/ibm/mcp-context-forge:latest
     depends_on:
       postgres:
@@ -68,7 +69,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8080:8080"    # HTTP API
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_CONTEXTFORGE_PORT:-18081}:8080"    # HTTP API
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/contextforge
       - REDIS_URL=redis://redis:6379/0
@@ -77,10 +78,11 @@ services:
 
   # OpenFGA 细粒度授权（Google Zanzibar 模型）
   openfga:
+    profiles: ["federation"]
     image: openfga/openfga:latest
     command: ["run"]
     ports:
-      - "127.0.0.1:8081:8081"    # HTTP API
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_OPENFGA_PORT:-18082}:8081"    # HTTP API
     environment:
       - OPENFGA_DATASTORE_ENGINE=postgres
       - OPENFGA_DATASTORE_URI=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/openfga
@@ -90,10 +92,11 @@ services:
 
   # LiteLLM Proxy：统一 LLM 网关。模型/key 配在 litellm-config.yaml
   litellm:
+    profiles: ["gateway"]
     image: ghcr.io/berriai/litellm:main-latest
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     ports:
-      - "127.0.0.1:4000:4000"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_LITELLM_PORT:-14000}:4000"
     volumes:
       - ./litellm-config.yaml:/app/config.yaml:ro
     environment:
@@ -102,24 +105,25 @@ services:
 
   # Langfuse v2：运行时追踪 + prompt 管理（v2 只需 Postgres；v3 需 ClickHouse 太重）
   langfuse:
+    profiles: ["tracing"]
     image: langfuse/langfuse:2
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "127.0.0.1:3001:3000"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_LANGFUSE_PORT:-13001}:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
-      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:?set LANGFUSE_NEXTAUTH_SECRET in deploy/compose/.env}
-      - SALT=${LANGFUSE_SALT:?set LANGFUSE_SALT in deploy/compose/.env}
-      - NEXTAUTH_URL=http://localhost:3001
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:-}
+      - SALT=${LANGFUSE_SALT:-}
+      - NEXTAUTH_URL=http://127.0.0.1:${XAGENT_LANGFUSE_PORT:-13001}
       - TELEMETRY_ENABLED=false
       - LANGFUSE_INIT_ORG_ID=xagent
       - LANGFUSE_INIT_PROJECT_ID=xagent
       - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-xagent-local
       - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-xagent-local
       - LANGFUSE_INIT_USER_EMAIL=admin@xagent.local
-      - LANGFUSE_INIT_USER_PASSWORD=${LANGFUSE_INIT_USER_PASSWORD:?set LANGFUSE_INIT_USER_PASSWORD in deploy/compose/.env}
+      - LANGFUSE_INIT_USER_PASSWORD=${LANGFUSE_INIT_USER_PASSWORD:-}
       - LANGFUSE_INIT_USER_NAME=admin
 
   # X-Agent 后端 API
@@ -133,16 +137,20 @@ services:
       redis:
         condition: service_healthy
       qdrant:
-        condition: service_started
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_API_PORT:-18000}:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
-      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xagent}
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+      - XAGENT_WORKSPACE=/data/workspace
+      - XAGENT_STORAGE__LOCAL_ROOT=/data/storage
+      - XAGENT_SKILLS_ROOT=/data/skills
+      - XAGENT_SKILL_PACKAGES_ROOT=/data/skill-packages
       # LLM：默认走本地 Ollama（host.docker.internal 访问宿主机）；有 proxy key 时走 LiteLLM
       # 置空 XAGENT_LLM__OLLAMA_BASE_URL 且无其它 provider key 时自动降级为内置 MockLLM
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
@@ -160,13 +168,15 @@ services:
       - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
-      - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://localhost:3000"]}
+      - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://127.0.0.1:18080"]}
+    volumes:
+      - xagentdata:/data
     command: >
       sh -c "python -m alembic upgrade head &&
              (python -m xagent.cli warmup || true) &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:8000/health',timeout=5); exit(0 if r.status_code==200 else 1)"]
+      test: ["CMD", "python", "-c", "import httpx,sys; r=httpx.get('http://localhost:8000/health/deep',timeout=5); sys.exit(0 if r.status_code == 200 and r.json().get('status') == 'healthy' else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -185,12 +195,12 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "8100:8100"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_MCP_PORT:-18100}:8100"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
-      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xagent}
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
@@ -198,7 +208,7 @@ services:
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
-      - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:-}
+      - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:?set XAGENT_PLATFORM_MCP_TOKEN in deploy/compose/r2.env}
     command: >
       sh -c "python -m xagent.adapters.mcp.platform_server --http --host 0.0.0.0 --port 8100"
     restart: unless-stopped
@@ -209,15 +219,23 @@ services:
       context: ../../apps/api
       dockerfile: Dockerfile
     depends_on:
-      - api
-      - redis
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - XAGENT_MODE=full
-      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/xagent
+      - XAGENT_DB__URL=postgresql+asyncpg://${POSTGRES_USER:-xagent}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xagent}
       - XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+      - XAGENT_WORKSPACE=/data/workspace
+      - XAGENT_STORAGE__LOCAL_ROOT=/data/storage
+      - XAGENT_SKILLS_ROOT=/data/skills
+      - XAGENT_SKILL_PACKAGES_ROOT=/data/skill-packages
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
@@ -230,8 +248,14 @@ services:
       - XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=${XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS:-1}
       - XAGENT_LLM__PROXY_API_KEY=${XAGENT_LLM__PROXY_API_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
+    volumes:
+      - xagentdata:/data
     healthcheck:
-      disable: true  # worker 不暴露 /health，避免继承 API 镜像的 8000 探针导致假失败
+      test: ["CMD-SHELL", "celery -A xagent.worker.celery_app inspect ping --timeout=5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     command: >
       sh -c "(python -m xagent.cli warmup || true) &&
              exec celery -A xagent.worker.celery_app worker --loglevel=info"
@@ -242,15 +266,17 @@ services:
       context: ../../apps/web
       dockerfile: Dockerfile
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "3000:80"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_WEB_PORT:-18080}:80"
 
   # Prometheus 指标采集 + 告警
   prometheus:
+    profiles: ["observability"]
     image: prom/prometheus:latest
     ports:
-      - "127.0.0.1:9090:9090"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_PROMETHEUS_PORT:-19090}:9090"
     volumes:
       - ../grafana/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../grafana/alert-rules.yml:/etc/prometheus/rules/xagent-alerts.yml:ro
@@ -261,9 +287,10 @@ services:
 
   # Grafana 可视化仪表盘
   grafana:
+    profiles: ["observability"]
     image: grafana/grafana:latest
     ports:
-      - "3002:3000"
+      - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_GRAFANA_PORT:-13002}:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in deploy/compose/.env}
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -275,6 +302,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  xagentdata:
   pgdata:
   redisdata:
   qdrantdata:
