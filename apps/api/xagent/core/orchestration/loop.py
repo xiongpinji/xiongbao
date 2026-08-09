@@ -1882,7 +1882,7 @@ async def run_agent(
                           )
                           state.finished = True
                           logger.warning("early_termination", error=_repeat_errors[0], step=state.step)
-                          await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+                          await _emit(StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step))
                           break
 
                       # ── 验证闭环：编辑后自动跑验证 + 回滚保护 ──
@@ -2188,7 +2188,7 @@ async def run_agent(
                           )
                           state.finished = True
                           logger.warning("early_termination", error=_repeat_errors[0], step=state.step)
-                          await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+                          await _emit(StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step))
                           break
 
                       # 验证闭环 + 回滚保护
@@ -2370,7 +2370,7 @@ async def run_agent(
                         "建议：可以继续对话让我完成剩余部分。"
                     )
                 await _emit(
-                    StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
+                    StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step)
                 )
         except asyncio.CancelledError:
             # ── Graceful 取消：用户中断时保存部分结果 + Git Diff 摘要 ──
@@ -2410,7 +2410,7 @@ async def run_agent(
                     _git_cleanup_branch(get_workspace(), _work_branch)
                     _work_branch = None
                 raise
-            await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+            await _emit(StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step))
         except MemoryError as memory_exc:
             # ── 优雅降级：内存不足时清理缓存并继续 ──
             logger.warning("memory_pressure", step=state.step)
@@ -2422,7 +2422,7 @@ async def run_agent(
                     "任务执行过程中遇到内存压力，已清理缓存。\n\n"
                     f"已完成 {state.step} 步，建议简化任务或分批执行。"
                 )
-            await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
+            await _emit(StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
             _loop_error = str(loop_exc)[:300]
             _run_error = _loop_error or type(loop_exc).__name__
@@ -2442,7 +2442,7 @@ async def run_agent(
                 else:
                     state.final_answer = f"执行过程中出错：{loop_exc!s:.200}"
                 await _emit(
-                    StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
+                    StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step)
                 )
         span.set_output(state.final_answer)
         # ── Git 清理：任务完成后清理临时分支 ──

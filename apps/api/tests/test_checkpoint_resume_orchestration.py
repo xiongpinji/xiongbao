@@ -11,6 +11,7 @@ from xagent.core.orchestration.conversation import (
     load_messages_from_db,
 )
 from xagent.core.orchestration.loop import run_agent
+from xagent.core.orchestration.state import StepKind
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.db import Base, get_engine, get_sessionmaker
 
@@ -341,6 +342,8 @@ async def test_repeated_error_early_termination_does_not_save_terminal_checkpoin
 
     assert result.steps == 3
     assert result.final_answer.startswith("任务提前终止：同一错误重复出现 3 次。")
+    assert not any(event.kind == StepKind.final for event in result.events)
+    assert any(event.kind == StepKind.error for event in result.events)
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     assert checkpoints == []
 
@@ -567,5 +570,7 @@ async def test_max_steps_exhaustion_does_not_save_terminal_success_checkpoint(
 
     assert result.final_answer == "max steps summary"
     assert result.steps == 1
+    assert not any(event.kind == StepKind.final for event in result.events)
+    assert any(event.kind == StepKind.error for event in result.events)
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     assert checkpoints == []

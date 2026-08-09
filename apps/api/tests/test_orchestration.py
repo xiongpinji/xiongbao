@@ -100,6 +100,10 @@ async def test_builtin_run_reports_provider_failure(monkeypatch) -> None:
     assert run.status == "failed"
     assert "provider failed" in run.error
     assert run.to_dict()["error"] == run.error
+    assert [event.kind for event in run.events if event.kind == StepKind.error] == [
+        StepKind.error
+    ]
+    assert not any(event.kind == StepKind.final for event in run.events)
 
 
 async def test_builtin_run_reports_memory_error(monkeypatch) -> None:
@@ -111,6 +115,10 @@ async def test_builtin_run_reports_memory_error(monkeypatch) -> None:
 
     assert run.status == "failed"
     assert "memory_pressure" in run.error
+    assert [event.kind for event in run.events if event.kind == StepKind.error] == [
+        StepKind.error
+    ]
+    assert not any(event.kind == StepKind.final for event in run.events)
 
 
 async def test_builtin_run_keeps_graceful_cancel_for_regular_calls(monkeypatch) -> None:
@@ -127,6 +135,10 @@ async def test_builtin_run_keeps_graceful_cancel_for_regular_calls(monkeypatch) 
 
     assert run.status == "cancelled"
     assert "cancelled" in run.error
+    assert [event.kind for event in run.events if event.kind == StepKind.error] == [
+        StepKind.error
+    ]
+    assert not any(event.kind == StepKind.final for event in run.events)
 
 
 class _ToolJsonLLM(LLMClient):

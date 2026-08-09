@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from xagent.adapters.llm.base import LLMResponse
+from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
 from xagent.core.orchestration.state import AgentRun, normalize_run_status
 from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.core.runtime.policies import normalize_runtime_policy
@@ -59,6 +61,23 @@ async def client(migrated_db):
 
 def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+class _EmptyRecoveryStreamingLLM(LiteLLMClient):
+    def __init__(self) -> None:
+        pass
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        yield StreamChunk(finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式合同测试不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
 
 
 def test_runtime_run_to_view_exposes_unified_contract() -> None:
@@ -474,6 +493,44 @@ async def test_stream_agent_failed_result_does_not_emit_done_or_persist_success(
     body = run_resp.json()
     assert body["task"]["status"] == "failed"
     assert body["task"]["result"]["status"] == "failed"
+
+
+async def test_stream_empty_model_response_emits_single_error_and_persists_failure(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    llm = _EmptyRecoveryStreamingLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    token = create_access_token(user_id="stream-user", tenant_id="tenant-1", roles=["member"])
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "空响应恢复失败"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert stream_resp.text.count("event: error") == 1
+    assert "event: final" not in stream_resp.text
+    assert "event: done" not in stream_resp.text
+    assert "model_empty_response_after_retry" in stream_resp.text
+
+    started_chunk = next(
+        chunk
+        for chunk in stream_resp.text.split("\n\n")
+        if "event: started" in chunk
+    )
+    data_line = next(
+        line for line in started_chunk.splitlines() if line.startswith("data: ")
+    )
+    run_id = json.loads(data_line.removeprefix("data: "))["run_id"]
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_resp.status_code == 200, run_resp.text
+    task = run_resp.json()["task"]
+    assert task["status"] == "failed"
+    assert task["result"]["status"] == "failed"
+    assert task["result"]["error"] == "model_empty_response_after_retry"
+    assert task["error"] == "model_empty_response_after_retry"
 
 
 async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_done_path(

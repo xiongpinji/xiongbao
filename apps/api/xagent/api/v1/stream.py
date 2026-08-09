@@ -151,8 +151,19 @@ async def _event_stream(
     done = object()
     input_payload = _build_input_payload(goal, role, caps)
     started_at = datetime.now(UTC)
+    error_event_sent = False
 
     async def on_event(ev) -> None:
+        nonlocal error_event_sent
+        if ev.kind.value == "error":
+            error_event_sent = True
+            await queue.put(
+                _sse(
+                    "error",
+                    {"error": str(ev.content or "agent_run_failed"), "run_id": run_id},
+                )
+            )
+            return
         _payload = {
             "kind": ev.kind.value,
             "step": ev.step,
@@ -269,7 +280,8 @@ async def _event_stream(
                     pass
         except TimeoutError:
             failure_error = f"Agent 运行超时（>{_AGENT_RUN_TIMEOUT}s），已自动终止。"
-            await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
+            if not error_event_sent:
+                await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         except Exception as exc:
             if result is not None and _is_runtime_persistence_schema_mismatch(exc):
                 await queue.put(_sse("done", {
@@ -329,7 +341,8 @@ async def _event_stream(
                         run_id=run_id,
                         error=str(exc),
                     )
-                await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
+                if not error_event_sent:
+                    await queue.put(_sse("error", {"error": failure_error, "run_id": run_id}))
         finally:
             await queue.put(done)
 
