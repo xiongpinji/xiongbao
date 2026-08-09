@@ -2314,11 +2314,52 @@ async def run_agent(
         except Exception:  # noqa: S110  指标失败不影响运行
             pass
 
+    # ── 任务完成摘要增强：添加 diff 统计 + 执行统计 ──
+    if state.final_answer:
+        _summary_parts = []
+        # 执行统计
+        _total_calls = _tool_success + _tool_fail
+        if _total_calls > 0:
+            _success_rate = int(_tool_success / _total_calls * 100)
+            _top_tools = sorted(_tool_stats.items(), key=lambda x: -x[1])[:3]
+            _tools_str = ", ".join(f"{t}({c})" for t, c in _top_tools)
+            _summary_parts.append(f"📈 执行统计: {_total_calls} 次工具调用, 成功率 {_success_rate}%, 常用: {_tools_str}")
+            # 按工具类型成功率（只显示有失败的）
+            _fail_tools = [(t, _tool_fail_by_type.get(t, 0)) for t in _tool_stats if _tool_fail_by_type.get(t, 0) > 0]
+            if _fail_tools:
+                _fail_str = ", ".join(f"{t}({f}次失败)" for t, f in _fail_tools[:3])
+                _summary_parts.append(f"⚠️ 失败分布: {_fail_str}")
+            # 工具耗时统计（显示平均耗时最高的）
+            _avg_times = []
+            for _tn, _times in _tool_time_by_type.items():
+                if _times:
+                    _avg = sum(_times) / len(_times)
+                    _avg_times.append((_tn, _avg, len(_times)))
+            if _avg_times:
+                _avg_times.sort(key=lambda x: -x[1])
+                _time_str = ", ".join(f"{t}(平均{a:.1f}s×{c})" for t, a, c in _avg_times[:3])
+                _summary_parts.append(f"⏱️ 耗时分析: {_time_str}")
+        # diff 统计
+        if _changed_files:
+            try:
+                import subprocess as _sp
+                _diff_stat = _sp.run(
+                    ["git", "diff", "--stat", "HEAD"],
+                    cwd=str(get_workspace()), capture_output=True, text=True, timeout=10
+                )
+                if _diff_stat.returncode == 0 and _diff_stat.stdout.strip():
+                    _stat_line = _diff_stat.stdout.strip().split("\n")[-1]
+                    _summary_parts.append(f"📊 变更统计: {_stat_line}")
+            except Exception:  # noqa: S110
+                pass
+        if _summary_parts:
+            state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
+
     terminal_messages = [_checkpoint_message(m) for m in conv_session.messages]
     terminal_messages.extend(
         [
-            {"role": "user", "content": goal[:500]},
-            {"role": "assistant", "content": state.final_answer[:500]},
+            {"role": "user", "content": goal},
+            {"role": "assistant", "content": state.final_answer},
         ]
     )
     if _terminal_success and state.step > 0:
@@ -2373,47 +2414,6 @@ async def run_agent(
             pass
     else:
         await _auto_extract_skill(goal, state.final_answer, state.step, events)
-
-    # ── 任务完成摘要增强：添加 diff 统计 + 执行统计 ──
-    if state.final_answer:
-        _summary_parts = []
-        # 执行统计
-        _total_calls = _tool_success + _tool_fail
-        if _total_calls > 0:
-            _success_rate = int(_tool_success / _total_calls * 100)
-            _top_tools = sorted(_tool_stats.items(), key=lambda x: -x[1])[:3]
-            _tools_str = ", ".join(f"{t}({c})" for t, c in _top_tools)
-            _summary_parts.append(f"📈 执行统计: {_total_calls} 次工具调用, 成功率 {_success_rate}%, 常用: {_tools_str}")
-            # 按工具类型成功率（只显示有失败的）
-            _fail_tools = [(t, _tool_fail_by_type.get(t, 0)) for t in _tool_stats if _tool_fail_by_type.get(t, 0) > 0]
-            if _fail_tools:
-                _fail_str = ", ".join(f"{t}({f}次失败)" for t, f in _fail_tools[:3])
-                _summary_parts.append(f"⚠️ 失败分布: {_fail_str}")
-            # 工具耗时统计（显示平均耗时最高的）
-            _avg_times = []
-            for _tn, _times in _tool_time_by_type.items():
-                if _times:
-                    _avg = sum(_times) / len(_times)
-                    _avg_times.append((_tn, _avg, len(_times)))
-            if _avg_times:
-                _avg_times.sort(key=lambda x: -x[1])
-                _time_str = ", ".join(f"{t}(平均{a:.1f}s×{c})" for t, a, c in _avg_times[:3])
-                _summary_parts.append(f"⏱️ 耗时分析: {_time_str}")
-        # diff 统计
-        if _changed_files:
-            try:
-                import subprocess as _sp
-                _diff_stat = _sp.run(
-                    ["git", "diff", "--stat", "HEAD"],
-                    cwd=str(get_workspace()), capture_output=True, text=True, timeout=10
-                )
-                if _diff_stat.returncode == 0 and _diff_stat.stdout.strip():
-                    _stat_line = _diff_stat.stdout.strip().split("\n")[-1]
-                    _summary_parts.append(f"📊 变更统计: {_stat_line}")
-            except Exception:  # noqa: S110
-                pass
-        if _summary_parts:
-            state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
 
     if _pending_final_event is not None:
         await _emit(

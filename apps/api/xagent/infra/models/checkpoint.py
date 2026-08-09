@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from xagent.infra.db import Base
@@ -16,6 +16,15 @@ def _utcnow() -> datetime:
 
 class CheckpointORM(Base):
     __tablename__ = "checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "conversation_id",
+            "run_id",
+            "step",
+            name="uq_checkpoints_scope",
+        ),
+    )
 
     checkpoint_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)

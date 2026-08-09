@@ -6,7 +6,10 @@ import asyncio
 
 import pytest
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message, ToolCall
-from xagent.core.orchestration.conversation import get_conversation_manager
+from xagent.core.orchestration.conversation import (
+    get_conversation_manager,
+    load_messages_from_db,
+)
 from xagent.core.orchestration.loop import run_agent
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.db import Base, get_engine, get_sessionmaker
@@ -136,6 +139,26 @@ class _MaxStepsLLM(LLMClient):
                 model="test",
             )
         return LLMResponse(content="max steps summary", model="test")
+
+    async def complete_with_tools(
+        self, messages, tools, **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        raise NotImplementedError
+
+    async def health(self) -> bool:
+        return True
+
+
+class _LongFinalLLM(LLMClient):
+    supports_tools = False
+
+    async def complete(
+        self, messages: list[Message], **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        return LLMResponse(
+            content='{"action":"final","answer":"' + ("terminal " + "x" * 650) + '"}',
+            model="test",
+        )
 
     async def complete_with_tools(
         self, messages, tools, **kwargs
@@ -437,20 +460,61 @@ async def test_multistep_non_boundary_success_saves_terminal_checkpoint(
         roles=frozenset({"member"}),
     )
 
+    events = []
+
+    async def collect_event(event):
+        events.append(event)
+
     result = await run_agent(
         "use prompt tool before final",
         principal=principal,
         run_id="multistep-terminal-run",
+        on_event=collect_event,
     )
 
-    assert result.final_answer == "multi step terminal"
+    assert result.final_answer.startswith("multi step terminal")
     assert result.steps == 2
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     assert [checkpoint.step for checkpoint in checkpoints] == [2]
-    assert checkpoints[0].messages[-2:] == [
-        {"role": "user", "content": "use prompt tool before final"},
-        {"role": "assistant", "content": "multi step terminal"},
+    assert checkpoints[0].messages[-1] == {
+        "role": "assistant",
+        "content": result.final_answer,
+    }
+    assert [event.content for event in events if event.kind.value == "final"] == [
+        result.final_answer
     ]
+    async with get_sessionmaker()() as session:
+        db_messages = await load_messages_from_db(
+            session, principal.tenant_id, result.conversation_id
+        )
+    assert db_messages[-1] == {"role": "assistant", "content": result.final_answer}
+
+
+async def test_terminal_checkpoint_uses_full_final_answer_without_loop_truncation(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: _LongFinalLLM()
+    )
+    principal = Principal(
+        user_id="long-final-user",
+        tenant_id="long-final-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "finish with long final",
+        principal=principal,
+        run_id="long-final-run",
+    )
+
+    checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
+    assert len(result.final_answer) > 500
+    assert checkpoints[0].messages[-1] == {
+        "role": "assistant",
+        "content": result.final_answer,
+    }
 
 
 async def test_native_tool_then_final_success_saves_terminal_checkpoint(

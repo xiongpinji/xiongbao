@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from xagent.domains.checkpoints import (
     create_checkpoint,
@@ -215,35 +218,183 @@ async def test_upsert_checkpoint_snapshot_scopes_by_conversation_id(
 
 
 async def test_upsert_checkpoint_snapshot_fails_on_duplicate_same_scope(
-    checkpoint_session, tmp_path
+    tmp_path,
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    for content in ("first", "duplicate"):
-        await create_checkpoint(
-            checkpoint_session,
-            tenant_id="tenant-a",
-            conversation_id="conversation-a",
-            run_id="run-a",
-            step=5,
-            goal=content,
-            messages=[{"role": "assistant", "content": content}],
-            changed_files=[],
-            workspace=workspace,
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'dirty.db'}")
+    async with engine.begin() as connection:
+        await connection.execute(
+            sa.text(
+                """
+                CREATE TABLE checkpoints (
+                    checkpoint_id VARCHAR(64) PRIMARY KEY,
+                    tenant_id VARCHAR(64) NOT NULL,
+                    conversation_id VARCHAR(64) NOT NULL,
+                    run_id VARCHAR(96) NOT NULL,
+                    parent_checkpoint_id VARCHAR(64) NOT NULL DEFAULT '',
+                    step INTEGER NOT NULL DEFAULT 0,
+                    status VARCHAR(32) NOT NULL,
+                    goal TEXT NOT NULL DEFAULT '',
+                    messages_json TEXT NOT NULL DEFAULT '[]',
+                    changed_files_json TEXT NOT NULL DEFAULT '[]',
+                    resumed_run_id VARCHAR(96) NOT NULL DEFAULT '',
+                    rollback_source VARCHAR(32) NOT NULL DEFAULT '',
+                    rollback_commit VARCHAR(128) NOT NULL DEFAULT '',
+                    rollback_error TEXT NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL
+                )
+                """
+            )
         )
+        for index, content in enumerate(("first", "duplicate")):
+            await connection.execute(
+                sa.text(
+                    """
+                    INSERT INTO checkpoints (
+                        checkpoint_id, tenant_id, conversation_id, run_id, step,
+                        status, goal, messages_json, changed_files_json,
+                        created_at, updated_at
+                    )
+                    VALUES (
+                        :checkpoint_id, 'tenant-a', 'conversation-a', 'run-a', 5,
+                        'available', :goal, :messages_json, '[]',
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    )
+                    """
+                ),
+                {
+                    "checkpoint_id": f"dirty-{index}",
+                    "goal": content,
+                    "messages_json": f'[{{"role":"assistant","content":"{content}"}}]',
+                },
+            )
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    async with maker() as session:
+        with pytest.raises(ValueError, match="checkpoint_scope_conflict"):
+            await upsert_checkpoint_snapshot(
+                session,
+                tenant_id="tenant-a",
+                conversation_id="conversation-a",
+                run_id="run-a",
+                step=5,
+                goal="terminal",
+                messages=[{"role": "assistant", "content": "terminal"}],
+                changed_files=[],
+                workspace=workspace,
+            )
+        await session.rollback()
+        rows = (
+            await session.execute(
+                sa.text("SELECT messages_json FROM checkpoints ORDER BY checkpoint_id")
+            )
+        ).scalars().all()
+    await engine.dispose()
 
-    with pytest.raises(ValueError, match="checkpoint_scope_conflict"):
+    assert rows == [
+        '[{"role":"assistant","content":"first"}]',
+        '[{"role":"assistant","content":"duplicate"}]',
+    ]
+
+
+async def test_upsert_checkpoint_snapshot_concurrent_same_scope_keeps_one_row(
+    tmp_path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'concurrent.db'}")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def write_snapshot(content: str) -> None:
+        async with maker() as session:
+            await upsert_checkpoint_snapshot(
+                session,
+                tenant_id="tenant-a",
+                conversation_id="conversation-a",
+                run_id="run-a",
+                step=5,
+                goal=content,
+                messages=[{"role": "assistant", "content": content}],
+                changed_files=[],
+                workspace=workspace,
+            )
+            await session.commit()
+
+    await asyncio.gather(write_snapshot("first"), write_snapshot("second"))
+    async with maker() as session:
         await upsert_checkpoint_snapshot(
-            checkpoint_session,
+            session,
             tenant_id="tenant-a",
             conversation_id="conversation-a",
             run_id="run-a",
             step=5,
-            goal="terminal",
-            messages=[{"role": "assistant", "content": "terminal"}],
+            goal="final",
+            messages=[{"role": "assistant", "content": "final"}],
             changed_files=[],
             workspace=workspace,
         )
+        await session.commit()
+
+    async with maker() as session:
+        history = await list_checkpoints(session, "tenant-a", run_id="run-a")
+    await engine.dispose()
+
+    assert len(history) == 1
+    assert history[0].messages == [{"role": "assistant", "content": "final"}]
+
+
+async def test_upsert_checkpoint_snapshot_integrity_retry_updates_existing_scope(
+    checkpoint_session, tmp_path, monkeypatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    await upsert_checkpoint_snapshot(
+        checkpoint_session,
+        tenant_id="tenant-a",
+        conversation_id="conversation-a",
+        run_id="run-a",
+        step=5,
+        goal="existing",
+        messages=[{"role": "assistant", "content": "existing"}],
+        changed_files=[],
+        workspace=workspace,
+    )
+
+    original_select = sa.select
+    calls = 0
+
+    def stale_first_select(*args, **kwargs):
+        nonlocal calls
+        stmt = original_select(*args, **kwargs)
+        if calls == 0:
+            calls += 1
+            return stmt.where(sa.text("0 = 1"))
+        calls += 1
+        return stmt
+
+    monkeypatch.setattr("xagent.domains.checkpoints.service.select", stale_first_select)
+
+    record, replaced = await upsert_checkpoint_snapshot(
+        checkpoint_session,
+        tenant_id="tenant-a",
+        conversation_id="conversation-a",
+        run_id="run-a",
+        step=5,
+        goal="retried",
+        messages=[{"role": "assistant", "content": "retried"}],
+        changed_files=[],
+        workspace=workspace,
+    )
+    await checkpoint_session.commit()
+    history = await list_checkpoints(checkpoint_session, "tenant-a", run_id="run-a")
+
+    assert replaced is True
+    assert record.messages == [{"role": "assistant", "content": "retried"}]
+    assert len(history) == 1
+    assert history[0].messages == [{"role": "assistant", "content": "retried"}]
 
 
 async def test_upsert_checkpoint_snapshot_rejects_oversized_payload(

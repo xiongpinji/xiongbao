@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.domains.checkpoints.models import CheckpointRecord
@@ -119,6 +120,72 @@ def _prepare_checkpoint_payload(
     )
 
 
+def _new_checkpoint_row(
+    *,
+    tenant_id: str,
+    conversation_id: str,
+    run_id: str,
+    step: int,
+    goal: str,
+    messages_json: str,
+    changed_files_json: str,
+    parent_checkpoint_id: str = "",
+    status: str = "available",
+) -> CheckpointORM:
+    return CheckpointORM(
+        checkpoint_id=uuid.uuid4().hex,
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        run_id=run_id,
+        parent_checkpoint_id=parent_checkpoint_id,
+        step=max(0, step),
+        status=status,
+        goal=goal,
+        messages_json=messages_json,
+        changed_files_json=changed_files_json,
+    )
+
+
+async def _select_checkpoint_scope(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    conversation_id: str,
+    run_id: str,
+    step: int,
+) -> list[CheckpointORM]:
+    return (
+        await session.scalars(
+            select(CheckpointORM).where(
+                CheckpointORM.tenant_id == tenant_id,
+                CheckpointORM.conversation_id == conversation_id,
+                CheckpointORM.run_id == run_id,
+                CheckpointORM.step == step,
+            )
+        )
+    ).all()
+
+
+async def _update_checkpoint_row(
+    session: AsyncSession,
+    row: CheckpointORM,
+    *,
+    parent_checkpoint_id: str,
+    status: str,
+    goal: str,
+    messages_json: str,
+    changed_files_json: str,
+) -> CheckpointRecord:
+    row.parent_checkpoint_id = parent_checkpoint_id
+    row.status = status
+    row.goal = goal
+    row.messages_json = messages_json
+    row.changed_files_json = changed_files_json
+    await session.flush()
+    await session.refresh(row)
+    return _record(row)
+
+
 async def create_checkpoint(
     session: AsyncSession,
     *,
@@ -139,8 +206,7 @@ async def create_checkpoint(
         changed_files=changed_files,
         workspace=workspace,
     )
-    row = CheckpointORM(
-        checkpoint_id=uuid.uuid4().hex,
+    row = _new_checkpoint_row(
         tenant_id=tenant_id,
         conversation_id=conversation_id,
         run_id=run_id,
@@ -171,48 +237,72 @@ async def upsert_checkpoint_snapshot(
     status: str = "available",
 ) -> tuple[CheckpointRecord, bool]:
     safe_step = max(0, step)
-    rows = (
-        await session.scalars(
-            select(CheckpointORM).where(
-                CheckpointORM.tenant_id == tenant_id,
-                CheckpointORM.conversation_id == conversation_id,
-                CheckpointORM.run_id == run_id,
-                CheckpointORM.step == safe_step,
-            )
-        )
-    ).all()
-    if len(rows) > 1:
-        raise ValueError("checkpoint_scope_conflict")
-    if not rows:
-        record = await create_checkpoint(
-            session,
-            tenant_id=tenant_id,
-            conversation_id=conversation_id,
-            run_id=run_id,
-            step=safe_step,
-            goal=goal,
-            messages=messages,
-            changed_files=changed_files,
-            workspace=workspace,
-            parent_checkpoint_id=parent_checkpoint_id,
-            status=status,
-        )
-        return record, False
-
     safe_goal, messages_json, changed_files_json = _prepare_checkpoint_payload(
         goal=goal,
         messages=messages,
         changed_files=changed_files,
         workspace=workspace,
     )
-    row = rows[0]
-    row.parent_checkpoint_id = parent_checkpoint_id
-    row.status = status
-    row.goal = safe_goal
-    row.messages_json = messages_json
-    row.changed_files_json = changed_files_json
-    await session.flush()
-    return _record(row), True
+    rows = await _select_checkpoint_scope(
+        session,
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        run_id=run_id,
+        step=safe_step,
+    )
+    if len(rows) > 1:
+        raise ValueError("checkpoint_scope_conflict")
+    if len(rows) == 1:
+        record = await _update_checkpoint_row(
+            session,
+            rows[0],
+            parent_checkpoint_id=parent_checkpoint_id,
+            status=status,
+            goal=safe_goal,
+            messages_json=messages_json,
+            changed_files_json=changed_files_json,
+        )
+        return record, True
+
+    try:
+        async with session.begin_nested():
+            row = _new_checkpoint_row(
+                tenant_id=tenant_id,
+                conversation_id=conversation_id,
+                run_id=run_id,
+                step=safe_step,
+                goal=safe_goal,
+                messages_json=messages_json,
+                changed_files_json=changed_files_json,
+                parent_checkpoint_id=parent_checkpoint_id,
+                status=status,
+            )
+            session.add(row)
+            await session.flush()
+        await session.refresh(row)
+        return _record(row), False
+    except IntegrityError:
+        rows = await _select_checkpoint_scope(
+            session,
+            tenant_id=tenant_id,
+            conversation_id=conversation_id,
+            run_id=run_id,
+            step=safe_step,
+        )
+        if len(rows) > 1:
+            raise ValueError("checkpoint_scope_conflict") from None
+        if not rows:
+            raise
+        record = await _update_checkpoint_row(
+            session,
+            rows[0],
+            parent_checkpoint_id=parent_checkpoint_id,
+            status=status,
+            goal=safe_goal,
+            messages_json=messages_json,
+            changed_files_json=changed_files_json,
+        )
+        return record, True
 
 
 async def get_checkpoint(

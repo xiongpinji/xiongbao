@@ -35,12 +35,14 @@ async def checkpoint_client(tmp_path, monkeypatch):
         await connection.run_sync(Base.metadata.create_all)
     workspace = tmp_path / "workspace"
     workspace.mkdir()
+    conversation_id = f"conversation-checkpoint-a-{uuid.uuid4().hex}"
+    run_id = f"run-checkpoint-a-{uuid.uuid4().hex}"
     async with get_sessionmaker()() as session:
         checkpoint = await create_checkpoint(
             session,
             tenant_id="tenant-checkpoint-a",
-            conversation_id="conversation-checkpoint-a",
-            run_id="run-checkpoint-a",
+            conversation_id=conversation_id,
+            run_id=run_id,
             step=5,
             goal="resume release validation",
             messages=[{"role": "user", "content": "continue safely"}],
@@ -67,7 +69,7 @@ async def test_list_detail_resume_are_tenant_scoped_and_preserve_parent(
 ) -> None:
     client, checkpoint, resumed, _ = checkpoint_client
     own = await client.get(
-        "/api/v1/checkpoints?conversation_id=conversation-checkpoint-a",
+        f"/api/v1/checkpoints?conversation_id={checkpoint.conversation_id}",
         headers=_headers("tenant-checkpoint-a"),
     )
     assert own.status_code == 200
