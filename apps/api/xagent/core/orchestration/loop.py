@@ -914,7 +914,7 @@ async def _handle_empty_or_echo(
     llm,
     target_model: str | None,
 ) -> str:
-    """处理 LLM 返回空内容或回显工具结果的情况，返回修正后的内容。"""
+    """处理空内容或工具结果回显；恢复失败时抛出可诊断异常。"""
     if _is_tool_echo(content_buf):
         state.messages.append(Message(role="assistant", content=content_buf))
         state.messages.append(Message(
@@ -928,8 +928,8 @@ async def _handle_empty_or_echo(
         try:
             retry_resp = await llm.complete(state.messages, model=target_model)
             content_buf = retry_resp.content or ""
-        except Exception:
-            content_buf = ""
+        except Exception as exc:
+            raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
         if _is_tool_echo(content_buf):
             content_buf = ""
 
@@ -944,17 +944,10 @@ async def _handle_empty_or_echo(
         try:
             retry_resp = await llm.complete(state.messages, model=target_model)
             content_buf = retry_resp.content or ""
-        except Exception:
-            content_buf = ""
+        except Exception as exc:
+            raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
         if not content_buf.strip():
-            content_buf = (
-                "我已尝试获取相关信息，但受限于页面动态渲染或工具调用次数，"
-                "未能获取完整内容。\n\n"
-                "建议：\n"
-                "1. 请告诉我该网站/项目的具体功能，我可以帮你分析\n"
-                "2. 如果有 GitHub 仓库地址，我可以查看 README\n"
-                "3. 如果有 API 文档链接，我可以获取更详细的信息"
-            )
+            raise RuntimeError("model_empty_response_after_retry")
     return content_buf
 
 
@@ -2258,13 +2251,16 @@ async def run_agent(
                       ))
                       continue
 
-                  await _emit(
-                      StepEvent(kind=StepKind.reason, content=resp.content, step=state.step)
+                  content_buf_ns = await _handle_empty_or_echo(
+                      resp.content, state, llm, target_model
                   )
-                  state.messages.append(Message(role="assistant", content=resp.content))
+                  await _emit(
+                      StepEvent(kind=StepKind.reason, content=content_buf_ns, step=state.step)
+                  )
+                  state.messages.append(Message(role="assistant", content=content_buf_ns))
 
                   # 防过早终止（非流式路径）— 智能完成检测
-                  _is_final_ns = _detect_final_answer(resp.content, state)
+                  _is_final_ns = _detect_final_answer(content_buf_ns, state)
                   if not _is_final_ns and state.step < _effective_max_steps - 2:
                       state.messages.append(Message(
                           role="user",
@@ -2276,10 +2272,10 @@ async def run_agent(
                       ))
                       continue
 
-                  action = _extract_action(resp.content)
+                  action = _extract_action(content_buf_ns)
                   if not action or action.get("action") == "final":
                       state.final_answer = (
-                          action.get("answer", resp.content) if action else resp.content
+                          action.get("answer", content_buf_ns) if action else content_buf_ns
                       )
                       _terminal_success = True
                       state.finished = True
@@ -2292,11 +2288,11 @@ async def run_agent(
                   if action.get("action") == "tool":
                       await _handle_prompt_tool_action(action, role, tools, ctx, state, events)
                       continue
-                  state.final_answer = resp.content
+                  state.final_answer = content_buf_ns
                   _terminal_success = True
                   state.finished = True
                   _pending_final_event = StepEvent(
-                      kind=StepKind.final, content=resp.content, step=state.step
+                      kind=StepKind.final, content=content_buf_ns, step=state.step
                   )
 
               else:
@@ -2309,15 +2305,18 @@ async def run_agent(
                   )
                   state.total_prompt_tokens += resp.prompt_tokens
                   state.total_completion_tokens += resp.completion_tokens
-                  await _emit(
-                      StepEvent(kind=StepKind.reason, content=resp.content, step=state.step)
+                  content_buf_plain = await _handle_empty_or_echo(
+                      resp.content, state, llm, target_model
                   )
-                  state.messages.append(Message(role="assistant", content=resp.content))
+                  await _emit(
+                      StepEvent(kind=StepKind.reason, content=content_buf_plain, step=state.step)
+                  )
+                  state.messages.append(Message(role="assistant", content=content_buf_plain))
 
-                  action = _extract_action(resp.content)
+                  action = _extract_action(content_buf_plain)
                   if not action or action.get("action") == "final":
                       state.final_answer = (
-                          action.get("answer", resp.content) if action else resp.content
+                          action.get("answer", content_buf_plain) if action else content_buf_plain
                       )
                       _terminal_success = True
                       state.finished = True
@@ -2332,11 +2331,11 @@ async def run_agent(
                       await _handle_prompt_tool_action(action, role, tools, ctx, state, events)
                       continue
 
-                  state.final_answer = resp.content
+                  state.final_answer = content_buf_plain
                   _terminal_success = True
                   state.finished = True
                   _pending_final_event = StepEvent(
-                      kind=StepKind.final, content=resp.content, step=state.step
+                      kind=StepKind.final, content=content_buf_plain, step=state.step
                   )
 
             if not state.finished:

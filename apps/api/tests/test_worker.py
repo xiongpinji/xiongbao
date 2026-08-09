@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from xagent.core.orchestration.state import AgentRun
 from xagent.enterprise.auth import create_access_token
 from xagent.main import create_app
 from xagent.worker import get_task_runner
@@ -450,6 +451,57 @@ def test_celery_worker_uses_task_id_as_run_id(monkeypatch: pytest.MonkeyPatch) -
 
     assert captured["run_id"] == "celery-task-run-id"
     assert result["run_id"] == "celery-task-run-id"
+
+
+def test_celery_worker_failed_result_does_not_persist_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from xagent.worker.celery_app import run_agent_task
+
+    async def _fake_run_agent(goal: str, **kwargs):
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal=goal,
+            role_name="general",
+            tenant_id="tenant-celery",
+            final_answer="执行过程中出错：model_empty_response_after_retry",
+            steps=1,
+            status="failed",
+            error="model_empty_response_after_retry",
+        )
+
+    class _Request:
+        id = "celery-failed-run-id"
+
+    class _CurrentTask:
+        request = _Request()
+
+    persist_record = AsyncMock()
+    update_status = AsyncMock()
+    monkeypatch.setattr("celery.current_task", _CurrentTask())
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.worker.celery_app.persist_submitted_agent_task", AsyncMock())
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.persist_agent_task_record_in_session",
+        persist_record,
+    )
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.update_task_status_by_run_id",
+        update_status,
+    )
+
+    with pytest.raises(RuntimeError, match="model_empty_response_after_retry"):
+        run_agent_task(
+            goal="空响应恢复失败",
+            role="general",
+            capabilities=[],
+            tenant_id="tenant-celery",
+            user_id="user-celery",
+        )
+
+    assert persist_record.await_args.kwargs["status"] == "failed"
+    assert persist_record.await_args.kwargs["error"] == "model_empty_response_after_retry"
+    assert update_status.await_args.kwargs["next_status"] == "recovery"
 
 
 def test_late_pending_persist_does_not_clobber_terminal_result(migrated_db) -> None:

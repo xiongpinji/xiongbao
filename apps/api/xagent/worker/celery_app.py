@@ -391,7 +391,7 @@ def run_agent_task(
         )
 
     try:
-        result = asyncio.run(
+        run_result = asyncio.run(
             run_agent(
                 goal,
                 principal=principal,
@@ -399,7 +399,19 @@ def run_agent_task(
                 capabilities=set(capabilities) or None,
                 run_id=task_id or None,
             )
-        ).to_dict()
+        )
+        result = run_result.to_dict()
+        result_status = str(
+            result.get("status") or getattr(run_result, "status", "succeeded")
+        )
+        if result_status != "succeeded":
+            raise RuntimeError(
+                str(
+                    result.get("error")
+                    or getattr(run_result, "error", "")
+                    or f"agent_run_{result_status}"
+                )
+            )
     except Exception as run_exc:
         run_error = str(run_exc)
         if task_id:

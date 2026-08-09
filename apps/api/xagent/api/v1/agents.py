@@ -376,6 +376,8 @@ async def run(
             session=session,
             run_id=run_id,
         )
+        if result.status != "succeeded":
+            raise RuntimeError(result.error or f"agent_run_{result.status}")
         result_payload = result.to_dict()
         delivery_summary = _build_delivery_summary(result.run_id, result_payload)
         validation_summary: dict[str, Any] = {"risks": []}

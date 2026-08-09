@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from xagent.core.orchestration.state import normalize_run_status
+from xagent.core.orchestration.state import AgentRun, normalize_run_status
 from xagent.core.runtime.models import RuntimeRun, RuntimeTaskRef
 from xagent.core.runtime.policies import normalize_runtime_policy
 from xagent.enterprise.auth import create_access_token
@@ -347,6 +347,42 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
     assert body["evidence"][1]["payload"] == {"error": "direct exploded", "run_id": run_id}
 
 
+async def test_direct_agent_failed_result_does_not_persist_success(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="chat-user", tenant_id="tenant-1", roles=["member"])
+
+    async def _failed_run(*args, **kwargs):  # noqa: ARG001
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal="空响应恢复失败",
+            role_name="general",
+            tenant_id="tenant-1",
+            final_answer="执行过程中出错：model_empty_response_after_retry",
+            steps=1,
+            status="failed",
+            error="model_empty_response_after_retry",
+        )
+
+    monkeypatch.setattr("xagent.api.v1.agents.run_agent", _failed_run)
+
+    resp = await client.post(
+        "/api/v1/agents/run",
+        json={"goal": "空响应恢复失败"},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 500, resp.text
+    run_id = resp.json()["detail"]["run_id"]
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_resp.status_code == 200, run_resp.text
+    body = run_resp.json()
+    assert body["task"]["status"] == "failed"
+    assert body["task"]["result"]["status"] == "failed"
+    assert body["task"]["result"]["error"] == "model_empty_response_after_retry"
+
+
 async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -397,6 +433,47 @@ async def test_stream_agent_failure_persists_failed_task_and_failure_delivery(
         "delivery.generated",
     ]
     assert body["evidence"][1]["payload"] == {"error": "stream exploded", "run_id": run_id}
+
+
+async def test_stream_agent_failed_result_does_not_emit_done_or_persist_success(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(user_id="stream-user", tenant_id="tenant-1", roles=["member"])
+    captured: dict[str, str] = {}
+
+    async def _failed_run(*args, **kwargs):  # noqa: ARG001
+        captured["run_id"] = kwargs["run_id"]
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal="空响应恢复失败",
+            role_name="general",
+            tenant_id="tenant-1",
+            final_answer="执行过程中出错：model_empty_response_after_retry",
+            steps=1,
+            status="failed",
+            error="model_empty_response_after_retry",
+        )
+
+    monkeypatch.setattr("xagent.api.v1.stream.run_agent", _failed_run)
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "空响应恢复失败"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert "event: error" in stream_resp.text
+    assert "event: done" not in stream_resp.text
+    assert "model_empty_response_after_retry" in stream_resp.text
+
+    run_id = captured["run_id"]
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_resp.status_code == 200, run_resp.text
+    body = run_resp.json()
+    assert body["task"]["status"] == "failed"
+    assert body["task"]["result"]["status"] == "failed"
 
 
 async def test_stream_agent_failure_before_result_does_not_take_schema_mismatch_done_path(

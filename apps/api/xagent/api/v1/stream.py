@@ -181,6 +181,8 @@ async def _event_stream(
                     ),
                     timeout=_AGENT_RUN_TIMEOUT,
                 )
+                if result.status != "succeeded":
+                    raise RuntimeError(result.error or f"agent_run_{result.status}")
                 result_payload = result.to_dict()
                 delivery_summary = _build_stream_delivery_summary(result_payload)
                 evidence_records = [

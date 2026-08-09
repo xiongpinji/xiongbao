@@ -351,6 +351,203 @@ class _StreamingParallelLLM(LiteLLMClient):
         return True
 
 
+class _EmptyRecoveryStreamingLLM(LiteLLMClient):
+    """流式工具请求与纯文本恢复均返回空内容。"""
+
+    def __init__(self, recovery_content: str = "") -> None:
+        self.recovery_content = recovery_content
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        yield StreamChunk(finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content=self.recovery_content, model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式合同测试不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_stream_empty_response_after_recovery_is_failed(monkeypatch) -> None:
+    llm = _EmptyRecoveryStreamingLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "failed"
+    assert run.error == "model_empty_response_after_retry"
+    assert "页面动态渲染" not in run.final_answer
+    assert "README" not in run.final_answer
+
+
+async def test_stream_empty_response_can_recover_with_real_content(monkeypatch) -> None:
+    llm = _EmptyRecoveryStreamingLLM("恢复后的真实模型回答。")
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert run.final_answer == "恢复后的真实模型回答。"
+
+
+class _EmptyRecoveryNativeLLM(LLMClient):
+    supports_tools = True
+
+    def __init__(self, recovery_content: str = "") -> None:
+        self.recovery_content = recovery_content
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content=self.recovery_content, model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="", model="test")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_nonstream_native_empty_response_after_recovery_is_failed(
+    monkeypatch,
+) -> None:
+    llm = _EmptyRecoveryNativeLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "failed"
+    assert run.error == "model_empty_response_after_retry"
+    assert "页面动态渲染" not in run.final_answer
+
+
+class _EmptyRecoveryPlainLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self, recovery_content: str = "") -> None:
+        self.recovery_content = recovery_content
+        self.calls = 0
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        content = "" if self.calls == 1 else self.recovery_content
+        return LLMResponse(content=content, model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("无工具模型不得进入原生工具路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_nonstream_plain_empty_response_after_recovery_is_failed(
+    monkeypatch,
+) -> None:
+    llm = _EmptyRecoveryPlainLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "failed"
+    assert run.error == "model_empty_response_after_retry"
+    assert "页面动态渲染" not in run.final_answer
+
+
+@pytest.mark.parametrize(
+    "llm_type",
+    [_EmptyRecoveryNativeLLM, _EmptyRecoveryPlainLLM],
+    ids=["native-tools", "plain"],
+)
+async def test_nonstream_empty_response_can_recover_with_real_content(
+    monkeypatch,
+    llm_type,
+) -> None:
+    llm = llm_type("恢复后的真实模型回答。")
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert run.final_answer == "恢复后的真实模型回答。"
+
+
+class _FailingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        raise ValueError("recovery provider failed")
+
+
+async def test_stream_empty_response_reports_recovery_failure(monkeypatch) -> None:
+    llm = _FailingRecoveryStreamingLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "回答当前问题",
+        principal=principal,
+        role_name="general",
+    )
+
+    assert run.status == "failed"
+    assert run.error == "model_response_recovery_failed: recovery provider failed"
+
+
+class _BlockingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
+    def __init__(self) -> None:
+        super().__init__()
+        self.recovery_started = asyncio.Event()
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        self.recovery_started.set()
+        await asyncio.Event().wait()
+
+
+async def test_stream_empty_response_recovery_preserves_cancellation(monkeypatch) -> None:
+    llm = _BlockingRecoveryStreamingLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    task = asyncio.create_task(
+        run_agent_builtin(
+            "回答当前问题",
+            principal=principal,
+            role_name="general",
+        )
+    )
+    await asyncio.wait_for(llm.recovery_started.wait(), timeout=5)
+    task.cancel()
+    run = await task
+
+    assert run.status == "cancelled"
+    assert run.error == "cancelled_by_user"
+
+
 class _RequiredFileWriteLLM(LLMClient):
     """首轮忽略 required tool 给纯文本，第二轮才调用 file_write。"""
 
