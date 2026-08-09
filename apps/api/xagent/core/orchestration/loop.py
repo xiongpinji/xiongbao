@@ -1305,6 +1305,8 @@ async def run_agent(
         # ── 会话级决策记忆：跨步骤记住关键决策 ──
         _session_decisions: list[str] = []  # 记录关键决策（最多 10 条）
 
+        _last_checkpoint_step = 0
+
         # ── 编辑回滚：连续验证失败计数 ──
         _verify_fail_count: int = 0
 
@@ -1391,6 +1393,7 @@ async def run_agent(
                           workspace=get_workspace(),
                           parent_checkpoint_id=resume_from_checkpoint_id,
                       )
+                      _last_checkpoint_step = state.step
               except Exception:  # noqa: S110
                   pass
 
@@ -2297,6 +2300,29 @@ async def run_agent(
     # ── 保存对话历史 ──
     conv_session.add_user(goal)
     conv_session.add_assistant(state.final_answer)
+    if state.finished and state.step > 0 and _last_checkpoint_step != state.step:
+        try:
+            from xagent.core.orchestration.checkpoint import save_checkpoint
+
+            await save_checkpoint(
+                conv_session.conversation_id,
+                resolved_run_id,
+                state.step,
+                [
+                    {"role": m.role, "content": m.content[:500],
+                     **({"tool_calls": m.tool_calls} if m.tool_calls else {}),
+                     **({"tool_call_id": m.tool_call_id} if m.tool_call_id else {}),
+                     **({"name": m.name} if m.name else {})}
+                    for m in conv_session.messages
+                ],
+                _changed_files,
+                goal,
+                tenant_id=principal.tenant_id,
+                workspace=get_workspace(),
+                parent_checkpoint_id=resume_from_checkpoint_id,
+            )
+        except Exception:  # noqa: S110  checkpoint 失败不影响主流程
+            pass
     # ── 持久化到 DB ──
     try:
         from xagent.core.orchestration.conversation import persist_conversation, persist_message

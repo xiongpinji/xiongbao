@@ -9,6 +9,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from xagent.core.orchestration.conversation import (
     ConversationSession,
+    get_conversation_manager,
     persist_conversation,
     persist_message,
 )
@@ -172,3 +173,72 @@ async def test_conversation_message_delete_and_run_reject_other_tenant(
     assert other_read.status_code == 404
     assert other_delete.status_code == 404
     assert other_run.status_code == 404
+
+
+async def test_conversation_messages_fall_back_to_same_tenant_memory_session(
+    checkpoint_client, monkeypatch
+) -> None:
+    client, _, _, _ = checkpoint_client
+    conversation_id = f"memory-conversation-{uuid.uuid4().hex}"
+    manager = get_conversation_manager()
+    session = manager.get_or_create(conversation_id, "tenant-checkpoint-a")
+    session.add_user("still running")
+    empty_conversation_id = f"empty-memory-conversation-{uuid.uuid4().hex}"
+    manager.get_or_create(empty_conversation_id, "tenant-checkpoint-a")
+
+    async def missing_from_db(*args, **kwargs):  # noqa: ARG001
+        raise LookupError(conversation_id)
+
+    monkeypatch.setattr(
+        "xagent.core.orchestration.conversation.load_conversation_from_db",
+        missing_from_db,
+    )
+
+    own = await client.get(
+        f"/api/v1/stream/conversations/{conversation_id}/messages",
+        headers=_headers("tenant-checkpoint-a"),
+    )
+    other = await client.get(
+        f"/api/v1/stream/conversations/{conversation_id}/messages",
+        headers=_headers("tenant-checkpoint-b"),
+    )
+    missing = await client.get(
+        f"/api/v1/stream/conversations/missing-{uuid.uuid4().hex}/messages",
+        headers=_headers("tenant-checkpoint-a"),
+    )
+    empty = await client.get(
+        f"/api/v1/stream/conversations/{empty_conversation_id}/messages",
+        headers=_headers("tenant-checkpoint-a"),
+    )
+
+    assert own.status_code == 200
+    assert own.json()["messages"] == [{"role": "user", "content": "still running"}]
+    assert empty.status_code == 200
+    assert empty.json()["messages"] == []
+    assert other.status_code == 404
+    assert missing.status_code == 404
+
+
+async def test_conversation_messages_do_not_hide_database_failures(
+    checkpoint_client, monkeypatch
+) -> None:
+    client, _, _, _ = checkpoint_client
+    conversation_id = f"db-error-conversation-{uuid.uuid4().hex}"
+    session = get_conversation_manager().get_or_create(
+        conversation_id, "tenant-checkpoint-a"
+    )
+    session.add_user("cached message")
+
+    async def database_failed(*args, **kwargs):  # noqa: ARG001
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(
+        "xagent.core.orchestration.conversation.load_conversation_from_db",
+        database_failed,
+    )
+
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        await client.get(
+            f"/api/v1/stream/conversations/{conversation_id}/messages",
+            headers=_headers("tenant-checkpoint-a"),
+        )

@@ -427,22 +427,22 @@ async def get_conversation_messages(
             conversation = await load_conversation_from_db(
                 session, principal.tenant_id, conversation_id
             )
-        except LookupError as exc:
-            raise HTTPException(
-                status.HTTP_404_NOT_FOUND, "对话不存在或无权访问"
-            ) from exc
+        except LookupError:
+            conversation = None
         messages = (
             [{"role": item.role, "content": item.content} for item in conversation.messages]
             if conversation is not None
             else []
         )
     # 如果 DB 无数据，尝试内存缓存
+    cached_session_found = False
     if not messages:
         mgr = get_conversation_manager()
         sess = mgr.get(conversation_id, principal.tenant_id)
         if sess:
+            cached_session_found = True
             messages = [{"role": m.role, "content": m.content} for m in sess.messages]
-    if conversation is None and not messages:
+    if conversation is None and not cached_session_found and not messages:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "对话不存在或无权访问")
     return {"messages": messages}
 
