@@ -313,6 +313,43 @@ async def test_litellm_plain_complete_keeps_ollama_generate_route(
     assert "tool_choice" not in captured
 
 
+async def test_litellm_plain_complete_preserves_configured_ollama_chat_prefix(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://localhost:11434",
+            ollama_model="ollama_chat/qwen3:4b",
+        )
+    )
+
+    assert client.effective_model == "ollama_chat/qwen3:4b"
+    await client.complete([Message(role="user", content="hello")])
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+
+
+async def test_litellm_tool_complete_preserves_configured_ollama_chat_prefix(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://localhost:11434",
+            ollama_model="ollama_chat/qwen3:4b",
+        )
+    )
+    tools = [{"type": "function", "function": {"name": "file_write"}}]
+
+    await client.complete_with_tools(
+        [Message(role="user", content="create a file")], tools
+    )
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+    assert captured["tools"] == tools
+
+
 async def test_litellm_ollama_named_tool_uses_chat_route_and_single_schema(
     monkeypatch,
 ) -> None:
@@ -438,6 +475,40 @@ async def test_litellm_non_ollama_named_tool_choice_is_transmitted(
     )
 
     assert captured["model"] == "openai/gpt-4o-mini"
+    assert captured["tools"] == tools
+    assert captured["tool_choice"] == named_choice
+
+
+async def test_litellm_proxy_does_not_rewrite_request_ollama_model(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = LiteLLMClient(
+        LLMSettings(
+            default_model="proxy-default",
+            proxy_url="http://localhost:4000",
+            proxy_api_key="proxy-key",
+            ollama_base_url="http://localhost:11434",
+        )
+    )
+    tools = [
+        {"type": "function", "function": {"name": "file_write"}},
+        {"type": "function", "function": {"name": "echo"}},
+    ]
+    named_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+
+    await client.complete_with_tools(
+        [Message(role="user", content="create a file")],
+        tools,
+        model="ollama/qwen3:4b",
+        tool_choice=named_choice,
+    )
+
+    assert captured["model"] == "ollama/qwen3:4b"
+    assert captured["api_base"] == "http://localhost:4000"
     assert captured["tools"] == tools
     assert captured["tool_choice"] == named_choice
 

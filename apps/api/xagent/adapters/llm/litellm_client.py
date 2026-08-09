@@ -40,7 +40,7 @@ class LiteLLMClient(LLMClient):
         """实际使用的模型名（带 litellm provider 前缀供路由）。
 
         - proxy: 始终使用 default_model，由 proxy 侧做最终路由
-        - ollama: 加 ollama/ 前缀
+        - ollama: 保留 ollama/ 或 ollama_chat/ 前缀，否则加 ollama/
         - deepseek 直连（无 proxy/ollama）: 加 deepseek/ 前缀
         - 其他: 原样返回（openai 兼容）
         """
@@ -48,7 +48,11 @@ class LiteLLMClient(LLMClient):
             return self._cfg.default_model
         if self._cfg.ollama_base_url:
             model = self._cfg.ollama_model or self._cfg.default_model
-            return model if model.startswith("ollama/") else f"ollama/{model}"
+            return (
+                model
+                if model.startswith(("ollama/", "ollama_chat/"))
+                else f"ollama/{model}"
+            )
         if self._cfg.deepseek_api_key:
             model = self._cfg.default_model
             return model if model.startswith("deepseek/") else f"deepseek/{model}"
@@ -78,15 +82,18 @@ class LiteLLMClient(LLMClient):
             kwargs["api_key"] = self._cfg.anthropic_api_key
         return kwargs
 
-    @staticmethod
     def _prepare_tools_request(
+        self,
         model: str,
         tools: list[dict[str, Any]],
         tool_choice: Any,
     ) -> tuple[str, list[dict[str, Any]], Any]:
+        direct_ollama = bool(
+            self._cfg.ollama_base_url and not self._cfg.proxy_url
+        )
         target_model = (
             f"ollama_chat/{model.removeprefix('ollama/')}"
-            if model.startswith("ollama/")
+            if direct_ollama and model.startswith("ollama/")
             else model
         )
         named_tool = None
@@ -103,14 +110,18 @@ class LiteLLMClient(LLMClient):
 
         # Ollama Chat API 不支持 tool_choice；
         # 实际约束由单工具 schema 与上层终态闸完成。
-        if target_model.startswith("ollama_chat/") and named_tool:
+        if direct_ollama and target_model.startswith("ollama_chat/") and named_tool:
             tools = [
                 tool
                 for tool in tools
                 if tool.get("function", {}).get("name") == named_tool
             ]
             tool_choice = "auto"
-        elif target_model.startswith("ollama_chat/") and tool_choice == "required":
+        elif (
+            direct_ollama
+            and target_model.startswith("ollama_chat/")
+            and tool_choice == "required"
+        ):
             if len(tools) != 1:
                 raise ValueError(
                     "Ollama required tool_choice 仅允许单工具 schema"
