@@ -3,19 +3,19 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R1 Web/API 发布审计完成，等待人工发布审批。
-- 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md`。
+- 当前阶段：R2 本地 Full Compose 核心栈试运行，R2-A 等待复核。
+- 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - P2 计划：`docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md`。
-- 当前分支：`feature/webapi-release-hardening`。
+- 当前分支：`feature/webapi-r2-staging-readiness`。
 - 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening`。
 - 排除范围：短剧业务链路、Tauri 桌面端、多机 HA、E2B 和客户现场演练。
 - Owner：Codex。
-- 最后更新时间：2026-08-07。
+- 最后更新时间：2026-08-09。
 
 ## In Progress
 
-- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：CLAIMED | 证据：先补 CI 合同红灯，再固化 `config-governance` R2 门禁、R2 Runbook 单一路径和本任务板条目；脱敏截图如后续产生，仅提交到 `output/playwright/`。
+- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：REVIEW | 证据：2026-08-09 在 `feature/webapi-r2-staging-readiness` / `306bd3a1a40423dddcd4301dd04887b20c1389e3` 从 fresh R2 resources 启动核心六服务；Docker `client=29.5.3 server=29.5.3`，Compose `v5.1.4`，宿主机 Ollama 有 `qwen3:4b`。`pwsh -NoProfile -File scripts/r2-preflight.ps1` 7/7 ok；启动前 `xagent-r2` 容器、volume、network 均为空。`apps/web` 的 `npm ci` 与 `npm run build` 退出 0；`docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local build api worker web` 退出 0。仅启动 `postgres redis qdrant api worker web`，六服务均 running/healthy，端口为 `127.0.0.1:18000/18080/15432/16379/16333/16334`；镜像 ID：api `sha256:650b4d956a2ab61180514bb62a020385a9e0ea64208734359d771fc315f807e3`，worker `sha256:61ca86f45aef63b22c857f2349cd62d580922aedc442da8bc19829536a99cca6`，web `sha256:a4b6d5cab532397cff3b11206f00b1b82e68ef296467629bca857bdc2d597a32`，postgres `sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb`，redis `sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99`，qdrant `sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c`。`python -m alembic current` 为 `20260807_checkpoints (head)`；`/health` 为 `ok`，`/health/ready` 为 `ready`，`/health/deep` 为 `healthy` 且 database/redis/qdrant 均 healthy；`celery -A xagent.worker.celery_app inspect ping --timeout=5` 返回 pong。隔离账号 `r2-reviewer` / tenant `r2-trial` 注册成功，`POST /api/v1/agents/run` 返回 run_id `aa62c3302b96402e8a46b57409b5de96` 且 final answer 非空；容器内配置为 `LiteLLMClient`、`ollama_base_url=http://host.docker.internal:11434`、`effective_model=ollama/qwen3:4b`，API/worker 日志有 `ollama_warmup_succeeded model=qwen3:4b route=ollama`，API run 日志有 `LiteLLM completion() model= qwen3:4b; provider = ollama`，未出现 MockLLM。按 env secret 值对 30 分钟服务日志复扫，4 个 secret 值 0 命中；`aicg-postgres` 与 `aicg-minio` 仍为原容器 ID `3af4cf4c653d` / `07e3c2aef1a1` 且 healthy，未被本任务重建。
 
 ## Ready
 
