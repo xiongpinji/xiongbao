@@ -11,7 +11,9 @@ import asyncio
 import subprocess
 from pathlib import Path
 
+from xagent.adapters.llm.base import LLMResponse, ToolCall
 from xagent.core import workspace as ws_mod
+from xagent.core.orchestration import loop as loop_mod
 from xagent.core.orchestration import parallel
 from xagent.core.orchestration.parallel import (
     SubTask,
@@ -34,19 +36,89 @@ def _principal() -> Principal:
 
 
 class _FakeRun:
-    def __init__(self, answer: str, *, tools: tuple[str, ...] = ()):
+    def __init__(
+        self,
+        answer: str,
+        *,
+        tools: tuple[str, ...] = (),
+        status: str = "succeeded",
+        error: str = "",
+    ):
         self._answer = answer
         self._tools = tools
+        self._status = status
+        self._error = error
 
     def to_dict(self) -> dict:
         return {
             "final_answer": self._answer,
             "steps": 1,
+            "status": self._status,
+            "error": self._error,
             "events": [
                 {"kind": "tool_call", "tool": tool, "step": 1, "content": {}}
                 for tool in self._tools
             ],
         }
+
+
+class _ScriptedDevelopmentLLM:
+    """只替代 provider 响应；编排、真实工具与 Git 生命周期均走产品代码。"""
+
+    supports_tools = True
+
+    def __init__(self, actions: list[str], *, repeat_last: bool = False) -> None:
+        self.actions = actions
+        self.repeat_last = repeat_last
+        self.calls = 0
+        self.blocked = asyncio.Event()
+        self.tool_schemas: list[set[str]] = []
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="达到执行上限，任务未完成。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        self.tool_schemas.append(
+            {tool["function"]["name"] for tool in tools}
+        )
+        index = min(self.calls - 1, len(self.actions) - 1)
+        if not self.repeat_last and self.calls > len(self.actions):
+            action = "final"
+        else:
+            action = self.actions[index]
+        if action == "write":
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(
+                        id=f"call_write_{self.calls}",
+                        name="file_write",
+                        args={
+                            "path": f"artifact-{self.calls}.txt",
+                            "content": f"step {self.calls}",
+                        },
+                    )
+                ],
+            )
+        if action == "echo":
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(id=f"call_echo_{self.calls}", name="echo", args={})
+                ],
+            )
+        if action == "error":
+            raise ValueError("provider exploded after write")
+        if action == "block":
+            self.blocked.set()
+            await asyncio.Event().wait()
+        return LLMResponse(content="全部完成，已写入真实开发产物。", model="test")
+
+    async def health(self) -> bool:
+        return True
 
 
 def _make_fake_run_agent(write_file: str | None = None):
@@ -74,6 +146,44 @@ def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "add", "-A"], cwd=path, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True,
                    capture_output=True)
+
+
+def _temporary_branches(repo: Path) -> list[str]:
+    result = subprocess.run(
+        [
+            "git",
+            "for-each-ref",
+            "--format=%(refname:short)",
+            "refs/heads/agent",
+            "refs/heads/xagent",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.splitlines()
+
+
+async def _run_actual_strict_task(
+    repo: Path,
+    monkeypatch,
+    llm: _ScriptedDevelopmentLLM,
+    *,
+    goal: str,
+):
+    monkeypatch.setattr(loop_mod, "get_llm_client", lambda: llm)
+    ws_token = ws_mod.set_workspace(repo)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        return await run_parallel_agents(
+            [SubTask(goal=goal, capabilities=["file_write"])],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
 
 
 # ─── contextvar 工作区解析 ───
@@ -238,6 +348,165 @@ async def test_required_file_write_without_tool_call_has_diagnostic_failure(
     assert record is not None
     assert record.status.value == "failed"
     assert "未调用必需工具 file_write" in record.error
+
+
+async def test_strict_task_rejects_post_write_provider_failure(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-provider-failure"
+    _init_git_repo(repo)
+
+    result = await _run_actual_strict_task(
+        repo,
+        monkeypatch,
+        _ScriptedDevelopmentLLM(["write", "error"]),
+        goal="provider failure after real write",
+    )
+
+    sub = result.sub_results[0]
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert "provider exploded after write" in sub.error
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", sub.development_task_id
+        )
+    assert record is not None
+    assert record.status.value == "failed"
+    assert not Path(record.patch_path).exists()
+
+
+async def test_strict_task_rejects_post_write_max_steps(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-max-steps"
+    _init_git_repo(repo)
+    monkeypatch.setattr(loop_mod, "MAX_STEPS", 2)
+
+    result = await _run_actual_strict_task(
+        repo,
+        monkeypatch,
+        _ScriptedDevelopmentLLM(["write"], repeat_last=True),
+        goal="keep writing without final answer",
+    )
+
+    sub = result.sub_results[0]
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert "max_steps_exceeded" in sub.error
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+
+
+async def test_strict_task_schema_and_execution_reject_other_tools(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-strict-tools"
+    _init_git_repo(repo)
+    llm = _ScriptedDevelopmentLLM(["write", "echo"])
+    registry = loop_mod.get_tool_registry()
+    original_call = registry.call
+    executed_tools: list[str] = []
+
+    async def _record_call(name, args, ctx):
+        executed_tools.append(name)
+        return await original_call(name, args, ctx)
+
+    monkeypatch.setattr(registry, "call", _record_call)
+
+    result = await _run_actual_strict_task(
+        repo,
+        monkeypatch,
+        llm,
+        goal="attempt disallowed tool after write",
+    )
+
+    sub = result.sub_results[0]
+    assert llm.tool_schemas
+    assert all(schema == {"file_write"} for schema in llm.tool_schemas)
+    assert sub.status == "failed"
+    assert "strict_tool_policy_violation: echo" in sub.error
+    assert executed_tools == ["file_write"]
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+
+
+async def test_strict_real_loop_cancel_after_write_is_cancelled(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-real-cancel"
+    _init_git_repo(repo)
+    llm = _ScriptedDevelopmentLLM(["write", "block"])
+    monkeypatch.setattr(loop_mod, "get_llm_client", lambda: llm)
+    ws_token = ws_mod.set_workspace(repo)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        parallel_task = asyncio.create_task(
+            run_parallel_agents(
+                [
+                    SubTask(
+                        goal="real loop cancel after write",
+                        capabilities=["file_write"],
+                    )
+                ],
+                _principal(),
+                use_worktrees=True,
+            )
+        )
+        await asyncio.wait_for(llm.blocked.wait(), timeout=5)
+        async with get_sessionmaker()() as session:
+            running = await list_development_tasks(session, "default")
+        task_id = next(
+            item.task_id
+            for item in running
+            if item.goal == "real loop cancel after write"
+        )
+        assert cancel_running_development_task(task_id) is True
+        result = await parallel_task
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert sub.status == "cancelled"
+    assert sub.development_task_status == "cancelled"
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(session, "default", task_id)
+    assert record is not None
+    assert record.status.value == "cancelled"
+    assert not record.patch_path or not Path(record.patch_path).exists()
+
+
+async def test_strict_real_loop_timeout_after_write_is_timeout(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-real-timeout"
+    _init_git_repo(repo)
+    monkeypatch.setattr(parallel, "SUB_TASK_TIMEOUT", 0.05)
+
+    result = await _run_actual_strict_task(
+        repo,
+        monkeypatch,
+        _ScriptedDevelopmentLLM(["write", "block"]),
+        goal="real loop timeout after write",
+    )
+
+    sub = result.sub_results[0]
+    assert sub.status == "timeout"
+    assert sub.development_task_status == "timeout"
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", sub.development_task_id
+        )
+    assert record is not None
+    assert record.status.value == "timeout"
+    assert not record.patch_path or not Path(record.patch_path).exists()
 
 
 async def test_multi_capability_task_does_not_force_file_write_first(

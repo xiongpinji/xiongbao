@@ -210,6 +210,13 @@ async def run_parallel_agents(
                     reset_workspace(wt_token)
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             rd = result.to_dict()
+            if (
+                required_first_tool is not None
+                and rd.get("status") != "succeeded"
+            ):
+                raise RuntimeError(
+                    str(rd.get("error") or "strict_agent_run_failed")[:500]
+                )
             if required_first_tool is not None and not any(
                 event.get("kind") == "tool_call"
                 and event.get("tool") == required_first_tool
@@ -244,7 +251,10 @@ async def run_parallel_agents(
                         result_commit=finalized.result_commit,
                         diff_stat=diff_stat,
                         test_summary=json.dumps(
-                            {"agent_status": "succeeded", "steps": rd.get("steps", 0)}
+                            {
+                                "agent_status": rd.get("status", "succeeded"),
+                                "steps": rd.get("steps", 0),
+                            }
                         ),
                     )
                     await session.commit()

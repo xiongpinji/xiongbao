@@ -27,7 +27,15 @@ from xagent.adapters.tools import get_tool_registry
 from xagent.adapters.tools.base import ToolContext
 from xagent.core.agents import get_role_registry
 from xagent.core.orchestration.conversation import get_conversation_manager
-from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, StepKind
+from xagent.core.orchestration.state import (
+    RUN_STATUS_CANCELLED,
+    RUN_STATUS_FAILED,
+    RUN_STATUS_SUCCEEDED,
+    AgentRun,
+    AgentState,
+    StepEvent,
+    StepKind,
+)
 from xagent.core.workspace import get_workspace  # V3-3: 每任务 contextvar 可覆盖
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.logging import get_logger
@@ -1063,6 +1071,12 @@ async def run_agent(
         raise RuntimeError(
             f"必需工具 {required_first_tool} 未在当前角色的工具 schema 中"
         )
+    if required_first_tool:
+        specs = [
+            spec
+            for spec in specs
+            if spec["function"]["name"] == required_first_tool
+        ]
 
     # ── 多轮对话：加载历史 ──
     conv_mgr = get_conversation_manager()
@@ -1328,6 +1342,8 @@ async def run_agent(
         _last_checkpoint_step = 0
         _terminal_success = False
         _pending_final_event: StepEvent | None = None
+        _run_status = RUN_STATUS_FAILED
+        _run_error = ""
         _required_tool_seen = False
         _required_tool_attempts = 0
         _required_tool_choice = (
@@ -1530,6 +1546,15 @@ async def run_agent(
                                   ),
                               ))
                               continue
+                      if required_first_tool:
+                          _disallowed_stream_tools = (
+                              _stream_tool_names - {required_first_tool}
+                          )
+                          if _disallowed_stream_tools:
+                              raise RuntimeError(
+                                  "strict_tool_policy_violation: "
+                                  + ", ".join(sorted(_disallowed_stream_tools))
+                              )
                       # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送，否则 Deepseek 报错）
                       _tc_list = [
                           {"id": tool_calls_buf[_i]["id"] or f"call_{state.step}_{_i}", "type": "function",
@@ -2031,6 +2056,15 @@ async def run_agent(
                                   ),
                               ))
                               continue
+                      if required_first_tool:
+                          _disallowed_native_tools = (
+                              _native_tool_names - {required_first_tool}
+                          )
+                          if _disallowed_native_tools:
+                              raise RuntimeError(
+                                  "strict_tool_policy_violation: "
+                                  + ", ".join(sorted(_disallowed_native_tools))
+                              )
                       # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送）
                       _tc_list_ns = [
                           {"id": tc.id, "type": "function",
@@ -2307,6 +2341,7 @@ async def run_agent(
 
             if not state.finished:
                 # MAX_STEPS 耗尽 — 让 LLM 做最终总结
+                _run_error = "max_steps_exceeded"
                 state.messages.append(Message(
                     role="user",
                     content=(
@@ -2369,12 +2404,20 @@ async def run_agent(
                 )
             except Exception:  # noqa: S110
                 pass
+            _run_status = RUN_STATUS_CANCELLED
+            _run_error = "cancelled_by_user"
+            if required_first_tool:
+                if _work_branch:
+                    _git_cleanup_branch(get_workspace(), _work_branch)
+                    _work_branch = None
+                raise
             await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
-        except MemoryError:
+        except MemoryError as memory_exc:
             # ── 优雅降级：内存不足时清理缓存并继续 ──
             logger.warning("memory_pressure", step=state.step)
             _file_read_cache.clear()
             _recent_tool_calls.clear()
+            _run_error = f"memory_pressure: {memory_exc!s:.200}"
             if not state.final_answer:
                 state.final_answer = (
                     "任务执行过程中遇到内存压力，已清理缓存。\n\n"
@@ -2383,6 +2426,7 @@ async def run_agent(
             await _emit(StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
             _loop_error = str(loop_exc)[:300]
+            _run_error = _loop_error or type(loop_exc).__name__
             # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
             if not state.final_answer:
                 # 从消息历史中提取最后的工具结果作为回答
@@ -2462,6 +2506,11 @@ async def run_agent(
                 pass
         if _summary_parts:
             state.final_answer += "\n\n---\n" + "\n".join(_summary_parts)
+
+    if _terminal_success and not _run_error:
+        _run_status = RUN_STATUS_SUCCEEDED
+    elif _run_status != RUN_STATUS_CANCELLED and not _run_error:
+        _run_error = "incomplete_run"
 
     terminal_messages = [_checkpoint_message(m) for m in conv_session.messages]
     terminal_messages.extend(
@@ -2557,6 +2606,8 @@ async def run_agent(
         tenant_id=principal.tenant_id,
         final_answer=state.final_answer,
         steps=state.step,
+        status=_run_status,
+        error=_run_error,
         events=events,
         conversation_id=conv_session.conversation_id,
         prompt_tokens=state.total_prompt_tokens,

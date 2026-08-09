@@ -480,6 +480,26 @@ class FileReadTool:
             return ToolResult(ok=False, error=f"读取失败: {e}")
 
 
+def _resolve_workspace_write_path(raw_path: Any) -> Path:
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise ValueError("写入路径不能为空")
+    requested = Path(raw_path)
+    if any(part == ".." for part in requested.parts):
+        raise ValueError("写入路径不得包含 ../ 穿越")
+    if any(part.casefold() == ".git" for part in requested.parts):
+        raise ValueError("禁止写入 Git 元数据路径")
+
+    workspace = _ws_resolve().resolve()
+    candidate = requested if requested.is_absolute() else workspace / requested
+    resolved = candidate.resolve(strict=False)
+    if not resolved.is_relative_to(workspace):
+        raise ValueError(f"写入路径必须位于 workspace 内: {workspace}")
+    relative = resolved.relative_to(workspace)
+    if any(part.casefold() == ".git" for part in relative.parts):
+        raise ValueError("禁止写入 Git 元数据路径")
+    return resolved
+
+
 class FileWriteTool:
     spec = ToolSpec(
         name="file_write",
@@ -495,10 +515,11 @@ class FileWriteTool:
     )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
-        path = Path(args.get("path", ""))
         content = args.get("content", "")
-        if not path.is_absolute():
-            path = _ws_resolve() / path
+        try:
+            path = _resolve_workspace_write_path(args.get("path", ""))
+        except (OSError, ValueError) as exc:
+            return ToolResult(ok=False, error=str(exc))
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             # ── 原子写入：先写临时文件再 rename（防止崩溃时文件损坏） ──
@@ -509,10 +530,7 @@ class FileWriteTool:
             try:
                 with os.fdopen(_tmp_fd, "w", encoding="utf-8") as _f:
                     _f.write(content)
-                # Windows 上 rename 前必须先删除目标（如果存在）
-                if path.exists():
-                    path.unlink()
-                os.rename(_tmp_path, str(path))
+                os.replace(_tmp_path, path)
             except Exception:
                 # 清理临时文件
                 try:

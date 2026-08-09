@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message
 from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
@@ -9,7 +11,7 @@ from xagent.adapters.tools.base import ToolResult
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
 from xagent.core.orchestration.loop import run_agent as run_agent_builtin
-from xagent.core.orchestration.state import StepKind
+from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 
@@ -20,6 +22,16 @@ def test_role_match_by_capability() -> None:
     assert match_role({"unknown-cap"}).name in {r.name for r in get_role_registry().all()}
 
 
+def test_agent_run_status_fields_preserve_positional_events_compatibility() -> None:
+    event = StepEvent(kind=StepKind.final, content="done", step=1)
+
+    run = AgentRun("run", "goal", "role", "tenant", "done", 1, [event])
+
+    assert run.events == [event]
+    assert run.status == "succeeded"
+    assert run.error == ""
+
+
 async def test_run_agent_converges_offline() -> None:
     # mock LLM 返回纯文本 -> 第一步 final，循环收敛
     p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
@@ -28,6 +40,9 @@ async def test_run_agent_converges_offline() -> None:
     assert run.steps >= 1
     assert run.events[-1].kind == StepKind.final
     assert run.tenant_id == "t1"
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert run.to_dict()["status"] == "succeeded"
 
 
 async def test_run_agent_records_run_id() -> None:
@@ -40,6 +55,78 @@ async def test_run_agent_reuses_external_run_id() -> None:
     p = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
     run = await run_agent("任务", principal=p, run_id="external-run-id")
     assert run.run_id == "external-run-id"
+
+
+class _FailingLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self, error: BaseException) -> None:
+        self.error = error
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        raise self.error
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("无工具模型不得进入原生工具路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _BlockingLLM(LLMClient):
+    supports_tools = False
+
+    def __init__(self) -> None:
+        self.started = asyncio.Event()
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        self.started.set()
+        await asyncio.Event().wait()
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("无工具模型不得进入原生工具路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_builtin_run_reports_provider_failure(monkeypatch) -> None:
+    llm = _FailingLLM(ValueError("provider failed"))
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin("provider failure", principal=principal)
+
+    assert run.status == "failed"
+    assert "provider failed" in run.error
+    assert run.to_dict()["error"] == run.error
+
+
+async def test_builtin_run_reports_memory_error(monkeypatch) -> None:
+    llm = _FailingLLM(MemoryError("out of memory"))
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin("memory failure", principal=principal)
+
+    assert run.status == "failed"
+    assert "memory_pressure" in run.error
+
+
+async def test_builtin_run_keeps_graceful_cancel_for_regular_calls(monkeypatch) -> None:
+    llm = _BlockingLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    task = asyncio.create_task(
+        run_agent_builtin("regular cancel", principal=principal)
+    )
+    await asyncio.wait_for(llm.started.wait(), timeout=5)
+    task.cancel()
+    run = await task
+
+    assert run.status == "cancelled"
+    assert "cancelled" in run.error
 
 
 class _ToolJsonLLM(LLMClient):

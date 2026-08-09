@@ -97,6 +97,8 @@ class AgentRun:
     # ── Token 用量（实测成本追踪） ──
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    status: str = RUN_STATUS_SUCCEEDED
+    error: str = ""
 
     @property
     def total_tokens(self) -> int:
@@ -110,6 +112,10 @@ class AgentRun:
             "tenant_id": self.tenant_id,
             "final_answer": self.final_answer,
             "steps": self.steps,
+            "status": normalize_run_status(
+                self.status, default=RUN_STATUS_SUCCEEDED
+            ),
+            "error": self.error,
             "conversation_id": self.conversation_id,
             "usage": {
                 "prompt_tokens": self.prompt_tokens,
