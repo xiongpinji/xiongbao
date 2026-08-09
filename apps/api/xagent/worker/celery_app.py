@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -361,6 +361,7 @@ async def _run_agent_task_lifecycle(
     task_id: str,
     started_at: datetime,
     input_payload: dict[str, Any],
+    tool_mode: Literal["auto", "none"],
 ) -> dict[str, Any]:
     from xagent.core.orchestration import run_agent
     from xagent.enterprise.auth.principal import Principal
@@ -384,6 +385,7 @@ async def _run_agent_task_lifecycle(
             role_name=role,
             capabilities=set(capabilities) or None,
             run_id=task_id or None,
+            tool_mode=tool_mode,
         )
         result = run_result.to_dict()
         result_status = str(result.get("status") or getattr(run_result, "status", "succeeded"))
@@ -469,6 +471,7 @@ def run_agent_task(
     capabilities: list[str],
     tenant_id: str,
     user_id: str,
+    tool_mode: Literal["auto", "none"] = "auto",
 ) -> dict[str, Any]:
     """Celery 任务入口：同步包装异步 run_agent。"""
     task_id = ""
@@ -478,6 +481,14 @@ def run_agent_task(
         task_id = str(getattr(getattr(current_task, "request", None), "id", "") or "")
     except Exception:
         task_id = ""
+
+    input_payload = {
+        "goal": goal,
+        "role": role,
+        "capabilities": list(capabilities),
+    }
+    if tool_mode == "none":
+        input_payload.update(tool_mode="none", route="chat_no_tools")
 
     async def _run_once() -> dict[str, Any]:
         from xagent.infra.db import dispose_engine
@@ -491,11 +502,8 @@ def run_agent_task(
                 user_id=user_id,
                 task_id=task_id,
                 started_at=datetime.now(UTC),
-                input_payload={
-                    "goal": goal,
-                    "role": role,
-                    "capabilities": list(capabilities),
-                },
+                input_payload=input_payload,
+                tool_mode=tool_mode,
             )
         finally:
             try:

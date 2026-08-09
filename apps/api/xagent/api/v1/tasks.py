@@ -10,7 +10,7 @@ import json
 import uuid
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -51,6 +51,7 @@ class TaskSubmitIn(BaseModel):
     spine_task_id: str = Field(default="")
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    tool_mode: Literal["auto", "none"] = "auto"
 
 
 def _build_input_payload(body: TaskSubmitIn) -> dict[str, Any]:
@@ -65,6 +66,8 @@ def _build_input_payload(body: TaskSubmitIn) -> dict[str, Any]:
         payload["goal_id"] = goal_id
     if spine_task_id:
         payload["spine_task_id"] = spine_task_id
+    if getattr(body, "tool_mode", "auto") == "none":
+        payload.update(tool_mode="none", route="chat_no_tools")
     return payload
 
 
@@ -135,9 +138,7 @@ async def _sync_finished_task_status_if_needed(
 
     next_status = "review" if record.status.value == "succeeded" else "recovery"
     blocker_reason = (
-        str(record.error or "")
-        if record.status.value in {"failed", "cancelled"}
-        else ""
+        str(record.error or "") if record.status.value in {"failed", "cancelled"} else ""
     )
     async with get_sessionmaker()() as session:
         await update_task_status_by_run_id(
@@ -307,6 +308,7 @@ async def submit_task(
     principal: Principal = Depends(require_permission("agent", "execute")),
 ) -> dict:
     runner = get_task_runner()
+    tool_mode = getattr(body, "tool_mode", "auto")
     resolved_goal_id, resolved_spine_task_id, strict_spine = await _resolve_spine_contract(
         principal=principal,
         goal_id=body.goal_id,
@@ -322,6 +324,7 @@ async def submit_task(
                     principal=principal,
                     role_name=body.role,
                     capabilities=set(body.capabilities) or None,
+                    tool_mode=tool_mode,
                 )
             ).to_dict()
             try:
@@ -391,6 +394,7 @@ async def submit_task(
                     "capabilities": body.capabilities,
                     "tenant_id": principal.tenant_id,
                     "user_id": principal.user_id,
+                    "tool_mode": tool_mode,
                 },
                 task_id=task_id,
             )

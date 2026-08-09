@@ -237,6 +237,7 @@ async def test_task_submit_reuses_shared_celery_app(
             assert name == "xagent.run_agent"
             assert kwargs["tenant_id"] == principal.tenant_id
             assert kwargs["user_id"] == principal.user_id
+            assert kwargs["tool_mode"] == "auto"
             assert task_id
             return _AsyncResultStub(task_id)
 
@@ -262,6 +263,127 @@ async def test_task_submit_reuses_shared_celery_app(
 
     assert created["task_id"]
     assert created["backend"] == "celery"
+
+
+async def test_task_submit_tool_mode_none_forwards_to_celery_and_persistence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from xagent.api.v1.tasks import TaskSubmitIn, submit_task
+    from xagent.enterprise.auth.principal import Principal
+
+    principal = Principal(
+        user_id="u-tool-mode", tenant_id="tenant-tool-mode", roles=frozenset({"member"})
+    )
+    sent: dict[str, object] = {}
+    persisted: dict[str, object] = {}
+
+    class _AsyncResultStub:
+        id = "celery-tool-mode-none"
+
+    class _SharedCeleryAppStub:
+        def send_task(self, name: str, kwargs: dict, task_id: str | None = None):
+            sent.update(name=name, kwargs=kwargs, task_id=task_id)
+            return _AsyncResultStub()
+
+    async def _persist_stub(**kwargs) -> None:
+        persisted.update(kwargs)
+
+    monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: _SharedCeleryAppStub())
+    monkeypatch.setattr("xagent.api.v1.tasks.persist_submitted_agent_task", _persist_stub)
+    monkeypatch.setattr("xagent.api.v1.tasks._try_attach_spine_task", AsyncMock(return_value=None))
+
+    created = await submit_task(
+        body=TaskSubmitIn(goal="exact background chat", tool_mode="none"),
+        principal=principal,
+    )
+
+    expected_input = {
+        "goal": "exact background chat",
+        "role": None,
+        "capabilities": [],
+        "tool_mode": "none",
+        "route": "chat_no_tools",
+    }
+    assert sent["name"] == "xagent.run_agent"
+    assert sent["kwargs"]["tool_mode"] == "none"
+    assert persisted["input_payload"] == expected_input
+    assert created["input"] == expected_input
+
+
+async def test_task_submit_tool_mode_none_forwards_to_inproc_run_agent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from xagent.api.v1.tasks import TaskSubmitIn, submit_task
+    from xagent.enterprise.auth.principal import Principal
+
+    principal = Principal(
+        user_id="u-tool-mode-inproc",
+        tenant_id="tenant-tool-mode-inproc",
+        roles=frozenset({"member"}),
+    )
+    captured: dict[str, object] = {}
+    called = asyncio.Event()
+
+    async def _fake_run_agent(goal: str, **kwargs):
+        captured.update(goal=goal, **kwargs)
+        called.set()
+
+        class _Run:
+            def to_dict(self) -> dict[str, object]:
+                return {"status": "succeeded", "final_answer": "done"}
+
+        return _Run()
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        async def commit(self) -> None:
+            return None
+
+    monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: None)
+    monkeypatch.setattr("xagent.api.v1.tasks.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.api.v1.tasks._try_attach_spine_task", AsyncMock(return_value=None))
+    monkeypatch.setattr("xagent.api.v1.tasks.get_sessionmaker", lambda: lambda: _Session())
+    monkeypatch.setattr("xagent.api.v1.tasks.update_task_status_by_run_id", AsyncMock())
+
+    created = await submit_task(
+        body=TaskSubmitIn(goal="exact inproc chat", tool_mode="none"),
+        principal=principal,
+    )
+    await asyncio.wait_for(called.wait(), timeout=1)
+    for _ in range(50):
+        record = get_task_runner().get(created["task_id"], principal.tenant_id)
+        if record is not None and record.status.value == "succeeded":
+            break
+        await asyncio.sleep(0.01)
+
+    assert captured["tool_mode"] == "none"
+    assert record is not None
+    assert record.status.value == "succeeded"
+    assert created["input"] == {
+        "goal": "exact inproc chat",
+        "role": None,
+        "capabilities": [],
+        "tool_mode": "none",
+        "route": "chat_no_tools",
+    }
+
+
+def test_task_submit_default_auto_preserves_legacy_input_shape() -> None:
+    from xagent.api.v1.tasks import TaskSubmitIn, _build_input_payload
+
+    body = TaskSubmitIn(goal="legacy task")
+
+    assert body.tool_mode == "auto"
+    assert _build_input_payload(body) == {
+        "goal": "legacy task",
+        "role": None,
+        "capabilities": [],
+    }
 
 
 async def test_task_list_refreshes_celery_terminal_status_from_backend(
@@ -450,6 +572,7 @@ def test_celery_worker_uses_task_id_as_run_id(monkeypatch: pytest.MonkeyPatch) -
     )
 
     assert captured["run_id"] == "celery-task-run-id"
+    assert captured["tool_mode"] == "auto"
     assert result["run_id"] == "celery-task-run-id"
 
 
@@ -502,6 +625,71 @@ def test_celery_worker_failed_result_does_not_persist_success(
     assert persist_record.await_args.kwargs["status"] == "failed"
     assert persist_record.await_args.kwargs["error"] == "model_empty_response_after_retry"
     assert update_status.await_args.kwargs["next_status"] == "recovery"
+
+
+def test_celery_worker_tool_mode_none_forwards_and_persists_terminal_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from xagent.worker.celery_app import run_agent_task
+
+    captured: dict[str, object] = {}
+
+    async def _fake_run_agent(goal: str, **kwargs):
+        captured.update(goal=goal, **kwargs)
+
+        class _Run:
+            status = "succeeded"
+
+            def to_dict(self) -> dict[str, object]:
+                return {"status": self.status, "final_answer": "done"}
+
+        return _Run()
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        async def commit(self) -> None:
+            return None
+
+    class _CurrentTask:
+        request = type("Request", (), {"id": "celery-tool-mode-none"})()
+
+    persist_running = AsyncMock()
+    persist_terminal = AsyncMock()
+    monkeypatch.setattr("celery.current_task", _CurrentTask())
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.worker.celery_app.persist_submitted_agent_task", persist_running)
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.persist_agent_task_record_in_session", persist_terminal
+    )
+    monkeypatch.setattr("xagent.worker.celery_app.update_task_status_by_run_id", AsyncMock())
+    monkeypatch.setattr("xagent.infra.db.get_sessionmaker", lambda: lambda: _Session())
+    monkeypatch.setattr("xagent.infra.db.dispose_engine", AsyncMock())
+
+    result = run_agent_task(
+        goal="exact worker chat",
+        role="general",
+        capabilities=[],
+        tenant_id="tenant-celery",
+        user_id="user-celery",
+        tool_mode="none",
+    )
+
+    expected_input = {
+        "goal": "exact worker chat",
+        "role": "general",
+        "capabilities": [],
+        "tool_mode": "none",
+        "route": "chat_no_tools",
+    }
+    assert result["status"] == "succeeded"
+    assert captured["tool_mode"] == "none"
+    assert persist_running.await_args.kwargs["input_payload"] == expected_input
+    assert persist_terminal.await_args.kwargs["input_payload"] == expected_input
 
 
 @pytest.mark.parametrize(
@@ -917,7 +1105,15 @@ def test_celery_worker_updates_persisted_task_result(
         def to_dict(self) -> dict:
             return {"final_answer": "done", "timeline": [{"kind": "finished"}]}
 
-    async def _fake_run_agent(goal, principal, role_name=None, capabilities=None, run_id=None):  # noqa: ARG001
+    async def _fake_run_agent(
+        goal,
+        principal,
+        role_name=None,
+        capabilities=None,
+        run_id=None,
+        tool_mode="auto",
+    ):  # noqa: ARG001
+        assert tool_mode == "auto"
         return _AgentResult()
 
     asyncio.run(
