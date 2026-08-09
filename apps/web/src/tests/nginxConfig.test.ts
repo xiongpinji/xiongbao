@@ -39,4 +39,17 @@ describe("nginx API upstream contract", () => {
       "nginx must not resolve the api service only once during startup",
     );
   });
+
+  it("proxies the exact API WebSocket path without a trailing-slash redirect", () => {
+    const config = readNginxConfig();
+
+    assert(
+      /\blocation\s*=\s*\/ws\s*\{[\s\S]*?\bproxy_pass\s+\$api_upstream\s*;[\s\S]*?\}/.test(config),
+      "nginx must proxy the API's exact /ws route",
+    );
+    assert(
+      !/\blocation\s+\/ws\/\s*\{/.test(config),
+      "nginx must not redirect /ws to the unsupported /ws/ route",
+    );
+  });
 });
