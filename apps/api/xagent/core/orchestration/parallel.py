@@ -210,12 +210,9 @@ async def run_parallel_agents(
                     reset_workspace(wt_token)
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             rd = result.to_dict()
-            if (
-                required_first_tool is not None
-                and rd.get("status") != "succeeded"
-            ):
+            if task_paths is not None and rd.get("status") != "succeeded":
                 raise RuntimeError(
-                    str(rd.get("error") or "strict_agent_run_failed")[:500]
+                    str(rd.get("error") or "isolated_agent_run_failed")[:500]
                 )
             if required_first_tool is not None and not any(
                 event.get("kind") == "tool_call"
@@ -349,6 +346,16 @@ async def run_parallel_agents(
                 await cleanup_task_worktree(
                     repository_baseline.root, task_paths, branch, strict=False
                 )
+                try:
+                    await asyncio.to_thread(
+                        task_paths.patch.unlink, missing_ok=True
+                    )
+                except OSError as exc:
+                    logger.warning(
+                        "parallel_patch_cleanup_failed",
+                        task_id=development_task_id,
+                        error=str(exc),
+                    )
 
     # 并行调度所有子任务
     results = await asyncio.gather(

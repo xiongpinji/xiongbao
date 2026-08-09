@@ -32,6 +32,17 @@ from xagent.infra.db import get_session
 
 router = APIRouter(prefix="/development-tasks", tags=["development-tasks"])
 
+_PATCH_READABLE_STATUSES = frozenset(
+    {
+        DevelopmentTaskStatus.awaiting_review,
+        DevelopmentTaskStatus.approved,
+        DevelopmentTaskStatus.applied,
+        DevelopmentTaskStatus.rejected,
+        DevelopmentTaskStatus.conflict,
+        DevelopmentTaskStatus.expired,
+    }
+)
+
 
 class TaskConfirmation(BaseModel):
     confirm_task_id: str = Field(min_length=1)
@@ -138,6 +149,11 @@ async def read_development_task_patch(
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     record = await _require_task(session, principal.tenant_id, task_id)
+    if record.status not in _PATCH_READABLE_STATUSES:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"开发任务当前状态不可读取补丁: {record.status.value}",
+        )
     try:
         paths = validate_record_paths(
             Path(record.main_workspace),

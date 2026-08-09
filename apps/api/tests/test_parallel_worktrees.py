@@ -598,6 +598,112 @@ async def test_parallel_worktree_failure_is_recorded_and_cleaned(tmp_path, monke
     assert branches == ""
 
 
+async def test_non_strict_worktree_failed_run_with_diff_is_not_reviewable(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-failed-status"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+
+    async def _failed_run(*args, **kwargs):  # noqa: ARG001
+        (ws_mod.get_workspace() / "failed.txt").write_text(
+            "real diff before failure", encoding="utf-8"
+        )
+        return _FakeRun(
+            "partial result",
+            status="failed",
+            error="provider failed after coding",
+        )
+
+    monkeypatch.setattr(parallel, "run_agent", _failed_run)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="failed coding result", capabilities=["coding"])],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert result.status == "failed"
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert sub.error == "provider failed after coding"
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", sub.development_task_id
+        )
+    assert record is not None
+    assert record.status.value == "failed"
+    assert record.error == "provider failed after coding"
+    assert not Path(record.patch_path).exists()
+
+
+async def test_cancel_during_finalize_removes_unpublished_patch(
+    tmp_path, monkeypatch
+) -> None:
+    from xagent.domains.development_tasks import git_lifecycle
+
+    repo = tmp_path / "repo-cancel-finalize"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+    patch_ready = asyncio.Event()
+    original_finalize = git_lifecycle.finalize_task_worktree
+
+    async def _blocking_finalize(*args, **kwargs):
+        finalized = await original_finalize(*args, **kwargs)
+        patch_ready.set()
+        await asyncio.Event().wait()
+        return finalized
+
+    monkeypatch.setattr(
+        git_lifecycle, "finalize_task_worktree", _blocking_finalize
+    )
+    monkeypatch.setattr(
+        parallel, "run_agent", _make_fake_run_agent("cancelled-finalize.txt")
+    )
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        parallel_task = asyncio.create_task(
+            run_parallel_agents(
+                [SubTask(goal="cancel during finalize", capabilities=["coding"])],
+                _principal(),
+                use_worktrees=True,
+            )
+        )
+        await asyncio.wait_for(patch_ready.wait(), timeout=5)
+        async with get_sessionmaker()() as session:
+            running = await list_development_tasks(session, "default")
+        record_before_cancel = next(
+            task for task in running if task.goal == "cancel during finalize"
+        )
+        assert Path(record_before_cancel.patch_path).is_file()
+        assert cancel_running_development_task(record_before_cancel.task_id) is True
+        result = await parallel_task
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert result.status == "failed"
+    assert sub.status == "cancelled"
+    assert sub.development_task_status == "cancelled"
+    assert not Path(sub.worktree_path).exists()
+    assert _temporary_branches(repo) == []
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", record_before_cancel.task_id
+        )
+    assert record is not None
+    assert record.status.value == "cancelled"
+    assert not Path(record.patch_path).exists()
+
+
 async def test_parallel_worktree_empty_result_is_failed_and_cleaned(
     tmp_path, monkeypatch
 ) -> None:

@@ -22,7 +22,13 @@ from xagent.adapters.observability import get_tracer
 from xagent.adapters.tools import get_tool_registry
 from xagent.adapters.tools.base import ToolContext
 from xagent.core.agents import get_role_registry
-from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
+from xagent.core.orchestration.state import (
+    RUN_STATUS_FAILED,
+    RUN_STATUS_SUCCEEDED,
+    AgentRun,
+    StepEvent,
+    StepKind,
+)
 from xagent.enterprise.auth.principal import Principal
 
 MAX_STEPS = 6
@@ -209,6 +215,14 @@ async def run_agent_langgraph(
     final_answer = final_state["final_answer"]
     if not final_answer and final_state["messages"]:
         final_answer = final_state["messages"][-1].get("content", "")
+    succeeded = final_state["finished"] is True
+    error = ""
+    if not succeeded:
+        error = (
+            "max_steps_exceeded"
+            if final_state["step"] >= MAX_STEPS
+            else "incomplete_run"
+        )
 
     return AgentRun(
         run_id=resolved_run_id,
@@ -218,4 +232,6 @@ async def run_agent_langgraph(
         final_answer=final_answer,
         steps=final_state["step"],
         events=events,
+        status=RUN_STATUS_SUCCEEDED if succeeded else RUN_STATUS_FAILED,
+        error=error,
     )

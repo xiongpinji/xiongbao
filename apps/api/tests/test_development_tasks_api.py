@@ -99,6 +99,60 @@ async def test_list_detail_and_patch_are_tenant_isolated_and_sanitized(
     assert "patch_path" not in patch.text
 
 
+async def test_cancelled_task_patch_is_not_downloadable_even_if_file_remains(
+    client: AsyncClient, tmp_path: Path
+) -> None:
+    task_id = "api-cancelled-patch"
+    tenant_id = "tenant-cancelled-patch"
+    await _create_task(
+        tmp_path,
+        task_id=task_id,
+        tenant_id=tenant_id,
+        status=DevelopmentTaskStatus.cancelled,
+    )
+
+    response = await client.get(
+        f"/api/v1/development-tasks/{task_id}/patch",
+        headers=_auth(tenant_id),
+    )
+
+    assert response.status_code == 409
+    assert "状态" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "task_status",
+    [
+        DevelopmentTaskStatus.approved,
+        DevelopmentTaskStatus.applied,
+        DevelopmentTaskStatus.rejected,
+        DevelopmentTaskStatus.conflict,
+        DevelopmentTaskStatus.expired,
+    ],
+)
+async def test_reviewed_task_patch_remains_downloadable(
+    client: AsyncClient,
+    tmp_path: Path,
+    task_status: DevelopmentTaskStatus,
+) -> None:
+    task_id = f"api-patch-{task_status.value}"
+    tenant_id = f"tenant-patch-{task_status.value}"
+    await _create_task(
+        tmp_path,
+        task_id=task_id,
+        tenant_id=tenant_id,
+        status=task_status,
+    )
+
+    response = await client.get(
+        f"/api/v1/development-tasks/{task_id}/patch",
+        headers=_auth(tenant_id),
+    )
+
+    assert response.status_code == 200
+    assert "diff --git" in response.json()["patch"]
+
+
 async def test_mutations_require_exact_task_confirmation(
     client: AsyncClient, tmp_path: Path
 ) -> None:

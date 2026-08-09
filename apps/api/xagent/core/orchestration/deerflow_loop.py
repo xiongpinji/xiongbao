@@ -13,7 +13,13 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
+from xagent.core.orchestration.state import (
+    RUN_STATUS_FAILED,
+    RUN_STATUS_SUCCEEDED,
+    AgentRun,
+    StepEvent,
+    StepKind,
+)
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.logging import get_logger
 
@@ -109,6 +115,19 @@ async def run_agent_deerflow(
                 kind=StepKind.error, content=str(exc2), step=1
             ))
 
+    error_events = [
+        str(event.content)
+        for event in events
+        if event.kind == StepKind.error and event.content
+    ]
+    successful_final = not error_events and any(
+        event.kind == StepKind.final and str(event.content or "").strip()
+        for event in events
+    )
+    error = ""
+    if not successful_final:
+        error = error_events[-1] if error_events else "incomplete_run"
+
     return AgentRun(
         run_id=resolved_run_id,
         goal=goal,
@@ -117,4 +136,6 @@ async def run_agent_deerflow(
         final_answer=final_answer,
         steps=len(events),
         events=events,
+        status=RUN_STATUS_SUCCEEDED if successful_final else RUN_STATUS_FAILED,
+        error=error,
     )
