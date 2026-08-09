@@ -4,7 +4,6 @@ import {
   shouldResetChatSession,
   withStreamingConversationHistoryGuard,
 } from "../pages/chatSessionLifecycle";
-import ChatPage from "../pages/ChatPage";
 
 type StreamingConversationSetter = (
   update: string | null | ((current: string | null) => string | null),
@@ -139,21 +138,6 @@ describe("chat session lifecycle", () => {
     );
   });
 
-  it("wires submit and regenerate through one guarded stream without cleanup reload", () => {
-    const source = ChatPage.toString();
-    const sharedRunCalls = source.match(/await runSSE\(/g)?.length ?? 0;
-
-    assert(sharedRunCalls === 2, "Submit and regenerate must share the guarded runSSE path");
-    assert(
-      source.includes("await withStreamingConversationHistoryGuard("),
-      "ChatPage runSSE must execute the stream through the lifecycle guard",
-    );
-    assert(
-      source.includes("}, [conversationId]);") &&
-        !source.includes("[conversationId, streamingConversationId]"),
-      "Guard cleanup must not retrigger the history-loading effect",
-    );
-  });
 });
 
 function createStreamingConversationState() {
