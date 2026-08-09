@@ -78,7 +78,7 @@ R2 核心路径只启动：`postgres`、`redis`、`qdrant`、`api`、`worker`、
 - `api` 负责 `/api/v1/tasks`、`/api/v1/workflows`、`/api/v1/runs/:run_id` 等 unified runtime 主链入口。
 - `worker` 负责 full 模式后台长任务；当 Redis / Celery 可用时，后台任务可跨实例续跑。
 - compose 默认通过 `host.docker.internal:11434` 访问宿主机 Ollama，并为 `api` / `worker` 配置了 `extra_hosts: ["host.docker.internal:host-gateway"]`，以兼容 Linux Docker。
-- `deploy/compose/.env.example` 与 `.env.rehearsal` 已包含冷启动加固相关参数：`XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`、`XAGENT_LLM__WARMUP_ENABLED=true`、`XAGENT_LLM__WARMUP_PROMPT=回复一个字：好`、`XAGENT_LLM__WARMUP_MAX_TOKENS=8`、`XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=30`、`XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`。复制到 `.env` 后应保留这组基线。
+- `deploy/compose/r2.env.example` 与 `pwsh -File scripts/r2-preflight.ps1 -Init` 生成的 `deploy/compose/r2.env.local` 已包含冷启动加固相关参数：`XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=150`、`XAGENT_LLM__WARMUP_ENABLED=true`、`XAGENT_LLM__WARMUP_PROMPT=回复一个字：好`、`XAGENT_LLM__WARMUP_MAX_TOKENS=8`、`XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=120`、`XAGENT_LLM__WARMUP_POLL_INTERVAL_SECONDS=1`。rehearsal 只允许把所需非 secret 参数合入 `deploy/compose/r2.env.local`。
 - compose 中的 `XAGENT_CORS_ORIGINS` 会直接读取 `deploy/compose/r2.env.local` 的值；R2 Compose 基线前端对外端口是 `18080`，因此浏览器来源应写成 `http://127.0.0.1:18080`。
 - `web` 提供统一 Run Console，容器内直接反代 `api:8000`，R2 对外浏览器入口是 `http://127.0.0.1:18080`。
 - `apps/web/dist` 不会在镜像内自动构建，因此 `docker compose up` 前必须先执行 `npm run build`。
@@ -159,13 +159,13 @@ docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file depl
 4. 观察 warmup 日志，确认 `api` 和 `worker` 都至少产出一次成功或失败信号：
 
 ```bash
-docker compose logs api worker --since=10m | grep -E "ollama_warmup_(succeeded|failed)"
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local logs api worker --since=10m | grep -E "ollama_warmup_(succeeded|failed)"
 ```
 
 判读要求：
 
 - 理想情况：`api`、`worker` 都出现 `ollama_warmup_succeeded`。
-- 若任一服务出现 `ollama_warmup_failed`，先检查宿主机 Ollama 是否存活、模型名是否与 `.env` 一致、`host.docker.internal:11434` 是否可达，再继续下面的首个真实请求验证。
+- 若任一服务出现 `ollama_warmup_failed`，先检查宿主机 Ollama 是否存活、模型名是否与 `deploy/compose/r2.env.local` 一致、`host.docker.internal:11434` 是否可达，再继续下面的首个真实请求验证。
 
 5. 做基础健康检查：
 
@@ -304,6 +304,6 @@ celery -A xagent.worker.celery_app worker --loglevel=info
 | `/ready` 返回 503 | 查看 `components` 字段定位 DB / 缓存依赖 |
 | `Run Console` 打不开运行详情 | 检查 `/api/v1/runs/:run_id` 与 `/api/v1/tasks/:task_id` 是否返回 200 |
 | 后台任务一直 pending | 查看 `worker` 日志，确认 Redis broker 与 Celery 已连通 |
-| 看到 `ollama_warmup_failed` | 检查宿主机 Ollama 进程、模型名、`host.docker.internal:11434` 连通性，并重跑 3.1 的冷启动验证 |
+| 看到 `ollama_warmup_failed` | 检查宿主机 Ollama 进程、模型名、`host.docker.internal:11434` 连通性，并重跑 4.1 的冷启动验证 |
 | LLM 调用失败 | 查看 LiteLLM Proxy 日志（`:4000`）或宿主机 Ollama |
 | 403 越权 | 角色 / 权限不足，调用 `/auth/me` 查看角色 |

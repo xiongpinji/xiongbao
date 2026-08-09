@@ -86,6 +86,29 @@ class R2ComposeContractTest(unittest.TestCase):
         ]
         self.assertEqual([], forbidden_commands)
 
+    def test_runbook_operations_use_current_r2_env_and_project_commands(self) -> None:
+        expected_logs_command = (
+            "docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml "
+            "--env-file deploy/compose/r2.env.local logs api worker --since=10m"
+        )
+        self.assertIn(
+            expected_logs_command + ' | grep -E "ollama_warmup_(succeeded|failed)"',
+            self.runbook,
+        )
+        self.assertNotIn(
+            'docker compose logs api worker --since=10m | grep -E "ollama_warmup_(succeeded|failed)"',
+            self.runbook,
+        )
+        self.assertIn(
+            "`deploy/compose/r2.env.example` 与 `pwsh -File scripts/r2-preflight.ps1 -Init`",
+            self.runbook,
+        )
+        self.assertIn("`XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=120`", self.runbook)
+        self.assertNotIn("复制到 `.env` 后应保留这组基线", self.runbook)
+        self.assertIn("模型名是否与 `deploy/compose/r2.env.local` 一致", self.runbook)
+        self.assertIn("重跑 4.1 的冷启动验证", self.runbook)
+        self.assertNotIn("重跑 3.1 的冷启动验证", self.runbook)
+
     def test_project_and_host_ports_are_isolated(self) -> None:
         self.assertIn("name: ${COMPOSE_PROJECT_NAME:-xagent-r2}", self.compose)
         port_variables = (
