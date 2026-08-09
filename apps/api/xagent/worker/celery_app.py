@@ -498,7 +498,14 @@ def run_agent_task(
                 },
             )
         finally:
-            await dispose_engine()
+            try:
+                await dispose_engine()
+            except Exception as dispose_exc:
+                logger.warning(
+                    "celery_db_engine_dispose_failed",
+                    task_id=task_id,
+                    error=str(dispose_exc),
+                )
 
     return asyncio.run(_run_once())
 
