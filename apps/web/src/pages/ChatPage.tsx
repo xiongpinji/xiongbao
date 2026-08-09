@@ -14,7 +14,7 @@ import { useEscapeClose } from "../hooks/useEscapeClose";
 import CheckpointTimeline from "../components/checkpoints/CheckpointTimeline.tsx";
 import {
   resolveInitialConversationId,
-  shouldLoadConversationHistory, shouldResetChatSession,
+  shouldLoadConversationHistory, shouldResetChatSession, withStreamingConversationHistoryGuard,
 } from "./chatSessionLifecycle";
 
 /* ================================================================== */
@@ -173,7 +173,7 @@ export default function ChatPage() {
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
     return () => { cancelled = true; };
-  }, [conversationId, streamingConversationId]);
+  }, [conversationId]);  // eslint-disable-line react-hooks/exhaustive-deps -- guard cleanup must not reload history
 
   // 快捷键
   useEffect(() => {
@@ -251,29 +251,32 @@ export default function ChatPage() {
     let tokenBuf = "";
     const segments: string[] = [];
 
-    await readAgentRunStream(resp, {
-      onStarted: (convId) => {
-        setStreamingConversationId(convId); setConversationId(convId);
-      },
-      onToken: (t) => { tokenBuf += t; setStreamingText(tokenBuf); },
-      onFinalAnswer: (text) => { result = text; if (!tokenBuf) setStreamingText(text); },
-      onError: setError,
-      onStep: (step) => {
-        collectedSteps.push(step);
-        setSteps([...collectedSteps]);
-        if (step.kind === "tool_call") {
-          if (tokenBuf.trim()) { segments.push(tokenBuf.trim()); setCompletedSegments([...segments]); }
-          tokenBuf = ""; setStreamingText("");
-        }
-      },
-      onDone: (nextRunId, usage) => {
-        sseRunId = nextRunId;
-        if (usage) setTokenUsage(usage);
-        syncRunTask(nextRunId, { source: "chat" });
-        appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
-      },
-      onProgress: () => {},
-    });
+    await withStreamingConversationHistoryGuard(
+      setStreamingConversationId,
+      (onStarted) => readAgentRunStream(resp, {
+        onStarted: (convId) => {
+          onStarted(convId); setConversationId(convId);
+        },
+        onToken: (t) => { tokenBuf += t; setStreamingText(tokenBuf); },
+        onFinalAnswer: (text) => { result = text; if (!tokenBuf) setStreamingText(text); },
+        onError: setError,
+        onStep: (step) => {
+          collectedSteps.push(step);
+          setSteps([...collectedSteps]);
+          if (step.kind === "tool_call") {
+            if (tokenBuf.trim()) { segments.push(tokenBuf.trim()); setCompletedSegments([...segments]); }
+            tokenBuf = ""; setStreamingText("");
+          }
+        },
+        onDone: (nextRunId, usage) => {
+          sseRunId = nextRunId;
+          if (usage) setTokenUsage(usage);
+          syncRunTask(nextRunId, { source: "chat" });
+          appendActivity({ taskId: "chat", title: "任务完成", detail: `运行 ${nextRunId}`, tone: "success" });
+        },
+        onProgress: () => {},
+      }),
+    );
 
     let finalContent = result || [...segments, tokenBuf].filter(Boolean).join("\n\n");
     if (!finalContent && collectedSteps.length > 0) {
