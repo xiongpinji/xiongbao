@@ -1,3 +1,6 @@
+import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -72,6 +75,49 @@ class R2ComposeContractTest(unittest.TestCase):
         for service in ("postgres", "redis", "qdrant", "api", "worker", "web"):
             with self.subTest(core_service=service):
                 self.assertNotIn("profiles:", self.service_block(service))
+
+    def test_default_config_does_not_require_optional_profile_secrets(self) -> None:
+        environment = os.environ.copy()
+        for variable in (
+            "GRAFANA_ADMIN_PASSWORD",
+            "XAGENT_PLATFORM_MCP_TOKEN",
+            "COMPOSE_ENV_FILES",
+            "COMPOSE_PROFILES",
+        ):
+            environment.pop(variable, None)
+        environment["COMPOSE_DISABLE_ENV_FILE"] = "1"
+        environment["POSTGRES_PASSWORD"] = "contract-only-postgres-strong-value"
+        environment["XAGENT_SECURITY__JWT_SECRET"] = (
+            "contract-only-jwt-secret-at-least-32-characters"
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            empty_env = Path(temporary_directory) / "empty.env"
+            empty_env.write_text("", encoding="utf-8")
+            result = subprocess.run(
+                (
+                    "docker",
+                    "compose",
+                    "-f",
+                    str(COMPOSE_PATH),
+                    "--env-file",
+                    str(empty_env),
+                    "config",
+                    "--services",
+                ),
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertCountEqual(
+            result.stdout.splitlines(),
+            ("postgres", "redis", "qdrant", "api", "worker", "web"),
+        )
 
     def test_api_and_worker_share_persistent_data_paths(self) -> None:
         self.assertGreaterEqual(self.compose.count("xagentdata:/data"), 2)

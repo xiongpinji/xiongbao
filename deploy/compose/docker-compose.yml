@@ -208,7 +208,7 @@ services:
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
-      - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:?set XAGENT_PLATFORM_MCP_TOKEN in deploy/compose/r2.env}
+      - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:-}
     command: >
       sh -c "python -m xagent.adapters.mcp.platform_server --http --host 0.0.0.0 --port 8100"
     restart: unless-stopped
@@ -292,7 +292,7 @@ services:
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_GRAFANA_PORT:-13002}:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in deploy/compose/.env}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ../grafana/xagent-dashboard.json:/var/lib/grafana/dashboards/xagent-overview.json:ro
