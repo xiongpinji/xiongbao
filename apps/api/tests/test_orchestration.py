@@ -301,6 +301,82 @@ class _RequiredFileWriteLLM(LLMClient):
         return True
 
 
+class _WrongThenRequiredFileWriteLLM(_RequiredFileWriteLLM):
+    """非流式：首轮忽略 named choice 调 echo，第二轮才写文件。"""
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        from xagent.adapters.llm.base import ToolCall
+
+        self.calls += 1
+        self.tool_choices.append(kwargs.get("tool_choice"))
+        if self.calls == 1:
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[ToolCall(id="call_wrong", name="echo", args={})],
+            )
+        if self.calls == 2:
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(
+                        id="call_write",
+                        name="file_write",
+                        args={"path": "artifact.txt", "content": "ok"},
+                    )
+                ],
+            )
+        return LLMResponse(content="已完成开发任务并写入产物。", model="test")
+
+
+class _RequiredStreamingFileWriteLLM(LiteLLMClient):
+    """流式：首轮调错工具，第二轮可配置为正确或继续错误。"""
+
+    def __init__(self, *, second_tool: str = "file_write") -> None:
+        self.second_tool = second_tool
+        self.calls = 0
+        self.tool_choices: list[object] = []
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        self.tool_choices.append(kwargs.get("tool_choice"))
+        if self.calls <= 2:
+            tool_name = "echo" if self.calls == 1 else self.second_tool
+            arguments = (
+                '{"path":"artifact.txt","content":"ok"}'
+                if tool_name == "file_write"
+                else "{}"
+            )
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": f"call_{self.calls}",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": arguments,
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(
+            delta_content="已完成开发任务并写入产物。",
+            finished=True,
+        )
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="已完成开发任务并写入产物。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式合同测试不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
 class _FileWriteRegistry:
     def specs(self) -> list[dict]:
         return [
@@ -357,6 +433,75 @@ async def test_required_first_tool_retries_once_after_plain_text(monkeypatch) ->
         for event in run.events
     )
     assert run.final_answer
+
+
+@pytest.mark.parametrize(
+    "llm_type",
+    [_WrongThenRequiredFileWriteLLM, _RequiredStreamingFileWriteLLM],
+    ids=["non-stream", "stream"],
+)
+async def test_required_tool_corrects_wrong_first_tool(
+    monkeypatch, llm_type
+) -> None:
+    llm = llm_type()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    required_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+    assert llm.tool_choices[:2] == [required_choice, required_choice]
+    assert llm.tool_choices[2:]
+    assert all(choice is None for choice in llm.tool_choices[2:])
+    assert [
+        event.tool for event in run.events if event.kind == StepKind.tool_call
+    ] == ["file_write"]
+    assert run.final_answer
+
+
+async def test_stream_required_tool_stops_after_one_wrong_tool_correction(
+    monkeypatch,
+) -> None:
+    llm = _RequiredStreamingFileWriteLLM(second_tool="echo")
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    required_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+    assert llm.calls == 2
+    assert llm.tool_choices == [required_choice, required_choice]
+    assert not any(event.kind == StepKind.tool_call for event in run.events)
+    assert "未调用必需工具 file_write" in run.final_answer
+    assert "已纠偏重试 1 次" in run.final_answer
 
 
 async def test_required_first_tool_fails_after_single_correction(monkeypatch) -> None:
