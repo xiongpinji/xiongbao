@@ -1306,6 +1306,7 @@ async def run_agent(
         _session_decisions: list[str] = []  # 记录关键决策（最多 10 条）
 
         _last_checkpoint_step = 0
+        _terminal_success = False
 
         # ── 编辑回滚：连续验证失败计数 ──
         _verify_fail_count: int = 0
@@ -1914,6 +1915,7 @@ async def run_agent(
                           state.final_answer = ""
                           continue
 
+                      _terminal_success = True
                       state.finished = True
                       await _emit(
                           StepEvent(kind=StepKind.final, content=_fa, step=state.step)
@@ -2130,6 +2132,7 @@ async def run_agent(
                       state.final_answer = (
                           action.get("answer", resp.content) if action else resp.content
                       )
+                      _terminal_success = True
                       state.finished = True
                       await _emit(
                           StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
@@ -2139,6 +2142,7 @@ async def run_agent(
                       await _handle_prompt_tool_action(action, role, tools, ctx, state, events)
                       continue
                   state.final_answer = resp.content
+                  _terminal_success = True
                   state.finished = True
                   await _emit(StepEvent(kind=StepKind.final, content=resp.content, step=state.step))
 
@@ -2162,6 +2166,7 @@ async def run_agent(
                       state.final_answer = (
                           action.get("answer", resp.content) if action else resp.content
                       )
+                      _terminal_success = True
                       state.finished = True
                       await _emit(
                           StepEvent(kind=StepKind.final, content=state.final_answer, step=state.step)
@@ -2173,6 +2178,7 @@ async def run_agent(
                       continue
 
                   state.final_answer = resp.content
+                  _terminal_success = True
                   state.finished = True
                   await _emit(StepEvent(kind=StepKind.final, content=resp.content, step=state.step))
 
@@ -2300,7 +2306,7 @@ async def run_agent(
     # ── 保存对话历史 ──
     conv_session.add_user(goal)
     conv_session.add_assistant(state.final_answer)
-    if state.finished and state.step > 0 and _last_checkpoint_step != state.step:
+    if _terminal_success and state.step > 0 and _last_checkpoint_step != state.step:
         try:
             from xagent.core.orchestration.checkpoint import save_checkpoint
 

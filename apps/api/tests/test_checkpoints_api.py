@@ -242,3 +242,26 @@ async def test_conversation_messages_do_not_hide_database_failures(
             f"/api/v1/stream/conversations/{conversation_id}/messages",
             headers=_headers("tenant-checkpoint-a"),
         )
+
+
+async def test_conversation_messages_db_empty_result_stays_authoritative(
+    checkpoint_client,
+) -> None:
+    client, _, _, _ = checkpoint_client
+    conversation_id = f"db-empty-conversation-{uuid.uuid4().hex}"
+    conversation = ConversationSession(conversation_id, "tenant-checkpoint-a")
+    async with get_sessionmaker()() as session:
+        await persist_conversation(session, conversation)
+        await session.commit()
+    memory_session = get_conversation_manager().get_or_create(
+        conversation_id, "tenant-checkpoint-a"
+    )
+    memory_session.add_user("memory must not override db")
+
+    response = await client.get(
+        f"/api/v1/stream/conversations/{conversation_id}/messages",
+        headers=_headers("tenant-checkpoint-a"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["messages"] == []

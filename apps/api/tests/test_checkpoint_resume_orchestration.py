@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from xagent.adapters.llm.base import LLMClient, LLMResponse, Message
+from xagent.adapters.llm.base import LLMClient, LLMResponse, Message, ToolCall
 from xagent.core.orchestration.loop import run_agent
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.db import Base, get_engine, get_sessionmaker
@@ -53,6 +53,33 @@ class _FinalLLM(LLMClient):
         self, messages, tools, **kwargs
     ) -> LLMResponse:  # noqa: ARG002
         raise NotImplementedError
+
+    async def health(self) -> bool:
+        return True
+
+
+class _RepeatedToolErrorLLM(LLMClient):
+    supports_tools = True
+
+    async def complete(
+        self, messages: list[Message], **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        raise NotImplementedError
+
+    async def complete_with_tools(
+        self, messages, tools, **kwargs
+    ) -> LLMResponse:  # noqa: ARG002
+        return LLMResponse(
+            content="",
+            model="test",
+            tool_calls=[
+                ToolCall(
+                    id="call_missing_file",
+                    name="file_read",
+                    args={"path": "missing-repeat-error.txt"},
+                )
+            ],
+        )
 
     async def health(self) -> bool:
         return True
@@ -174,3 +201,29 @@ async def test_terminal_checkpoint_keeps_failure_and_cancel_contracts(
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     expected_steps = [1] if llm.cancel else []
     assert [checkpoint.step for checkpoint in checkpoints] == expected_steps
+
+
+async def test_repeated_error_early_termination_does_not_save_terminal_checkpoint(
+    monkeypatch,
+) -> None:
+    await _prepare_checkpoint_tables()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client",
+        lambda: _RepeatedToolErrorLLM(),
+    )
+    principal = Principal(
+        user_id="repeat-error-user",
+        tenant_id="repeat-error-tenant",
+        roles=frozenset({"member"}),
+    )
+
+    result = await run_agent(
+        "trigger repeated tool error",
+        principal=principal,
+        run_id="repeat-error-run",
+    )
+
+    assert result.steps == 3
+    assert result.final_answer.startswith("任务提前终止：同一错误重复出现 3 次。")
+    checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
+    assert checkpoints == []
