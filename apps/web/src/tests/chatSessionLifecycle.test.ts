@@ -1,5 +1,6 @@
 import {
   resolveInitialConversationId,
+  shouldLoadConversationHistory,
   shouldResetChatSession,
 } from "../pages/chatSessionLifecycle";
 
@@ -36,6 +37,21 @@ describe("chat session lifecycle", () => {
       resolveInitialConversationId("selected-conversation", "persisted-conversation") ===
         "selected-conversation",
       "An explicit sidebar selection must take precedence over persisted state",
+    );
+  });
+
+  it("does not load history for a conversation announced by the active stream", () => {
+    assert(
+      !shouldLoadConversationHistory("new-conversation", "new-conversation"),
+      "The conversation announced by the active stream must keep its in-memory messages",
+    );
+    assert(
+      shouldLoadConversationHistory("persisted-conversation", null),
+      "A reloaded persisted conversation must load history",
+    );
+    assert(
+      shouldLoadConversationHistory("selected-conversation", "other-conversation"),
+      "A non-streaming sidebar selection must load history",
     );
   });
 });

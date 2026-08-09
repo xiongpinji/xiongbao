@@ -14,7 +14,7 @@ import { useEscapeClose } from "../hooks/useEscapeClose";
 import CheckpointTimeline from "../components/checkpoints/CheckpointTimeline.tsx";
 import {
   resolveInitialConversationId,
-  shouldResetChatSession,
+  shouldLoadConversationHistory, shouldResetChatSession,
 } from "./chatSessionLifecycle";
 
 /* ================================================================== */
@@ -72,7 +72,7 @@ export default function ChatPage() {
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
   const [model, setModel] = useState("");
   const [modelOpen, setModelOpen] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false); const [streamingConversationId, setStreamingConversationId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -115,13 +115,13 @@ export default function ChatPage() {
     if (!shouldResetChatSession(previousSessionKey, chatSessionKey)) return;
     setGoal(""); setMessages([]); setLoading(false);
     setError(null); setConversationId(null); setSteps([]); setStreamingText("");
-    setCompletedSegments([]); setLoadingHistory(false);
+    setCompletedSegments([]); setLoadingHistory(false); setStreamingConversationId(null);
   }, [chatSessionVersion, chatSessionKey]);
 
   // 当侧栏选择对话时同步
   useEffect(() => {
     if (activeConversationId && activeConversationId !== conversationId) {
-      setConversationId(activeConversationId);
+      setStreamingConversationId(null); setConversationId(activeConversationId);
       setSteps([]); setStreamingText(""); setError(null); setMessages([]);
     }
   }, [activeConversationId]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -153,7 +153,7 @@ export default function ChatPage() {
 
   // 恢复/切换会话时加载消息
   useEffect(() => {
-    if (!conversationId) return;
+    if (!shouldLoadConversationHistory(conversationId, streamingConversationId)) return;
     let cancelled = false;
     setLoadingHistory(true);
     const token = getToken();
@@ -173,7 +173,7 @@ export default function ChatPage() {
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
     return () => { cancelled = true; };
-  }, [conversationId]);
+  }, [conversationId, streamingConversationId]);
 
   // 快捷键
   useEffect(() => {
@@ -252,7 +252,9 @@ export default function ChatPage() {
     const segments: string[] = [];
 
     await readAgentRunStream(resp, {
-      onStarted: (convId) => setConversationId(convId),
+      onStarted: (convId) => {
+        setStreamingConversationId(convId); setConversationId(convId);
+      },
       onToken: (t) => { tokenBuf += t; setStreamingText(tokenBuf); },
       onFinalAnswer: (text) => { result = text; if (!tokenBuf) setStreamingText(text); },
       onError: setError,

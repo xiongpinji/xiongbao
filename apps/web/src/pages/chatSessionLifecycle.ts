@@ -11,3 +11,10 @@ export function shouldResetChatSession(
 ): boolean {
   return previousSessionKey !== null && previousSessionKey !== currentSessionKey;
 }
+
+export function shouldLoadConversationHistory(
+  conversationId: string | null,
+  streamingConversationId: string | null,
+): boolean {
+  return conversationId !== null && conversationId !== streamingConversationId;
+}
