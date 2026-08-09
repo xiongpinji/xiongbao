@@ -173,7 +173,7 @@ services:
       - xagentdata:/data
     command: >
       sh -c "python -m alembic upgrade head &&
-             (python -m xagent.cli warmup || true) &&
+             python -m xagent.cli warmup &&
              uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx,sys; r=httpx.get('http://localhost:8000/health/deep',timeout=5); sys.exit(0 if r.status_code == 200 and r.json().get('status') == 'healthy' else 1)"]
@@ -257,7 +257,7 @@ services:
       retries: 3
       start_period: 60s
     command: >
-      sh -c "(python -m xagent.cli warmup || true) &&
+      sh -c "python -m xagent.cli warmup &&
              exec celery -A xagent.worker.celery_app worker --loglevel=info"
 
   # X-Agent 前端（nginx 托管 + 反代 api）

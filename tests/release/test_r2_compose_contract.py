@@ -229,6 +229,22 @@ class R2ComposeContractTest(unittest.TestCase):
         self.assertGreaterEqual(self.compose.count("condition: service_healthy"), 5)
         self.assertIn("condition: service_healthy", web)
 
+    def test_api_and_worker_warmup_failures_gate_startup(self) -> None:
+        parsed = yaml.safe_load(COMPOSE_PATH.read_text(encoding="utf-8"))
+        services = parsed["services"]
+        forbidden_fragments = (
+            "warmup || true",
+            "warmup||true",
+            "warmup; true",
+            "warmup && true",
+        )
+        for service in ("api", "worker"):
+            with self.subTest(service=service):
+                command = services[service]["command"]
+                self.assertIn("python -m xagent.cli warmup", command)
+                for fragment in forbidden_fragments:
+                    self.assertNotIn(fragment, command)
+
     def test_database_urls_use_configured_database_name(self) -> None:
         self.assertIn("${POSTGRES_DB:-xagent}", self.compose)
         self.assertNotIn("@postgres:5432/xagent", self.compose)
