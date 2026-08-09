@@ -4,8 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
+CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 COMPOSE_PATH = ROOT / "deploy" / "compose" / "docker-compose.yml"
 ENV_PATH = ROOT / "deploy" / "compose" / "r2.env.example"
 ROOT_COMPOSE_PATH = ROOT / "docker-compose.yml"
@@ -18,6 +21,7 @@ def read_or_empty(path: Path) -> str:
 class R2ComposeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls.ci = yaml.safe_load(CI_PATH.read_text(encoding="utf-8"))
         cls.compose = read_or_empty(COMPOSE_PATH)
         cls.env_example = read_or_empty(ENV_PATH)
         cls.root_compose = read_or_empty(ROOT_COMPOSE_PATH)
@@ -32,6 +36,35 @@ class R2ComposeContractTest(unittest.TestCase):
                 break
             block_lines.append(line)
         return "\n".join(block_lines)
+
+    def test_ci_runs_r2_release_contract(self) -> None:
+        job = self.ci["jobs"]["config-governance"]
+        steps = {step.get("name"): step for step in job["steps"] if "name" in step}
+
+        self.assertIn("R2 compose contract", steps)
+        contract = steps["R2 compose contract"]
+        self.assertIn(
+            'python -m unittest discover -s tests/release -p "test_r2_*.py" -v',
+            contract["run"],
+        )
+
+        self.assertIn("R2 compose render", steps)
+        render = steps["R2 compose render"]
+        self.assertEqual(
+            render["env"]["POSTGRES_PASSWORD"],
+            "config-only-postgres-strong-value",
+        )
+        self.assertEqual(
+            render["env"]["XAGENT_SECURITY__JWT_SECRET"],
+            "config-only-jwt-secret-at-least-32-characters",
+        )
+        self.assertEqual(
+            render["env"]["GRAFANA_ADMIN_PASSWORD"],
+            "config-only-grafana-strong-value",
+        )
+        self.assertIn("docker compose", render["run"])
+        self.assertIn("deploy/compose/r2.env.example", render["run"])
+        self.assertIn("config --quiet", render["run"])
 
     def test_project_and_host_ports_are_isolated(self) -> None:
         self.assertIn("name: ${COMPOSE_PROJECT_NAME:-xagent-r2}", self.compose)

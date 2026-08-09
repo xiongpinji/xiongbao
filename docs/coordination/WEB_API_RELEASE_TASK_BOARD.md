@@ -15,7 +15,7 @@
 
 ## In Progress
 
-- 暂无。
+- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：CLAIMED | 证据：先补 CI 合同红灯，再固化 `config-governance` R2 门禁、R2 Runbook 单一路径和本任务板条目；脱敏截图如后续产生，仅提交到 `output/playwright/`。
 
 ## Ready
 
@@ -23,7 +23,9 @@
 
 ## Queued
 
-- 暂无。
+- [R2-B] R2 核心六服务 full Compose 试运行 | 状态：PENDING | 证据：待执行；核心服务范围为 `postgres redis qdrant api worker web`；浏览器验收使用 `http://127.0.0.1:18080`，脱敏截图提交到 `output/playwright/`。
+- [R2-C] R2 重启、故障恢复与持久化复验 | 状态：PENDING | 证据：待执行；不得使用原始证据目录。
+- [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：PENDING | 证据：待执行；仅在核心服务通过后启用 `mcp` 与 `observability`，脱敏截图提交到 `output/playwright/`。
 
 ## Done
 
