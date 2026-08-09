@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
 import socket
 import subprocess
@@ -35,6 +36,7 @@ PORTS = {
     "XAGENT_PROMETHEUS_PORT": ("prometheus", "9090"),
     "XAGENT_GRAFANA_PORT": ("grafana", "3000"),
 }
+COMMAND_TIMEOUT_SECONDS = 60
 
 
 @dataclass
@@ -56,13 +58,58 @@ def load_env(path: Path) -> dict[str, str]:
 
 
 def init_env(template: Path, target: Path) -> None:
-    if target.exists():
-        raise FileExistsError(f"refusing to overwrite {target}")
     text = template.read_text(encoding="utf-8")
     for key in GENERATED_KEYS:
         text = text.replace(f"{key}=__GENERATE__", f"{key}={secrets.token_urlsafe(36)}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8", newline="\n")
+    data = text.replace("\r\n", "\n").encode("utf-8")
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    fd: int | None = None
+    created = False
+    try:
+        fd = os.open(str(target), flags, 0o600)
+        created = True
+        with os.fdopen(fd, "wb") as handle:
+            fd = None
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        restrict_env_permissions(target)
+    except FileExistsError:
+        raise
+    except Exception:
+        if fd is not None:
+            os.close(fd)
+        if created:
+            try:
+                target.unlink()
+            except FileNotFoundError:
+                pass
+        raise
+
+
+def restrict_env_permissions(path: Path) -> None:
+    if os.name == "nt":
+        username = os.environ.get("USERNAME")
+        domain = os.environ.get("USERDOMAIN")
+        account = f"{domain}\\{username}" if domain and username else username
+        if not account:
+            raise RuntimeError("failed to identify current user")
+        result = subprocess.run(
+            ["icacls", str(path), "/inheritance:r", "/grant:r", f"{account}:F"],
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError("failed to restrict env file permissions")
+        return
+    path.chmod(0o600)
+    if path.stat().st_mode & 0o777 != 0o600:
+        raise RuntimeError("failed to restrict env file permissions")
 
 
 def validate_env(values: dict[str, str]) -> list[dict[str, str]]:
@@ -85,21 +132,24 @@ def validate_env(values: dict[str, str]) -> list[dict[str, str]]:
 
 
 def run_command(command: Sequence[str]) -> CommandResult:
-    completed = subprocess.run(
-        list(command),
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            list(command),
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=COMMAND_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return CommandResult(124, "", "command timed out")
     return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
 def check_port_available(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             probe.bind((host, port))
         except OSError:
@@ -151,9 +201,10 @@ def check_git(checks: list[dict[str, object]], expected_branch: str) -> tuple[bo
 def check_command(checks: list[dict[str, object]], name: str, command: Sequence[str]) -> bool:
     result = run_command(command)
     if result.returncode != 0:
-        return add_check(checks, name, False, f"command failed with exit {result.returncode}")
-    first_line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else "ok"
-    return add_check(checks, name, True, first_line)
+        if result.returncode == 124:
+            return add_check(checks, name, False, "command_timed_out")
+        return add_check(checks, name, False, f"command_failed:{result.returncode}")
+    return add_check(checks, name, True, "ok")
 
 
 def parse_port_mapping(stdout: str) -> tuple[str, int] | None:
@@ -169,6 +220,13 @@ def parse_port_mapping(stdout: str) -> tuple[str, int] | None:
         return None
 
 
+def normalize_loopback(host: str) -> str | None:
+    value = host.strip().lower()
+    if value in {"127.0.0.1", "localhost", "::1"}:
+        return "127.0.0.1"
+    return None
+
+
 def same_project_owns_port(
     env_file: Path,
     compose_file: Path,
@@ -176,6 +234,7 @@ def same_project_owns_port(
     service: str,
     container_port: str,
     expected_port: int,
+    expected_host: str,
 ) -> bool:
     result = run_command([
         "docker", "compose", "--env-file", str(env_file),
@@ -184,7 +243,13 @@ def same_project_owns_port(
     if result.returncode != 0:
         return False
     mapping = parse_port_mapping(result.stdout)
-    return mapping is not None and mapping[1] == expected_port
+    if mapping is None:
+        return False
+    host, published_port = mapping
+    return (
+        normalize_loopback(host) == normalize_loopback(expected_host)
+        and published_port == expected_port
+    )
 
 
 def check_ports(
@@ -211,13 +276,13 @@ def check_ports(
         if check_port_available(host, port):
             continue
         if allow_running_project and same_project_owns_port(
-            env_file, compose_file, project_name, service, container_port, port
+            env_file, compose_file, project_name, service, container_port, port, host
         ):
             continue
-        occupied.append(f"{key}:{port}")
+        occupied.append(key)
     if occupied:
-        return add_check(checks, "ports", False, "unavailable ports: " + ", ".join(occupied))
-    return add_check(checks, "ports", True, f"{checked} candidate ports available")
+        return add_check(checks, "ports", False, "unavailable_port_keys:" + ",".join(occupied))
+    return add_check(checks, "ports", True, f"checked:{checked}")
 
 
 def check_ollama(checks: list[dict[str, object]], model: str) -> bool:
@@ -226,8 +291,8 @@ def check_ollama(checks: list[dict[str, object]], model: str) -> bool:
     except Exception as exc:
         return add_check(checks, "ollama", False, f"Ollama tags request failed: {exc.__class__.__name__}")
     if model not in models:
-        return add_check(checks, "ollama", False, f"Ollama model missing: {model}")
-    return add_check(checks, "ollama", True, f"Ollama model present: {model}")
+        return add_check(checks, "ollama", False, "missing_ollama_model")
+    return add_check(checks, "ollama", True, "ok")
 
 
 def check_compose_config(checks: list[dict[str, object]], env_file: Path, compose_file: Path, project_name: str) -> bool:

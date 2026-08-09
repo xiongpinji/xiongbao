@@ -1,10 +1,13 @@
 import json
+import os
+import socket
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from scripts.r2_preflight import check_ports, init_env, load_env, main, validate_env
+from scripts.r2_preflight import check_port_available, check_ports, init_env, load_env, main, run_command, validate_env
 
 
 class R2PreflightTest(unittest.TestCase):
@@ -35,6 +38,42 @@ class R2PreflightTest(unittest.TestCase):
                 self.assertNotEqual(value, "__GENERATE__")
             with self.assertRaises(FileExistsError):
                 init_env(template, target)
+
+    def test_init_env_uses_exclusive_create_and_owner_only_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / "r2.env.example"
+            target = root / "r2.env.local"
+            template.write_text("POSTGRES_PASSWORD=__GENERATE__\n", encoding="utf-8")
+            real_open = os.open
+            seen: dict[str, int] = {}
+
+            def capture_open(path: str, flags: int, mode: int = 0o777) -> int:
+                seen["flags"] = flags
+                seen["mode"] = mode
+                return real_open(path, flags, mode)
+
+            with mock.patch("scripts.r2_preflight.os.open", side_effect=capture_open):
+                init_env(template, target)
+
+            self.assertTrue(seen["flags"] & os.O_CREAT)
+            self.assertTrue(seen["flags"] & os.O_EXCL)
+            self.assertTrue(seen["flags"] & os.O_WRONLY)
+            if os.name == "posix":
+                self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+
+    def test_init_env_removes_partial_file_when_write_or_permission_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / "r2.env.example"
+            target = root / "r2.env.local"
+            template.write_text("POSTGRES_PASSWORD=__GENERATE__\n", encoding="utf-8")
+
+            with mock.patch("scripts.r2_preflight.restrict_env_permissions", side_effect=OSError("acl failed")):
+                with self.assertRaises(OSError):
+                    init_env(template, target)
+
+            self.assertFalse(target.exists())
 
     def test_load_env_parses_only_simple_key_values(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -229,7 +268,8 @@ class R2PreflightTest(unittest.TestCase):
             )
 
             self.assertTrue(ok)
-            self.assertEqual(checks, [{"name": "ports", "ok": True, "detail": "1 candidate ports available"}])
+            self.assertEqual(checks, [{"name": "ports", "ok": True, "detail": "checked:1"}])
+            self.assertEqual(run_command.call_args.args[0][-2:], ["api", "8000"])
 
         with mock.patch("scripts.r2_preflight.check_port_available", return_value=False), \
                 mock.patch("scripts.r2_preflight.run_command") as run_command:
@@ -246,7 +286,158 @@ class R2PreflightTest(unittest.TestCase):
             )
 
             self.assertFalse(ok)
-            self.assertIn("XAGENT_API_PORT:28000", checks[0]["detail"])
+            self.assertIn("XAGENT_API_PORT", checks[0]["detail"])
+            self.assertNotIn("28000", checks[0]["detail"])
+
+    def test_allow_running_project_rejects_wildcard_and_wrong_port_mappings(self) -> None:
+        values = {
+            "XAGENT_BIND_ADDRESS": "127.0.0.1",
+            "XAGENT_API_PORT": "28000",
+            "XAGENT_WEB_PORT": "28080",
+            "XAGENT_MCP_PORT": "28100",
+        }
+        command_results = [
+            mock.Mock(returncode=0, stdout="0.0.0.0:28000\n", stderr=""),
+            mock.Mock(returncode=0, stdout="[::]:28080\n", stderr=""),
+            mock.Mock(returncode=0, stdout="127.0.0.1:28099\n", stderr=""),
+        ]
+
+        with mock.patch("scripts.r2_preflight.check_port_available", return_value=False), \
+                mock.patch("scripts.r2_preflight.run_command", side_effect=command_results) as run_command:
+            checks: list[dict[str, object]] = []
+
+            ok = check_ports(
+                checks,
+                values,
+                Path("r2.env.local"),
+                Path("docker-compose.yml"),
+                "xagent-r2",
+                allow_running_project=True,
+            )
+
+            self.assertFalse(ok)
+            self.assertIn("XAGENT_API_PORT", checks[0]["detail"])
+            self.assertIn("XAGENT_WEB_PORT", checks[0]["detail"])
+            self.assertIn("XAGENT_MCP_PORT", checks[0]["detail"])
+            self.assertNotIn("28000", checks[0]["detail"])
+            self.assertNotIn("28080", checks[0]["detail"])
+            self.assertNotIn("28100", checks[0]["detail"])
+            self.assertEqual(
+                [call.args[0][-2:] for call in run_command.call_args_list],
+                [["api", "8000"], ["web", "80"], ["platform-mcp", "8100"]],
+            )
+
+    def test_command_timeout_returns_sanitized_nonzero_result(self) -> None:
+        with mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
+            subprocess_run.side_effect = subprocess.TimeoutExpired(["docker", "version"], timeout=12)
+
+            result = run_command(["docker", "version"])
+
+        self.assertEqual(result.returncode, 124)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "command timed out")
+        self.assertNotIn("docker", repr(result))
+
+    def test_cli_writes_safe_json_when_command_times_out(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env_file = root / "r2.env.local"
+            compose_file = root / "docker-compose.yml"
+            output = root / "preflight.json"
+            unique_values = {
+                "POSTGRES_PASSWORD": "unique-postgres-value",
+                "XAGENT_SECURITY__JWT_SECRET": "unique-jwt-value-at-least-32-characters",
+                "XAGENT_PLATFORM_MCP_TOKEN": "unique-mcp-token-at-least-32-characters",
+                "GRAFANA_ADMIN_PASSWORD": "unique-grafana-value",
+                "XAGENT_SECURITY__REQUIRE_AUTH": "true",
+                "XAGENT_CORS_ORIGINS": "[\"http://127.0.0.1:38080\"]",
+                "XAGENT_LLM__OLLAMA_MODEL": "unique-model-value",
+                "XAGENT_API_PORT": "38000",
+            }
+            env_file.write_text(
+                "".join(f"{key}={value}\n" for key, value in unique_values.items()),
+                encoding="utf-8",
+            )
+            compose_file.write_text("services: {}\n", encoding="utf-8")
+            command_results = [
+                mock.Mock(returncode=0, stdout="feature/webapi-r2-staging-readiness\n", stderr=""),
+                mock.Mock(returncode=0, stdout="", stderr=""),
+                mock.Mock(returncode=0, stdout="abc123\n", stderr=""),
+                mock.Mock(returncode=124, stdout="", stderr="command timed out"),
+            ]
+
+            with mock.patch("scripts.r2_preflight.run_command", side_effect=command_results):
+                exit_code = main([
+                    "--env-file", str(env_file),
+                    "--compose-file", str(compose_file),
+                    "--project-name", "xagent-r2",
+                    "--expected-branch", "feature/webapi-r2-staging-readiness",
+                    "--output", str(output),
+                ])
+
+            report_text = output.read_text(encoding="utf-8")
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(json.loads(report_text)["ok"])
+            for key, value in unique_values.items():
+                if key == "XAGENT_SECURITY__REQUIRE_AUTH":
+                    continue
+                self.assertNotIn(value, report_text)
+
+    def test_report_details_do_not_contain_any_env_value(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env_file = root / "r2.env.local"
+            compose_file = root / "docker-compose.yml"
+            output = root / "preflight.json"
+            unique_values = {
+                "POSTGRES_PASSWORD": "safe-postgres-secret",
+                "XAGENT_SECURITY__JWT_SECRET": "safe-jwt-secret-at-least-32-characters",
+                "XAGENT_PLATFORM_MCP_TOKEN": "safe-mcp-token-at-least-32-characters",
+                "GRAFANA_ADMIN_PASSWORD": "safe-grafana-secret",
+                "XAGENT_SECURITY__REQUIRE_AUTH": "true",
+                "XAGENT_CORS_ORIGINS": "[\"http://127.0.0.1:48080\"]",
+                "XAGENT_LLM__OLLAMA_MODEL": "safe-unique-model",
+                "XAGENT_API_PORT": "48000",
+            }
+            env_file.write_text(
+                "".join(f"{key}={value}\n" for key, value in unique_values.items()),
+                encoding="utf-8",
+            )
+            compose_file.write_text("services: {}\n", encoding="utf-8")
+            command_results = [
+                mock.Mock(returncode=0, stdout="feature/webapi-r2-staging-readiness\n", stderr=""),
+                mock.Mock(returncode=0, stdout="", stderr=""),
+                mock.Mock(returncode=0, stdout="abc123\n", stderr=""),
+                mock.Mock(returncode=0, stdout="Docker version\n", stderr=""),
+                mock.Mock(returncode=0, stdout="Docker Compose version\n", stderr=""),
+                mock.Mock(returncode=0, stdout="", stderr=""),
+            ]
+
+            with mock.patch("scripts.r2_preflight.run_command", side_effect=command_results), \
+                    mock.patch("scripts.r2_preflight.check_port_available", return_value=True), \
+                    mock.patch("scripts.r2_preflight.fetch_ollama_models", return_value={"safe-unique-model"}):
+                exit_code = main([
+                    "--env-file", str(env_file),
+                    "--compose-file", str(compose_file),
+                    "--project-name", "xagent-r2",
+                    "--expected-branch", "feature/webapi-r2-staging-readiness",
+                    "--output", str(output),
+                ])
+
+            report_text = output.read_text(encoding="utf-8")
+            self.assertEqual(exit_code, 0)
+            for key, value in unique_values.items():
+                if key == "XAGENT_SECURITY__REQUIRE_AUTH":
+                    continue
+                self.assertNotIn(value, report_text)
+
+    def test_port_probe_reports_bound_port_unavailable(self) -> None:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as bound:
+            bound.bind(("127.0.0.1", 0))
+            bound.listen(1)
+            port = bound.getsockname()[1]
+
+            self.assertFalse(check_port_available("127.0.0.1", port))
 
 
 if __name__ == "__main__":
