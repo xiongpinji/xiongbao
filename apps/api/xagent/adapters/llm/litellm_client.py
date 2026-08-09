@@ -78,6 +78,46 @@ class LiteLLMClient(LLMClient):
             kwargs["api_key"] = self._cfg.anthropic_api_key
         return kwargs
 
+    @staticmethod
+    def _prepare_tools_request(
+        model: str,
+        tools: list[dict[str, Any]],
+        tool_choice: Any,
+    ) -> tuple[str, list[dict[str, Any]], Any]:
+        target_model = (
+            f"ollama_chat/{model.removeprefix('ollama/')}"
+            if model.startswith("ollama/")
+            else model
+        )
+        named_tool = None
+        if isinstance(tool_choice, dict) and tool_choice.get("type") == "function":
+            function = tool_choice.get("function")
+            named_tool = function.get("name") if isinstance(function, dict) else None
+            if not isinstance(named_tool, str) or not named_tool:
+                raise ValueError("named tool_choice 缺少 function.name")
+            if not any(
+                tool.get("function", {}).get("name") == named_tool
+                for tool in tools
+            ):
+                raise ValueError(f"named tool_choice 不在 tools schema 中: {named_tool}")
+
+        # Ollama Chat API 不支持 tool_choice；
+        # 实际约束由单工具 schema 与上层终态闸完成。
+        if target_model.startswith("ollama_chat/") and named_tool:
+            tools = [
+                tool
+                for tool in tools
+                if tool.get("function", {}).get("name") == named_tool
+            ]
+            tool_choice = "auto"
+        elif target_model.startswith("ollama_chat/") and tool_choice == "required":
+            if len(tools) != 1:
+                raise ValueError(
+                    "Ollama required tool_choice 仅允许单工具 schema"
+                )
+            tool_choice = "auto"
+        return target_model, tools, tool_choice
+
     async def complete(
         self,
         messages: list[Message],
@@ -122,8 +162,12 @@ class LiteLLMClient(LLMClient):
 
         target_model = model or self.effective_model
         payload = self._serialize_messages(messages)
-        call_kwargs = self._call_kwargs(target_model)
         tool_choice = kwargs.pop("tool_choice", "auto")
+        if tools is not None:
+            target_model, tools, tool_choice = self._prepare_tools_request(
+                target_model, tools, tool_choice
+            )
+        call_kwargs = self._call_kwargs(target_model)
         call_kwargs.update(temperature=temperature, **kwargs)
         if max_tokens:
             call_kwargs["max_tokens"] = max_tokens
@@ -168,8 +212,11 @@ class LiteLLMClient(LLMClient):
 
         target_model = model or self.effective_model
         payload = self._serialize_messages(messages)
-        call_kwargs = self._call_kwargs(target_model)
         tool_choice = kwargs.pop("tool_choice", "auto")
+        target_model, tools, tool_choice = self._prepare_tools_request(
+            target_model, tools, tool_choice
+        )
+        call_kwargs = self._call_kwargs(target_model)
         call_kwargs.update(temperature=temperature, stream=True, **kwargs)
         call_kwargs["tools"] = tools
         call_kwargs["tool_choice"] = tool_choice

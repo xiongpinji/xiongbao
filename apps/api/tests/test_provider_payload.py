@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
 from xagent.adapters.llm.base import Message
 from xagent.adapters.llm.litellm_client import LiteLLMClient
 from xagent.domains.creative_studio.media import (
@@ -276,12 +277,19 @@ async def test_litellm_health_false_without_any_key() -> None:
     assert await client.health() is False
 
 
-async def test_litellm_complete_with_tools_transmits_named_tool_choice(
-    monkeypatch,
-) -> None:
+def _ollama_client() -> LiteLLMClient:
+    return LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://localhost:11434",
+            ollama_model="qwen3:4b",
+        )
+    )
+
+
+def _capture_completion(monkeypatch) -> dict:
     captured: dict = {}
 
-    async def _fake_acompletion(*, messages, **kwargs):
+    async def _fake_acompletion(*, messages, **kwargs):  # noqa: ARG001
         captured.update(kwargs)
         return {
             "choices": [{"message": {"content": "", "tool_calls": []}}],
@@ -289,12 +297,27 @@ async def test_litellm_complete_with_tools_transmits_named_tool_choice(
         }
 
     monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
-    client = LiteLLMClient(
-        LLMSettings(
-            ollama_base_url="http://localhost:11434",
-            ollama_model="qwen3:4b",
-        )
-    )
+    return captured
+
+
+async def test_litellm_plain_complete_keeps_ollama_generate_route(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+
+    await client.complete([Message(role="user", content="hello")])
+
+    assert captured["model"] == "ollama/qwen3:4b"
+    assert "tools" not in captured
+    assert "tool_choice" not in captured
+
+
+async def test_litellm_ollama_named_tool_uses_chat_route_and_single_schema(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
     required_choice = {
         "type": "function",
         "function": {"name": "file_write"},
@@ -302,11 +325,121 @@ async def test_litellm_complete_with_tools_transmits_named_tool_choice(
 
     await client.complete_with_tools(
         [Message(role="user", content="create a file")],
-        [{"type": "function", "function": {"name": "file_write"}}],
+        [
+            {"type": "function", "function": {"name": "file_write"}},
+            {"type": "function", "function": {"name": "echo"}},
+        ],
         tool_choice=required_choice,
     )
 
-    assert captured["tool_choice"] == required_choice
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+    assert captured["api_base"] == "http://localhost:11434"
+    assert captured["tools"] == [
+        {"type": "function", "function": {"name": "file_write"}}
+    ]
+    assert captured["tool_choice"] == "auto"
+
+
+async def test_litellm_ollama_tool_complete_defaults_to_auto(monkeypatch) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+    tools = [
+        {"type": "function", "function": {"name": "file_write"}},
+        {"type": "function", "function": {"name": "echo"}},
+    ]
+
+    await client.complete_with_tools(
+        [Message(role="user", content="use a tool")], tools
+    )
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+    assert captured["tools"] == tools
+    assert captured["tool_choice"] == "auto"
+
+
+async def test_litellm_ollama_required_single_tool_degrades_to_auto(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+    tools = [{"type": "function", "function": {"name": "file_write"}}]
+
+    await client.complete_with_tools(
+        [Message(role="user", content="create a file")],
+        tools,
+        model="ollama_chat/qwen3:4b",
+        tool_choice="required",
+    )
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+    assert captured["tools"] == tools
+    assert captured["tool_choice"] == "auto"
+
+
+@pytest.mark.parametrize(
+    ("tools", "tool_choice", "error"),
+    [
+        (
+            [
+                {"type": "function", "function": {"name": "file_write"}},
+                {"type": "function", "function": {"name": "echo"}},
+            ],
+            "required",
+            "仅允许单工具",
+        ),
+        (
+            [{"type": "function", "function": {"name": "file_write"}}],
+            {"type": "function", "function": {"name": "missing_tool"}},
+            "不在 tools schema 中",
+        ),
+    ],
+)
+async def test_litellm_ollama_unsupported_tool_choice_fails_before_request(
+    monkeypatch,
+    tools,
+    tool_choice,
+    error,
+) -> None:
+    called = False
+
+    async def _fake_acompletion(*, messages, **kwargs):  # noqa: ARG001
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
+    client = _ollama_client()
+
+    with pytest.raises(ValueError, match=error):
+        await client.complete_with_tools(
+            [Message(role="user", content="create a file")],
+            tools,
+            tool_choice=tool_choice,
+        )
+
+    assert called is False
+
+
+async def test_litellm_non_ollama_named_tool_choice_is_transmitted(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = LiteLLMClient(LLMSettings(openai_api_key="sk-fake"))
+    tools = [
+        {"type": "function", "function": {"name": "file_write"}},
+        {"type": "function", "function": {"name": "echo"}},
+    ]
+    named_choice = {"type": "function", "function": {"name": "echo"}}
+
+    await client.complete_with_tools(
+        [Message(role="user", content="echo")],
+        tools,
+        model="openai/gpt-4o-mini",
+        tool_choice=named_choice,
+    )
+
+    assert captured["model"] == "openai/gpt-4o-mini"
+    assert captured["tools"] == tools
+    assert captured["tool_choice"] == named_choice
 
 
 async def test_litellm_stream_with_tools_transmits_named_choice_and_defaults_auto(
@@ -336,14 +469,12 @@ async def test_litellm_stream_with_tools_transmits_named_choice_and_defaults_aut
         return _FakeStream()
 
     monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
-    client = LiteLLMClient(
-        LLMSettings(
-            ollama_base_url="http://localhost:11434",
-            ollama_model="qwen3:4b",
-        )
-    )
+    client = _ollama_client()
     messages = [Message(role="user", content="create a file")]
-    tools = [{"type": "function", "function": {"name": "file_write"}}]
+    tools = [
+        {"type": "function", "function": {"name": "file_write"}},
+        {"type": "function", "function": {"name": "echo"}},
+    ]
     required_choice = {
         "type": "function",
         "function": {"name": "file_write"},
@@ -357,5 +488,9 @@ async def test_litellm_stream_with_tools_transmits_named_choice_and_defaults_aut
     ]
     _ = [chunk async for chunk in client.stream_with_tools(messages, tools)]
 
-    assert captured[0]["tool_choice"] == required_choice
+    assert captured[0]["model"] == "ollama_chat/qwen3:4b"
+    assert captured[0]["tools"] == [tools[0]]
+    assert captured[0]["tool_choice"] == "auto"
+    assert captured[1]["model"] == "ollama_chat/qwen3:4b"
+    assert captured[1]["tools"] == tools
     assert captured[1]["tool_choice"] == "auto"
