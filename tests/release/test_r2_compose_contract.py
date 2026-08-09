@@ -9,6 +9,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
+RUNBOOK_PATH = ROOT / "docs" / "DEPLOYMENT_RUNBOOK.md"
 COMPOSE_PATH = ROOT / "deploy" / "compose" / "docker-compose.yml"
 ENV_PATH = ROOT / "deploy" / "compose" / "r2.env.example"
 ROOT_COMPOSE_PATH = ROOT / "docker-compose.yml"
@@ -22,6 +23,7 @@ class R2ComposeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.ci = yaml.safe_load(CI_PATH.read_text(encoding="utf-8"))
+        cls.runbook = read_or_empty(RUNBOOK_PATH)
         cls.compose = read_or_empty(COMPOSE_PATH)
         cls.env_example = read_or_empty(ENV_PATH)
         cls.root_compose = read_or_empty(ROOT_COMPOSE_PATH)
@@ -43,7 +45,7 @@ class R2ComposeContractTest(unittest.TestCase):
 
         self.assertIn("R2 compose contract", steps)
         contract = steps["R2 compose contract"]
-        self.assertIn(
+        self.assertEqual(
             'python -m unittest discover -s tests/release -p "test_r2_*.py" -v',
             contract["run"],
         )
@@ -62,9 +64,27 @@ class R2ComposeContractTest(unittest.TestCase):
             render["env"]["GRAFANA_ADMIN_PASSWORD"],
             "config-only-grafana-strong-value",
         )
-        self.assertIn("docker compose", render["run"])
-        self.assertIn("deploy/compose/r2.env.example", render["run"])
-        self.assertIn("config --quiet", render["run"])
+        self.assertEqual(
+            "docker compose -f deploy/compose/docker-compose.yml --env-file "
+            "deploy/compose/r2.env.example config --quiet",
+            render["run"],
+        )
+
+    def test_runbook_host_debug_uses_r2_core_dependency_command(self) -> None:
+        expected_command = (
+            "docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml "
+            "--env-file deploy/compose/r2.env.local up -d postgres redis qdrant"
+        )
+        self.assertIn(expected_command, self.runbook)
+        self.assertIn("根目录 `docker-compose.yml` 只是开发兼容入口，不是 R2 入口", self.runbook)
+
+        forbidden_commands = [
+            line
+            for line in self.runbook.splitlines()
+            if line.startswith("docker compose")
+            and any(service in line for service in ("litellm", "langfuse"))
+        ]
+        self.assertEqual([], forbidden_commands)
 
     def test_project_and_host_ports_are_isolated(self) -> None:
         self.assertIn("name: ${COMPOSE_PROJECT_NAME:-xagent-r2}", self.compose)

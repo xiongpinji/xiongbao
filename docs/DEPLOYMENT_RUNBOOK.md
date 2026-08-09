@@ -223,17 +223,16 @@ curl -X POST http://127.0.0.1:18000/api/v1/agents/run \
 如果不想通过 compose 内的 `api` / `worker` 排障，也可以只启动依赖服务，然后在宿主机运行后端：
 
 ```bash
-cd deploy/compose
-docker compose up -d postgres redis qdrant litellm langfuse
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local up -d postgres redis qdrant
 
-cd ../../apps/api
+cd apps/api
 # PowerShell: $env:PYTHONPATH = (Get-Location).Path
 # Bash:       export PYTHONPATH="$PWD"
 pip install -e ".[dev]"
 XAGENT_MODE=full xagent serve
 ```
 
-此模式适合本地调试，但不是本文档推荐的 private deployment 交付形态。
+此模式适合本地调试，但不是本文档推荐的 private deployment 交付形态。本阶段宿主机调试也只能启动核心依赖 `postgres`、`redis`、`qdrant`，不得启动 `litellm`、`langfuse` 或 `gateway` / `tracing` / `federation` profile。
 
 ## 7. 登录与鉴权
 
