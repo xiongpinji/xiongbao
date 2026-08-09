@@ -504,6 +504,112 @@ def test_celery_worker_failed_result_does_not_persist_success(
     assert update_status.await_args.kwargs["next_status"] == "recovery"
 
 
+@pytest.mark.parametrize(
+    ("run_error", "terminal_status", "next_status"),
+    [
+        (None, "succeeded", "review"),
+        (RuntimeError("provider failed"), "failed", "recovery"),
+    ],
+)
+def test_celery_worker_lifecycle_uses_one_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+    run_error: RuntimeError | None,
+    terminal_status: str,
+    next_status: str,
+) -> None:
+    from xagent.worker.celery_app import run_agent_task
+
+    observed_loops: list[tuple[str, asyncio.AbstractEventLoop]] = []
+
+    def _record_loop(phase: str) -> None:
+        observed_loops.append((phase, asyncio.get_running_loop()))
+
+    async def _persist_submitted(**kwargs) -> None:
+        assert kwargs["status"] == "running"
+        _record_loop("running")
+
+    async def _fake_run_agent(goal: str, **kwargs):
+        _record_loop("run_agent")
+        if run_error is not None:
+            raise run_error
+
+        class _Run:
+            status = "succeeded"
+
+            def to_dict(self) -> dict[str, object]:
+                return {
+                    "run_id": kwargs["run_id"],
+                    "goal": goal,
+                    "status": self.status,
+                    "final_answer": "done",
+                }
+
+        return _Run()
+
+    async def _persist_terminal(_session, **kwargs) -> None:
+        assert kwargs["status"] == terminal_status
+        assert kwargs["error"] == ("provider failed" if run_error else "")
+        _record_loop(terminal_status)
+
+    async def _update_status(_session, **kwargs) -> None:
+        assert kwargs["next_status"] == next_status
+        if run_error is not None:
+            assert kwargs["blocker_reason"] == "provider failed"
+
+    async def _dispose_engine() -> None:
+        _record_loop("disposed")
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        async def commit(self) -> None:
+            return None
+
+    class _CurrentTask:
+        request = type("Request", (), {"id": f"celery-single-loop-{terminal_status}"})()
+
+    monkeypatch.setattr("celery.current_task", _CurrentTask())
+    monkeypatch.setattr("xagent.core.orchestration.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.worker.celery_app.persist_submitted_agent_task", _persist_submitted)
+    monkeypatch.setattr(
+        "xagent.worker.celery_app.persist_agent_task_record_in_session", _persist_terminal
+    )
+    monkeypatch.setattr("xagent.worker.celery_app.update_task_status_by_run_id", _update_status)
+    monkeypatch.setattr("xagent.infra.db.get_sessionmaker", lambda: lambda: _Session())
+    monkeypatch.setattr("xagent.infra.db.dispose_engine", _dispose_engine)
+
+    if run_error is not None:
+        with pytest.raises(RuntimeError, match="provider failed"):
+            run_agent_task(
+                goal="single loop failure",
+                role="general",
+                capabilities=[],
+                tenant_id="tenant-celery",
+                user_id="user-celery",
+            )
+    else:
+        result = run_agent_task(
+            goal="single loop success",
+            role="general",
+            capabilities=[],
+            tenant_id="tenant-celery",
+            user_id="user-celery",
+        )
+        assert result["status"] == "succeeded"
+
+    assert [phase for phase, _loop in observed_loops] == [
+        "running",
+        "run_agent",
+        terminal_status,
+        "disposed",
+    ]
+    assert all(loop is observed_loops[0][1] for _phase, loop in observed_loops)
+
+
 def test_late_pending_persist_does_not_clobber_terminal_result(migrated_db) -> None:
     import asyncio
     from datetime import UTC, datetime

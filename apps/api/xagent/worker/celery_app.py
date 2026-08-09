@@ -351,59 +351,42 @@ def get_celery_app():
     return _celery_app
 
 
-def run_agent_task(
+async def _run_agent_task_lifecycle(
+    *,
     goal: str,
     role: str | None,
     capabilities: list[str],
     tenant_id: str,
     user_id: str,
+    task_id: str,
+    started_at: datetime,
+    input_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    """Celery 任务入口：同步包装异步 run_agent。"""
     from xagent.core.orchestration import run_agent
     from xagent.enterprise.auth.principal import Principal
 
     principal = Principal(user_id=user_id, tenant_id=tenant_id, roles=frozenset({"member"}))
-    task_id = ""
-    try:
-        from celery import current_task
-
-        task_id = str(getattr(getattr(current_task, "request", None), "id", "") or "")
-    except Exception:
-        task_id = ""
-
-    started_at = datetime.now(UTC)
-    input_payload = {
-        "goal": goal,
-        "role": role,
-        "capabilities": list(capabilities),
-    }
     if task_id:
-        asyncio.run(
-            persist_submitted_agent_task(
-                task_id=task_id,
-                tenant_id=tenant_id,
-                owner_id=user_id,
-                kind="agent.run",
-                backend="celery",
-                input_payload=input_payload,
-                status="running",
-            )
+        await persist_submitted_agent_task(
+            task_id=task_id,
+            tenant_id=tenant_id,
+            owner_id=user_id,
+            kind="agent.run",
+            backend="celery",
+            input_payload=input_payload,
+            status="running",
         )
 
     try:
-        run_result = asyncio.run(
-            run_agent(
-                goal,
-                principal=principal,
-                role_name=role,
-                capabilities=set(capabilities) or None,
-                run_id=task_id or None,
-            )
+        run_result = await run_agent(
+            goal,
+            principal=principal,
+            role_name=role,
+            capabilities=set(capabilities) or None,
+            run_id=task_id or None,
         )
         result = run_result.to_dict()
-        result_status = str(
-            result.get("status") or getattr(run_result, "status", "succeeded")
-        )
+        result_status = str(result.get("status") or getattr(run_result, "status", "succeeded"))
         if result_status != "succeeded":
             raise RuntimeError(
                 str(
@@ -417,44 +400,6 @@ def run_agent_task(
         if task_id:
             from xagent.infra.db import get_sessionmaker
 
-            async def _mark_failed() -> None:
-                try:
-                    async with get_sessionmaker()() as session:
-                        await persist_agent_task_record_in_session(
-                            session,
-                            task_id=task_id,
-                            run_id=task_id,
-                            tenant_id=tenant_id,
-                            owner_id=user_id,
-                            kind="agent.run",
-                            backend="celery",
-                            status="failed",
-                            input_payload=input_payload,
-                            result_payload={},
-                            error=run_error,
-                            started_at=started_at,
-                            finished_at=datetime.now(UTC),
-                        )
-                        await update_task_status_by_run_id(
-                            session,
-                            tenant_id=tenant_id,
-                            run_id=task_id,
-                            next_status="recovery",
-                            blocker_reason=run_error,
-                        )
-                        await session.commit()
-                except Exception as persist_exc:
-                    if _is_schema_mismatch(persist_exc, "agent_tasks"):
-                        return
-                    raise
-
-            asyncio.run(_mark_failed())
-        raise
-
-    if task_id:
-        from xagent.infra.db import get_sessionmaker
-
-        async def _mark_succeeded() -> None:
             try:
                 async with get_sessionmaker()() as session:
                     await persist_agent_task_record_in_session(
@@ -465,10 +410,10 @@ def run_agent_task(
                         owner_id=user_id,
                         kind="agent.run",
                         backend="celery",
-                        status="succeeded",
+                        status="failed",
                         input_payload=input_payload,
-                        result_payload=result if isinstance(result, dict) else {"value": result},
-                        error="",
+                        result_payload={},
+                        error=run_error,
                         started_at=started_at,
                         finished_at=datetime.now(UTC),
                     )
@@ -476,16 +421,86 @@ def run_agent_task(
                         session,
                         tenant_id=tenant_id,
                         run_id=task_id,
-                        next_status="review",
+                        next_status="recovery",
+                        blocker_reason=run_error,
                     )
                     await session.commit()
             except Exception as persist_exc:
-                if _is_schema_mismatch(persist_exc, "agent_tasks"):
-                    return
-                raise
+                if not _is_schema_mismatch(persist_exc, "agent_tasks"):
+                    raise
+        raise
 
-        asyncio.run(_mark_succeeded())
+    if task_id:
+        from xagent.infra.db import get_sessionmaker
+
+        try:
+            async with get_sessionmaker()() as session:
+                await persist_agent_task_record_in_session(
+                    session,
+                    task_id=task_id,
+                    run_id=task_id,
+                    tenant_id=tenant_id,
+                    owner_id=user_id,
+                    kind="agent.run",
+                    backend="celery",
+                    status="succeeded",
+                    input_payload=input_payload,
+                    result_payload=result if isinstance(result, dict) else {"value": result},
+                    error="",
+                    started_at=started_at,
+                    finished_at=datetime.now(UTC),
+                )
+                await update_task_status_by_run_id(
+                    session,
+                    tenant_id=tenant_id,
+                    run_id=task_id,
+                    next_status="review",
+                )
+                await session.commit()
+        except Exception as persist_exc:
+            if not _is_schema_mismatch(persist_exc, "agent_tasks"):
+                raise
     return result
+
+
+def run_agent_task(
+    goal: str,
+    role: str | None,
+    capabilities: list[str],
+    tenant_id: str,
+    user_id: str,
+) -> dict[str, Any]:
+    """Celery 任务入口：同步包装异步 run_agent。"""
+    task_id = ""
+    try:
+        from celery import current_task
+
+        task_id = str(getattr(getattr(current_task, "request", None), "id", "") or "")
+    except Exception:
+        task_id = ""
+
+    async def _run_once() -> dict[str, Any]:
+        from xagent.infra.db import dispose_engine
+
+        try:
+            return await _run_agent_task_lifecycle(
+                goal=goal,
+                role=role,
+                capabilities=capabilities,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                task_id=task_id,
+                started_at=datetime.now(UTC),
+                input_payload={
+                    "goal": goal,
+                    "role": role,
+                    "capabilities": list(capabilities),
+                },
+            )
+        finally:
+            await dispose_engine()
+
+    return asyncio.run(_run_once())
 
 
 # 模块级 app（celery CLI -A 需要）
