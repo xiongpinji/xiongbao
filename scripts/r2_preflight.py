@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import secrets
@@ -90,13 +91,10 @@ def init_env(template: Path, target: Path) -> None:
 
 def restrict_env_permissions(path: Path) -> None:
     if os.name == "nt":
-        username = os.environ.get("USERNAME")
-        domain = os.environ.get("USERDOMAIN")
-        account = f"{domain}\\{username}" if domain and username else username
-        if not account:
-            raise RuntimeError("failed to identify current user")
+        system32 = get_windows_system32()
+        account = get_windows_identity(system32)
         result = subprocess.run(
-            ["icacls", str(path), "/inheritance:r", "/grant:r", f"{account}:F"],
+            [str(system32 / "icacls.exe"), str(path), "/inheritance:r", "/grant:r", f"{account}:F"],
             text=True,
             capture_output=True,
             encoding="utf-8",
@@ -110,6 +108,51 @@ def restrict_env_permissions(path: Path) -> None:
     path.chmod(0o600)
     if path.stat().st_mode & 0o777 != 0o600:
         raise RuntimeError("failed to restrict env file permissions")
+
+
+def get_windows_system32() -> Path:
+    buffer = ctypes.create_unicode_buffer(32768)
+    length = ctypes.windll.kernel32.GetSystemDirectoryW(buffer, len(buffer))
+    if length <= 0 or length >= len(buffer):
+        raise RuntimeError("failed to locate System32")
+    system32 = Path(buffer.value)
+    if not system32.is_absolute():
+        raise RuntimeError("failed to locate System32")
+    return system32
+
+
+def get_windows_identity(system32: Path) -> str:
+    result = subprocess.run(
+        [str(system32 / "whoami.exe")],
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=15,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("failed to identify current user")
+    identity = result.stdout.strip()
+    if not is_safe_windows_identity(identity):
+        raise RuntimeError("failed to identify current user")
+    return identity
+
+
+def is_safe_windows_identity(identity: str) -> bool:
+    normalized = identity.strip().lower()
+    if not normalized or "\n" in identity or "\r" in identity:
+        return False
+    if "\\" not in normalized:
+        return False
+    domain, user = normalized.split("\\", 1)
+    if not domain or not user:
+        return False
+    if user == "everyone" or normalized == "everyone":
+        return False
+    if domain in {"builtin", "nt authority"}:
+        return False
+    return True
 
 
 def validate_env(values: dict[str, str]) -> list[dict[str, str]]:
@@ -236,6 +279,9 @@ def same_project_owns_port(
     expected_port: int,
     expected_host: str,
 ) -> bool:
+    expected_loopback = normalize_loopback(expected_host)
+    if expected_loopback is None:
+        return False
     result = run_command([
         "docker", "compose", "--env-file", str(env_file),
         "-f", str(compose_file), "-p", project_name, "port", service, container_port,
@@ -247,7 +293,7 @@ def same_project_owns_port(
         return False
     host, published_port = mapping
     return (
-        normalize_loopback(host) == normalize_loopback(expected_host)
+        normalize_loopback(host) == expected_loopback
         and published_port == expected_port
     )
 
@@ -261,6 +307,8 @@ def check_ports(
     allow_running_project: bool,
 ) -> bool:
     host = values.get("XAGENT_BIND_ADDRESS", "127.0.0.1")
+    if normalize_loopback(host) is None:
+        return add_check(checks, "ports", False, "invalid_bind_address")
     checked = 0
     occupied: list[str] = []
     for key, (service, container_port) in PORTS.items():

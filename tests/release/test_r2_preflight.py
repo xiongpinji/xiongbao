@@ -7,7 +7,16 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from scripts.r2_preflight import check_port_available, check_ports, init_env, load_env, main, run_command, validate_env
+from scripts.r2_preflight import (
+    check_port_available,
+    check_ports,
+    init_env,
+    load_env,
+    main,
+    restrict_env_permissions,
+    run_command,
+    validate_env,
+)
 
 
 class R2PreflightTest(unittest.TestCase):
@@ -71,6 +80,42 @@ class R2PreflightTest(unittest.TestCase):
 
             with mock.patch("scripts.r2_preflight.restrict_env_permissions", side_effect=OSError("acl failed")):
                 with self.assertRaises(OSError):
+                    init_env(template, target)
+
+            self.assertFalse(target.exists())
+
+    def test_windows_acl_uses_system32_identity_not_spoofable_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "r2.env.local"
+            target.write_text("POSTGRES_PASSWORD=secret\n", encoding="utf-8")
+            system32 = Path("C:/Windows/System32")
+            completed = mock.Mock(returncode=0, stdout="MACHINE\\real-user\n", stderr="")
+
+            with mock.patch("scripts.r2_preflight.os.name", "nt"), \
+                    mock.patch.dict(os.environ, {"USERNAME": "Everyone", "USERDOMAIN": "BUILTIN"}), \
+                    mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
+                    mock.patch("scripts.r2_preflight.subprocess.run", return_value=completed) as subprocess_run:
+                restrict_env_permissions(target)
+
+            commands = [call.args[0] for call in subprocess_run.call_args_list]
+            self.assertEqual(commands[0][0], str(system32 / "whoami.exe"))
+            self.assertEqual(commands[1][0], str(system32 / "icacls.exe"))
+            self.assertIn("MACHINE\\real-user:F", commands[1])
+            self.assertNotIn("Everyone:F", commands[1])
+            self.assertNotIn("BUILTIN\\Everyone:F", commands[1])
+
+    def test_init_env_removes_file_when_windows_identity_is_dangerous(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / "r2.env.example"
+            target = root / "r2.env.local"
+            template.write_text("POSTGRES_PASSWORD=__GENERATE__\n", encoding="utf-8")
+
+            with mock.patch("scripts.r2_preflight.os.name", "nt"), \
+                    mock.patch("scripts.r2_preflight.get_windows_system32", return_value=Path("C:/Windows/System32")), \
+                    mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
+                subprocess_run.return_value = mock.Mock(returncode=0, stdout="Everyone\n", stderr="")
+                with self.assertRaises(RuntimeError):
                     init_env(template, target)
 
             self.assertFalse(target.exists())
@@ -326,6 +371,33 @@ class R2PreflightTest(unittest.TestCase):
                 [call.args[0][-2:] for call in run_command.call_args_list],
                 [["api", "8000"], ["web", "80"], ["platform-mcp", "8100"]],
             )
+
+    def test_allow_running_project_rejects_configured_wildcard_bind_address(self) -> None:
+        cases = [
+            ("0.0.0.0", "0.0.0.0:28000\n"),
+            ("[::]", "[::]:28000\n"),
+        ]
+        for configured_host, compose_port in cases:
+            with self.subTest(configured_host=configured_host), \
+                    mock.patch("scripts.r2_preflight.check_port_available", return_value=False), \
+                    mock.patch("scripts.r2_preflight.run_command") as run_command:
+                run_command.return_value = mock.Mock(returncode=0, stdout=compose_port, stderr="")
+                checks: list[dict[str, object]] = []
+
+                ok = check_ports(
+                    checks,
+                    {"XAGENT_BIND_ADDRESS": configured_host, "XAGENT_API_PORT": "28000"},
+                    Path("r2.env.local"),
+                    Path("docker-compose.yml"),
+                    "xagent-r2",
+                    allow_running_project=True,
+                )
+
+                self.assertFalse(ok)
+                self.assertIn("invalid_bind_address", checks[0]["detail"])
+                self.assertNotIn(configured_host, checks[0]["detail"])
+                self.assertNotIn("28000", checks[0]["detail"])
+                run_command.assert_not_called()
 
     def test_command_timeout_returns_sanitized_nonzero_result(self) -> None:
         with mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
