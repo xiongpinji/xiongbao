@@ -142,6 +142,30 @@ class LiteLLMClient(LLMClient):
             messages, model=model, temperature=temperature, max_tokens=max_tokens, **kwargs
         )
 
+    async def complete_chat(
+        self,
+        messages: list[Message],
+        *,
+        model: str | None = None,
+        max_tokens: int | None = 512,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """无工具 Chat 补全；本地 Ollama 直连使用 Chat API 路由。"""
+        target_model = model or self.effective_model
+        if (
+            self._cfg.ollama_base_url
+            and not self._cfg.proxy_url
+            and target_model.startswith("ollama/")
+        ):
+            target_model = f"ollama_chat/{target_model.removeprefix('ollama/')}"
+        return await self._complete(
+            messages,
+            model=target_model,
+            temperature=0,
+            max_tokens=max(512, max_tokens or 0),
+            **kwargs,
+        )
+
     async def complete_with_tools(
         self,
         messages: list[Message],

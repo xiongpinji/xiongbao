@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -42,6 +42,7 @@ class RunRequest(BaseModel):
     role: str | None = Field(None, description="指定角色名；不指定则按能力匹配")
     capabilities: list[str] = Field(default_factory=list, description="任务所需能力标签")
     model: str | None = None
+    tool_mode: Literal["auto", "none"] = "auto"
 
 
 def _build_input_payload(body: RunRequest) -> dict:
@@ -57,6 +58,8 @@ def _build_input_payload(body: RunRequest) -> dict:
         payload["goal_id"] = goal_id
     if spine_task_id:
         payload["spine_task_id"] = spine_task_id
+    if body.tool_mode == "none":
+        payload.update(tool_mode="none", route="chat_no_tools")
     return payload
 
 
@@ -375,6 +378,7 @@ async def run(
             model=body.model,
             session=session,
             run_id=run_id,
+            tool_mode=body.tool_mode,
         )
         if result.status != "succeeded":
             raise RuntimeError(result.error or f"agent_run_{result.status}")

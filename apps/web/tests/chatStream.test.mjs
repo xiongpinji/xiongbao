@@ -50,3 +50,13 @@ test("ChatPage keeps the run detail link visible for done-only SSE runs", async 
   assert.match(source, /\(loading \|\| streamText \|\| run \|\| error \|\| runId\) &&/);
   assert.match(source, /\{runId && \(/);
 });
+
+test("ChatPage explicitly requests the no-tools chat route", async () => {
+  const source = await readFile(new URL("../src/pages/ChatPage.tsx", import.meta.url), "utf8");
+
+  assert.match(
+    source,
+    /JSON\.stringify\(\{ goal: nextGoal, conversation_id: conversationId \|\| undefined, tool_mode: "none" \}\)/,
+  );
+  assert.match(source, /runAgent\(\{ goal: nextGoal, tool_mode: "none" \}\)/);
+});

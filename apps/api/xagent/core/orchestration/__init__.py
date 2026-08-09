@@ -51,16 +51,29 @@ async def run_agent(
     resume_changed_files: list[str] | None = None,
     resume_from_checkpoint_id: str = "",
     required_first_tool: str | None = None,
+    tool_mode: str = "auto",
 ) -> AgentRun:
     """运行一次 agent 任务。DeerFlow(opt-in) > LangGraph > 内置循环。"""
-    if resume_messages is None and required_first_tool is None and _has_deerflow():
+    if tool_mode not in {"auto", "none"}:
+        raise ValueError(f"不支持的 tool_mode: {tool_mode}")
+    if (
+        tool_mode == "auto"
+        and resume_messages is None
+        and required_first_tool is None
+        and _has_deerflow()
+    ):
         from xagent.core.orchestration.deerflow_loop import run_agent_deerflow
         return await run_agent_deerflow(
             goal, principal=principal, role_name=role_name,
             capabilities=capabilities, model=model, on_event=on_event,
             session=session, run_id=run_id,
         )
-    if resume_messages is None and required_first_tool is None and _has_langgraph():
+    if (
+        tool_mode == "auto"
+        and resume_messages is None
+        and required_first_tool is None
+        and _has_langgraph()
+    ):
         from xagent.core.orchestration.langgraph_loop import run_agent_langgraph
         return await run_agent_langgraph(
             goal, principal=principal, role_name=role_name,
@@ -78,6 +91,7 @@ async def run_agent(
         resume_changed_files=resume_changed_files,
         resume_from_checkpoint_id=resume_from_checkpoint_id,
         required_first_tool=required_first_tool,
+        tool_mode=tool_mode,
     )
 
 

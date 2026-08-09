@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from xagent.adapters.llm import Message, get_llm_client
+from xagent.adapters.llm import LLMResponse, Message, get_llm_client
 from xagent.adapters.llm.litellm_client import LiteLLMClient
 from xagent.adapters.observability import get_tracer
 from xagent.adapters.tools import get_tool_registry
@@ -1039,6 +1039,7 @@ async def run_agent(
     resume_changed_files: list[str] | None = None,
     resume_from_checkpoint_id: str = "",
     required_first_tool: str | None = None,
+    tool_mode: str = "auto",
 ) -> AgentRun:
     """运行一次 agent 任务，返回含事件序列的结果。
 
@@ -1046,19 +1047,27 @@ async def run_agent(
     conversation_id: 会话 ID，传入则启用多轮对话。
     permission_mode: 权限模式 (suggest | auto-edit | full-auto)。
     """
+    if tool_mode not in {"auto", "none"}:
+        raise ValueError(f"不支持的 tool_mode: {tool_mode}")
+    no_tools_chat = tool_mode == "none"
+    if no_tools_chat and required_first_tool:
+        raise ValueError("tool_mode=none 不允许 required_first_tool")
+
     registry = get_role_registry()
-    role = (
-        registry.get(role_name)
-        if role_name
-        else registry.match(capabilities or {"general"})
+    role = registry.get("general") if no_tools_chat else (
+        registry.get(role_name) if role_name else registry.match(capabilities or {"general"})
     )
     if role is None:
         role = registry.match({"general"})
 
-    tools = get_tool_registry()
+    tools = None if no_tools_chat else get_tool_registry()
     resolved_run_id = run_id or uuid.uuid4().hex
     # 仅暴露该角色允许的工具
-    specs = [s for s in tools.specs() if role.can_use(s["function"]["name"])]
+    specs = (
+        []
+        if tools is None
+        else [s for s in tools.specs() if role.can_use(s["function"]["name"])]
+    )
     available_tool_names = {spec["function"]["name"] for spec in specs}
     if required_first_tool and required_first_tool not in available_tool_names:
         raise RuntimeError(
@@ -1152,7 +1161,9 @@ async def run_agent(
         raise RuntimeError(
             f"必需工具 {required_first_tool} 需要支持原生工具调用的模型"
         )
-    if use_native_tools:
+    if no_tools_chat:
+        system = role.system_prompt
+    elif use_native_tools:
         system = _tool_system_prompt_native(role.system_prompt, specs)
     else:
         system = _build_system_prompt(role.system_prompt, specs)
@@ -1163,27 +1174,33 @@ async def run_agent(
     # [工作流F·竞品对标] 升级为三层分层指令（用户级<工作区根<子目录级），失败回退原单文件加载
     # [工作流S3-2] 识别任务涉及路径传入 task_paths（goal 显式路径优先、历史工具调用路径参数次之），
     #               无识别结果为 None 保持原仅两层行为；子目录层按就近优先合并
-    try:
-        from xagent.core.instructions import extract_task_paths, get_layered_instructions
-        _task_paths = extract_task_paths(get_workspace(), goal=goal, history=history)
-        agents_md = (
-            get_layered_instructions(get_workspace(), task_paths=_task_paths) or _load_agents_md()
-        )
-    except Exception:  # noqa: S110  指令加载失败不影响主流程
-        agents_md = _load_agents_md()
-    if agents_md:
-        system += f"\n\n## 项目指令 (AGENTS.md)\n{agents_md}"
-    # 注入项目结构感知（Codex 对齐：先建立结构认知）
-    project_ctx = _detect_project_context(get_workspace())
-    if project_ctx:
-        system += f"\n\n## 项目环境\n{project_ctx}"
-    # 注入权限模式说明（Codex 对齐）
-    _MODE_DESC = {
-        "suggest": "\n\n## 权限模式: suggest\n你只能建议代码修改，不能直接执行文件写入或 shell 命令。输出建议让用户确认。",
-        "auto-edit": "\n\n## 权限模式: auto-edit\n你可以直接读写文件，但执行 shell 命令前应说明意图。",
-        "full-auto": "",  # 默认模式，无额外限制
-    }
-    system += _MODE_DESC.get(permission_mode, "")
+    if not no_tools_chat:
+        try:
+            from xagent.core.instructions import (
+                extract_task_paths,
+                get_layered_instructions,
+            )
+
+            _task_paths = extract_task_paths(get_workspace(), goal=goal, history=history)
+            agents_md = (
+                get_layered_instructions(get_workspace(), task_paths=_task_paths)
+                or _load_agents_md()
+            )
+        except Exception:  # noqa: S110  指令加载失败不影响主流程
+            agents_md = _load_agents_md()
+        if agents_md:
+            system += f"\n\n## 项目指令 (AGENTS.md)\n{agents_md}"
+        # 注入项目结构感知（Codex 对齐：先建立结构认知）
+        project_ctx = _detect_project_context(get_workspace())
+        if project_ctx:
+            system += f"\n\n## 项目环境\n{project_ctx}"
+        # 注入权限模式说明（Codex 对齐）
+        _MODE_DESC = {
+            "suggest": "\n\n## 权限模式: suggest\n你只能建议代码修改，不能直接执行文件写入或 shell 命令。输出建议让用户确认。",
+            "auto-edit": "\n\n## 权限模式: auto-edit\n你可以直接读写文件，但执行 shell 命令前应说明意图。",
+            "full-auto": "",  # 默认模式，无额外限制
+        }
+        system += _MODE_DESC.get(permission_mode, "")
     # 注入匹配的技能（Skill 系统）
     try:
         from xagent.core.skills import get_skill_store
@@ -1215,16 +1232,16 @@ async def run_agent(
         if any(w in g_lower for w in ("创建", "开发", "实现", "编写", "create", "build", "implement")):
             return "coding"
         return "coding"  # 默认
-    _task_type = _detect_task_type(goal)
+    _task_type = "chat" if no_tools_chat else _detect_task_type(goal)
 
-    _is_complex = (
+    _is_complex = not no_tools_chat and (
         len(goal) > 100
         or goal.count("、") >= 2
-        or bool(re.search(r'[1-9][)\.]', goal))
+        or bool(re.search(r"[1-9][)\.]", goal))
         or any(w in goal for w in ("并且", "同时", "然后", "接着", "分别"))
     )
     # ── 自适应步数：复杂任务动态提升 MAX_STEPS ──
-    _effective_max_steps = MAX_STEPS
+    _effective_max_steps = 1 if no_tools_chat else MAX_STEPS
     if _is_complex:
         # 复杂任务：根据长度和子任务数动态调整
         _subtask_count = max(goal.count("、"), len(re.findall(r'[1-9][)\.]', goal)), 1)
@@ -1255,6 +1272,21 @@ async def run_agent(
     _type_hint = _TASK_TYPE_HINTS.get(_task_type, "")
     if _type_hint:
         state.messages.append(Message(role="user", content=_type_hint))
+
+    async def _complete_no_tools_chat() -> LLMResponse:
+        complete_chat = getattr(llm, "complete_chat", None)
+        if callable(complete_chat):
+            return await complete_chat(
+                state.messages,
+                model=target_model,
+                max_tokens=512,
+            )
+        return await llm.complete(
+            state.messages,
+            model=target_model,
+            temperature=0,
+            max_tokens=512,
+        )
 
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
         span.set_input(goal)
@@ -1291,7 +1323,11 @@ async def run_agent(
         _CACHE_TTL = 300  # 缓存有效期 5 分钟
 
         # ── 缓存预热：预读关键配置文件（减少首次访问延迟） ──
-        _PREWARM_FILES = ["package.json", "pyproject.toml", "tsconfig.json", "README.md"]
+        _PREWARM_FILES = (
+            []
+            if no_tools_chat
+            else ["package.json", "pyproject.toml", "tsconfig.json", "README.md"]
+        )
         for _pf in _PREWARM_FILES:
             _pf_path = get_workspace() / _pf
             if _pf_path.is_file():
@@ -1394,7 +1430,11 @@ async def run_agent(
               # 上下文压缩：每 10 步检查一次，或估算 token 超预算时触发
               _est_tokens = sum(len(m.content or "") for m in state.messages) // _CHARS_PER_TOKEN
               # ── 上下文预警：接近 80% 预算时通知模型精简输出 ──
-              if _est_tokens > _TOKEN_BUDGET * 0.8 and not getattr(state, '_ctx_warned', False):
+              if (
+                  not no_tools_chat
+                  and _est_tokens > _TOKEN_BUDGET * 0.8
+                  and not getattr(state, '_ctx_warned', False)
+              ):
                   state.messages.append(Message(
                       role="user",
                       content=(
@@ -1403,7 +1443,10 @@ async def run_agent(
                       ),
                   ))
                   state._ctx_warned = True  # type: ignore[attr-defined]
-              if (state.step % 10 == 0 and len(state.messages) > 20) or _est_tokens > _TOKEN_BUDGET:
+              if not no_tools_chat and (
+                  (state.step % 10 == 0 and len(state.messages) > 20)
+                  or _est_tokens > _TOKEN_BUDGET
+              ):
                   state.messages = await _compress_context(
                       state.messages, llm, target_model
                   )
@@ -1433,6 +1476,51 @@ async def run_agent(
                       _last_checkpoint_step = state.step
               except Exception:  # noqa: S110
                   pass
+
+              if no_tools_chat:
+                  chat_resp = await _llm_call_with_retry(
+                      _complete_no_tools_chat,
+                      description="chat_no_tools",
+                  )
+                  state.total_prompt_tokens += chat_resp.prompt_tokens
+                  state.total_completion_tokens += chat_resp.completion_tokens
+                  chat_content = (chat_resp.content or "").strip()
+                  if not chat_content:
+                      state.messages.append(Message(
+                          role="user",
+                          content=(
+                              "[系统提示] 请直接回答用户的问题，"
+                              "不要返回空内容。"
+                          ),
+                      ))
+                      retry_resp = await _llm_call_with_retry(
+                          _complete_no_tools_chat,
+                          description="chat_no_tools_recovery",
+                      )
+                      state.total_prompt_tokens += retry_resp.prompt_tokens
+                      state.total_completion_tokens += retry_resp.completion_tokens
+                      chat_content = (retry_resp.content or "").strip()
+                  if not chat_content:
+                      raise RuntimeError("model_empty_response_after_retry")
+                  await _emit(
+                      StepEvent(
+                          kind=StepKind.reason,
+                          content=chat_content,
+                          step=state.step,
+                      )
+                  )
+                  state.messages.append(
+                      Message(role="assistant", content=chat_content)
+                  )
+                  state.final_answer = chat_content
+                  _terminal_success = True
+                  state.finished = True
+                  _pending_final_event = StepEvent(
+                      kind=StepKind.final,
+                      content=chat_content,
+                      step=state.step,
+                  )
+                  break
 
               if can_stream:
                   # ── 流式路径：逐 token 推送（带重试 + 超时保护） ──

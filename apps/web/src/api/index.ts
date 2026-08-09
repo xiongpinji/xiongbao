@@ -84,6 +84,7 @@ export const runAgent = (body: {
   goal: string;
   role?: string;
   capabilities?: string[];
+  tool_mode?: "auto" | "none";
 }) => api.post<AgentRun>("/agents/run", body).then((r) => r.data);
 
 export interface WorkflowStepInput {

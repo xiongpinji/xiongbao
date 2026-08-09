@@ -216,7 +216,7 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, { role: "assistant", content: "（已停止）" }]);
       } else {
         try {
-          const nextRun = await runAgent({ goal: nextGoal });
+          const nextRun = await runAgent({ goal: nextGoal, tool_mode: "none" });
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun, timestamp: Date.now() },
@@ -240,7 +240,7 @@ export default function ChatPage() {
     const resp = await fetch("/api/v1/stream/agents/run", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined }),
+      body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined, tool_mode: "none" }),
       signal: controller.signal,
     });
     if (!resp.ok || !resp.body) throw new Error(`SSE ${resp.status}`);

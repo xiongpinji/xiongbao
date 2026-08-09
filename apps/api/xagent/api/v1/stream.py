@@ -11,6 +11,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
@@ -41,6 +42,7 @@ class StreamRunIn(BaseModel):
     role: str | None = None
     capabilities: list[str] = Field(default_factory=list)
     conversation_id: str | None = None
+    tool_mode: Literal["auto", "none"] = "auto"
     mode: str = Field(
         default="full-auto",
         description="Permission mode: suggest | auto-edit | full-auto",
@@ -50,12 +52,20 @@ class StreamRunIn(BaseModel):
     )
 
 
-def _build_input_payload(goal: str, role: str | None, caps: list[str]) -> dict:
-    return {
+def _build_input_payload(
+    goal: str,
+    role: str | None,
+    caps: list[str],
+    tool_mode: Literal["auto", "none"] = "auto",
+) -> dict:
+    payload = {
         "goal": goal,
         "role": role,
         "capabilities": list(caps),
     }
+    if tool_mode == "none":
+        payload.update(tool_mode="none", route="chat_no_tools")
+    return payload
 
 
 def _build_stream_result_summary(result: dict) -> dict:
@@ -105,22 +115,24 @@ async def _event_stream(
     goal: str, principal: Principal, role: str | None, caps: list[str],
     conversation_id: str | None = None, request: Request | None = None,
     mode: str = "full-auto", strategy: str = "react",
+    tool_mode: Literal["auto", "none"] = "auto",
 ) -> AsyncGenerator[bytes, None]:
     """跑 agent 并把事件逐条以 SSE 实时推送（step 级流式）。"""
     run_id = uuid.uuid4().hex
     resolved_conv_id = conversation_id or uuid.uuid4().hex
-    yield _sse(
-        "started",
-        {
-            "goal": goal,
-            "run_id": run_id,
-            "conversation_id": resolved_conv_id,
-            "strategy": strategy,
-        },
-    )
+    effective_strategy = "react" if tool_mode == "none" else strategy
+    started_payload = {
+        "goal": goal,
+        "run_id": run_id,
+        "conversation_id": resolved_conv_id,
+        "strategy": effective_strategy,
+    }
+    if tool_mode == "none":
+        started_payload["route"] = "chat_no_tools"
+    yield _sse("started", started_payload)
 
     # Plan-and-Execute 模式：先生成计划并推送给前端
-    if strategy == "plan-execute":
+    if effective_strategy == "plan-execute":
         try:
             from xagent.adapters.llm import get_llm_client
             from xagent.core.orchestration.plan_execute import generate_plan
@@ -149,7 +161,7 @@ async def _event_stream(
 
     queue: asyncio.Queue = asyncio.Queue()
     done = object()
-    input_payload = _build_input_payload(goal, role, caps)
+    input_payload = _build_input_payload(goal, role, caps, tool_mode)
     started_at = datetime.now(UTC)
     error_event_sent = False
 
@@ -189,6 +201,7 @@ async def _event_stream(
                         run_id=run_id,
                         conversation_id=resolved_conv_id,
                         permission_mode=mode,
+                        tool_mode=tool_mode,
                     ),
                     timeout=_AGENT_RUN_TIMEOUT,
                 )
@@ -405,6 +418,7 @@ async def stream_run(
             request,
             body.mode,
             body.strategy,
+            body.tool_mode,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},

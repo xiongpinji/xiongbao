@@ -80,6 +80,36 @@ class _EmptyRecoveryStreamingLLM(LiteLLMClient):
         return True
 
 
+class _ExactNoToolsChatLLM(LiteLLMClient):
+    def __init__(self) -> None:
+        self.calls = 0
+        self.messages = []
+
+    async def complete_chat(self, messages, **kwargs) -> LLMResponse:
+        self.calls += 1
+        self.messages = list(messages)
+        assert kwargs["max_tokens"] == 512
+        return LLMResponse(
+            content="exact chat answer",
+            model="ollama_chat/qwen3:4b",
+            prompt_tokens=8,
+            completion_tokens=3,
+        )
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools SSE 不得走普通 complete")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools SSE 不得传入 tools schema")
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools SSE 不得进入工具流")
+        yield
+
+    async def health(self) -> bool:
+        return True
+
+
 def test_runtime_run_to_view_exposes_unified_contract() -> None:
     payload = {"goal": "draft", "steps": [{"id": "s1", "tags": ["alpha"]}]}
     result = {"final_answer": "done", "artifacts": [{"name": "report"}]}
@@ -309,6 +339,139 @@ async def test_runs_api_reads_stream_agent_run_persisted_to_agent_tasks(
     assert body["delivery"]["resume"] is None
 
 
+async def test_stream_tool_mode_none_is_observable_and_persisted(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(
+        user_id="chat-user", tenant_id="tenant-1", roles=["member"]
+    )
+
+    async def _chat_run(goal: str, **kwargs) -> AgentRun:
+        assert kwargs["tool_mode"] == "none"
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal=goal,
+            role_name="general",
+            tenant_id="tenant-1",
+            final_answer="exact chat answer",
+            steps=1,
+        )
+
+    monkeypatch.setattr("xagent.api.v1.stream.run_agent", _chat_run)
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "exact chat prompt", "tool_mode": "none"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert '"route": "chat_no_tools"' in stream_resp.text
+    assert "event: done" in stream_resp.text
+    done_chunk = next(
+        chunk for chunk in stream_resp.text.split("\n\n") if "event: done" in chunk
+    )
+    run_id = json.loads(
+        next(line for line in done_chunk.splitlines() if line.startswith("data: "))[
+            len("data: ") :
+        ]
+    )["run_id"]
+
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_resp.status_code == 200, run_resp.text
+    assert run_resp.json()["task"]["input"] == {
+        "goal": "exact chat prompt",
+        "role": None,
+        "capabilities": [],
+        "tool_mode": "none",
+        "route": "chat_no_tools",
+    }
+
+
+async def test_stream_tool_mode_none_skips_plan_execute_tool_planning(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(
+        user_id="chat-user", tenant_id="tenant-1", roles=["member"]
+    )
+
+    async def _chat_run(goal: str, **kwargs) -> AgentRun:
+        assert goal == "exact chat prompt"
+        assert kwargs["tool_mode"] == "none"
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal=goal,
+            role_name="general",
+            tenant_id="tenant-1",
+            final_answer="exact chat answer",
+            steps=1,
+        )
+
+    monkeypatch.setattr("xagent.api.v1.stream.run_agent", _chat_run)
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={
+            "goal": "exact chat prompt",
+            "tool_mode": "none",
+            "strategy": "plan-execute",
+        },
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert "event: plan" not in stream_resp.text
+    assert '"strategy": "react"' in stream_resp.text
+    assert "event: done" in stream_resp.text
+
+
+async def test_stream_tool_mode_none_runs_exact_chat_and_persists_success(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    llm = _ExactNoToolsChatLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    token = create_access_token(
+        user_id="chat-user", tenant_id="tenant-1", roles=["member"]
+    )
+
+    stream_resp = await client.post(
+        "/api/v1/stream/agents/run",
+        json={"goal": "exact chat prompt", "tool_mode": "none"},
+        headers={**_auth(token), "Accept": "text/event-stream"},
+    )
+
+    assert stream_resp.status_code == 200, stream_resp.text
+    assert llm.calls == 1
+    assert '"route": "chat_no_tools"' in stream_resp.text
+    assert '"kind": "final"' in stream_resp.text
+    assert '"content": "exact chat answer"' in stream_resp.text
+    assert "event: done" in stream_resp.text
+    assert '"kind": "tool_call"' not in stream_resp.text
+    assert '"kind": "tool_result"' not in stream_resp.text
+    done_chunk = next(
+        chunk for chunk in stream_resp.text.split("\n\n") if "event: done" in chunk
+    )
+    run_id = json.loads(
+        next(line for line in done_chunk.splitlines() if line.startswith("data: "))[
+            len("data: ") :
+        ]
+    )["run_id"]
+
+    run_resp = await client.get(f"/api/v1/runs/{run_id}", headers=_auth(token))
+    assert run_resp.status_code == 200, run_resp.text
+    task = run_resp.json()["task"]
+    assert task["status"] == "succeeded"
+    assert task["input"]["route"] == "chat_no_tools"
+    assert task["result"]["final_answer"] == "exact chat answer"
+    assert not any(
+        event["kind"] in {"tool_call", "tool_result"}
+        for event in task["result"]["events"]
+    )
+
+
 async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -364,6 +527,48 @@ async def test_direct_agent_failure_persists_failed_task_and_failure_delivery(
         "run.summary",
     ]
     assert body["evidence"][1]["payload"] == {"error": "direct exploded", "run_id": run_id}
+
+
+async def test_direct_tool_mode_none_is_forwarded_and_persisted(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = create_access_token(
+        user_id="chat-user", tenant_id="tenant-1", roles=["member"]
+    )
+
+    async def _chat_run(goal: str, **kwargs) -> AgentRun:
+        assert kwargs["tool_mode"] == "none"
+        return AgentRun(
+            run_id=kwargs["run_id"],
+            goal=goal,
+            role_name="general",
+            tenant_id="tenant-1",
+            final_answer="direct chat answer",
+            steps=1,
+        )
+
+    monkeypatch.setattr("xagent.api.v1.agents.run_agent", _chat_run)
+
+    resp = await client.post(
+        "/api/v1/agents/run",
+        json={"goal": "direct chat prompt", "tool_mode": "none"},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 200, resp.text
+    run_resp = await client.get(
+        f"/api/v1/runs/{resp.json()['run_id']}", headers=_auth(token)
+    )
+    assert run_resp.status_code == 200, run_resp.text
+    assert run_resp.json()["task"]["input"] == {
+        "goal": "direct chat prompt",
+        "role": None,
+        "capabilities": [],
+        "model": None,
+        "tool_mode": "none",
+        "route": "chat_no_tools",
+    }
 
 
 async def test_direct_agent_failed_result_does_not_persist_success(

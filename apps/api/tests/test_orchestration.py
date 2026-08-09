@@ -10,8 +10,10 @@ from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
 from xagent.adapters.tools.base import ToolResult
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
+from xagent.core.orchestration.conversation import get_conversation_manager
 from xagent.core.orchestration.loop import run_agent as run_agent_builtin
 from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
+from xagent.core.skills import SkillStore
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 
@@ -57,6 +59,39 @@ async def test_run_agent_reuses_external_run_id() -> None:
     assert run.run_id == "external-run-id"
 
 
+async def test_tool_mode_none_forces_builtin_orchestration(monkeypatch) -> None:
+    import xagent.core.orchestration as orchestration
+    from xagent.core.orchestration import deerflow_loop, loop
+
+    principal = Principal(
+        user_id="chat-user", tenant_id="tenant-chat", roles=frozenset({"member"})
+    )
+
+    async def _unexpected_deerflow(*args, **kwargs):  # noqa: ARG001
+        raise AssertionError("no-tools Chat 不得被 DeerFlow 截获")
+
+    async def _builtin(goal: str, **kwargs) -> AgentRun:
+        assert kwargs["tool_mode"] == "none"
+        return AgentRun(
+            run_id="chat-run",
+            goal=goal,
+            role_name="general",
+            tenant_id=principal.tenant_id,
+            final_answer="chat answer",
+            steps=1,
+        )
+
+    monkeypatch.setattr(orchestration, "_has_deerflow", lambda: True)
+    monkeypatch.setattr(deerflow_loop, "run_agent_deerflow", _unexpected_deerflow)
+    monkeypatch.setattr(loop, "run_agent", _builtin)
+
+    result = await orchestration.run_agent(
+        "chat prompt", principal=principal, tool_mode="none"
+    )
+
+    assert result.final_answer == "chat answer"
+
+
 class _FailingLLM(LLMClient):
     supports_tools = False
 
@@ -71,6 +106,142 @@ class _FailingLLM(LLMClient):
 
     async def health(self) -> bool:
         return True
+
+
+class _NoToolsChatLLM(LiteLLMClient):
+    def __init__(self, content: str = "exact chat answer") -> None:
+        self.messages: list[Message] = []
+        self.calls = 0
+        self.content = content
+
+    async def complete_chat(self, messages, **kwargs) -> LLMResponse:
+        self.calls += 1
+        self.messages = list(messages)
+        assert kwargs["max_tokens"] >= 512
+        return LLMResponse(
+            content=self.content,
+            model="ollama_chat/qwen3:4b",
+        )
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools Chat 必须走明确 chat completion")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools Chat 不得传入 tools schema")
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("no-tools Chat 不得进入工具流式路径")
+        yield
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_builtin_tool_mode_none_preserves_tenant_context_without_dev_hints(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    llm = _NoToolsChatLLM()
+    principal = Principal(
+        user_id="chat-user", tenant_id="tenant-chat", roles=frozenset({"member"})
+    )
+    conversation_id = "no-tools-context"
+    conversation = get_conversation_manager().get_or_create(
+        conversation_id, principal.tenant_id
+    )
+    conversation.add_user("previous user turn")
+    conversation.add_assistant("previous assistant turn")
+    skill_store = SkillStore(tmp_path / "skills")
+    skill_store.create_skill(
+        name="tenant-chat-skill",
+        description="tenant chat context",
+        trigger_pattern="exact chat prompt",
+        system_prompt_hint="tenant skill hint",
+        tenant_id=principal.tenant_id,
+    )
+
+    async def _memory_context(goal: str, tenant_id: str) -> str:
+        assert goal == "exact chat prompt"
+        assert tenant_id == principal.tenant_id
+        return "tenant memory context"
+
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._retrieve_relevant_memories", _memory_context
+    )
+    monkeypatch.setattr("xagent.core.skills.get_skill_store", lambda: skill_store)
+
+    run = await run_agent_builtin(
+        "exact chat prompt",
+        principal=principal,
+        role_name="coder",
+        capabilities={"coding"},
+        conversation_id=conversation_id,
+        tool_mode="none",
+    )
+
+    assert run.status == "succeeded", run.error
+    assert run.role_name == "general"
+    assert run.final_answer == "exact chat answer"
+    assert llm.calls == 1
+    assert [message.content for message in llm.messages[1:]] == [
+        "previous user turn",
+        "previous assistant turn",
+        "exact chat prompt",
+    ]
+    system = llm.messages[0].content
+    assert "X-Agent 通用智能体" in system
+    assert "tenant memory context" in system
+    assert "tenant skill hint" in system
+    assert "## 核心行为准则" not in system
+    assert "## 项目指令" not in system
+    assert "## 项目环境" not in system
+    assert "[任务类型: 代码开发]" not in "\n".join(
+        message.content for message in llm.messages
+    )
+    assert not any(event.kind == StepKind.tool_call for event in run.events)
+
+
+async def test_builtin_tool_mode_none_treats_tool_json_as_plain_final(
+    monkeypatch,
+) -> None:
+    tool_json = '{"action":"tool","tool":"echo","args":{"text":"pong"}}'
+    llm = _NoToolsChatLLM(content=tool_json)
+    principal = Principal(
+        user_id="chat-user", tenant_id="tenant-chat", roles=frozenset({"member"})
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+
+    run = await run_agent_builtin(
+        "return tool-shaped text",
+        principal=principal,
+        tool_mode="none",
+    )
+
+    assert run.status == "succeeded"
+    assert run.final_answer == tool_json
+    assert not any(
+        event.kind in {StepKind.tool_call, StepKind.tool_result}
+        for event in run.events
+    )
+
+
+async def test_builtin_tool_mode_none_rejects_required_first_tool() -> None:
+    principal = Principal(
+        user_id="chat-user", tenant_id="tenant-chat", roles=frozenset({"member"})
+    )
+
+    with pytest.raises(ValueError, match="tool_mode=none"):
+        await run_agent_builtin(
+            "invalid strict chat",
+            principal=principal,
+            tool_mode="none",
+            required_first_tool="file_write",
+        )
 
 
 class _BlockingLLM(LLMClient):

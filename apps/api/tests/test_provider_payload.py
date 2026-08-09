@@ -313,6 +313,77 @@ async def test_litellm_plain_complete_keeps_ollama_generate_route(
     assert "tool_choice" not in captured
 
 
+async def test_litellm_chat_complete_uses_direct_ollama_chat_contract(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+
+    await client.complete_chat([Message(role="user", content="exact chat prompt")])
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+    assert captured["temperature"] == 0
+    assert captured["max_tokens"] == 512
+    assert "tools" not in captured
+    assert "tool_choice" not in captured
+    assert "reasoning_effort" not in captured
+
+
+@pytest.mark.parametrize(
+    ("settings", "model", "expected_model", "expected_api_base"),
+    [
+        (
+            LLMSettings(
+                default_model="proxy-default",
+                proxy_url="http://localhost:4000",
+                proxy_api_key="proxy-key",
+                ollama_base_url="http://localhost:11434",
+            ),
+            "ollama/qwen3:4b",
+            "ollama/qwen3:4b",
+            "http://localhost:4000",
+        ),
+        (
+            LLMSettings(openai_api_key="sk-fake"),
+            "openai/gpt-4o-mini",
+            "openai/gpt-4o-mini",
+            None,
+        ),
+        (
+            LLMSettings(
+                ollama_base_url="http://localhost:11434",
+                ollama_model="ollama_chat/qwen3:4b",
+            ),
+            None,
+            "ollama_chat/qwen3:4b",
+            "http://localhost:11434",
+        ),
+    ],
+)
+async def test_litellm_chat_complete_preserves_non_direct_routes(
+    monkeypatch,
+    settings,
+    model,
+    expected_model,
+    expected_api_base,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = LiteLLMClient(settings)
+
+    await client.complete_chat(
+        [Message(role="user", content="exact chat prompt")],
+        model=model,
+        max_tokens=128,
+    )
+
+    assert captured["model"] == expected_model
+    assert captured["max_tokens"] == 512
+    if expected_api_base is None:
+        assert "api_base" not in captured
+    else:
+        assert captured["api_base"] == expected_api_base
+
+
 async def test_litellm_plain_complete_preserves_configured_ollama_chat_prefix(
     monkeypatch,
 ) -> None:
