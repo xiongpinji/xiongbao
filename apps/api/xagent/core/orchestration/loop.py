@@ -1037,6 +1037,7 @@ async def run_agent(
     resume_step: int = 0,
     resume_changed_files: list[str] | None = None,
     resume_from_checkpoint_id: str = "",
+    required_first_tool: str | None = None,
 ) -> AgentRun:
     """运行一次 agent 任务，返回含事件序列的结果。
 
@@ -1057,6 +1058,11 @@ async def run_agent(
     resolved_run_id = run_id or uuid.uuid4().hex
     # 仅暴露该角色允许的工具
     specs = [s for s in tools.specs() if role.can_use(s["function"]["name"])]
+    available_tool_names = {spec["function"]["name"] for spec in specs}
+    if required_first_tool and required_first_tool not in available_tool_names:
+        raise RuntimeError(
+            f"必需工具 {required_first_tool} 未在当前角色的工具 schema 中"
+        )
 
     # ── 多轮对话：加载历史 ──
     conv_mgr = get_conversation_manager()
@@ -1135,6 +1141,10 @@ async def run_agent(
 
     # 选择执行路径：支持原生 function-calling 走工具路径，否则提示工程降级
     use_native_tools = getattr(llm, "supports_tools", False) and bool(specs)
+    if required_first_tool and not use_native_tools:
+        raise RuntimeError(
+            f"必需工具 {required_first_tool} 需要支持原生工具调用的模型"
+        )
     if use_native_tools:
         system = _tool_system_prompt_native(role.system_prompt, specs)
     else:
@@ -1318,6 +1328,16 @@ async def run_agent(
         _last_checkpoint_step = 0
         _terminal_success = False
         _pending_final_event: StepEvent | None = None
+        _required_tool_seen = False
+        _required_tool_attempts = 0
+        _required_tool_choice = (
+            {
+                "type": "function",
+                "function": {"name": required_first_tool},
+            }
+            if required_first_tool
+            else None
+        )
 
         # ── 编辑回滚：连续验证失败计数 ──
         _verify_fail_count: int = 0
@@ -1414,6 +1434,10 @@ async def run_agent(
 
                   # 流式重试：流失败时重建连接
                   _stream_ok = False
+                  _stream_tool_kwargs: dict[str, Any] = {}
+                  if required_first_tool and not _required_tool_seen:
+                      _required_tool_attempts += 1
+                      _stream_tool_kwargs["tool_choice"] = _required_tool_choice
                   for _stream_attempt in range(_LLM_MAX_RETRIES):
                       try:
                           content_buf = ""
@@ -1422,7 +1446,10 @@ async def run_agent(
                           _first_chunk_received = False
                           stream_llm: Any = llm
                           async for chunk in stream_llm.stream_with_tools(
-                              state.messages, specs, model=target_model
+                              state.messages,
+                              specs,
+                              model=target_model,
+                              **_stream_tool_kwargs,
                           ):
                               _now = time.perf_counter()
                               # 超时保护：首 chunk 60s，后续 30s
@@ -1483,6 +1510,26 @@ async def run_agent(
 
                   # 流结束：判断是工具调用还是最终回答
                   if tool_calls_buf:
+                      _stream_tool_names = {
+                          item["name"] for item in tool_calls_buf.values()
+                      }
+                      if required_first_tool and not _required_tool_seen:
+                          if required_first_tool in _stream_tool_names:
+                              _required_tool_seen = True
+                          elif _required_tool_attempts >= 2:
+                              raise RuntimeError(
+                                  f"隔离开发任务未调用必需工具 "
+                                  f"{required_first_tool}（已纠偏重试 1 次）"
+                              )
+                          else:
+                              state.messages.append(Message(
+                                  role="user",
+                                  content=(
+                                      f"[必需工具纠偏] 这是隔离开发任务，"
+                                      f"首轮必须调用 {required_first_tool} 产生真实文件变更。"
+                                  ),
+                              ))
+                              continue
                       # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送，否则 Deepseek 报错）
                       _tc_list = [
                           {"id": tool_calls_buf[_i]["id"] or f"call_{state.step}_{_i}", "type": "function",
@@ -1865,6 +1912,23 @@ async def run_agent(
                       continue
                   else:
                       # 纯内容 → 判断是最终回答还是中间规划
+                      if required_first_tool and not _required_tool_seen:
+                          if _required_tool_attempts >= 2:
+                              raise RuntimeError(
+                                  f"隔离开发任务未调用必需工具 "
+                                  f"{required_first_tool}（已纠偏重试 1 次）"
+                              )
+                          state.messages.append(
+                              Message(role="assistant", content=content_buf)
+                          )
+                          state.messages.append(Message(
+                              role="user",
+                              content=(
+                                  f"[必需工具纠偏] 不得用纯文本宣称完成。"
+                                  f"立即调用 {required_first_tool} 产生真实文件变更。"
+                              ),
+                          ))
+                          continue
                       content_buf = await _handle_empty_or_echo(
                           content_buf, state, llm, target_model
                       )
@@ -1931,9 +1995,17 @@ async def run_agent(
 
               elif use_native_tools:
                   # ── 非流式原生工具路径（回退） ──
+                  _native_tool_kwargs: dict[str, Any] = {}
+                  if required_first_tool and not _required_tool_seen:
+                      _required_tool_attempts += 1
+                      _native_tool_kwargs["tool_choice"] = _required_tool_choice
                   resp = await _llm_call_with_retry(
-                      lambda selected_model=target_model: llm.complete_with_tools(
-                          state.messages, specs, model=selected_model
+                      lambda selected_model=target_model,
+                      tool_kwargs=_native_tool_kwargs: llm.complete_with_tools(
+                          state.messages,
+                          specs,
+                          model=selected_model,
+                          **tool_kwargs,
                       ),
                       description="complete_with_tools",
                   )
@@ -1941,6 +2013,24 @@ async def run_agent(
                   state.total_prompt_tokens += resp.prompt_tokens
                   state.total_completion_tokens += resp.completion_tokens
                   if resp.tool_calls:
+                      _native_tool_names = {tc.name for tc in resp.tool_calls}
+                      if required_first_tool and not _required_tool_seen:
+                          if required_first_tool in _native_tool_names:
+                              _required_tool_seen = True
+                          elif _required_tool_attempts >= 2:
+                              raise RuntimeError(
+                                  f"隔离开发任务未调用必需工具 "
+                                  f"{required_first_tool}（已纠偏重试 1 次）"
+                              )
+                          else:
+                              state.messages.append(Message(
+                                  role="user",
+                                  content=(
+                                      f"[必需工具纠偏] 这是隔离开发任务，"
+                                      f"首轮必须调用 {required_first_tool} 产生真实文件变更。"
+                                  ),
+                              ))
+                              continue
                       # 构建 OpenAI 格式 tool_calls（必须随 assistant 消息一起发送）
                       _tc_list_ns = [
                           {"id": tc.id, "type": "function",
@@ -2114,6 +2204,24 @@ async def run_agent(
                               ),
                           ))
                           _consecutive_errors = 0
+                      continue
+
+                  if required_first_tool and not _required_tool_seen:
+                      if _required_tool_attempts >= 2:
+                          raise RuntimeError(
+                              f"隔离开发任务未调用必需工具 "
+                              f"{required_first_tool}（已纠偏重试 1 次）"
+                          )
+                      state.messages.append(
+                          Message(role="assistant", content=resp.content)
+                      )
+                      state.messages.append(Message(
+                          role="user",
+                          content=(
+                              f"[必需工具纠偏] 不得用纯文本宣称完成。"
+                              f"立即调用 {required_first_tool} 产生真实文件变更。"
+                          ),
+                      ))
                       continue
 
                   await _emit(

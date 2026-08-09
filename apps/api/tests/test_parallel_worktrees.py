@@ -34,11 +34,19 @@ def _principal() -> Principal:
 
 
 class _FakeRun:
-    def __init__(self, answer: str):
+    def __init__(self, answer: str, *, tools: tuple[str, ...] = ()):
         self._answer = answer
+        self._tools = tools
 
     def to_dict(self) -> dict:
-        return {"final_answer": self._answer, "steps": 1}
+        return {
+            "final_answer": self._answer,
+            "steps": 1,
+            "events": [
+                {"kind": "tool_call", "tool": tool, "step": 1, "content": {}}
+                for tool in self._tools
+            ],
+        }
 
 
 def _make_fake_run_agent(write_file: str | None = None):
@@ -156,6 +164,120 @@ async def test_parallel_with_worktrees_isolation(tmp_path, monkeypatch) -> None:
     assert len(branches.splitlines()) == 2
 
 
+async def test_isolated_file_write_task_requires_file_write_on_first_turn(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-required-tool"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+    seen_required_tools: list[str | None] = []
+
+    async def _fake(
+        goal,
+        *,
+        principal,
+        role_name=None,
+        capabilities=None,
+        run_id=None,
+        required_first_tool=None,
+    ):
+        seen_required_tools.append(required_first_tool)
+        (ws_mod.get_workspace() / "artifact.txt").write_text(
+            f"by {run_id}", encoding="utf-8"
+        )
+        return _FakeRun("created artifact", tools=("file_write",))
+
+    monkeypatch.setattr(parallel, "run_agent", _fake)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="create artifact", capabilities=["file_write"])],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    assert result.status == "succeeded"
+    assert seen_required_tools == ["file_write"]
+    assert "artifact.txt" in result.sub_results[0].diff_stat
+
+
+async def test_required_file_write_without_tool_call_has_diagnostic_failure(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-missing-required-tool"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+
+    async def _fake(*args, **kwargs):  # noqa: ARG001
+        return _FakeRun("claimed complete")
+
+    monkeypatch.setattr(parallel, "run_agent", _fake)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="create artifact", capabilities=["file_write"])],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert "未调用必需工具 file_write" in sub.error
+    assert not Path(sub.worktree_path).exists()
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", sub.development_task_id
+        )
+    assert record is not None
+    assert record.status.value == "failed"
+    assert "未调用必需工具 file_write" in record.error
+
+
+async def test_multi_capability_task_does_not_force_file_write_first(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-multi-capability"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+    seen_required_tools: list[str | None] = []
+
+    async def _fake(
+        *args, required_first_tool=None, run_id=None, **kwargs  # noqa: ARG001
+    ):
+        seen_required_tools.append(required_first_tool)
+        (ws_mod.get_workspace() / "artifact.txt").write_text(
+            f"by {run_id}", encoding="utf-8"
+        )
+        return _FakeRun("created artifact")
+
+    monkeypatch.setattr(parallel, "run_agent", _fake)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [
+                SubTask(
+                    goal="inspect then create artifact",
+                    capabilities=["file_write", "coding"],
+                )
+            ],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    assert result.status == "succeeded"
+    assert seen_required_tools == [None]
+
+
 async def test_parallel_worktree_degrades_outside_git_repo(tmp_path, monkeypatch) -> None:
     plain = tmp_path / "plain"
     plain.mkdir()
@@ -198,6 +320,47 @@ async def test_parallel_worktree_failure_is_recorded_and_cleaned(tmp_path, monke
         record = await get_development_task(session, "default", sub.development_task_id)
     assert record is not None
     assert record.status.value == "failed"
+    branches = subprocess.run(
+        ["git", "branch", "--list", "agent/*"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert branches == ""
+
+
+async def test_parallel_worktree_empty_result_is_failed_and_cleaned(
+    tmp_path, monkeypatch
+) -> None:
+    """Agent 返回成功但没有产生 diff 时，不得制造可审查的空结果。"""
+    repo = tmp_path / "repo-empty"
+    _init_git_repo(repo)
+    ws_token = ws_mod.set_workspace(repo)
+    monkeypatch.setattr(parallel, "run_agent", _make_fake_run_agent())
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="claim success without edits")],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    sub = result.sub_results[0]
+    assert result.status == "failed"
+    assert sub.status == "failed"
+    assert sub.development_task_status == "failed"
+    assert "未产生可审查变更" in sub.error
+    assert not Path(sub.worktree_path).exists()
+    async with get_sessionmaker()() as session:
+        record = await get_development_task(
+            session, "default", sub.development_task_id
+        )
+    assert record is not None
+    assert record.status.value == "failed"
+    assert not Path(record.patch_path).exists()
     branches = subprocess.run(
         ["git", "branch", "--list", "agent/*"],
         cwd=repo,

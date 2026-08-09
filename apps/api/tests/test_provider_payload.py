@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from xagent.adapters.llm.base import Message
 from xagent.adapters.llm.litellm_client import LiteLLMClient
 from xagent.domains.creative_studio.media import (
     GenerationMode,
@@ -273,3 +274,88 @@ async def test_litellm_health_false_without_any_key() -> None:
     cfg = LLMSettings()
     client = LiteLLMClient(cfg)
     assert await client.health() is False
+
+
+async def test_litellm_complete_with_tools_transmits_named_tool_choice(
+    monkeypatch,
+) -> None:
+    captured: dict = {}
+
+    async def _fake_acompletion(*, messages, **kwargs):
+        captured.update(kwargs)
+        return {
+            "choices": [{"message": {"content": "", "tool_calls": []}}],
+            "usage": {},
+        }
+
+    monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
+    client = LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://localhost:11434",
+            ollama_model="qwen3:4b",
+        )
+    )
+    required_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+
+    await client.complete_with_tools(
+        [Message(role="user", content="create a file")],
+        [{"type": "function", "function": {"name": "file_write"}}],
+        tool_choice=required_choice,
+    )
+
+    assert captured["tool_choice"] == required_choice
+
+
+async def test_litellm_stream_with_tools_transmits_named_choice_and_defaults_auto(
+    monkeypatch,
+) -> None:
+    captured: list[dict] = []
+
+    class _FakeStream:
+        def __init__(self) -> None:
+            self._done = False
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if self._done:
+                raise StopAsyncIteration
+            self._done = True
+            return {
+                "choices": [
+                    {"delta": {"content": "ok"}, "finish_reason": "stop"}
+                ]
+            }
+
+    async def _fake_acompletion(*, messages, **kwargs):  # noqa: ARG001
+        captured.append(kwargs)
+        return _FakeStream()
+
+    monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
+    client = LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://localhost:11434",
+            ollama_model="qwen3:4b",
+        )
+    )
+    messages = [Message(role="user", content="create a file")]
+    tools = [{"type": "function", "function": {"name": "file_write"}}]
+    required_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+
+    _ = [
+        chunk
+        async for chunk in client.stream_with_tools(
+            messages, tools, tool_choice=required_choice
+        )
+    ]
+    _ = [chunk async for chunk in client.stream_with_tools(messages, tools)]
+
+    assert captured[0]["tool_choice"] == required_choice
+    assert captured[1]["tool_choice"] == "auto"

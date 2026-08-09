@@ -116,6 +116,11 @@ async def finalize_task_worktree(
     rc, output = await run_git(paths.worktree, "add", "-A")
     if rc != 0:
         raise RuntimeError(f"git add 失败: {output.strip()[:300]}")
+    rc, output = await run_git(paths.worktree, "diff", "--cached", "--quiet")
+    if rc == 0:
+        raise RuntimeError("开发任务未产生可审查变更")
+    if rc != 1:
+        raise RuntimeError(f"检查待提交变更失败: {output.strip()[:300]}")
     rc, output = await run_git(
         paths.worktree,
         "-c",
@@ -124,7 +129,6 @@ async def finalize_task_worktree(
         "user.email=xagent@local",
         "commit",
         "--no-gpg-sign",
-        "--allow-empty",
         "-m",
         f"xagent: development task {task_id}",
     )
@@ -144,6 +148,8 @@ async def finalize_task_worktree(
     )
     if rc != 0:
         raise RuntimeError(f"生成 patch 失败: {patch_text.strip()[:300]}")
+    if not patch_text.strip():
+        raise RuntimeError("开发任务未产生可审查变更")
     await asyncio.to_thread(paths.patch_root.mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread(paths.patch.write_text, patch_text, encoding="utf-8")
     return WorktreeResult(

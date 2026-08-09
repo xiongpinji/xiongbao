@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from xagent.adapters.llm.base import LLMClient, LLMResponse, Message
 from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
 from xagent.adapters.tools.base import ToolResult
@@ -261,6 +262,146 @@ class _StreamingParallelLLM(LiteLLMClient):
 
     async def health(self) -> bool:
         return True
+
+
+class _RequiredFileWriteLLM(LLMClient):
+    """首轮忽略 required tool 给纯文本，第二轮才调用 file_write。"""
+
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.tool_choices: list[object] = []
+        self.calls = 0
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="已完成开发任务。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        from xagent.adapters.llm.base import ToolCall
+
+        self.calls += 1
+        self.tool_choices.append(kwargs.get("tool_choice"))
+        if self.calls == 1:
+            return LLMResponse(content="我会创建文件。", model="test")
+        if self.calls == 2:
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(
+                        id="call_write",
+                        name="file_write",
+                        args={"path": "artifact.txt", "content": "ok"},
+                    )
+                ],
+            )
+        return LLMResponse(content="已完成开发任务并写入产物。", model="test")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _FileWriteRegistry:
+    def specs(self) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "file_write",
+                    "description": "写文件",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "path": {"type": "string"},
+                            "content": {"type": "string"},
+                        },
+                        "required": ["path", "content"],
+                    },
+                },
+            }
+        ]
+
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        return ToolResult(ok=True, output="written")
+
+
+async def test_required_first_tool_retries_once_after_plain_text(monkeypatch) -> None:
+    llm = _RequiredFileWriteLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    required_choice = {
+        "type": "function",
+        "function": {"name": "file_write"},
+    }
+    assert llm.tool_choices[:2] == [required_choice, required_choice]
+    assert llm.tool_choices[2:]
+    assert all(choice is None for choice in llm.tool_choices[2:])
+    assert any(
+        event.kind == StepKind.tool_call and event.tool == "file_write"
+        for event in run.events
+    )
+    assert run.final_answer
+
+
+async def test_required_first_tool_fails_after_single_correction(monkeypatch) -> None:
+    llm = _RequiredFileWriteLLM()
+
+    async def _always_plain_text(messages, tools, **kwargs):  # noqa: ARG001
+        llm.tool_choices.append(kwargs.get("tool_choice"))
+        return LLMResponse(content="只返回文本，不调用工具。", model="test")
+
+    monkeypatch.setattr(llm, "complete_with_tools", _always_plain_text)
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert len(llm.tool_choices) == 2
+    assert "未调用必需工具 file_write" in run.final_answer
+    assert "已纠偏重试 1 次" in run.final_answer
+
+
+async def test_required_first_tool_must_exist_in_tool_schema(monkeypatch) -> None:
+    llm = _NativeToolLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _ParallelEchoRegistry(),
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    with pytest.raises(RuntimeError, match="未在当前角色的工具 schema 中"):
+        await run_agent_builtin(
+            "创建开发产物",
+            principal=principal,
+            role_name="general",
+            required_first_tool="file_write",
+        )
 
 
 async def test_native_tool_exception_backfills_tool_message(monkeypatch) -> None:

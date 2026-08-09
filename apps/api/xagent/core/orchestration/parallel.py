@@ -183,6 +183,15 @@ async def run_parallel_agents(
                     _RUNNING_DEVELOPMENT_TASKS[development_task_id] = current_task
                 wt_token = set_workspace(task_paths.worktree)
             try:
+                required_first_tool = (
+                    "file_write"
+                    if repository_baseline is not None
+                    and set(task.capabilities) == {"file_write"}
+                    else None
+                )
+                agent_kwargs: dict[str, Any] = {}
+                if required_first_tool is not None:
+                    agent_kwargs["required_first_tool"] = required_first_tool
                 result = await asyncio.wait_for(
                     run_agent(
                         task.goal,
@@ -190,6 +199,7 @@ async def run_parallel_agents(
                         role_name=task.role,
                         capabilities=set(task.capabilities) or None,
                         run_id=sub_run_id,
+                        **agent_kwargs,
                     ),
                     timeout=SUB_TASK_TIMEOUT,
                 )
@@ -200,6 +210,15 @@ async def run_parallel_agents(
                     reset_workspace(wt_token)
             elapsed = (datetime.now(UTC) - t0).total_seconds() * 1000
             rd = result.to_dict()
+            if required_first_tool is not None and not any(
+                event.get("kind") == "tool_call"
+                and event.get("tool") == required_first_tool
+                for event in rd.get("events", [])
+            ):
+                raise RuntimeError(
+                    f"隔离开发任务未调用必需工具 {required_first_tool}"
+                    "（已执行一次受控纠偏重试）"
+                )
             diff_stat, diff_text = "", ""
             if task_paths is not None and repository_baseline is not None:
                 from xagent.domains.development_tasks import (

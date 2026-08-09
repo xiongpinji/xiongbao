@@ -123,12 +123,13 @@ class LiteLLMClient(LLMClient):
         target_model = model or self.effective_model
         payload = self._serialize_messages(messages)
         call_kwargs = self._call_kwargs(target_model)
+        tool_choice = kwargs.pop("tool_choice", "auto")
         call_kwargs.update(temperature=temperature, **kwargs)
         if max_tokens:
             call_kwargs["max_tokens"] = max_tokens
         if tools:
             call_kwargs["tools"] = tools
-            call_kwargs["tool_choice"] = "auto"
+            call_kwargs["tool_choice"] = tool_choice
 
         resp = await litellm.acompletion(messages=payload, **call_kwargs)
         choice = resp["choices"][0]
@@ -168,9 +169,10 @@ class LiteLLMClient(LLMClient):
         target_model = model or self.effective_model
         payload = self._serialize_messages(messages)
         call_kwargs = self._call_kwargs(target_model)
+        tool_choice = kwargs.pop("tool_choice", "auto")
         call_kwargs.update(temperature=temperature, stream=True, **kwargs)
         call_kwargs["tools"] = tools
-        call_kwargs["tool_choice"] = "auto"
+        call_kwargs["tool_choice"] = tool_choice
         # 请求流式 usage（OpenAI 兼容接口支持）
         call_kwargs["stream_options"] = {"include_usage": True}
 
