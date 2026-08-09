@@ -46,13 +46,12 @@ def _headers(tenant_id: str) -> dict[str, str]:
 @pytest.fixture
 async def package_client(tmp_path, monkeypatch):
     import xagent.core.skills as skills_mod
-    from xagent.api.v1 import skill_packages as package_api
 
     async with get_engine().begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     store = SkillStore(tmp_path / "skills")
     monkeypatch.setattr(skills_mod, "_store", store)
-    monkeypatch.setattr(package_api, "PACKAGES_ROOT", tmp_path / "packages")
+    monkeypatch.setenv("XAGENT_SKILL_PACKAGES_ROOT", str(tmp_path / "packages"))
     app = create_app()
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

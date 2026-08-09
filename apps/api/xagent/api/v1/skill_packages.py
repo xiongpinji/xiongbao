@@ -18,14 +18,13 @@ from xagent.domains.skill_packages import (
     import_skill_package_zip,
     list_skill_packages,
 )
-from xagent.domains.skill_packages.service import DEFAULT_PACKAGES_ROOT
+from xagent.domains.skill_packages.service import default_packages_root
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_session
 
 router = APIRouter(prefix="/skill-packages", tags=["skill-packages"])
-PACKAGES_ROOT = DEFAULT_PACKAGES_ROOT
 
 
 def _view(record: SkillPackageRecord, *, detail: bool) -> dict[str, Any]:
@@ -71,6 +70,7 @@ async def import_package(
         await file.close()
     if len(archive) > limits.max_archive_bytes:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "archive_size_limit")
+    packages_root = default_packages_root()
     try:
         package = await import_skill_package_zip(
             session,
@@ -79,7 +79,7 @@ async def import_package(
             owner_id=principal.user_id,
             archive_bytes=archive,
             source=Path(file.filename or "upload.zip").name,
-            packages_root=PACKAGES_ROOT,
+            packages_root=packages_root,
             limits=limits,
         )
     except ValueError as exc:
@@ -94,7 +94,7 @@ async def import_package(
     except Exception:
         await session.rollback()
         await discard_skill_package_import(
-            get_skill_store(), package, packages_root=PACKAGES_ROOT
+            get_skill_store(), package, packages_root=packages_root
         )
         raise
     get_audit_log().record(

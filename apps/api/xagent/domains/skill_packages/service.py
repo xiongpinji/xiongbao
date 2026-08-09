@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import re
 import shutil
 import stat
@@ -25,7 +26,15 @@ from xagent.core.skills.importer import candidate_from_skillmd, parse_skillmd
 from xagent.infra.models.skill_package import SkillPackageORM
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_PACKAGES_ROOT = _PROJECT_ROOT / "data" / "skill-packages"
+
+
+def default_packages_root() -> Path:
+    configured = os.environ.get("XAGENT_SKILL_PACKAGES_ROOT", "").strip()
+    return (
+        Path(configured).expanduser()
+        if configured
+        else _PROJECT_ROOT / "data" / "skill-packages"
+    )
 
 
 @dataclass(frozen=True)
@@ -243,9 +252,10 @@ async def import_skill_package_zip(
     owner_id: str,
     archive_bytes: bytes,
     source: str,
-    packages_root: Path = DEFAULT_PACKAGES_ROOT,
+    packages_root: Path | None = None,
     limits: SkillPackageLimits | None = None,
 ) -> SkillPackageRecord:
+    packages_root = packages_root or default_packages_root()
     limits = limits or SkillPackageLimits()
     entries = await asyncio.to_thread(_read_zip_entries, archive_bytes, limits)
     return await _import_entries(
@@ -347,9 +357,10 @@ async def import_skill_package_directory(
     owner_id: str,
     source_dir: Path,
     source: str,
-    packages_root: Path = DEFAULT_PACKAGES_ROOT,
+    packages_root: Path | None = None,
     limits: SkillPackageLimits | None = None,
 ) -> SkillPackageRecord:
+    packages_root = packages_root or default_packages_root()
     limits = limits or SkillPackageLimits()
     entries = await asyncio.to_thread(_read_directory_entries, source_dir, limits)
     return await _import_entries(
@@ -367,9 +378,10 @@ async def discard_skill_package_import(
     store: Any,
     package: SkillPackageRecord,
     *,
-    packages_root: Path = DEFAULT_PACKAGES_ROOT,
+    packages_root: Path | None = None,
 ) -> None:
     """补偿尚未提交的导入，只删除该 package_id 对应的受控目录。"""
+    packages_root = packages_root or default_packages_root()
     store.delete(package.skill_id)
 
     def remove_materialized_package() -> None:

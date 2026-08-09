@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -23,6 +24,11 @@ logger = get_logger("xagent.skills")
 
 # 项目根目录
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+
+def default_skills_root() -> Path:
+    configured = os.environ.get("XAGENT_SKILLS_ROOT", "").strip()
+    return Path(configured).expanduser() if configured else _PROJECT_ROOT / "data" / "skills"
 
 # ─── 自进化配置 ───
 MIN_STEPS_FOR_EXTRACTION = 3      # 任务步数 >= 此值才考虑提炼
@@ -149,7 +155,7 @@ class SkillStore:
     """
 
     def __init__(self, storage_dir: Path | None = None) -> None:
-        base = storage_dir or _PROJECT_ROOT / "data" / "skills"
+        base = storage_dir or default_skills_root()
         self._dir = base
         self._dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, Skill] = {}
