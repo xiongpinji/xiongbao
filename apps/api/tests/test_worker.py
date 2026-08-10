@@ -348,7 +348,8 @@ async def test_task_submit_tool_mode_none_forwards_to_inproc_run_agent(
     monkeypatch.setattr("xagent.api.v1.tasks.run_agent", _fake_run_agent)
     monkeypatch.setattr("xagent.api.v1.tasks._try_attach_spine_task", AsyncMock(return_value=None))
     monkeypatch.setattr("xagent.api.v1.tasks.get_sessionmaker", lambda: lambda: _Session())
-    monkeypatch.setattr("xagent.api.v1.tasks.update_task_status_by_run_id", AsyncMock())
+    update_status = AsyncMock()
+    monkeypatch.setattr("xagent.api.v1.tasks.update_task_status_by_run_id", update_status)
 
     created = await submit_task(
         body=TaskSubmitIn(goal="exact inproc chat", tool_mode="none"),
@@ -364,6 +365,7 @@ async def test_task_submit_tool_mode_none_forwards_to_inproc_run_agent(
     assert captured["tool_mode"] == "none"
     assert record is not None
     assert record.status.value == "succeeded"
+    assert {call.kwargs["next_status"] for call in update_status.await_args_list} == {"review"}
     assert created["input"] == {
         "goal": "exact inproc chat",
         "role": None,
@@ -371,6 +373,78 @@ async def test_task_submit_tool_mode_none_forwards_to_inproc_run_agent(
         "tool_mode": "none",
         "route": "chat_no_tools",
     }
+
+
+@pytest.mark.parametrize(
+    ("run_status", "run_error", "expected_error"),
+    [
+        ("failed", "model_empty_response_after_retry", "model_empty_response_after_retry"),
+        ("cancelled", "", "agent_run_cancelled"),
+    ],
+)
+async def test_task_submit_inproc_non_success_agent_run_persists_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+    run_status: str,
+    run_error: str,
+    expected_error: str,
+) -> None:
+    from xagent.api.v1.tasks import TaskSubmitIn, submit_task
+    from xagent.enterprise.auth.principal import Principal
+
+    principal = Principal(
+        user_id="u-tool-mode-failed",
+        tenant_id="tenant-tool-mode-failed",
+        roles=frozenset({"member"}),
+    )
+    captured: dict[str, object] = {}
+
+    async def _fake_run_agent(goal: str, **kwargs):
+        captured.update(goal=goal, **kwargs)
+        return AgentRun(
+            run_id="inproc-failed-agent-run",
+            goal=goal,
+            role_name="general",
+            tenant_id=principal.tenant_id,
+            final_answer="",
+            steps=1,
+            status=run_status,
+            error=run_error,
+        )
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        async def commit(self) -> None:
+            return None
+
+    update_status = AsyncMock()
+    monkeypatch.setattr("xagent.api.v1.tasks.get_celery_app", lambda: None)
+    monkeypatch.setattr("xagent.api.v1.tasks.run_agent", _fake_run_agent)
+    monkeypatch.setattr("xagent.api.v1.tasks._try_attach_spine_task", AsyncMock(return_value=None))
+    monkeypatch.setattr("xagent.api.v1.tasks.get_sessionmaker", lambda: lambda: _Session())
+    monkeypatch.setattr("xagent.api.v1.tasks.update_task_status_by_run_id", update_status)
+
+    created = await submit_task(
+        body=TaskSubmitIn(goal="failed inproc chat", tool_mode="none"),
+        principal=principal,
+    )
+    for _ in range(50):
+        record = get_task_runner().get(created["task_id"], principal.tenant_id)
+        if record is not None and record.status.value in {"succeeded", "failed"}:
+            break
+        await asyncio.sleep(0.01)
+
+    assert captured["tool_mode"] == "none"
+    assert record is not None
+    assert record.status.value == "failed"
+    assert record.error == expected_error
+    statuses = [call.kwargs["next_status"] for call in update_status.await_args_list]
+    assert "recovery" in statuses
+    assert "review" not in statuses
 
 
 def test_task_submit_default_auto_preserves_legacy_input_shape() -> None:

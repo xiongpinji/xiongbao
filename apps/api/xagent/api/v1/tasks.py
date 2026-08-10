@@ -318,15 +318,23 @@ async def submit_task(
 
     async def _run():
         try:
-            result = (
-                await run_agent(
-                    body.goal,
-                    principal=principal,
-                    role_name=body.role,
-                    capabilities=set(body.capabilities) or None,
-                    tool_mode=tool_mode,
+            run_result = await run_agent(
+                body.goal,
+                principal=principal,
+                role_name=body.role,
+                capabilities=set(body.capabilities) or None,
+                tool_mode=tool_mode,
+            )
+            result = run_result.to_dict()
+            result_status = str(result.get("status") or getattr(run_result, "status", "succeeded"))
+            if result_status != "succeeded":
+                raise RuntimeError(
+                    str(
+                        result.get("error")
+                        or getattr(run_result, "error", "")
+                        or f"agent_run_{result_status}"
+                    )
                 )
-            ).to_dict()
             try:
                 async with get_sessionmaker()() as session:
                     await update_task_status_by_run_id(
