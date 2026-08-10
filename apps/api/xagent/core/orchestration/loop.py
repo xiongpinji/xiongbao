@@ -1541,6 +1541,7 @@ async def run_agent(
                   )
                   break
 
+              assert tools is not None
               if can_stream:
                   # ── 流式路径：逐 token 推送（带重试 + 超时保护） ──
                   content_buf = ""

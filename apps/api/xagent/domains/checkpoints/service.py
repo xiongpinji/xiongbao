@@ -154,16 +154,15 @@ async def _select_checkpoint_scope(
     run_id: str,
     step: int,
 ) -> list[CheckpointORM]:
-    return (
-        await session.scalars(
-            select(CheckpointORM).where(
-                CheckpointORM.tenant_id == tenant_id,
-                CheckpointORM.conversation_id == conversation_id,
-                CheckpointORM.run_id == run_id,
-                CheckpointORM.step == step,
-            )
+    rows = await session.scalars(
+        select(CheckpointORM).where(
+            CheckpointORM.tenant_id == tenant_id,
+            CheckpointORM.conversation_id == conversation_id,
+            CheckpointORM.run_id == run_id,
+            CheckpointORM.step == step,
         )
-    ).all()
+    )
+    return list(rows.all())
 
 
 async def _update_checkpoint_row(

@@ -19,6 +19,7 @@ RUN pip install --upgrade pip hatchling && pip install ".[dev]" && \
 RUN rm -rf /app/xagent
 
 COPY migrations ./migrations
+COPY scripts/auto_archive_evidence.py scripts/collect_ops_evidence.py ./scripts/
 COPY alembic.ini ./
 
 EXPOSE 8000

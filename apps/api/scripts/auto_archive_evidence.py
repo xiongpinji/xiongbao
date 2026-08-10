@@ -22,8 +22,7 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-API_ROOT = REPO_ROOT / "apps" / "api"
+API_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = API_ROOT / "scripts"
 
 

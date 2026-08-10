@@ -1,7 +1,7 @@
 {
   "ruff_line_length": {
-    "count": 189,
-    "sha256": "77e326a2b78d4f5346a549389ab4bc1841a8fac58aa901f8a89e18e456c63110",
+    "count": 187,
+    "sha256": "4313c16632f26b36bf18caeeeb4eaeaa000c4bd369212fe9540d42965f80aab4",
     "owner": "backend-platform",
     "reason": "历史长行需要按模块拆分格式化，避免在发布加固中制造大面积无关差异",
     "expires_on": "2026-09-30",
@@ -9,7 +9,7 @@
   },
   "ruff_exception_fallback": {
     "count": 17,
-    "sha256": "e901bd5b5144697ef1193ff8846c672bdeb41a6496ca3c96f02e8837c27482fc",
+    "sha256": "503583717a110c1c3541dc9b40f33b850944436bc7b5c3a4e5b9c538775c2948",
     "owner": "backend-runtime",
     "reason": "存量 best-effort 降级路径需要逐项补结构化日志与故障注入测试",
     "expires_on": "2026-09-30",
@@ -17,7 +17,7 @@
   },
   "ruff_controlled_subprocess": {
     "count": 15,
-    "sha256": "a3374d2e036fee367f4881f0a6f22b8641f361e50c6db631d92817e725654263",
+    "sha256": "7c410d5054e5fb21c8c9444ed173770a677e279ed0cc12ed328413917982c499",
     "owner": "agent-runtime",
     "reason": "开发任务运行器的 Git 与验证命令需迁移到统一异步受控执行器",
     "expires_on": "2026-09-30",
@@ -25,7 +25,7 @@
   },
   "ruff_async_blocking": {
     "count": 6,
-    "sha256": "23bde60b6eb3d6360da999d691f089c2cf2387c8ab0cc877c2b469fd4e1fe30f",
+    "sha256": "4455af6c8ff369328c8192107f3b2249d876868c58396f0834224dae0eef4d13",
     "owner": "agent-runtime",
     "reason": "存量同步文件与进程调用需迁移到线程池或异步进程接口并做并发回归",
     "expires_on": "2026-09-30",

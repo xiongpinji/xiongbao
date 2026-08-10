@@ -14,6 +14,7 @@ RUNBOOK_PATH = ROOT / "docs" / "DEPLOYMENT_RUNBOOK.md"
 COMPOSE_PATH = ROOT / "deploy" / "compose" / "docker-compose.yml"
 ENV_PATH = ROOT / "deploy" / "compose" / "r2.env.example"
 ROOT_COMPOSE_PATH = ROOT / "docker-compose.yml"
+API_DOCKERFILE_PATH = ROOT / "apps" / "api" / "Dockerfile"
 GRAFANA_DATASOURCE_PATH = (
     ROOT / "deploy" / "grafana" / "provisioning" / "datasources" / "prometheus.yml"
 )
@@ -75,6 +76,15 @@ class R2ComposeContractTest(unittest.TestCase):
             "docker compose -f deploy/compose/docker-compose.yml --env-file "
             "deploy/compose/r2.env.example config --quiet",
             render["run"],
+        )
+
+    def test_api_image_contains_operational_scripts(self) -> None:
+        dockerfile = API_DOCKERFILE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "COPY scripts/auto_archive_evidence.py "
+            "scripts/collect_ops_evidence.py ./scripts/",
+            dockerfile,
         )
 
     def test_runbook_host_debug_uses_r2_core_dependency_command(self) -> None:
