@@ -31,8 +31,8 @@ jobs:
       - name: Static quality baseline
         run: python ../../scripts/check_static_quality.py
 
-      - name: Test (pytest)
-        run: pytest -q
+      - name: Test (Web/API release scope)
+        run: python ../../scripts/run_webapi_release_tests.py
 
   frontend:
     runs-on: ubuntu-latest
