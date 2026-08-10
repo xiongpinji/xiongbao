@@ -180,7 +180,7 @@ export default function DevelopmentTasksPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
                     {[
                       ["状态", STATUS_LABELS[task.status]],
                       ["目标分支", task.target_branch],
