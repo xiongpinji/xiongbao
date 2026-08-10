@@ -137,6 +137,57 @@ class _NoToolsChatLLM(LiteLLMClient):
         return True
 
 
+class _LengthFinishChoice:
+    finish_reason = "length"
+
+
+class _LengthLimitedNoToolsChatLLM(_NoToolsChatLLM):
+    def __init__(self) -> None:
+        super().__init__(content="")
+        self.max_tokens_calls: list[int] = []
+
+    async def complete_chat(self, messages, **kwargs) -> LLMResponse:
+        max_tokens = kwargs["max_tokens"]
+        self.max_tokens_calls.append(max_tokens)
+        if max_tokens < 1024:
+            return LLMResponse(
+                content="",
+                model="ollama_chat/qwen3:4b",
+                completion_tokens=0,
+                raw={"choices": [_LengthFinishChoice()]},
+            )
+        return LLMResponse(
+            content="R2-RESTORE-OK",
+            model="ollama_chat/qwen3:4b",
+            completion_tokens=640,
+            raw={"choices": [{"finish_reason": "stop"}]},
+        )
+
+
+async def test_builtin_tool_mode_none_expands_length_limited_recovery_budget(
+    monkeypatch,
+) -> None:
+    llm = _LengthLimitedNoToolsChatLLM()
+    principal = Principal(
+        user_id="restore-user",
+        tenant_id="restore-tenant",
+        roles=frozenset({"member"}),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+
+    run = await run_agent_builtin(
+        "请只回复：R2-RESTORE-OK",
+        principal=principal,
+        tool_mode="none",
+    )
+
+    assert run.status == "succeeded", run.error
+    assert run.final_answer == "R2-RESTORE-OK"
+    assert llm.max_tokens_calls == [512, 1024]
+
+
 async def test_builtin_tool_mode_none_preserves_tenant_context_without_dev_hints(
     monkeypatch,
     tmp_path,

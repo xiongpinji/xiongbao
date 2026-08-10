@@ -1273,19 +1273,19 @@ async def run_agent(
     if _type_hint:
         state.messages.append(Message(role="user", content=_type_hint))
 
-    async def _complete_no_tools_chat() -> LLMResponse:
+    async def _complete_no_tools_chat(max_tokens: int = 512) -> LLMResponse:
         complete_chat = getattr(llm, "complete_chat", None)
         if callable(complete_chat):
             return await complete_chat(
                 state.messages,
                 model=target_model,
-                max_tokens=512,
+                max_tokens=max_tokens,
             )
         return await llm.complete(
             state.messages,
             model=target_model,
             temperature=0,
-            max_tokens=512,
+            max_tokens=max_tokens,
         )
 
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
@@ -1486,6 +1486,23 @@ async def run_agent(
                   state.total_completion_tokens += chat_resp.completion_tokens
                   chat_content = (chat_resp.content or "").strip()
                   if not chat_content:
+                      choices = chat_resp.raw.get("choices")
+                      first_choice = (
+                          choices[0]
+                          if isinstance(choices, list) and choices
+                          else {}
+                      )
+                      finish_reason = (
+                          first_choice.get("finish_reason")
+                          if isinstance(first_choice, dict)
+                          else getattr(first_choice, "finish_reason", None)
+                      )
+                      recovery_max_tokens = (
+                          1024
+                          if finish_reason == "length"
+                          or chat_resp.completion_tokens >= 512
+                          else 512
+                      )
                       state.messages.append(Message(
                           role="user",
                           content=(
@@ -1494,7 +1511,9 @@ async def run_agent(
                           ),
                       ))
                       retry_resp = await _llm_call_with_retry(
-                          _complete_no_tools_chat,
+                          lambda max_tokens=recovery_max_tokens: (
+                              _complete_no_tools_chat(max_tokens)
+                          ),
                           description="chat_no_tools_recovery",
                       )
                       state.total_prompt_tokens += retry_resp.prompt_tokens

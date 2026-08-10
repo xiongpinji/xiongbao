@@ -329,6 +329,32 @@ async def test_litellm_chat_complete_uses_direct_ollama_chat_contract(
     assert "reasoning_effort" not in captured
 
 
+async def test_litellm_complete_preserves_model_response_finish_reason(
+    monkeypatch,
+) -> None:
+    from litellm import ModelResponse
+
+    async def _fake_acompletion(*, messages, **kwargs):  # noqa: ARG001
+        return ModelResponse(
+            model="qwen3:4b",
+            choices=[
+                {
+                    "index": 0,
+                    "finish_reason": "length",
+                    "message": {"role": "assistant", "content": ""},
+                }
+            ],
+        )
+
+    monkeypatch.setattr("litellm.acompletion", _fake_acompletion)
+
+    response = await _ollama_client().complete_chat(
+        [Message(role="user", content="exact chat prompt")]
+    )
+
+    assert response.raw["choices"][0]["finish_reason"] == "length"
+
+
 @pytest.mark.parametrize(
     ("settings", "model", "expected_model", "expected_api_base"),
     [

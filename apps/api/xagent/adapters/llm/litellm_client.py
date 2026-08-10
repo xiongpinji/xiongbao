@@ -224,13 +224,20 @@ class LiteLLMClient(LLMClient):
             except Exception:
                 args = {}
             tool_calls.append(ToolCall(id=tc.get("id", ""), name=fn.get("name", ""), args=args))
+        model_dump = getattr(resp, "model_dump", None)
+        if isinstance(resp, dict):
+            raw_response = dict(resp)
+        elif callable(model_dump):
+            raw_response = model_dump()
+        else:
+            raw_response = {}
         return LLMResponse(
             content=content,
             model=target_model,
             prompt_tokens=usage.get("prompt_tokens", 0),
             completion_tokens=usage.get("completion_tokens", 0),
             tool_calls=tool_calls,
-            raw=dict(resp) if isinstance(resp, dict) else {},
+            raw=raw_response,
         )
 
     async def stream_with_tools(
