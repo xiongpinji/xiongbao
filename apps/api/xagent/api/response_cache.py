@@ -54,6 +54,9 @@ class ResponseCacheMiddleware(BaseHTTPMiddleware):
         if "/stream" in path or "/ws" in path:
             return await call_next(request)
 
+        if path == "/metrics":
+            return await call_next(request)
+
         # 跳过认证端点：OIDC 回调的 state 是一次性的，缓存会让重放请求绕过
         # 校验直接拿到缓存的会话 token；登录/注册响应同样不应被缓存复用。
         if "/auth" in path:
