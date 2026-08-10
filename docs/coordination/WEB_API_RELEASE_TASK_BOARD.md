@@ -27,8 +27,8 @@
 
 ## Done
 
-- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：DONE | 证据：最终候选 `2ad8a1d` 的 preflight、Compose config、镜像内 R2 范围 `832 passed / 14 skipped`、Ruff/mypy 精确基线、许可证与版本门均通过；核心、扩展及受保护服务边界明确。详见 `docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md`。
-- [R2-B] R2 核心六服务 Full Compose 试运行 | 状态：DONE | 证据：最终 headed Chromium 同轮 `6/6 passed`、workers=1、retries=0；真实 `qwen3:4b` Chat、Run/reload、scheduler exact result、完整 Skill ZIP、真实 file_write worktree/patch、第二租户隔离全部通过，console/pageerror/短剧媒体请求均 0；六张 1280×720 脱敏截图已复核。
+- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：DONE | 证据：最终候选 `bad1aa8` 的 preflight、Compose config、CI Web/API 后端范围入口、镜像内 `739 passed / 8 skipped`、release contracts `40/40`、Ruff/mypy 精确基线、许可证与版本门均通过；核心、扩展及受保护服务边界明确。详见 `docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md`。
+- [R2-B] R2 核心六服务 Full Compose 试运行 | 状态：DONE | 证据：最终 headed Chromium 同轮 `6/6 passed`、workers=1、retries=0、总用时 2.0 分钟；真实 `qwen3:4b` Chat、Run/reload、scheduler exact result、完整 Skill ZIP、真实 file_write worktree/patch、第二租户隔离全部通过，console/pageerror/短剧媒体请求均 0；六张 1280×720 脱敏截图已复核。
 - [R2-C] R2 重启、故障恢复与持久化复验 | 状态：DONE | 证据：API/Worker restart、Nginx Docker DNS/WS 恢复、Worker pause/unpause、Redis degraded/恢复、无 `-v` down/up、四卷与全部业务锚点复读均通过；无重复终态、跨 loop 或 terminal checkpoint 错误。
 - [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：DONE | 证据：Platform MCP 15 tools、认证与租户隔离、Prometheus 实时 metrics target、Grafana datasource/dashboard/query、只读 provisioning mount 均通过；最终服务健康且 MockLLM 为 0。
 - [R2-E] R2 备份与全新隔离 project 恢复演练 | 状态：DONE | 证据：PostgreSQL/Qdrant/Redis/xagentdata 四件仓库外备份在 fresh project/端口/network/volumes 恢复；表计数、Qdrant 27 points、Skill 文件和 Development Patch 锚点一致，真实 restore run 精确 `R2-RESTORE-OK`；restore 已无 `-v` down，卷与备份保留。

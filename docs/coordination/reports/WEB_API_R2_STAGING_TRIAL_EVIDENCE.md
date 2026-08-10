@@ -2,7 +2,7 @@
 
 > 日期：2026-08-10
 > 分支：`feature/webapi-r2-staging-readiness`
-> 最终功能候选：`2ad8a1d`
+> 最终候选：`bad1aa8`（运行镜像功能基线：`2ad8a1d`）
 > 环境：Windows + Docker Desktop，`xagent-r2` 本地 Full Compose，真实本地 `qwen3:4b`
 > 结论：R2 Web/API 范围达到本地受控试运行发布标准；不等同于正式商用 GA、远端 CI 签发或生产部署。
 
@@ -22,12 +22,13 @@
 
 ### 2.1 API/Worker
 
-- 最终候选 API 镜像原始全量收集 860 项：`832 passed / 14 failed / 14 skipped`。
-- 14 项失败全部位于明确排除的短剧/媒体路径：audio pipeline 4 项、creative studio 6 项、media 1 项、pipeline 2 项、runtime creative status 1 项；`network=none` 下外部 Pollinations 路由不可用。本报告不把原始全仓结果描述为全绿。
-- 使用 14 个精确 node id 排除上述范围后，R2 Web/API 镜像结果为 `832 passed / 14 skipped / 2 warnings`，用时 477.4 秒。
-- 14 项 skip：可选 `edge_tts` 5 项、可选 `moviepy` 1 项、默认关闭的 Docker integration 8 项。
+- 最终候选 API 镜像原始全量收集 860 项：`833 passed / 13 failed / 14 skipped`。
+- 13 项失败全部位于明确排除的短剧/媒体路径：audio pipeline 3 项、creative studio 6 项、media 1 项、pipeline 2 项、runtime creative status 1 项；`network=none` 下外部 Pollinations 路由不可用。本报告不把原始全仓结果描述为全绿。
+- R2 Web/API 范围以完整产品模块为边界，排除短剧、画布、编辑器、媒体、producer、pipeline、audio 和 E2B 测试模块，并在共享 runtime 文件中排除 1 个 creative production node。最终 API 镜像结果为 `739 passed / 8 skipped / 2 warnings`，用时 233.3 秒。
+- 8 项 skip 均为默认关闭的 Docker integration 实机测试。
 - 2 条 warning：passlib `crypt` 弃用；OIDC 伪造 HS256 安全测试故意使用短 HMAC key。
-- 当前源码相关回归：checkpoint、resume、orchestration、evidence、ops 共 `80/80`；evidence/ops 独立 `25/25`；release unittest `38/38`。
+- CI 已使用 `scripts/run_webapi_release_tests.py` 执行同一 Web/API 范围，合同测试锁定完整排除边界，禁止退回裸 `pytest -q`。
+- 当前源码相关回归：checkpoint、resume、orchestration、evidence、ops 共 `80/80`；evidence/ops 独立 `25/25`；release unittest `40/40`。
 - 最终镜像包含且只包含所需运维脚本；安装布局和源码布局均可导入 evidence/ops 脚本。
 
 ### 2.2 静态与发布门
@@ -37,7 +38,7 @@
 - mypy：仅剩 4 条短剧排除项固定指纹，Web/API 范围 0 条新增错误。
 - Python 许可证门：通过。
 - API、Web、README 版本：均为 `v1.0.0`。
-- Compose R2 release contracts：`38/38`。
+- Compose 与 R2 release contracts：`40/40`。
 - `scripts/r2-preflight.ps1 -AllowRunningProject`：13 个端口均确认属于目标 project，退出 0。
 - Compose `config --quiet`：通过。
 
@@ -78,16 +79,16 @@
 
 ## 4. 真实 Ollama 与浏览器同轮证据
 
-最终证据轮命令固定为 headed Chromium、`workers=1`、`retries=0`，使用随机新租户和临时 ZIP。结果：`6/6 passed`，总用时 1.8 分钟。
+最终证据轮命令固定为 headed Chromium、`workers=1`、`retries=0`，使用随机新租户和临时 ZIP。结果：`6/6 passed`，总用时 2.0 分钟。
 
 | 场景 | 结果 |
 | --- | --- |
-| PostgreSQL / Redis / Qdrant deep health | 通过，1.1 秒 |
-| 真实 Ollama Chat → Run Console → reload/history | 精确 `R2-WEB-OLLAMA-OK`，通过，9.6 秒 |
-| durable scheduler create/run/pause/reload | attempt 1 `succeeded`，result 精确 `R2-SCHEDULER-OK`，error 为空，32.3 秒 |
+| PostgreSQL / Redis / Qdrant deep health | 通过，1.3 秒 |
+| 真实 Ollama Chat → Run Console → reload/history | 精确 `R2-WEB-OLLAMA-OK`，通过，18.5 秒 |
+| durable scheduler create/run/pause/reload | attempt 1 `succeeded`，result 精确 `R2-SCHEDULER-OK`，error 为空，13.0 秒 |
 | 完整 Skill ZIP 导入 | `SKILL.md`、assets、references、scripts 四文件可见，2.1 秒 |
-| 隔离开发任务 | 真实 `file_write`、worktree、commit、diff、patch、下载/审查链通过，59.9 秒 |
-| 第二租户隔离 | Skill、checkpoint、development task 均 403/404，1.8 秒 |
+| 隔离开发任务 | 真实 `file_write`、worktree、commit、diff、patch、下载/审查链通过，1.4 分钟 |
+| 第二租户隔离 | Skill、checkpoint、development task 均 403/404，1.6 秒 |
 
 同轮附加合同：
 
@@ -96,6 +97,8 @@
 - 浏览器 `console.error=0`、`pageerror=0`、短剧/媒体 forbidden request=0。
 - API/Worker 当前窗口 `MockLLM=0`，真实 route 为 Ollama。
 - 临时技能 ZIP 在 `finally` 中删除，未进入仓库。
+- 同轮锚点：Chat run `6470571438ff4f6d8c296fa90ca71735`、checkpoint `3da7b254abe644d2a01ccfdbcc1d020f`、Scheduler run `064cb64295ff4a8296d2f49e96b45990`、Skill Package `14de4d83cedf42d3a4a5030d6bb5bcd3`、Development Task `538074005c6d48a49af24bc685ea0832`。
+- Development Patch SHA-256 为 `71907736a92515f0e93d4d36e1e8cd20efcc252cb4df352e19cc8b4b63763986`，正文包含 `R2-DEVELOPMENT-TASK-OK`。
 
 ## 5. 截图与客观视觉复核
 
@@ -103,12 +106,12 @@
 
 | 文件 | 字节 | SHA-256 |
 | --- | ---: | --- |
-| `r2-chat.png` | 50,667 | `97adc9298ee0987ec7a402e5fae4273b18b8f82fb5bf7cdeb2139d819030620f` |
-| `r2-run-console.png` | 67,841 | `445d023700864a9445da8884c7b528665b98e20d9fc1f90adf945f3604432057` |
-| `r2-reload.png` | 67,841 | `445d023700864a9445da8884c7b528665b98e20d9fc1f90adf945f3604432057` |
-| `r2-scheduler.png` | 69,626 | `15d7d52413f6793c76384680faed29d13fa4b3ded3739fb71ec136a73762ed1a` |
-| `r2-skill.png` | 82,881 | `b3aac4fb98af89a450a9138e9cdec205e1dbc85bbfd478263c36ee3c5cd0633c` |
-| `r2-development-task.png` | 82,839 | `db850393d8072e8efa9e391c719b5c8c91d63cb2178dea7cec8ff5a2af78018d` |
+| `r2-chat.png` | 50,470 | `2050b7293da717381fa7e9c2cc717df5cd520b439ff8177a602b8b1977a16795` |
+| `r2-run-console.png` | 67,197 | `9dce48dae15785f31dd1faf26427c9ab46512e262256fc613122ccc43b4c271b` |
+| `r2-reload.png` | 67,197 | `9dce48dae15785f31dd1faf26427c9ab46512e262256fc613122ccc43b4c271b` |
+| `r2-scheduler.png` | 69,548 | `0b153005d38f7cceefff4d04b3234720edfe919b66bcc10e78c9f4aeb7887d28` |
+| `r2-skill.png` | 81,456 | `4a671c453c26c5638aaa9f4bd75c31a17d94ea74e1e8a220f09ae3a1536c3e03` |
+| `r2-development-task.png` | 82,916 | `b83fce5281cb05e9bf29ff1d2eb6725288566083982a56385de3c4bba8cb108c` |
 
 截图审计发现并修复两项发布可见问题：
 
@@ -175,7 +178,7 @@ R2-E 已完成：
 - 本地 `qwen3:4b` 仍有偶发空响应历史；当前系统会 fail-closed，不会伪装成功，但尚无长期稳定性/SLO 数据。
 - 尚未完成客户现场、生产流量、多机 HA、远程沙箱、Tauri 桌面或付费 provider 验收。
 - 缺少正式视觉基准，不能宣称与竞品像素级一致。
-- 14 个原始全仓失败属于本轮明确排除的短剧/媒体路径；短剧独立项目接入后需另做同级真实验收。
+- 13 个原始全仓失败属于本轮明确排除的短剧/媒体路径；短剧独立项目接入后需另做同级真实验收。
 
 ## 11. 最终结论
 
