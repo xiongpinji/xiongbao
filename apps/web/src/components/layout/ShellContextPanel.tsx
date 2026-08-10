@@ -78,9 +78,9 @@ export default function ShellContextPanel({ onClose }: { onClose: () => void }) 
 /* ================================================================== */
 
 function PreviewTab() {
-  const [url, setUrl] = useState("http://localhost:5175");
-  const [inputUrl, setInputUrl] = useState("http://localhost:5175");
-  const [loading, setLoading] = useState(true);
+  const [url, setUrl] = useState("");
+  const [inputUrl, setInputUrl] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -94,7 +94,7 @@ function PreviewTab() {
   }, [inputUrl]);
 
   const refresh = useCallback(() => {
-    if (iframeRef.current) {
+    if (url && iframeRef.current) {
       setLoading(true);
       setError(false);
       iframeRef.current.src = url;
@@ -126,45 +126,57 @@ function PreviewTab() {
           <RefreshCw size={12} />
         </button>
         <a
-          href={url}
+          href={url || undefined}
           target="_blank"
           rel="noopener noreferrer"
           title="在浏览器中打开"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-600 transition hover:bg-white/[0.06] hover:text-neutral-300"
+          aria-disabled={!url}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-600 transition ${
+            url ? "hover:bg-white/[0.06] hover:text-neutral-300" : "pointer-events-none opacity-40"
+          }`}
         >
           <ExternalLink size={12} />
         </a>
       </div>
 
       {/* iframe */}
-      <div className="relative min-h-0 flex-1 bg-white">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0f0f0f]">
-            <Loader2 size={18} className="animate-spin text-neutral-600" />
+      <div className="relative min-h-0 flex-1 bg-[#0f0f0f]">
+        {!url ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <Globe size={22} className="text-neutral-800" />
+            <span className="text-[12px] text-neutral-600">输入 URL 以预览页面</span>
           </div>
+        ) : (
+          <>
+            {loading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0f0f0f]">
+                <Loader2 size={18} className="animate-spin text-neutral-600" />
+              </div>
+            )}
+            {error && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#0f0f0f]">
+                <XCircle size={20} className="text-neutral-700" />
+                <span className="text-[12px] text-neutral-600">无法加载页面</span>
+                <button
+                  type="button"
+                  onClick={refresh}
+                  className="mt-1 rounded-md bg-white/[0.06] px-3 py-1.5 text-[11px] text-neutral-400 transition hover:bg-white/[0.1]"
+                >
+                  重试
+                </button>
+              </div>
+            )}
+            <iframe
+              ref={iframeRef}
+              src={url}
+              title="内置浏览器"
+              className="h-full w-full border-0 bg-white"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+              onLoad={() => setLoading(false)}
+              onError={() => { setLoading(false); setError(true); }}
+            />
+          </>
         )}
-        {error && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#0f0f0f]">
-            <XCircle size={20} className="text-neutral-700" />
-            <span className="text-[12px] text-neutral-600">无法加载页面</span>
-            <button
-              type="button"
-              onClick={refresh}
-              className="mt-1 rounded-md bg-white/[0.06] px-3 py-1.5 text-[11px] text-neutral-400 transition hover:bg-white/[0.1]"
-            >
-              重试
-            </button>
-          </div>
-        )}
-        <iframe
-          ref={iframeRef}
-          src={url}
-          title="内置浏览器"
-          className="h-full w-full border-0"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-          onLoad={() => setLoading(false)}
-          onError={() => { setLoading(false); setError(true); }}
-        />
       </div>
     </div>
   );
