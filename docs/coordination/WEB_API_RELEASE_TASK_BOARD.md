@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R2 本地 Full Compose 核心栈试运行，R2-A 等待复核。
+- 当前阶段：R2 Web/API 本地 Full Compose 试运行已完成，等待 reviewer/owner 后续发布决策。
 - 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - P2 计划：`docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md`。
@@ -11,11 +11,11 @@
 - 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening`。
 - 排除范围：短剧业务链路、Tauri 桌面端、多机 HA、E2B 和客户现场演练。
 - Owner：Codex。
-- 最后更新时间：2026-08-09。
+- 最后更新时间：2026-08-10。
 
 ## In Progress
 
-- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：REVIEW | 证据：2026-08-09 在 `feature/webapi-r2-staging-readiness` / `306bd3a1a40423dddcd4301dd04887b20c1389e3` 从 fresh R2 resources 启动核心六服务；Docker `client=29.5.3 server=29.5.3`，Compose `v5.1.4`，宿主机 Ollama 有 `qwen3:4b`。`pwsh -NoProfile -File scripts/r2-preflight.ps1` 7/7 ok；启动前 `xagent-r2` 容器、volume、network 均为空。`apps/web` 的 `npm ci` 与 `npm run build` 退出 0；`docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local build api worker web` 退出 0。仅启动 `postgres redis qdrant api worker web`，六服务均 running/healthy，端口为 `127.0.0.1:18000/18080/15432/16379/16333/16334`；镜像 ID：api `sha256:650b4d956a2ab61180514bb62a020385a9e0ea64208734359d771fc315f807e3`，worker `sha256:61ca86f45aef63b22c857f2349cd62d580922aedc442da8bc19829536a99cca6`，web `sha256:a4b6d5cab532397cff3b11206f00b1b82e68ef296467629bca857bdc2d597a32`，postgres `sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb`，redis `sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99`，qdrant `sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c`。`python -m alembic current` 为 `20260807_checkpoints (head)`；`/health` 为 `ok`，`/health/ready` 为 `ready`，`/health/deep` 为 `healthy` 且 database/redis/qdrant 均 healthy；`celery -A xagent.worker.celery_app inspect ping --timeout=5` 返回 pong。隔离用户 `r2-reviewer` 在 `tenant_id=r2-trial` 下注册成功，`POST /api/v1/agents/run` 返回 run_id `aa62c3302b96402e8a46b57409b5de96` 且 final answer 非空；容器内配置为 `LiteLLMClient`、`ollama_base_url=http://host.docker.internal:11434`、`effective_model=ollama/qwen3:4b`，API/worker 日志有 `ollama_warmup_succeeded model=qwen3:4b route=ollama`，API run 日志有 `LiteLLM completion() model= qwen3:4b; provider = ollama`，未出现 MockLLM。2026-08-09 strict warmup gate 修复补验：合同测试先在旧 compose 对 api/worker 的 `warmup || true` 取得红灯，移除吞错后绿灯；隔离 `docker compose run --rm --no-deps` 使用无效 `127.0.0.1:9` Ollama 和 `XAGENT_LLM__WARMUP_WAIT_TIMEOUT_SECONDS=1` 验证 api/worker 均 exit 1，后续启动 marker 均未出现；有效配置下仅 force-recreate `api` 后等 healthy，再 force-recreate `worker`，新容器 api `95087c60e43c`、worker `f3ca69ede480` 均 strict `ollama_warmup_succeeded model=qwen3:4b route=ollama`，六服务最终 healthy，`/health/deep` 仍 healthy，worker ping 返回 pong，新真实 run `da00773ccc9747af821ea332eb7582fc` 非空且日志为 `LiteLLM completion() model= qwen3:4b; provider = ollama`。按 env secret 值对 30 分钟服务日志复扫，4 个 secret 值 0 命中；`aicg-postgres` 与 `aicg-minio` 仍为原容器 ID `3af4cf4c653d` / `07e3c2aef1a1` 且 healthy，未被本任务重建。镜像 tag/provenance 仍作为后续发布加固风险记录，本修复不改镜像版本或标签。
+- 暂无。
 
 ## Ready
 
@@ -23,12 +23,15 @@
 
 ## Queued
 
-- [R2-B] R2 核心六服务 full Compose 试运行 | 状态：REVIEW | 证据：待执行；核心服务范围为 `postgres redis qdrant api worker web`；浏览器验收使用 `http://127.0.0.1:18080`，脱敏截图提交到 `output/playwright/`。
-- [R2-C] R2 重启、故障恢复与持久化复验 | 状态：REVIEW | 证据：2026-08-10 本地 `xagent-r2` 完成非破坏性恢复门：API/Worker restart 后 Web 容器 ID 不变且 HTTP/WS 代理自行恢复；Worker pause 期间唯一任务保持非终态，unpause 后 `9bef43e1...` 单一 `succeeded`、最终答复精确、`chat_no_tools` 输入与 checkpoint 可读（保留 `qwen3:4b` 偶发空响应 fail-closed 风险）；Redis pause 2 秒后 deep health 在 3.056 秒内返回 HTTP 200/overall degraded/`skip_cache`，unpause 后恢复全 healthy，目标调度 Job 仍为 2 次运行/1 个终态且无重复 schedule-attempt；`compose down`（无 `-v`）/up 后约 16.7 秒恢复 deep healthy，四个项目卷和受保护 aicg 容器均未变化，Chat/Run/Checkpoint/Scheduler/Skill/Development Patch SHA 锚点一致；headed Chromium 只读恢复 1/1（retries=0），console/pageerror/短剧媒体请求均为 0，当前窗口无 Traceback/Unhandled/MockLLM/502/跨 loop/终态 checkpoint 错误。
-- [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：REVIEW | 证据：2026-08-10 本地 `xagent-r2` 仅启用 `platform-mcp`、Prometheus、Grafana：MCP initialize 与 15 个工具可列出，同租户会话/run/事件/审批可读，无 token 及真实第二租户 JWT 均为 401，跨租户 run 返回 `run_not_found`；Prometheus target `api:8000/metrics` 为 up，HTTP 指标 6 个 series/总值 49，唯一真实 `qwen3:4b` no-tools 探针精确返回 `R2-METRICS-OK` 并形成 run 指标 1 个 series/值 1；Grafana datasource uid `prometheus` 与 X-Agent Overview 已加载，`/api/ds/query` 返回 6 frames/56 个数值；provisioning/dashboard 三个只读 mount 哈希一致，核心及受保护容器 ID 未变化，deep/pong/WS/MCP 健康，当前窗口 Traceback/Unhandled/MockLLM/未解释 scrape/provision 错误均为 0。
-- [R2-E] R2 备份与全新隔离 project 恢复演练 | 状态：REVIEW | 证据：2026-08-10 仅暂停源 Web/API/Worker/MCP 写入面后生成 PostgreSQL 100083 B、Qdrant 322048 B、Redis 7457 B 与 xagentdata 18016 B 四件仓库外备份，SHA-256 分别为 `ff31d1…ea44` / `418b80…8b04` / `90f8c6…11ea` / `20b1e8…f4d`，manifest 无 secret 值；源服务由 finally 恢复且全部锚点不变。在独立端口、secret、network 和四个 fresh `xagent-r2-restore_*` volume 中恢复 migration `20260809_checkpoint_scope_unique`、租户表计数、Qdrant `xagent_memory` 27 points、Skill 4 文件 SHA 与 Development Patch SHA，正常登录后 Chat/Run/Checkpoint/Scheduler/Skill/Development 锚点全部相等。首个真实 restore run `400609d5…` 暴露 qwen3 Thinking 两次恰好耗尽 512 token 后空内容，以 `model_empty_response_after_retry` 诚实失败；`6a0bfde` 用红绿合同保留 LiteLLM `finish_reason`，仅对长度耗尽恢复扩展到 1024，相关 159 项回归通过。新镜像下唯一新 restore run `0b64fe0c…` 在 6.5 秒内精确返回 `R2-RESTORE-OK`，DB 为 `succeeded/stream/chat_no_tools`、工具事件 0、MockLLM 0，源 DB 无该 run。最后执行 restore `down`（无 `-v`），容器/network 已移除，四个 restore volume 与 TEMP 备份保留，源核心/扩展/受保护容器健康。
+- 暂无。
 
 ## Done
+
+- [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：DONE | 证据：最终候选 `2ad8a1d` 的 preflight、Compose config、镜像内 R2 范围 `832 passed / 14 skipped`、Ruff/mypy 精确基线、许可证与版本门均通过；核心、扩展及受保护服务边界明确。详见 `docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md`。
+- [R2-B] R2 核心六服务 Full Compose 试运行 | 状态：DONE | 证据：最终 headed Chromium 同轮 `6/6 passed`、workers=1、retries=0；真实 `qwen3:4b` Chat、Run/reload、scheduler exact result、完整 Skill ZIP、真实 file_write worktree/patch、第二租户隔离全部通过，console/pageerror/短剧媒体请求均 0；六张 1280×720 脱敏截图已复核。
+- [R2-C] R2 重启、故障恢复与持久化复验 | 状态：DONE | 证据：API/Worker restart、Nginx Docker DNS/WS 恢复、Worker pause/unpause、Redis degraded/恢复、无 `-v` down/up、四卷与全部业务锚点复读均通过；无重复终态、跨 loop 或 terminal checkpoint 错误。
+- [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：DONE | 证据：Platform MCP 15 tools、认证与租户隔离、Prometheus 实时 metrics target、Grafana datasource/dashboard/query、只读 provisioning mount 均通过；最终服务健康且 MockLLM 为 0。
+- [R2-E] R2 备份与全新隔离 project 恢复演练 | 状态：DONE | 证据：PostgreSQL/Qdrant/Redis/xagentdata 四件仓库外备份在 fresh project/端口/network/volumes 恢复；表计数、Qdrant 27 points、Skill 文件和 Development Patch 锚点一致，真实 restore run 精确 `R2-RESTORE-OK`；restore 已无 `-v` down，卷与备份保留。
 
 - [R1] Web/API 发布级全量审计与 Release gate 实跑 | 状态：DONE | 证据：最终 API 镜像全量测试 `720 passed / 15 skipped`，Web `25/25`，类型/构建/精确静态门禁、许可证、版本、fresh migration、镜像健康和 Git 运行时均通过；真实浏览器完成 run、证据、调度持久化、Skill 持久化、会话点击/刷新恢复及 1037px 运行台视觉复验，控制台 0/0；详见 `docs/coordination/reports/WEB_API_R1_RELEASE_AUDIT_EVIDENCE.md`。
 - [P2-D] MCP 会话、运行、审批与事件接口 | 状态：DONE | 证据：15 个租户受控 MCP 工具、统一 Principal/RBAC/tenant/audit、精确确认的取消与审批、事件/技能包脱敏、MCP run 持久同链、非回环 HTTP 强制 token 均成立；MCP 合同 18/18、Runtime/worker 37/37、目标 Ruff/mypy 0、全仓 Ruff `262 <= 286`、mypy `65 <= 74`、fresh migration、真实 MCP 协议工具发现/会话读取和 401 鉴权通过；详见 `docs/coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE.md`。
