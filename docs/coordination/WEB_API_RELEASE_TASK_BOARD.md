@@ -25,7 +25,7 @@
 
 - [R2-B] R2 核心六服务 full Compose 试运行 | 状态：REVIEW | 证据：待执行；核心服务范围为 `postgres redis qdrant api worker web`；浏览器验收使用 `http://127.0.0.1:18080`，脱敏截图提交到 `output/playwright/`。
 - [R2-C] R2 重启、故障恢复与持久化复验 | 状态：REVIEW | 证据：2026-08-10 本地 `xagent-r2` 完成非破坏性恢复门：API/Worker restart 后 Web 容器 ID 不变且 HTTP/WS 代理自行恢复；Worker pause 期间唯一任务保持非终态，unpause 后 `9bef43e1...` 单一 `succeeded`、最终答复精确、`chat_no_tools` 输入与 checkpoint 可读（保留 `qwen3:4b` 偶发空响应 fail-closed 风险）；Redis pause 2 秒后 deep health 在 3.056 秒内返回 HTTP 200/overall degraded/`skip_cache`，unpause 后恢复全 healthy，目标调度 Job 仍为 2 次运行/1 个终态且无重复 schedule-attempt；`compose down`（无 `-v`）/up 后约 16.7 秒恢复 deep healthy，四个项目卷和受保护 aicg 容器均未变化，Chat/Run/Checkpoint/Scheduler/Skill/Development Patch SHA 锚点一致；headed Chromium 只读恢复 1/1（retries=0），console/pageerror/短剧媒体请求均为 0，当前窗口无 Traceback/Unhandled/MockLLM/502/跨 loop/终态 checkpoint 错误。
-- [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：PENDING | 证据：待执行；仅在核心服务通过后启用 `mcp` 与 `observability`，脱敏截图提交到 `output/playwright/`。
+- [R2-D] R2 MCP 与 observability 可选服务验收 | 状态：REVIEW | 证据：2026-08-10 本地 `xagent-r2` 仅启用 `platform-mcp`、Prometheus、Grafana：MCP initialize 与 15 个工具可列出，同租户会话/run/事件/审批可读，无 token 及真实第二租户 JWT 均为 401，跨租户 run 返回 `run_not_found`；Prometheus target `api:8000/metrics` 为 up，HTTP 指标 6 个 series/总值 49，唯一真实 `qwen3:4b` no-tools 探针精确返回 `R2-METRICS-OK` 并形成 run 指标 1 个 series/值 1；Grafana datasource uid `prometheus` 与 X-Agent Overview 已加载，`/api/ds/query` 返回 6 frames/56 个数值；provisioning/dashboard 三个只读 mount 哈希一致，核心及受保护容器 ID 未变化，deep/pong/WS/MCP 健康，当前窗口 Traceback/Unhandled/MockLLM/未解释 scrape/provision 错误均为 0。
 
 ## Done
 

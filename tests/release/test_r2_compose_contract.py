@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -13,6 +14,12 @@ RUNBOOK_PATH = ROOT / "docs" / "DEPLOYMENT_RUNBOOK.md"
 COMPOSE_PATH = ROOT / "deploy" / "compose" / "docker-compose.yml"
 ENV_PATH = ROOT / "deploy" / "compose" / "r2.env.example"
 ROOT_COMPOSE_PATH = ROOT / "docker-compose.yml"
+GRAFANA_DATASOURCE_PATH = (
+    ROOT / "deploy" / "grafana" / "provisioning" / "datasources" / "prometheus.yml"
+)
+GRAFANA_DASHBOARD_PROVIDER_PATH = (
+    ROOT / "deploy" / "grafana" / "provisioning" / "dashboards" / "xagent.yml"
+)
 
 
 def read_or_empty(path: Path) -> str:
@@ -152,11 +159,178 @@ class R2ComposeContractTest(unittest.TestCase):
             with self.subTest(core_service=service):
                 self.assertNotIn("profiles:", self.service_block(service))
 
+    def test_platform_mcp_overrides_api_image_healthcheck(self) -> None:
+        environment = os.environ.copy()
+        for variable in ("COMPOSE_ENV_FILES", "COMPOSE_PROFILES"):
+            environment.pop(variable, None)
+        environment.update(
+            {
+                "COMPOSE_DISABLE_ENV_FILE": "1",
+                "POSTGRES_PASSWORD": "contract-only-postgres-strong-value",
+                "XAGENT_SECURITY__JWT_SECRET": (
+                    "contract-only-jwt-secret-at-least-32-characters"
+                ),
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            empty_env = Path(temporary_directory) / "empty.env"
+            empty_env.write_text("", encoding="utf-8")
+            result = subprocess.run(
+                (
+                    "docker",
+                    "compose",
+                    "-f",
+                    str(COMPOSE_PATH),
+                    "--env-file",
+                    str(empty_env),
+                    "--profile",
+                    "mcp",
+                    "config",
+                    "--format",
+                    "json",
+                ),
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        healthcheck = yaml.safe_load(result.stdout)["services"]["platform-mcp"][
+            "healthcheck"
+        ]["test"]
+        self.assertEqual(healthcheck[0], "CMD-SHELL")
+        command = healthcheck[1]
+        self.assertIn("--max-time 4", command)
+        self.assertIn("--write-out '%{http_code}'", command)
+        self.assertIn("--request POST http://localhost:8100/mcp", command)
+        whitelist = re.search(r'case "\$\$http_code" in ([0-9|]+)\)', command)
+        self.assertIsNotNone(whitelist, command)
+        accepted = set(whitelist.group(1).split("|"))
+        self.assertEqual(accepted, {"200", "400", "401", "406"})
+        for rejected in ("404", "405", "500", "502", "503"):
+            with self.subTest(rejected=rejected):
+                self.assertNotIn(rejected, accepted)
+        self.assertIn(") exit 0 ;; *) exit 1 ;; esac", command)
+
+    def test_platform_mcp_principal_defaults_match_server_contract(self) -> None:
+        platform_mcp = yaml.safe_load(self.compose)["services"]["platform-mcp"]
+        for setting in (
+            "XAGENT_PLATFORM_MCP_USER_ID=${XAGENT_PLATFORM_MCP_USER_ID:-platform-mcp}",
+            "XAGENT_PLATFORM_MCP_TENANT_ID=${XAGENT_PLATFORM_MCP_TENANT_ID:-default}",
+            "XAGENT_PLATFORM_MCP_ROLES=${XAGENT_PLATFORM_MCP_ROLES:-admin}",
+        ):
+            with self.subTest(setting=setting):
+                self.assertIn(setting, platform_mcp["environment"])
+
+    def test_platform_mcp_principal_accepts_shell_environment_overrides(self) -> None:
+        environment = os.environ.copy()
+        for variable in (
+            "COMPOSE_ENV_FILES",
+            "COMPOSE_PROFILES",
+            "XAGENT_PLATFORM_MCP_TOKEN",
+        ):
+            environment.pop(variable, None)
+        environment.update(
+            {
+                "COMPOSE_DISABLE_ENV_FILE": "1",
+                "POSTGRES_PASSWORD": "contract-only-postgres-strong-value",
+                "XAGENT_SECURITY__JWT_SECRET": (
+                    "contract-only-jwt-secret-at-least-32-characters"
+                ),
+                "XAGENT_PLATFORM_MCP_USER_ID": "contract-mcp-user",
+                "XAGENT_PLATFORM_MCP_TENANT_ID": "contract-mcp-tenant",
+                "XAGENT_PLATFORM_MCP_ROLES": "viewer,admin",
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            empty_env = Path(temporary_directory) / "empty.env"
+            empty_env.write_text("", encoding="utf-8")
+            result = subprocess.run(
+                (
+                    "docker",
+                    "compose",
+                    "-f",
+                    str(COMPOSE_PATH),
+                    "--env-file",
+                    str(empty_env),
+                    "--profile",
+                    "mcp",
+                    "config",
+                    "--format",
+                    "json",
+                ),
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rendered = yaml.safe_load(result.stdout)["services"]["platform-mcp"][
+            "environment"
+        ]
+        self.assertEqual(rendered.get("XAGENT_PLATFORM_MCP_USER_ID"), "contract-mcp-user")
+        self.assertEqual(rendered.get("XAGENT_PLATFORM_MCP_TENANT_ID"), "contract-mcp-tenant")
+        self.assertEqual(rendered.get("XAGENT_PLATFORM_MCP_ROLES"), "viewer,admin")
+
+    def test_grafana_provisioning_and_dashboard_mounts_are_read_only(self) -> None:
+        grafana = yaml.safe_load(self.compose)["services"]["grafana"]
+        self.assertCountEqual(
+            grafana["volumes"],
+            (
+                "../grafana/provisioning/datasources/prometheus.yml:"
+                "/etc/grafana/provisioning/datasources/prometheus.yml:ro",
+                "../grafana/provisioning/dashboards/xagent.yml:"
+                "/etc/grafana/provisioning/dashboards/xagent.yml:ro",
+                "../grafana/xagent-dashboard.json:"
+                "/var/lib/grafana/dashboards/xagent-overview.json:ro",
+                "grafanadata:/var/lib/grafana",
+            ),
+        )
+
+    def test_grafana_prometheus_datasource_is_internal_and_stable(self) -> None:
+        self.assertTrue(GRAFANA_DATASOURCE_PATH.is_file())
+        provisioning = yaml.safe_load(GRAFANA_DATASOURCE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(provisioning["apiVersion"], 1)
+        self.assertEqual(len(provisioning["datasources"]), 1)
+        datasource = provisioning["datasources"][0]
+        self.assertEqual(datasource["name"], "Prometheus")
+        self.assertEqual(datasource["type"], "prometheus")
+        self.assertEqual(datasource["uid"], "prometheus")
+        self.assertEqual(datasource["url"], "http://prometheus:9090")
+        self.assertEqual(datasource["access"], "proxy")
+        self.assertTrue(datasource["isDefault"])
+        self.assertFalse(datasource["editable"])
+
+    def test_grafana_dashboard_provider_loads_existing_dashboard(self) -> None:
+        self.assertTrue(GRAFANA_DASHBOARD_PROVIDER_PATH.is_file())
+        provisioning = yaml.safe_load(GRAFANA_DASHBOARD_PROVIDER_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(provisioning["apiVersion"], 1)
+        self.assertEqual(len(provisioning["providers"]), 1)
+        provider = provisioning["providers"][0]
+        self.assertEqual(provider["name"], "X-Agent")
+        self.assertEqual(provider["type"], "file")
+        self.assertEqual(provider["orgId"], 1)
+        self.assertEqual(provider["folder"], "X-Agent")
+        self.assertTrue(provider["disableDeletion"])
+        self.assertFalse(provider["editable"])
+        self.assertEqual(provider["options"]["path"], "/var/lib/grafana/dashboards")
+
     def test_default_config_does_not_require_optional_profile_secrets(self) -> None:
         environment = os.environ.copy()
         for variable in (
             "GRAFANA_ADMIN_PASSWORD",
             "XAGENT_PLATFORM_MCP_TOKEN",
+            "XAGENT_PLATFORM_MCP_USER_ID",
+            "XAGENT_PLATFORM_MCP_TENANT_ID",
+            "XAGENT_PLATFORM_MCP_ROLES",
             "COMPOSE_ENV_FILES",
             "COMPOSE_PROFILES",
         ):

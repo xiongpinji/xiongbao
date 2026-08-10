@@ -209,8 +209,17 @@ services:
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
       - XAGENT_PLATFORM_MCP_TOKEN=${XAGENT_PLATFORM_MCP_TOKEN:-}
+      - XAGENT_PLATFORM_MCP_USER_ID=${XAGENT_PLATFORM_MCP_USER_ID:-platform-mcp}
+      - XAGENT_PLATFORM_MCP_TENANT_ID=${XAGENT_PLATFORM_MCP_TENANT_ID:-default}
+      - XAGENT_PLATFORM_MCP_ROLES=${XAGENT_PLATFORM_MCP_ROLES:-admin}
     command: >
       sh -c "python -m xagent.adapters.mcp.platform_server --http --host 0.0.0.0 --port 8100"
+    healthcheck:
+      test: ["CMD-SHELL", "http_code=$$(curl --silent --show-error --max-time 4 --output /dev/null --write-out '%{http_code}' --request POST http://localhost:8100/mcp) && case \"$$http_code\" in 200|400|401|406) exit 0 ;; *) exit 1 ;; esac"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   # X-Agent Celery worker（后台长任务）
@@ -295,6 +304,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
+      - ../grafana/provisioning/datasources/prometheus.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - ../grafana/provisioning/dashboards/xagent.yml:/etc/grafana/provisioning/dashboards/xagent.yml:ro
       - ../grafana/xagent-dashboard.json:/var/lib/grafana/dashboards/xagent-overview.json:ro
       - grafanadata:/var/lib/grafana
     depends_on:
