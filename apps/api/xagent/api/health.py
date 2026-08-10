@@ -25,6 +25,9 @@ from xagent.infra.settings import get_settings
 router = APIRouter(prefix="/health", tags=["system"])
 logger = get_logger("xagent.health")
 
+_REDIS_CONNECT_TIMEOUT_SECONDS = 3.0
+_REDIS_PING_TIMEOUT_SECONDS = 3.0
+
 
 async def _check_db() -> dict:
     """检查数据库连接。"""
@@ -43,16 +46,30 @@ async def _check_redis() -> dict:
     redis_url = getattr(settings.cache, "redis_url", None) if hasattr(settings, "cache") else None
     if not redis_url:
         return {"status": "skipped", "reason": "not_configured"}
+    r = None
     try:
         import redis.asyncio as aioredis
-        r = aioredis.from_url(redis_url, socket_connect_timeout=3)
+
+        r = aioredis.from_url(
+            redis_url,
+            socket_connect_timeout=_REDIS_CONNECT_TIMEOUT_SECONDS,
+            socket_timeout=_REDIS_PING_TIMEOUT_SECONDS,
+        )
         start = time.perf_counter()
-        await r.ping()
+        await asyncio.wait_for(r.ping(), timeout=_REDIS_PING_TIMEOUT_SECONDS)
         latency = (time.perf_counter() - start) * 1000
-        await r.aclose()
         return {"status": "healthy", "latency_ms": round(latency, 1)}
     except Exception as e:
         return {"status": "degraded", "error": str(e)[:200], "fallback": "skip_cache"}
+    finally:
+        if r is not None:
+            try:
+                await r.aclose()
+            except Exception as close_error:
+                logger.warning(
+                    "redis_health_close_failed",
+                    error_type=type(close_error).__name__,
+                )
 
 
 async def _check_qdrant() -> dict:
