@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
 from scripts.r3_model_reliability import (
+    BatchRecorder,
     BatchStatus,
     FailureCode,
     LogsAudit,
@@ -12,6 +16,7 @@ from scripts.r3_model_reliability import (
     build_sample_plan,
     build_summary,
     nearest_rank_percentile,
+    render_markdown_report,
 )
 
 
@@ -203,6 +208,95 @@ class R3PlanAndSummaryTests(unittest.TestCase):
         self.assertEqual(summary.status, BatchStatus.ABORTED)
         self.assertEqual(summary.completed_samples, 1)
         self.assertEqual(summary.aborted_error, "KeyboardInterrupt")
+
+
+class R3EvidenceWriterTests(unittest.TestCase):
+    def test_recorder_writes_public_json_and_refuses_existing_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result = replace(
+                _sample_result(SampleKind.CHAT, 1),
+                error="Bearer super-secret token=abc password=hunter2",
+            )
+            summary = build_summary(
+                BATCH_ID,
+                [result],
+                logs_audit=LogsAudit(qwen_route_hits=1),
+                isolation_ok=False,
+                aborted_error="stopped authorization=private-value",
+            )
+            recorder = BatchRecorder(root, BATCH_ID)
+
+            recorder.start()
+            recorder.append(result)
+            recorder.finalize(summary, summary.logs_audit)
+
+            batch_dir = root / BATCH_ID
+            sample_text = (batch_dir / "samples.jsonl").read_text("utf-8")
+            sample_payload = json.loads(sample_text)
+            summary_text = (batch_dir / "summary.json").read_text("utf-8")
+            summary_payload = json.loads(summary_text)
+            logs_payload = json.loads(
+                (batch_dir / "logs-audit.json").read_text("utf-8")
+            )
+            self.assertEqual(sample_payload["kind"], "chat")
+            self.assertEqual(summary_payload["status"], "aborted")
+            self.assertEqual(logs_payload["qwen_route_hits"], 1)
+            for text in (sample_text, summary_text):
+                self.assertNotIn("super-secret", text)
+                self.assertNotIn("hunter2", text)
+                self.assertNotIn("private-value", text)
+                self.assertNotIn("reasoning", text.lower())
+                self.assertNotIn("system_prompt", text.lower())
+            with self.assertRaises(FileExistsError):
+                BatchRecorder(root, BATCH_ID).start()
+
+    def test_recorder_cannot_append_after_finalize(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = BatchRecorder(Path(directory), BATCH_ID)
+            result = _sample_result(SampleKind.CHAT, 1)
+            recorder.start()
+            recorder.append(result)
+            recorder.finalize(
+                build_summary(
+                    BATCH_ID,
+                    [result],
+                    logs_audit=LogsAudit(),
+                    isolation_ok=False,
+                    aborted_error="stopped",
+                ),
+                LogsAudit(),
+            )
+
+            with self.assertRaises(RuntimeError):
+                recorder.append(result)
+            with self.assertRaises(RuntimeError):
+                recorder.finalize(
+                    build_summary(
+                        BATCH_ID,
+                        [result],
+                        logs_audit=LogsAudit(),
+                        isolation_ok=False,
+                        aborted_error="stopped",
+                    ),
+                    LogsAudit(),
+                )
+
+    def test_markdown_contains_metrics_but_not_raw_secret(self) -> None:
+        summary = build_summary(
+            BATCH_ID,
+            [],
+            logs_audit=LogsAudit(mock_hits=1),
+            isolation_ok=False,
+            aborted_error="password=plain-secret",
+        )
+
+        report = render_markdown_report(summary)
+
+        self.assertIn("状态：`aborted`", report)
+        self.assertIn("MockLLM 命中：1", report)
+        self.assertNotIn("plain-secret", report)
+        self.assertNotIn("reasoning", report.lower())
 
 
 if __name__ == "__main__":

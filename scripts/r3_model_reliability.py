@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+import json
+import re
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Sequence
+
+
+_SECRET_PATTERNS = (
+    re.compile(r"(?i)Bearer\s+[^\s]+"),
+    re.compile(r"(?i)(password|token|authorization)\s*[:=]\s*[^\s,;]+"),
+)
 
 
 class SampleKind(StrEnum):
@@ -81,6 +90,12 @@ class SampleResult:
     mock_detected: bool = False
     forbidden_route_detected: bool = False
 
+    def to_public_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["kind"] = self.kind.value
+        payload["error"] = sanitize_error(self.error)
+        return payload
+
 
 @dataclass(frozen=True, slots=True)
 class LogsAudit:
@@ -88,6 +103,9 @@ class LogsAudit:
     forbidden_route_hits: int = 0
     traceback_hits: int = 0
     qwen_route_hits: int = 0
+
+    def to_public_dict(self) -> dict[str, int]:
+        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +123,54 @@ class BatchSummary:
     hard_failures: tuple[str, ...] = field(default_factory=tuple)
     aborted_error: str = ""
 
+    def to_public_dict(self) -> dict[str, Any]:
+        return {
+            "batch_id": self.batch_id,
+            "status": self.status.value,
+            "planned_samples": self.planned_samples,
+            "completed_samples": self.completed_samples,
+            "by_kind": self.by_kind,
+            "false_success_count": self.false_success_count,
+            "failed_sample_count": self.failed_sample_count,
+            "fail_closed": self.fail_closed,
+            "isolation_ok": self.isolation_ok,
+            "logs_audit": self.logs_audit.to_public_dict(),
+            "hard_failures": list(self.hard_failures),
+            "aborted_error": sanitize_error(self.aborted_error),
+        }
+
+
+class BatchRecorder:
+    def __init__(self, root: Path, batch_id: str) -> None:
+        self.directory = root / batch_id
+        self.samples_path = self.directory / "samples.jsonl"
+        self._started = False
+        self._finalized = False
+
+    def start(self) -> None:
+        self.directory.mkdir(parents=True, exist_ok=False)
+        self.samples_path.touch(exist_ok=False)
+        self._started = True
+
+    def append(self, result: SampleResult) -> None:
+        if not self._started or self._finalized:
+            raise RuntimeError("batch recorder is not writable")
+        with self.samples_path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(result.to_public_dict(), ensure_ascii=False) + "\n")
+
+    def finalize(self, summary: BatchSummary, logs_audit: LogsAudit) -> None:
+        if not self._started or self._finalized:
+            raise RuntimeError("batch recorder cannot be finalized")
+        self._write_json("summary.json", summary.to_public_dict())
+        self._write_json("logs-audit.json", logs_audit.to_public_dict())
+        self._finalized = True
+
+    def _write_json(self, filename: str, payload: dict[str, Any]) -> None:
+        path = self.directory / filename
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+
 
 SAMPLE_COUNTS = {
     SampleKind.CHAT: 30,
@@ -121,6 +187,13 @@ P95_THRESHOLDS = {
     SampleKind.SCHEDULER: 180.0,
     SampleKind.FILE_WRITE: 240.0,
 }
+
+
+def sanitize_error(value: str) -> str:
+    text = str(value or "")[:1000]
+    for pattern in _SECRET_PATTERNS:
+        text = pattern.sub("[REDACTED]", text)
+    return text
 
 
 def build_sample_plan(batch_id: str) -> tuple[SampleSpec, ...]:
@@ -233,4 +306,39 @@ def build_summary(
         logs_audit=logs_audit,
         hard_failures=tuple(hard_failures),
         aborted_error=aborted_error,
+    )
+
+
+def render_markdown_report(summary: BatchSummary) -> str:
+    rows = []
+    for kind in SampleKind:
+        metrics = summary.by_kind[kind.value]
+        p95 = metrics["p95_seconds"]
+        p95_text = "unknown" if p95 is None else f"{p95:.3f}"
+        rows.append(
+            f"| {kind.value} | {metrics['completed']}/{metrics['planned']} | "
+            f"{metrics['succeeded']} | {p95_text} |"
+        )
+    hard_failures = ", ".join(summary.hard_failures) or "无"
+    aborted_error = sanitize_error(summary.aborted_error) or "无"
+    return "\n".join(
+        [
+            "# X-Agent Web/API R3-A 真实模型可靠性基线",
+            "",
+            f"- 批次：`{summary.batch_id}`",
+            f"- 状态：`{summary.status.value}`",
+            f"- 完成样本：{summary.completed_samples}/{summary.planned_samples}",
+            f"- 假成功：{summary.false_success_count}",
+            f"- Fail-closed：{summary.fail_closed}",
+            f"- 租户隔离：{'通过' if summary.isolation_ok else '失败'}",
+            f"- MockLLM 命中：{summary.logs_audit.mock_hits}",
+            f"- Forbidden route 命中：{summary.logs_audit.forbidden_route_hits}",
+            f"- 硬失败：{hard_failures}",
+            f"- 中断原因：{aborted_error}",
+            "",
+            "| 类型 | 完成/计划 | 精确成功 | P95 秒 |",
+            "| --- | ---: | ---: | ---: |",
+            *rows,
+            "",
+        ]
     )
