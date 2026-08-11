@@ -164,6 +164,37 @@ class _LengthLimitedNoToolsChatLLM(_NoToolsChatLLM):
         )
 
 
+class _NonEmptyTruncatedNoToolsChatLLM(_NoToolsChatLLM):
+    def __init__(self, *, recovery_still_truncated: bool = False) -> None:
+        super().__init__(content="")
+        self.recovery_still_truncated = recovery_still_truncated
+        self.max_tokens_calls: list[int] = []
+
+    async def complete_chat(self, messages, **kwargs) -> LLMResponse:
+        max_tokens = kwargs["max_tokens"]
+        self.max_tokens_calls.append(max_tokens)
+        if max_tokens < 1024:
+            return LLMResponse(
+                content="R3-CHAT-TRUNCATED-PREFIX",
+                model="ollama_chat/qwen3:4b",
+                completion_tokens=512,
+                raw={"choices": [{"finish_reason": "stop"}]},
+            )
+        if self.recovery_still_truncated:
+            return LLMResponse(
+                content="R3-CHAT-STILL-TRUNCATED",
+                model="ollama_chat/qwen3:4b",
+                completion_tokens=128,
+                raw={"choices": [{"finish_reason": "length"}]},
+            )
+        return LLMResponse(
+            content="R3-CHAT-COMPLETE",
+            model="ollama_chat/qwen3:4b",
+            completion_tokens=96,
+            raw={"choices": [{"finish_reason": "stop"}]},
+        )
+
+
 async def test_builtin_tool_mode_none_expands_length_limited_recovery_budget(
     monkeypatch,
 ) -> None:
@@ -185,6 +216,56 @@ async def test_builtin_tool_mode_none_expands_length_limited_recovery_budget(
 
     assert run.status == "succeeded", run.error
     assert run.final_answer == "R2-RESTORE-OK"
+    assert llm.max_tokens_calls == [512, 1024]
+
+
+async def test_builtin_tool_mode_none_recovers_nonempty_truncated_response(
+    monkeypatch,
+) -> None:
+    llm = _NonEmptyTruncatedNoToolsChatLLM()
+    principal = Principal(
+        user_id="r3-user",
+        tenant_id="r3-tenant",
+        roles=frozenset({"member"}),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+
+    run = await run_agent_builtin(
+        "请只回复：R3-CHAT-COMPLETE",
+        principal=principal,
+        tool_mode="none",
+    )
+
+    assert run.status == "succeeded", run.error
+    assert run.final_answer == "R3-CHAT-COMPLETE"
+    assert llm.max_tokens_calls == [512, 1024]
+
+
+async def test_builtin_tool_mode_none_fails_when_recovery_is_still_truncated(
+    monkeypatch,
+) -> None:
+    llm = _NonEmptyTruncatedNoToolsChatLLM(recovery_still_truncated=True)
+    principal = Principal(
+        user_id="r3-user",
+        tenant_id="r3-tenant",
+        roles=frozenset({"member"}),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+
+    run = await run_agent_builtin(
+        "请只回复：R3-CHAT-COMPLETE",
+        principal=principal,
+        tool_mode="none",
+    )
+
+    assert run.status == "failed"
+    assert run.error == "model_incomplete_response_after_retry"
+    assert "R3-CHAT-STILL-TRUNCATED" not in run.final_answer
+    assert not any(event.kind == StepKind.final for event in run.events)
     assert llm.max_tokens_calls == [512, 1024]
 
 

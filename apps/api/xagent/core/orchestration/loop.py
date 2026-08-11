@@ -1288,6 +1288,21 @@ async def run_agent(
             max_tokens=max_tokens,
         )
 
+    def _no_tools_chat_response_incomplete(
+        response: LLMResponse, requested_max_tokens: int
+    ) -> bool:
+        choices = response.raw.get("choices")
+        first_choice = choices[0] if isinstance(choices, list) and choices else {}
+        finish_reason = (
+            first_choice.get("finish_reason")
+            if isinstance(first_choice, dict)
+            else getattr(first_choice, "finish_reason", None)
+        )
+        return (
+            finish_reason == "length"
+            or response.completion_tokens >= requested_max_tokens
+        )
+
     async with tracer.trace("agent.run", role=role.name, tenant=principal.tenant_id) as span:
         span.set_input(goal)
         _run_start = time.perf_counter()
@@ -1485,23 +1500,12 @@ async def run_agent(
                   state.total_prompt_tokens += chat_resp.prompt_tokens
                   state.total_completion_tokens += chat_resp.completion_tokens
                   chat_content = (chat_resp.content or "").strip()
-                  if not chat_content:
-                      choices = chat_resp.raw.get("choices")
-                      first_choice = (
-                          choices[0]
-                          if isinstance(choices, list) and choices
-                          else {}
-                      )
-                      finish_reason = (
-                          first_choice.get("finish_reason")
-                          if isinstance(first_choice, dict)
-                          else getattr(first_choice, "finish_reason", None)
-                      )
+                  response_incomplete = _no_tools_chat_response_incomplete(
+                      chat_resp, 512
+                  )
+                  if not chat_content or response_incomplete:
                       recovery_max_tokens = (
-                          1024
-                          if finish_reason == "length"
-                          or chat_resp.completion_tokens >= 512
-                          else 512
+                          1024 if response_incomplete else 512
                       )
                       state.messages.append(Message(
                           role="user",
@@ -1519,6 +1523,14 @@ async def run_agent(
                       state.total_prompt_tokens += retry_resp.prompt_tokens
                       state.total_completion_tokens += retry_resp.completion_tokens
                       chat_content = (retry_resp.content or "").strip()
+                      if not chat_content:
+                          raise RuntimeError("model_empty_response_after_retry")
+                      if _no_tools_chat_response_incomplete(
+                          retry_resp, recovery_max_tokens
+                      ):
+                          raise RuntimeError(
+                              "model_incomplete_response_after_retry"
+                          )
                   if not chat_content:
                       raise RuntimeError("model_empty_response_after_retry")
                   await _emit(
