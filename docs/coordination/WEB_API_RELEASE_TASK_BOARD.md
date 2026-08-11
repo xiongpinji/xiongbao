@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-B 可靠性缺陷修复已开始；先修复 Chat 截断响应假成功与隔离 file_write 180 秒硬超时，再进入定向 Live 验证。
+- 当前阶段：R3-B 修复与 API-only 定向 Live 验证已通过，状态 REVIEW；R3-A 统计门仍为 PARTIAL，下一步需执行新的完整 50 样本批次。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -16,7 +16,7 @@
 
 ## In Progress
 
-- [R3-B] Chat 截断终态与隔离 file_write 超时边界 | 状态：CLAIMED | 根因已由 R3-A raw、数据库和源码调用链确认；按 `docs/superpowers/specs/2026-08-11-xagent-r3b-reliability-repair-design.md` 先红后绿，独立审查前不重建容器或重跑完整批次。
+- [R3-B] Chat 截断终态与隔离 file_write 超时边界 | 状态：REVIEW | Chat 截断首答改为一次有界恢复、二次截断 fail-closed；严格隔离 file_write 使用 270 秒而普通并行仍为 180 秒。提交后相关回归 191 项、release contracts 77 项（另 87 subtests）通过；API-only 新镜像下单次真实 Chat exact 成功、单次真实 file_write 四项产物成功并 reject 清理，MockLLM/Traceback/forbidden 均 0。该定向探针不替代完整统计批次。证据：`docs/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE.md`。
 - [R3-A] 真实 Ollama 可靠性基线 | 状态：PARTIAL | 批次 `20260811T064937Z-2ec342` 完整记录 50/50：Chat 29/30、P95 9.139 秒，但 `chat-001` 为 succeeded + 截断答案的假成功；Scheduler 10/10、P95 40.381 秒且全部暂停；file_write 5/10、P95 180.539 秒，另 5 条约 180 秒 timeout/missing_artifact，均 fail-closed 且清理成功。租户隔离通过，MockLLM/forbidden/cleanup failure 均为 0。下一门是先修复 Chat 假成功与 file_write 可靠性，不直接重跑。证据：`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。
 
 ## Ready
