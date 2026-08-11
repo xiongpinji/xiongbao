@@ -21,6 +21,7 @@ from scripts.r3_model_reliability import (
     nearest_rank_percentile,
     render_markdown_report,
     run_chat_sample,
+    run_scheduler_sample,
 )
 
 
@@ -467,6 +468,166 @@ class R3ChatTests(unittest.TestCase):
         self.assertTrue(result.false_success)
         self.assertEqual(result.error_code, "false_success")
         self.assertEqual(result.tool_call_count, 1)
+
+
+class R3SchedulerTests(unittest.TestCase):
+    def _api(
+        self,
+        *,
+        terminal_status: str,
+        result_text: str,
+        error: str = "",
+        toggle_status: int = 200,
+    ) -> tuple[ProductApiClient, list[tuple[str, str]], list[dict[str, object]]]:
+        calls: list[tuple[str, str]] = []
+        bodies: list[dict[str, object]] = []
+        job_id = "c" * 12
+        scheduler_run_id = "d" * 32
+        agent_run_id = "e" * 32
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls.append((request.method, request.url.path))
+            if request.content:
+                bodies.append(json.loads(request.content))
+            if request.method == "POST" and request.url.path.endswith(
+                "/scheduler/jobs"
+            ):
+                payload = bodies[-1]
+                self.assertEqual(payload["interval_seconds"], 86_400)
+                self.assertEqual(payload["max_retries"], 0)
+                return httpx.Response(
+                    200,
+                    json={"job_id": job_id, "enabled": True},
+                )
+            if request.method == "POST" and request.url.path.endswith(
+                f"/scheduler/jobs/{job_id}/run"
+            ):
+                self.assertEqual(bodies[-1], {"confirm_job_id": job_id})
+                return httpx.Response(
+                    200,
+                    json={
+                        "run_id": scheduler_run_id,
+                        "job_id": job_id,
+                        "status": "pending",
+                        "attempt": 1,
+                    },
+                )
+            if request.method == "GET" and request.url.path.endswith(
+                f"/scheduler/jobs/{job_id}/runs"
+            ):
+                return httpx.Response(
+                    200,
+                    json={
+                        "runs": [
+                            {
+                                "run_id": scheduler_run_id,
+                                "job_id": job_id,
+                                "status": terminal_status,
+                                "attempt": 1,
+                                "agent_run_id": agent_run_id,
+                                "result": result_text,
+                                "error": error,
+                            }
+                        ]
+                    },
+                )
+            if request.method == "PATCH" and request.url.path.endswith(
+                f"/scheduler/jobs/{job_id}/toggle"
+            ):
+                self.assertEqual(
+                    bodies[-1], {"confirm_job_id": job_id, "enabled": False}
+                )
+                return httpx.Response(
+                    toggle_status,
+                    json={"job_id": job_id, "enabled": False},
+                )
+            if request.method == "GET" and request.url.path.endswith("/scheduler/jobs"):
+                return httpx.Response(
+                    200,
+                    json={"jobs": [{"job_id": job_id, "enabled": False}]},
+                )
+            raise AssertionError(str(request.url))
+
+        api = ProductApiClient(
+            "http://xagent.test/api/v1",
+            token="memory-only-token",
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        return api, calls, bodies
+
+    def test_scheduler_runs_attempt_one_once_and_pauses(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[30]
+        api, calls, _ = self._api(
+            terminal_status="succeeded",
+            result_text=spec.marker,
+        )
+
+        result = run_scheduler_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            sleep=lambda _seconds: None,
+        )
+
+        job_path = f"/api/v1/scheduler/jobs/{'c' * 12}"
+        self.assertTrue(result.success)
+        self.assertEqual(result.run_id, "e" * 32)
+        self.assertEqual(result.task_id, "d" * 32)
+        self.assertEqual(result.job_id, "c" * 12)
+        self.assertTrue(result.cleanup_ok)
+        self.assertEqual(calls.count(("POST", "/api/v1/scheduler/jobs")), 1)
+        self.assertEqual(calls.count(("POST", f"{job_path}/run")), 1)
+        self.assertEqual(calls.count(("PATCH", f"{job_path}/toggle")), 1)
+        with self.assertRaises(RuntimeError):
+            run_scheduler_sample(
+                api,
+                spec,
+                model="qwen3:4b",
+                sleep=lambda _seconds: None,
+            )
+
+    def test_scheduler_failure_is_fail_closed_and_still_paused(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[30]
+        api, calls, _ = self._api(
+            terminal_status="failed",
+            result_text="",
+            error="provider failed",
+        )
+
+        result = run_scheduler_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            sleep=lambda _seconds: None,
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_code, "scheduler_terminal_error")
+        self.assertTrue(result.fail_closed)
+        self.assertTrue(result.cleanup_ok)
+        self.assertEqual(
+            calls.count(("PATCH", f"/api/v1/scheduler/jobs/{'c' * 12}/toggle")),
+            1,
+        )
+
+    def test_scheduler_cleanup_failure_cannot_be_success(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[30]
+        api, _, _ = self._api(
+            terminal_status="succeeded",
+            result_text=spec.marker,
+            toggle_status=409,
+        )
+
+        result = run_scheduler_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            sleep=lambda _seconds: None,
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_code, "cleanup_failed")
+        self.assertFalse(result.cleanup_ok)
 
 
 if __name__ == "__main__":

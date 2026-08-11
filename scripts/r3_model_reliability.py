@@ -4,6 +4,7 @@ import math
 import json
 import re
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -583,6 +584,316 @@ def run_chat_sample(
         tool_call_count=0,
         mock_detected=mock_detected,
         forbidden_route_detected=api.forbidden_route_detected,
+    )
+
+
+def _scheduler_result(
+    spec: SampleSpec,
+    *,
+    started_at: str,
+    started_monotonic: float,
+    model: str,
+    http_status: int,
+    terminal_status: str,
+    success: bool,
+    exact_match: bool,
+    false_success: bool,
+    fail_closed: bool | None,
+    run_id: str = "",
+    task_id: str = "",
+    job_id: str = "",
+    error_code: FailureCode | None = None,
+    error: str = "",
+    cleanup_ok: bool = True,
+    forbidden_route_detected: bool = False,
+) -> SampleResult:
+    return SampleResult(
+        batch_id=spec.batch_id,
+        sample_id=spec.sample_id,
+        kind=spec.kind,
+        index=spec.index,
+        marker=spec.marker,
+        started_at=started_at,
+        finished_at=datetime.now(UTC).isoformat(),
+        duration_seconds=max(0.0, time.monotonic() - started_monotonic),
+        http_status=http_status,
+        terminal_status=terminal_status,
+        success=success,
+        exact_match=exact_match,
+        false_success=false_success,
+        fail_closed=fail_closed,
+        model=model,
+        route="scheduler",
+        tool_mode="auto",
+        run_id=run_id,
+        task_id=task_id,
+        job_id=job_id,
+        error_code=error_code.value if error_code else "",
+        error=error,
+        artifact_count=1 if task_id else 0,
+        cleanup_ok=cleanup_ok,
+        forbidden_route_detected=forbidden_route_detected,
+    )
+
+
+def _pause_scheduler_job(api: ProductApiClient, job_id: str) -> bool:
+    try:
+        response = api.request(
+            "PATCH",
+            f"/scheduler/jobs/{job_id}/toggle",
+            json={"confirm_job_id": job_id, "enabled": False},
+            timeout=30.0,
+        )
+        if not response.is_success or response.json().get("enabled") is not False:
+            return False
+        jobs_response = api.request("GET", "/scheduler/jobs", timeout=30.0)
+        if not jobs_response.is_success:
+            return False
+        jobs = jobs_response.json().get("jobs") or []
+        return any(
+            isinstance(job, dict)
+            and job.get("job_id") == job_id
+            and job.get("enabled") is False
+            for job in jobs
+        )
+    except (httpx.HTTPError, ValueError, TypeError):
+        return False
+
+
+def run_scheduler_sample(
+    api: ProductApiClient,
+    spec: SampleSpec,
+    *,
+    model: str,
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> SampleResult:
+    if spec.kind is not SampleKind.SCHEDULER:
+        raise ValueError("scheduler executor requires a scheduler sample")
+    create_path = "/scheduler/jobs"
+    api.claim_submission(spec.sample_id, create_path)
+    started_at = datetime.now(UTC).isoformat()
+    started_monotonic = time.monotonic()
+    try:
+        create_response = api.request(
+            "POST",
+            create_path,
+            json={
+                "name": f"R3 reliability {spec.batch_id} {spec.index:03d}",
+                "goal": f"请只回复：{spec.marker}",
+                "role": None,
+                "interval_seconds": 86_400,
+                "max_retries": 0,
+                "retry_backoff_seconds": 60,
+            },
+            timeout=30.0,
+        )
+    except httpx.TimeoutException as exc:
+        return _scheduler_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            terminal_status="timeout",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.TIMEOUT,
+            error=str(exc) or "scheduler create timed out",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    except httpx.HTTPError as exc:
+        return _scheduler_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            terminal_status="failed",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.HTTP_ERROR,
+            error=str(exc),
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    if not create_response.is_success:
+        return _scheduler_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=create_response.status_code,
+            terminal_status="failed",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.HTTP_ERROR,
+            error=f"scheduler create HTTP {create_response.status_code}",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    job_id = str(create_response.json().get("job_id") or "")
+    if not job_id:
+        return _scheduler_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=create_response.status_code,
+            terminal_status="failed",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.MISSING_PERSISTENCE,
+            error="scheduler job id is missing",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+
+    scheduled_run_id = ""
+    agent_run_id = ""
+    terminal_status = "unknown"
+    result_text = ""
+    terminal_error = ""
+    http_status = create_response.status_code
+    sample_error_code: FailureCode | None = None
+    cleanup_ok = False
+    try:
+        run_path = f"/scheduler/jobs/{job_id}/run"
+        api.claim_submission(spec.sample_id, run_path)
+        run_response = api.request(
+            "POST",
+            run_path,
+            json={"confirm_job_id": job_id},
+            timeout=30.0,
+        )
+        http_status = run_response.status_code
+        if not run_response.is_success:
+            sample_error_code = FailureCode.HTTP_ERROR
+            terminal_error = f"scheduler run HTTP {run_response.status_code}"
+        else:
+            scheduled_run_id = str(run_response.json().get("run_id") or "")
+            deadline = monotonic() + 600.0
+            while True:
+                runs_response = api.request(
+                    "GET",
+                    f"/scheduler/jobs/{job_id}/runs",
+                    timeout=30.0,
+                )
+                http_status = runs_response.status_code
+                if not runs_response.is_success:
+                    sample_error_code = FailureCode.HTTP_ERROR
+                    terminal_error = f"scheduler runs HTTP {runs_response.status_code}"
+                    break
+                runs = runs_response.json().get("runs") or []
+                attempt_one = next(
+                    (
+                        run
+                        for run in runs
+                        if isinstance(run, dict)
+                        and run.get("attempt") == 1
+                        and (
+                            not scheduled_run_id
+                            or run.get("run_id") == scheduled_run_id
+                        )
+                    ),
+                    None,
+                )
+                if attempt_one is not None:
+                    terminal_status = str(attempt_one.get("status") or "unknown")
+                    if terminal_status in {"succeeded", "failed", "interrupted"}:
+                        scheduled_run_id = str(
+                            attempt_one.get("run_id") or scheduled_run_id
+                        )
+                        agent_run_id = str(attempt_one.get("agent_run_id") or "")
+                        result_text = str(attempt_one.get("result") or "")
+                        terminal_error = str(attempt_one.get("error") or "")
+                        break
+                if monotonic() >= deadline:
+                    terminal_status = "timeout"
+                    sample_error_code = FailureCode.TIMEOUT
+                    terminal_error = "scheduler attempt 1 timed out"
+                    break
+                sleep(2.0)
+    except httpx.TimeoutException as exc:
+        terminal_status = "timeout"
+        sample_error_code = FailureCode.TIMEOUT
+        terminal_error = str(exc) or "scheduler request timed out"
+    except httpx.HTTPError as exc:
+        terminal_status = "failed"
+        sample_error_code = FailureCode.HTTP_ERROR
+        terminal_error = str(exc)
+    finally:
+        cleanup_ok = _pause_scheduler_job(api, job_id)
+
+    common = {
+        "started_at": started_at,
+        "started_monotonic": started_monotonic,
+        "model": model,
+        "http_status": http_status,
+        "terminal_status": terminal_status,
+        "run_id": agent_run_id,
+        "task_id": scheduled_run_id,
+        "job_id": job_id,
+        "cleanup_ok": cleanup_ok,
+        "forbidden_route_detected": api.forbidden_route_detected,
+    }
+    if not cleanup_ok:
+        return _scheduler_result(
+            spec,
+            success=False,
+            exact_match=result_text.strip() == spec.marker,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.CLEANUP_FAILED,
+            error="scheduler job pause failed",
+            **common,
+        )
+    if sample_error_code is not None:
+        return _scheduler_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=sample_error_code,
+            error=terminal_error,
+            **common,
+        )
+    if terminal_status != "succeeded":
+        return _scheduler_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=bool(terminal_error) and not result_text,
+            error_code=FailureCode.SCHEDULER_TERMINAL_ERROR,
+            error=terminal_error or f"scheduler terminal status {terminal_status}",
+            **common,
+        )
+    exact_match = result_text.strip() == spec.marker
+    if not exact_match or terminal_error or not agent_run_id:
+        return _scheduler_result(
+            spec,
+            success=False,
+            exact_match=exact_match,
+            false_success=True,
+            fail_closed=False,
+            error_code=FailureCode.FALSE_SUCCESS,
+            error="scheduler result contract mismatch",
+            **common,
+        )
+    return _scheduler_result(
+        spec,
+        success=True,
+        exact_match=True,
+        false_success=False,
+        fail_closed=None,
+        **common,
     )
 
 
