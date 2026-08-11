@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-A 首个正式批次因 Scheduler harness ID 映射缺陷在 33/50 后中止，状态 BLOCKED；修复已完成，等待 Owner 批准全新批次。
+- 当前阶段：R3-A 全新正式批次已获 Owner 批准，状态 CLAIMED；Scheduler harness 修复已通过合同，等待 clean preflight 后执行唯一新批次。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -16,7 +16,7 @@
 
 ## In Progress
 
-- [R3-A] 真实 Ollama 可靠性基线 | 状态：BLOCKED | 批次 `20260811T044822Z-9fb876` 在 33/50 后中止：30 个 Chat 全部精确成功；Scheduler harness 错把 manual request ID 当成 attempt=1 run ID，导致三条真实成功记录被误记 timeout。数据库交叉核验 4 个 attempt=1 均 succeeded、marker 精确、job 均已暂停；第 4 个产品 job 未写入不可变 JSONL。修复 `8101768` 已通过合同，但旧批次未续写，等待 Owner 批准全新正式批次。证据：`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。
+- [R3-A] 真实 Ollama 可靠性基线 | 状态：CLAIMED | Owner 已批准启动全新正式批次；旧批次 `20260811T044822Z-9fb876` 保持 `aborted` 且不可续写，证据见 `docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。Scheduler attempt ID 映射修复 `8101768` 已通过合同；新批次仅在 clean Git、同 checkout 无冲突、Worker 空闲与 `--preflight-only` 全部通过后启动一次。
 
 ## Ready
 
