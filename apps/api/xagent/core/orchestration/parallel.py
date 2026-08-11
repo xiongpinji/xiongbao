@@ -25,6 +25,8 @@ logger = get_logger("xagent.parallel")
 MAX_PARALLEL_AGENTS = 5
 # 单个子任务超时
 SUB_TASK_TIMEOUT = 180
+# 严格隔离 file_write 需覆盖 240 秒 SLO，并为 Git finalize/HTTP 返回留余量。
+STRICT_FILE_WRITE_TIMEOUT = 270
 _RUNNING_DEVELOPMENT_TASKS: dict[str, asyncio.Task[Any]] = {}
 
 
@@ -138,6 +140,7 @@ async def run_parallel_agents(
         task_persisted = False
         keep_worktree = False
         wt_token = None
+        task_timeout = SUB_TASK_TIMEOUT
         try:
             if repository_baseline is not None:
                 from datetime import timedelta
@@ -192,6 +195,7 @@ async def run_parallel_agents(
                 agent_kwargs: dict[str, Any] = {}
                 if required_first_tool is not None:
                     agent_kwargs["required_first_tool"] = required_first_tool
+                    task_timeout = STRICT_FILE_WRITE_TIMEOUT
                 result = await asyncio.wait_for(
                     run_agent(
                         task.goal,
@@ -201,7 +205,7 @@ async def run_parallel_agents(
                         run_id=sub_run_id,
                         **agent_kwargs,
                     ),
-                    timeout=SUB_TASK_TIMEOUT,
+                    timeout=task_timeout,
                 )
             finally:
                 if wt_token is not None:
@@ -299,13 +303,13 @@ async def run_parallel_agents(
                     principal.tenant_id,
                     development_task_id,
                     "timeout",
-                    f"超时(>{SUB_TASK_TIMEOUT}s)",
+                    f"超时(>{task_timeout}s)",
                 )
             return SubTaskResult(
                 goal=task.goal,
                 run_id=sub_run_id,
                 status="timeout",
-                error=f"超时(>{SUB_TASK_TIMEOUT}s)",
+                error=f"超时(>{task_timeout}s)",
                 duration_ms=elapsed,
                 isolated=task_paths is not None,
                 worktree_path=str(task_paths.worktree) if task_paths else "",

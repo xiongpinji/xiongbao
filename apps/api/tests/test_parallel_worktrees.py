@@ -486,7 +486,7 @@ async def test_strict_real_loop_timeout_after_write_is_timeout(
 ) -> None:
     repo = tmp_path / "repo-real-timeout"
     _init_git_repo(repo)
-    monkeypatch.setattr(parallel, "SUB_TASK_TIMEOUT", 0.05)
+    monkeypatch.setattr(parallel, "STRICT_FILE_WRITE_TIMEOUT", 0.05)
 
     result = await _run_actual_strict_task(
         repo,
@@ -497,6 +497,7 @@ async def test_strict_real_loop_timeout_after_write_is_timeout(
 
     sub = result.sub_results[0]
     assert sub.status == "timeout"
+    assert sub.error == "超时(>0.05s)"
     assert sub.development_task_status == "timeout"
     assert not Path(sub.worktree_path).exists()
     assert _temporary_branches(repo) == []
@@ -506,7 +507,61 @@ async def test_strict_real_loop_timeout_after_write_is_timeout(
         )
     assert record is not None
     assert record.status.value == "timeout"
+    assert record.error == "超时(>0.05s)"
     assert not record.patch_path or not Path(record.patch_path).exists()
+
+
+async def test_strict_file_write_uses_slo_aligned_timeout(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo-timeout-budget"
+    _init_git_repo(repo)
+    captured_timeouts: list[float] = []
+    real_wait_for = asyncio.wait_for
+
+    async def _capture_wait_for(awaitable, *, timeout):
+        captured_timeouts.append(timeout)
+        return await real_wait_for(awaitable, timeout=timeout)
+
+    async def _failed_run_agent(*args, **kwargs):  # noqa: ARG001
+        return _FakeRun("", status="failed", error="stop after timeout capture")
+
+    monkeypatch.setattr(parallel.asyncio, "wait_for", _capture_wait_for)
+    monkeypatch.setattr(parallel, "run_agent", _failed_run_agent)
+    ws_token = ws_mod.set_workspace(repo)
+    async with get_engine().begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        result = await run_parallel_agents(
+            [SubTask(goal="capture strict timeout", capabilities=["file_write"])],
+            _principal(),
+            use_worktrees=True,
+        )
+    finally:
+        ws_mod.reset_workspace(ws_token)
+
+    assert result.sub_results[0].status == "failed"
+    assert captured_timeouts == [270]
+
+
+async def test_regular_parallel_task_keeps_default_timeout(monkeypatch) -> None:
+    captured_timeouts: list[float] = []
+    real_wait_for = asyncio.wait_for
+
+    async def _capture_wait_for(awaitable, *, timeout):
+        captured_timeouts.append(timeout)
+        return await real_wait_for(awaitable, timeout=timeout)
+
+    async def _successful_run_agent(*args, **kwargs):  # noqa: ARG001
+        return _FakeRun("done")
+
+    monkeypatch.setattr(parallel.asyncio, "wait_for", _capture_wait_for)
+    monkeypatch.setattr(parallel, "run_agent", _successful_run_agent)
+
+    result = await run_parallel_agents([SubTask(goal="regular")], _principal())
+
+    assert result.sub_results[0].status == "succeeded"
+    assert captured_timeouts == [180]
 
 
 async def test_multi_capability_task_does_not_force_file_write_first(
