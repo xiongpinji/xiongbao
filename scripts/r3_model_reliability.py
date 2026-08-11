@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import math
 import re
+import secrets
 import subprocess
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -198,6 +200,27 @@ class PreflightSnapshot:
 
     def to_public_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionOutcome:
+    results: tuple[SampleResult, ...]
+    aborted_error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class IsolationProbeResult:
+    ok: bool
+    error_code: str = ""
+    error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BatchRunOutcome:
+    batch_id: str
+    summary: BatchSummary
+    directory: Path
+    report_path: Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -499,6 +522,199 @@ def run_preflight(
         service_ids=service_ids,
         protected_container_ids=protected_ids,
     )
+
+
+def execute_sample_plan(
+    plan: Sequence[SampleSpec],
+    recorder: BatchRecorder,
+    executor: Callable[[SampleSpec], SampleResult],
+) -> ExecutionOutcome:
+    results: list[SampleResult] = []
+    for spec in plan:
+        try:
+            result = executor(spec)
+        except BaseException as exc:
+            name = type(exc).__name__
+            detail = str(exc).strip()
+            return ExecutionOutcome(
+                results=tuple(results),
+                aborted_error=sanitize_error(f"{name}: {detail}" if detail else name),
+            )
+        if result.sample_id != spec.sample_id or result.kind is not spec.kind:
+            return ExecutionOutcome(
+                results=tuple(results),
+                aborted_error="HarnessError: executor returned the wrong sample",
+            )
+        recorder.append(result)
+        results.append(result)
+    return ExecutionOutcome(results=tuple(results))
+
+
+def run_tenant_isolation_probe(
+    second_tenant_api: ProductApiClient,
+    results: Sequence[SampleResult],
+) -> IsolationProbeResult:
+    first_chat = next(
+        (
+            item
+            for item in results
+            if item.kind is SampleKind.CHAT and item.run_id and item.checkpoint_id
+        ),
+        None,
+    )
+    first_file_write = next(
+        (
+            item
+            for item in results
+            if item.kind is SampleKind.FILE_WRITE and item.development_task_id
+        ),
+        None,
+    )
+    if first_chat is None or first_file_write is None:
+        return IsolationProbeResult(
+            ok=False,
+            error_code=FailureCode.HARNESS_ERROR.value,
+            error="tenant isolation anchors are incomplete",
+        )
+    paths = (
+        f"/runs/{first_chat.run_id}",
+        f"/checkpoints/{first_chat.checkpoint_id}",
+        f"/development-tasks/{first_file_write.development_task_id}",
+    )
+    try:
+        for path in paths:
+            response = second_tenant_api.request("GET", path, timeout=30.0)
+            if response.status_code == 200:
+                return IsolationProbeResult(
+                    ok=False,
+                    error_code=FailureCode.TENANT_ISOLATION_BREACH.value,
+                    error=f"second tenant can read protected anchor: {path}",
+                )
+            if response.status_code not in {403, 404}:
+                return IsolationProbeResult(
+                    ok=False,
+                    error_code=FailureCode.HARNESS_ERROR.value,
+                    error=f"unexpected isolation response: HTTP {response.status_code}",
+                )
+    except httpx.HTTPError as exc:
+        return IsolationProbeResult(
+            ok=False,
+            error_code=FailureCode.HARNESS_ERROR.value,
+            error=str(exc),
+        )
+    return IsolationProbeResult(ok=True)
+
+
+def generate_batch_id() -> str:
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return f"{timestamp}-{secrets.token_hex(3)}"
+
+
+def _register_batch_tenant(
+    api: ProductApiClient,
+    batch_id: str,
+    *,
+    isolation: bool = False,
+) -> str:
+    prefix = "r3-reliability-isolation" if isolation else "r3-reliability"
+    username = f"{prefix}-{batch_id}"
+    tenant_id = username
+    password = secrets.token_urlsafe(33)
+    response = api.request(
+        "POST",
+        "/auth/register",
+        json={
+            "username": username,
+            "password": password,
+            "tenant_id": tenant_id,
+        },
+        timeout=30.0,
+    )
+    if not response.is_success:
+        raise HarnessError(f"tenant registration failed: HTTP {response.status_code}")
+    payload = response.json()
+    token = str(payload.get("access_token") or "")
+    returned_tenant = str(payload.get("tenant_id") or "")
+    if not token or returned_tenant != tenant_id:
+        raise HarnessError("tenant registration response is invalid")
+    api.token = token
+    return tenant_id
+
+
+def _read_runtime_identity(
+    compose: ComposeTarget,
+    repo_root: Path,
+    shell_runner: ShellRunner,
+) -> tuple[dict[str, str], dict[str, str]]:
+    ps = _run_readonly(
+        shell_runner,
+        compose.command(
+            "--profile",
+            "mcp",
+            "--profile",
+            "observability",
+            "ps",
+            "--format",
+            "json",
+        ),
+        cwd=repo_root,
+    )
+    rows = _parse_json_rows(ps.stdout)
+    services = {str(row.get("Service") or ""): row for row in rows}
+    service_ids: dict[str, str] = {}
+    for name in PREFLIGHT_SERVICES:
+        row = services.get(name)
+        if (
+            row is None
+            or str(row.get("State") or "").lower() != "running"
+            or str(row.get("Health") or "").lower() != "healthy"
+        ):
+            raise HarnessError(f"runtime service is not healthy: {name}")
+        container_id = str(row.get("ID") or row.get("Id") or "")
+        if not container_id:
+            raise HarnessError(f"runtime service identity is missing: {name}")
+        service_ids[name] = container_id
+
+    protected = _run_readonly(
+        shell_runner,
+        ["docker", "inspect", "--format", "{{json .}}", *PROTECTED_CONTAINERS],
+        cwd=repo_root,
+    )
+    protected_by_name = {
+        str(row.get("Name") or "").removeprefix("/"): row
+        for row in _parse_json_rows(protected.stdout)
+    }
+    protected_ids: dict[str, str] = {}
+    for name in PROTECTED_CONTAINERS:
+        row = protected_by_name.get(name)
+        state = row.get("State") if isinstance(row, dict) else None
+        health = state.get("Health") if isinstance(state, dict) else None
+        if (
+            not isinstance(state, dict)
+            or state.get("Status") != "running"
+            or not isinstance(health, dict)
+            or health.get("Status") != "healthy"
+        ):
+            raise HarnessError(f"protected container is not healthy: {name}")
+        container_id = str(row.get("Id") or "")
+        if not container_id:
+            raise HarnessError(f"protected container identity is missing: {name}")
+        protected_ids[name] = container_id
+    return service_ids, protected_ids
+
+
+def _collect_log_audit(
+    compose: ComposeTarget,
+    repo_root: Path,
+    shell_runner: ShellRunner,
+    since_utc: str,
+) -> LogsAudit:
+    result = _run_readonly(
+        shell_runner,
+        compose.command("logs", "--since", since_utc, "api", "worker"),
+        cwd=repo_root,
+    )
+    return audit_logs(f"{result.stdout}\n{result.stderr}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1761,3 +1977,192 @@ def render_markdown_report(summary: BatchSummary) -> str:
             "",
         ]
     )
+
+
+def run_reliability_batch(
+    *,
+    preflight: PreflightSnapshot,
+    api_base_url: str,
+    compose: ComposeTarget,
+    output_root: Path,
+    report_path: Path,
+    repo_root: Path,
+    shell_runner: ShellRunner = subprocess.run,
+    api_factory: Callable[[str], ProductApiClient] = ProductApiClient,
+    batch_id_factory: Callable[[], str] = generate_batch_id,
+    sample_executor: Callable[[SampleSpec], SampleResult] | None = None,
+    identity_reader: Callable[[], tuple[dict[str, str], dict[str, str]]] | None = None,
+    logs_reader: Callable[[str], LogsAudit] | None = None,
+) -> BatchRunOutcome:
+    if not preflight.passed:
+        raise HarnessError("batch cannot start before preflight passes")
+    batch_id = batch_id_factory()
+    primary_api = api_factory(api_base_url)
+    _register_batch_tenant(primary_api, batch_id)
+    recorder = BatchRecorder(output_root, batch_id)
+    recorder.start()
+    batch_started_at = datetime.now(UTC).isoformat()
+
+    if sample_executor is None:
+
+        def dispatch(spec: SampleSpec) -> SampleResult:
+            if spec.kind is SampleKind.CHAT:
+                return run_chat_sample(primary_api, spec, model=preflight.model)
+            if spec.kind is SampleKind.SCHEDULER:
+                return run_scheduler_sample(primary_api, spec, model=preflight.model)
+            return run_file_write_sample(
+                primary_api,
+                spec,
+                model=preflight.model,
+                compose=compose,
+                shell_runner=shell_runner,
+            )
+
+    else:
+        dispatch = sample_executor
+
+    execution = execute_sample_plan(build_sample_plan(batch_id), recorder, dispatch)
+    aborted_error = execution.aborted_error
+    isolation = IsolationProbeResult(
+        ok=False,
+        error_code=FailureCode.HARNESS_ERROR.value,
+        error="tenant isolation probe did not run",
+    )
+    if not aborted_error and len(execution.results) == 50:
+        try:
+            second_api = api_factory(api_base_url)
+            _register_batch_tenant(second_api, batch_id, isolation=True)
+            isolation = run_tenant_isolation_probe(second_api, execution.results)
+        except BaseException as exc:
+            name = type(exc).__name__
+            detail = str(exc).strip()
+            aborted_error = sanitize_error(f"{name}: {detail}" if detail else name)
+
+    try:
+        logs_audit = (
+            logs_reader(batch_started_at)
+            if logs_reader is not None
+            else _collect_log_audit(
+                compose,
+                repo_root,
+                shell_runner,
+                batch_started_at,
+            )
+        )
+    except BaseException as exc:
+        logs_audit = LogsAudit()
+        if not aborted_error:
+            name = type(exc).__name__
+            detail = str(exc).strip()
+            aborted_error = sanitize_error(f"{name}: {detail}" if detail else name)
+
+    identity_error = ""
+    try:
+        service_ids, protected_ids = (
+            identity_reader()
+            if identity_reader is not None
+            else _read_runtime_identity(compose, repo_root, shell_runner)
+        )
+        if (
+            service_ids != preflight.service_ids
+            or protected_ids != preflight.protected_container_ids
+        ):
+            identity_error = "container_identity_drift"
+    except BaseException:
+        identity_error = "container_identity_unverified"
+
+    summary = build_summary(
+        batch_id,
+        execution.results,
+        logs_audit=logs_audit,
+        isolation_ok=isolation.ok,
+        aborted_error=aborted_error,
+    )
+    extra_failures = [
+        item
+        for item in (isolation.error_code if not isolation.ok else "", identity_error)
+        if item and item not in summary.hard_failures
+    ]
+    if extra_failures:
+        status = (
+            BatchStatus.ABORTED
+            if summary.status is BatchStatus.ABORTED
+            else BatchStatus.FAILED
+        )
+        summary = replace(
+            summary,
+            status=status,
+            hard_failures=(*summary.hard_failures, *extra_failures),
+        )
+
+    recorder.finalize(summary, logs_audit)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(render_markdown_report(summary), encoding="utf-8")
+    return BatchRunOutcome(
+        batch_id=batch_id,
+        summary=summary,
+        directory=recorder.directory,
+        report_path=report_path,
+    )
+
+
+def cli(
+    argv: Sequence[str] | None = None,
+    *,
+    preflight_runner: Callable[..., PreflightSnapshot] = run_preflight,
+    batch_runner: Callable[..., BatchRunOutcome] = run_reliability_batch,
+) -> int:
+    parser = argparse.ArgumentParser(description="X-Agent R3 model reliability batch")
+    parser.add_argument("--api-base-url", default="http://127.0.0.1:18000/api/v1")
+    parser.add_argument("--health-url", default="http://127.0.0.1:18000/health/deep")
+    parser.add_argument("--compose-file", default="deploy/compose/docker-compose.yml")
+    parser.add_argument("--env-file", default="deploy/compose/r2.env.local")
+    parser.add_argument("--project-name", default="xagent-r2")
+    parser.add_argument("--output-root", default="output/reliability")
+    parser.add_argument(
+        "--report-path",
+        default="docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md",
+    )
+    parser.add_argument("--preflight-only", action="store_true")
+    args = parser.parse_args(argv)
+
+    repo_root = Path.cwd()
+    compose = ComposeTarget(
+        compose_file=Path(args.compose_file),
+        env_file=Path(args.env_file),
+        project_name=args.project_name,
+    )
+    preflight = preflight_runner(
+        repo_root=repo_root,
+        compose=compose,
+        health_url=args.health_url,
+    )
+    if not preflight.passed:
+        print(f"preflight={preflight.code}")
+        return 2
+    if args.preflight_only:
+        print("preflight=passed")
+        return 0
+    try:
+        outcome = batch_runner(
+            preflight=preflight,
+            api_base_url=args.api_base_url,
+            compose=compose,
+            output_root=Path(args.output_root),
+            report_path=Path(args.report_path),
+            repo_root=repo_root,
+        )
+    except BaseException:
+        print("batch_id=not_started")
+        print("status=aborted")
+        return 2
+    print(f"batch_id={outcome.batch_id}")
+    print(f"status={outcome.summary.status.value}")
+    print(f"samples={outcome.directory / 'samples.jsonl'}")
+    print(f"summary={outcome.directory / 'summary.json'}")
+    print(f"report={outcome.report_path}")
+    return {
+        BatchStatus.PASSED: 0,
+        BatchStatus.FAILED: 1,
+        BatchStatus.ABORTED: 2,
+    }[outcome.summary.status]

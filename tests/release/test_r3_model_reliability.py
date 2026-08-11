@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import io
+import json
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,9 +14,12 @@ import httpx
 
 from scripts.r3_model_reliability import (
     BatchRecorder,
+    BatchRunOutcome,
     BatchStatus,
     ComposeTarget,
+    ExecutionOutcome,
     FailureCode,
+    IsolationProbeResult,
     LogsAudit,
     PreflightSnapshot,
     ProductApiClient,
@@ -23,12 +28,17 @@ from scripts.r3_model_reliability import (
     audit_logs,
     build_sample_plan,
     build_summary,
+    cli,
+    execute_sample_plan,
+    generate_batch_id,
     nearest_rank_percentile,
     render_markdown_report,
     run_preflight,
     run_chat_sample,
     run_file_write_sample,
+    run_reliability_batch,
     run_scheduler_sample,
+    run_tenant_isolation_probe,
 )
 
 
@@ -1025,6 +1035,362 @@ class R3LogsTests(unittest.TestCase):
             set(audit.to_public_dict()),
             {"mock_hits", "forbidden_route_hits", "traceback_hits", "qwen_route_hits"},
         )
+
+
+class R3BatchExecutionTests(unittest.TestCase):
+    def test_execution_is_strictly_serial_and_does_not_replace_failures(self) -> None:
+        seen: list[str] = []
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = BatchRecorder(Path(directory), BATCH_ID)
+            recorder.start()
+
+            def executor(spec) -> SampleResult:
+                seen.append(spec.sample_id)
+                return _sample_result(
+                    spec.kind,
+                    spec.index,
+                    success=spec.sample_id != "chat-003",
+                    fail_closed=True if spec.sample_id == "chat-003" else None,
+                )
+
+            outcome = execute_sample_plan(
+                build_sample_plan(BATCH_ID), recorder, executor
+            )
+
+            self.assertIsInstance(outcome, ExecutionOutcome)
+            self.assertEqual(
+                seen, [item.sample_id for item in build_sample_plan(BATCH_ID)]
+            )
+            self.assertEqual(len(seen), 50)
+            self.assertEqual(len(set(seen)), 50)
+            self.assertEqual(len(outcome.results), 50)
+            self.assertFalse(outcome.results[2].success)
+            self.assertEqual(outcome.aborted_error, "")
+            self.assertTrue(
+                all(
+                    item.cleanup_ok
+                    for item in outcome.results
+                    if item.kind != SampleKind.CHAT
+                )
+            )
+            lines = recorder.samples_path.read_text("utf-8").splitlines()
+            self.assertEqual(len(lines), 50)
+
+    def test_execution_interrupts_without_resuming_or_submitting_more(self) -> None:
+        seen: list[str] = []
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            recorder = BatchRecorder(root, BATCH_ID)
+            recorder.start()
+
+            def executor(spec) -> SampleResult:
+                seen.append(spec.sample_id)
+                if len(seen) == 3:
+                    raise KeyboardInterrupt
+                return _sample_result(spec.kind, spec.index)
+
+            outcome = execute_sample_plan(
+                build_sample_plan(BATCH_ID), recorder, executor
+            )
+
+            self.assertEqual(seen, ["chat-001", "chat-002", "chat-003"])
+            self.assertEqual(len(outcome.results), 2)
+            self.assertIn("KeyboardInterrupt", outcome.aborted_error)
+            self.assertEqual(
+                len(recorder.samples_path.read_text("utf-8").splitlines()), 2
+            )
+            summary = build_summary(
+                BATCH_ID,
+                outcome.results,
+                logs_audit=LogsAudit(),
+                isolation_ok=False,
+                aborted_error=outcome.aborted_error,
+            )
+            self.assertEqual(summary.status, BatchStatus.ABORTED)
+            with self.assertRaises(FileExistsError):
+                BatchRecorder(root, BATCH_ID).start()
+
+
+class R3IsolationTests(unittest.TestCase):
+    def _results_with_anchors(self) -> list[SampleResult]:
+        results = _passing_results()
+        results[0] = replace(
+            results[0],
+            run_id="r" * 32,
+            checkpoint_id="c" * 32,
+        )
+        results[40] = replace(
+            results[40],
+            development_task_id="d" * 32,
+        )
+        return results
+
+    def _api(self, statuses: dict[str, int]) -> ProductApiClient:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(statuses[request.url.path], json={"detail": "hidden"})
+
+        return ProductApiClient(
+            "http://xagent.test/api/v1",
+            token="second-tenant-memory-token",
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+
+    def test_second_tenant_cannot_read_first_tenant_anchors(self) -> None:
+        statuses = {
+            f"/api/v1/runs/{'r' * 32}": 404,
+            f"/api/v1/checkpoints/{'c' * 32}": 403,
+            f"/api/v1/development-tasks/{'d' * 32}": 404,
+        }
+
+        result = run_tenant_isolation_probe(
+            self._api(statuses), self._results_with_anchors()
+        )
+
+        self.assertIsInstance(result, IsolationProbeResult)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.error_code, "")
+
+    def test_readable_anchor_is_a_tenant_isolation_breach(self) -> None:
+        statuses = {
+            f"/api/v1/runs/{'r' * 32}": 200,
+            f"/api/v1/checkpoints/{'c' * 32}": 403,
+            f"/api/v1/development-tasks/{'d' * 32}": 404,
+        }
+
+        result = run_tenant_isolation_probe(
+            self._api(statuses), self._results_with_anchors()
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error_code, "tenant_isolation_breach")
+
+    def test_missing_anchor_is_a_harness_error(self) -> None:
+        result = run_tenant_isolation_probe(
+            self._api({}),
+            _passing_results(),
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error_code, "harness_error")
+
+
+class R3CliTests(unittest.TestCase):
+    def _batch_outcome(self, status: BatchStatus, root: Path) -> BatchRunOutcome:
+        if status is BatchStatus.PASSED:
+            results = _passing_results()
+            aborted_error = ""
+        elif status is BatchStatus.FAILED:
+            results = _passing_results()
+            for index in (0, 1):
+                results[index] = replace(
+                    results[index],
+                    success=False,
+                    exact_match=False,
+                    terminal_status="failed",
+                    fail_closed=True,
+                )
+            aborted_error = ""
+        else:
+            results = []
+            aborted_error = "KeyboardInterrupt"
+        summary = build_summary(
+            BATCH_ID,
+            results,
+            logs_audit=LogsAudit(),
+            isolation_ok=status is not BatchStatus.ABORTED,
+            aborted_error=aborted_error,
+        )
+        return BatchRunOutcome(
+            batch_id=BATCH_ID,
+            summary=summary,
+            directory=root / BATCH_ID,
+            report_path=root / "report.md",
+        )
+
+    def test_batch_id_has_fixed_utc_random_format(self) -> None:
+        self.assertRegex(generate_batch_id(), r"^\d{8}T\d{6}Z-[a-f0-9]{6}$")
+
+    def test_cli_maps_passed_failed_and_aborted_exit_codes(self) -> None:
+        expected = {
+            BatchStatus.PASSED: 0,
+            BatchStatus.FAILED: 1,
+            BatchStatus.ABORTED: 2,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for status, exit_code in expected.items():
+                with self.subTest(status=status):
+                    stdout = io.StringIO()
+                    with redirect_stdout(stdout):
+                        actual = cli(
+                            ["--output-root", str(root)],
+                            preflight_runner=lambda **_kwargs: PreflightSnapshot(
+                                passed=True,
+                                code="passed",
+                                error="",
+                                model="qwen3:4b",
+                            ),
+                            batch_runner=lambda **_kwargs: self._batch_outcome(
+                                status, root
+                            ),
+                        )
+                    self.assertEqual(actual, exit_code)
+                    output = stdout.getvalue()
+                    self.assertIn(f"batch_id={BATCH_ID}", output)
+                    self.assertIn(f"status={status.value}", output)
+                    self.assertNotIn("token", output.lower())
+                    self.assertNotIn("password", output.lower())
+
+    def test_cli_preflight_failure_and_preflight_only_never_start_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "output"
+            calls = 0
+
+            def batch_runner(**_kwargs) -> BatchRunOutcome:
+                nonlocal calls
+                calls += 1
+                raise AssertionError("batch must not start")
+
+            failed_stdout = io.StringIO()
+            with redirect_stdout(failed_stdout):
+                failed_code = cli(
+                    ["--output-root", str(root)],
+                    preflight_runner=lambda **_kwargs: PreflightSnapshot(
+                        passed=False, code="git_dirty", error="dirty"
+                    ),
+                    batch_runner=batch_runner,
+                )
+            self.assertEqual(failed_code, 2)
+            self.assertIn("preflight=git_dirty", failed_stdout.getvalue())
+
+            passed_stdout = io.StringIO()
+            with redirect_stdout(passed_stdout):
+                passed_code = cli(
+                    ["--output-root", str(root), "--preflight-only"],
+                    preflight_runner=lambda **_kwargs: PreflightSnapshot(
+                        passed=True, code="passed", error="", model="qwen3:4b"
+                    ),
+                    batch_runner=batch_runner,
+                )
+            self.assertEqual(passed_code, 0)
+            self.assertEqual(passed_stdout.getvalue().strip(), "preflight=passed")
+            self.assertEqual(calls, 0)
+            self.assertFalse(root.exists())
+
+
+class R3BatchOrchestrationTests(unittest.TestCase):
+    def test_batch_registers_in_memory_runs_once_and_finalizes_evidence(self) -> None:
+        events: list[str] = []
+        registration_payloads: list[dict[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and request.url.path.endswith("/auth/register"):
+                body = json.loads(request.content)
+                registration_payloads.append(body)
+                events.append(f"register:{body['tenant_id']}")
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": f"memory-token-{len(registration_payloads)}",
+                        "tenant_id": body["tenant_id"],
+                    },
+                )
+            if request.method == "GET" and request.url.path.endswith(
+                f"/runs/{'r' * 32}"
+            ):
+                return httpx.Response(404, json={"detail": "hidden"})
+            if request.method == "GET" and request.url.path.endswith(
+                f"/checkpoints/{'c' * 32}"
+            ):
+                return httpx.Response(403, json={"detail": "hidden"})
+            if request.method == "GET" and request.url.path.endswith(
+                f"/development-tasks/{'d' * 32}"
+            ):
+                return httpx.Response(404, json={"detail": "hidden"})
+            raise AssertionError(str(request.url))
+
+        def api_factory(base_url: str) -> ProductApiClient:
+            return ProductApiClient(
+                base_url,
+                client=httpx.Client(transport=httpx.MockTransport(handler)),
+            )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output_root = root / "output"
+            report_path = root / "report.md"
+
+            def executor(spec) -> SampleResult:
+                self.assertTrue((output_root / BATCH_ID / "samples.jsonl").exists())
+                events.append(f"sample:{spec.sample_id}")
+                result = _sample_result(spec.kind, spec.index)
+                if spec.sample_id == "chat-001":
+                    result = replace(
+                        result,
+                        run_id="r" * 32,
+                        checkpoint_id="c" * 32,
+                    )
+                if spec.sample_id == "file-write-001":
+                    result = replace(result, development_task_id="d" * 32)
+                return result
+
+            preflight = PreflightSnapshot(
+                passed=True,
+                code="passed",
+                error="",
+                model="qwen3:4b",
+                service_ids={"api": "api-id"},
+                protected_container_ids={"aicg-minio": "minio-id"},
+            )
+            outcome = run_reliability_batch(
+                preflight=preflight,
+                api_base_url="http://xagent.test/api/v1",
+                compose=ComposeTarget(Path("compose.yml"), Path("env"), "xagent-r2"),
+                output_root=output_root,
+                report_path=report_path,
+                repo_root=Path("."),
+                api_factory=api_factory,
+                batch_id_factory=lambda: BATCH_ID,
+                sample_executor=executor,
+                identity_reader=lambda: (
+                    preflight.service_ids,
+                    preflight.protected_container_ids,
+                ),
+                logs_reader=lambda _since: LogsAudit(qwen_route_hits=50),
+            )
+
+            self.assertEqual(outcome.summary.status, BatchStatus.PASSED)
+            self.assertEqual(len(registration_payloads), 2)
+            self.assertEqual(len(registration_payloads[0]["password"]), 44)
+            self.assertEqual(len(registration_payloads[1]["password"]), 44)
+            self.assertTrue(events[0].startswith("register:r3-reliability-"))
+            self.assertEqual(
+                events[1:51],
+                [f"sample:{item.sample_id}" for item in build_sample_plan(BATCH_ID)],
+            )
+            self.assertTrue(events[51].startswith("register:r3-reliability-isolation-"))
+            self.assertEqual(
+                len(
+                    (outcome.directory / "samples.jsonl")
+                    .read_text("utf-8")
+                    .splitlines()
+                ),
+                50,
+            )
+            self.assertTrue((outcome.directory / "summary.json").is_file())
+            self.assertTrue((outcome.directory / "logs-audit.json").is_file())
+            self.assertTrue(report_path.is_file())
+            evidence = "\n".join(
+                path.read_text("utf-8")
+                for path in (
+                    outcome.directory / "samples.jsonl",
+                    outcome.directory / "summary.json",
+                    outcome.directory / "logs-audit.json",
+                    report_path,
+                )
+            )
+            self.assertNotIn("memory-token", evidence)
+            self.assertNotIn(registration_payloads[0]["password"], evidence)
 
 
 if __name__ == "__main__":
