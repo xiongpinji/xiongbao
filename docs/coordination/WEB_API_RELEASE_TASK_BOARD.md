@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-A 真实 Ollama 可靠性基线已完成设计和实施计划，进入 READY。
+- 当前阶段：R3-A 真实 Ollama 可靠性基线工具已就绪，进入 CLAIMED；正式 50 样本尚未开始。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -16,11 +16,11 @@
 
 ## In Progress
 
-- 暂无。
+- [R3-A] 真实 Ollama 可靠性基线 | 状态：CLAIMED | 证据：固定 30/10/10 合同、不可变批次、脱敏输出、SLO 判定和现有 R2 回归已通过；正式 50 样本尚未开始。
 
 ## Ready
 
-- [R3-A] 真实 Ollama 可靠性基线 | 状态：READY | 设计与逐步 TDD 计划已通过；正式工具、离线门和 50 样本均未开始。
+- 暂无。
 
 ## Queued
 
