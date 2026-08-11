@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import math
+import hashlib
 import json
+import math
 import re
+import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -26,6 +28,7 @@ FORBIDDEN_ROUTE_PATTERNS = (
     "/media/tasks",
     "/produce",
 )
+ShellRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 class HarnessError(RuntimeError):
@@ -150,6 +153,26 @@ class SampleResult:
         payload["kind"] = self.kind.value
         payload["error"] = sanitize_error(self.error)
         return payload
+
+
+@dataclass(frozen=True, slots=True)
+class ComposeTarget:
+    compose_file: Path
+    env_file: Path
+    project_name: str
+
+    def command(self, *args: str) -> list[str]:
+        return [
+            "docker",
+            "compose",
+            "--env-file",
+            str(self.env_file),
+            "-f",
+            str(self.compose_file),
+            "-p",
+            self.project_name,
+            *args,
+        ]
 
 
 @dataclass(frozen=True, slots=True)
@@ -888,6 +911,386 @@ def run_scheduler_sample(
             **common,
         )
     return _scheduler_result(
+        spec,
+        success=True,
+        exact_match=True,
+        false_success=False,
+        fail_closed=None,
+        **common,
+    )
+
+
+def _file_write_result(
+    spec: SampleSpec,
+    *,
+    started_at: str,
+    started_monotonic: float,
+    model: str,
+    http_status: int,
+    terminal_status: str,
+    success: bool,
+    exact_match: bool,
+    false_success: bool,
+    fail_closed: bool | None,
+    run_id: str = "",
+    task_id: str = "",
+    development_task_id: str = "",
+    error_code: FailureCode | None = None,
+    error: str = "",
+    artifact_count: int = 0,
+    patch_sha256: str = "",
+    cleanup_ok: bool = True,
+    forbidden_route_detected: bool = False,
+) -> SampleResult:
+    return SampleResult(
+        batch_id=spec.batch_id,
+        sample_id=spec.sample_id,
+        kind=spec.kind,
+        index=spec.index,
+        marker=spec.marker,
+        started_at=started_at,
+        finished_at=datetime.now(UTC).isoformat(),
+        duration_seconds=max(0.0, time.monotonic() - started_monotonic),
+        http_status=http_status,
+        terminal_status=terminal_status,
+        success=success,
+        exact_match=exact_match,
+        false_success=false_success,
+        fail_closed=fail_closed,
+        model=model,
+        route="parallel_file_write",
+        tool_mode="auto",
+        run_id=run_id,
+        task_id=task_id,
+        development_task_id=development_task_id,
+        error_code=error_code.value if error_code else "",
+        error=error,
+        artifact_count=artifact_count,
+        patch_sha256=patch_sha256,
+        cleanup_ok=cleanup_ok,
+        forbidden_route_detected=forbidden_route_detected,
+    )
+
+
+def _compose_exec(
+    compose: ComposeTarget,
+    shell_runner: ShellRunner,
+    *args: str,
+) -> subprocess.CompletedProcess[str]:
+    return shell_runner(
+        compose.command("exec", "-T", "api", *args),
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+        check=False,
+    )
+
+
+def _reject_file_write_task(
+    api: ProductApiClient,
+    compose: ComposeTarget,
+    task_id: str,
+    shell_runner: ShellRunner,
+) -> bool:
+    try:
+        reject = api.request(
+            "POST",
+            f"/development-tasks/{task_id}/reject",
+            json={"confirm_task_id": task_id},
+            timeout=30.0,
+        )
+        if not reject.is_success:
+            return False
+        detail = api.request(
+            "GET",
+            f"/development-tasks/{task_id}",
+            timeout=30.0,
+        )
+        if not detail.is_success or detail.json().get("status") != "rejected":
+            return False
+        worktree = _compose_exec(
+            compose,
+            shell_runner,
+            "test",
+            "!",
+            "-d",
+            f"/data/.xagent-worktrees/{task_id}",
+        )
+        branch = _compose_exec(
+            compose,
+            shell_runner,
+            "git",
+            "-C",
+            "/data/workspace",
+            "branch",
+            "--list",
+            f"agent/{task_id}",
+        )
+        return (
+            worktree.returncode == 0
+            and branch.returncode == 0
+            and not branch.stdout.strip()
+        )
+    except (
+        httpx.HTTPError,
+        ValueError,
+        TypeError,
+        OSError,
+        subprocess.SubprocessError,
+    ):
+        return False
+
+
+def run_file_write_sample(
+    api: ProductApiClient,
+    spec: SampleSpec,
+    *,
+    model: str,
+    compose: ComposeTarget,
+    shell_runner: ShellRunner = subprocess.run,
+) -> SampleResult:
+    if spec.kind is not SampleKind.FILE_WRITE:
+        raise ValueError("file_write executor requires a file_write sample")
+    path = "/agents/parallel-run"
+    api.claim_submission(spec.sample_id, path)
+    started_at = datetime.now(UTC).isoformat()
+    started_monotonic = time.monotonic()
+    try:
+        response = api.request(
+            "POST",
+            path,
+            json={
+                "tasks": [
+                    {
+                        "goal": (
+                            "必须调用 file_write 工具在当前工作区创建 "
+                            f"{spec.filename}，文件内容必须精确为 {spec.marker}"
+                            "（允许末尾换行），不得只用文字回答。"
+                        ),
+                        "capabilities": ["file_write"],
+                    }
+                ],
+                "coordinator_goal": f"R3 可靠性样本 {spec.sample_id}",
+                "use_worktrees": True,
+            },
+            timeout=300.0,
+        )
+    except httpx.TimeoutException as exc:
+        return _file_write_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            terminal_status="timeout",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.TIMEOUT,
+            error=str(exc) or "file_write request timed out",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    except httpx.HTTPError as exc:
+        return _file_write_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            terminal_status="failed",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.HTTP_ERROR,
+            error=str(exc),
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    if not response.is_success:
+        return _file_write_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=response.status_code,
+            terminal_status="failed",
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.HTTP_ERROR,
+            error=f"file_write HTTP {response.status_code}",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+
+    payload = response.json()
+    sub_results = payload.get("sub_results") or []
+    sub = sub_results[0] if sub_results and isinstance(sub_results[0], dict) else {}
+    parent_run_id = str(payload.get("run_id") or "")
+    sub_run_id = str(sub.get("run_id") or "")
+    terminal_status = str(sub.get("status") or "unknown")
+    task_id = str(sub.get("development_task_id") or "")
+    task_status = str(sub.get("development_task_status") or "")
+    sub_error = str(sub.get("error") or "")
+    safe_task_id = bool(re.fullmatch(r"[a-f0-9]{32}", task_id))
+    detail: dict[str, Any] = {}
+    patch = ""
+    http_status = response.status_code
+    artifact_count = 0
+    patch_sha256 = ""
+    inspection_error = ""
+    cleanup_ok = True
+
+    try:
+        if safe_task_id:
+            detail_response = api.request(
+                "GET",
+                f"/development-tasks/{task_id}",
+                timeout=30.0,
+            )
+            http_status = detail_response.status_code
+            if detail_response.is_success:
+                detail = detail_response.json()
+            else:
+                inspection_error = (
+                    f"development task HTTP {detail_response.status_code}"
+                )
+            readable_status = str(detail.get("status") or task_status)
+            if readable_status == "awaiting_review":
+                patch_response = api.request(
+                    "GET",
+                    f"/development-tasks/{task_id}/patch",
+                    timeout=30.0,
+                )
+                http_status = patch_response.status_code
+                if patch_response.is_success:
+                    patch = str(patch_response.json().get("patch") or "")
+                    patch_sha256 = hashlib.sha256(patch.encode()).hexdigest()
+                elif not inspection_error:
+                    inspection_error = f"patch HTTP {patch_response.status_code}"
+
+            worktree = _compose_exec(
+                compose,
+                shell_runner,
+                "test",
+                "-d",
+                f"/data/.xagent-worktrees/{task_id}",
+            )
+            worktree_ok = worktree.returncode == 0
+            artifact_count += int(worktree_ok)
+
+            result_commit = str(detail.get("result_commit") or "")
+            commit_ok = False
+            if worktree_ok and re.fullmatch(r"[a-f0-9]{40}", result_commit):
+                commit = _compose_exec(
+                    compose,
+                    shell_runner,
+                    "git",
+                    "-C",
+                    f"/data/.xagent-worktrees/{task_id}",
+                    "cat-file",
+                    "-e",
+                    f"{result_commit}^{{commit}}",
+                )
+                commit_ok = commit.returncode == 0
+            artifact_count += int(commit_ok)
+
+            diff_stat = str(detail.get("diff_stat") or sub.get("diff_stat") or "")
+            diff_text = str(sub.get("diff") or "")
+            diff_ok = spec.filename in diff_stat and spec.marker in diff_text
+            patch_ok = spec.filename in patch and spec.marker in patch
+            artifact_count += int(diff_ok)
+            artifact_count += int(patch_ok)
+        else:
+            worktree_ok = commit_ok = diff_ok = patch_ok = False
+    except (
+        httpx.HTTPError,
+        ValueError,
+        TypeError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as exc:
+        worktree_ok = commit_ok = diff_ok = patch_ok = False
+        inspection_error = str(exc)
+    finally:
+        if safe_task_id and (
+            task_status == "awaiting_review"
+            or str(detail.get("status") or "") == "awaiting_review"
+        ):
+            cleanup_ok = _reject_file_write_task(api, compose, task_id, shell_runner)
+
+    common = {
+        "started_at": started_at,
+        "started_monotonic": started_monotonic,
+        "model": model,
+        "http_status": http_status,
+        "terminal_status": terminal_status,
+        "run_id": sub_run_id,
+        "task_id": parent_run_id,
+        "development_task_id": task_id,
+        "artifact_count": artifact_count,
+        "patch_sha256": patch_sha256,
+        "cleanup_ok": cleanup_ok,
+        "forbidden_route_detected": api.forbidden_route_detected,
+    }
+    if not cleanup_ok:
+        return _file_write_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=False,
+            error_code=FailureCode.CLEANUP_FAILED,
+            error="development task reject cleanup failed",
+            **common,
+        )
+    if terminal_status != "succeeded":
+        failure_code = (
+            FailureCode.MODEL_EMPTY_RESPONSE
+            if "model_empty_response_after_retry" in sub_error
+            else FailureCode.MISSING_ARTIFACT
+        )
+        return _file_write_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=False,
+            fail_closed=bool(sub_error) and not patch,
+            error_code=failure_code,
+            error=sub_error or f"file_write terminal status {terminal_status}",
+            **common,
+        )
+    contract_ok = (
+        payload.get("status") == "succeeded"
+        and sub.get("isolated") is True
+        and task_status == "awaiting_review"
+        and detail.get("status") == "awaiting_review"
+        and artifact_count == 4
+    )
+    if not patch_ok:
+        return _file_write_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=True,
+            fail_closed=False,
+            error_code=FailureCode.PATCH_MISMATCH,
+            error="development task patch does not contain expected artifact",
+            **common,
+        )
+    if not contract_ok:
+        return _file_write_result(
+            spec,
+            success=False,
+            exact_match=False,
+            false_success=True,
+            fail_closed=False,
+            error_code=FailureCode.MISSING_ARTIFACT,
+            error=inspection_error or "development task artifact contract mismatch",
+            **common,
+        )
+    return _file_write_result(
         spec,
         success=True,
         exact_match=True,

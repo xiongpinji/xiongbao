@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import subprocess
 import tempfile
 import unittest
 from dataclasses import replace
@@ -11,6 +13,7 @@ import httpx
 from scripts.r3_model_reliability import (
     BatchRecorder,
     BatchStatus,
+    ComposeTarget,
     FailureCode,
     LogsAudit,
     ProductApiClient,
@@ -21,6 +24,7 @@ from scripts.r3_model_reliability import (
     nearest_rank_percentile,
     render_markdown_report,
     run_chat_sample,
+    run_file_write_sample,
     run_scheduler_sample,
 )
 
@@ -628,6 +632,240 @@ class R3SchedulerTests(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.error_code, "cleanup_failed")
         self.assertFalse(result.cleanup_ok)
+
+
+class R3FileWriteTests(unittest.TestCase):
+    def _api(
+        self,
+        spec,
+        *,
+        patch_text: str | None = None,
+        reject_status: int = 200,
+        terminal_status: str = "succeeded",
+        development_status: str = "awaiting_review",
+        error: str = "",
+    ) -> tuple[
+        ProductApiClient,
+        list[tuple[str, str]],
+        list[list[str]],
+        object,
+    ]:
+        calls: list[tuple[str, str]] = []
+        shell_calls: list[list[str]] = []
+        task_id = "d" * 32
+        result_commit = "f" * 40
+        rejected = False
+        expected_patch = (
+            patch_text
+            if patch_text is not None
+            else (
+                f"diff --git a/{spec.filename} b/{spec.filename}\n"
+                f"+++ b/{spec.filename}\n+{spec.marker}\n"
+            )
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal rejected
+            calls.append((request.method, request.url.path))
+            if request.method == "POST" and request.url.path.endswith(
+                "/agents/parallel-run"
+            ):
+                payload = json.loads(request.content)
+                self.assertEqual(payload["tasks"][0]["capabilities"], ["file_write"])
+                self.assertTrue(payload["use_worktrees"])
+                self.assertIn(spec.filename, payload["tasks"][0]["goal"])
+                self.assertIn(spec.marker, payload["tasks"][0]["goal"])
+                return httpx.Response(
+                    200,
+                    json={
+                        "run_id": "parent-run",
+                        "status": terminal_status,
+                        "sub_results": [
+                            {
+                                "run_id": "parent-run_sub0",
+                                "status": terminal_status,
+                                "steps": 2,
+                                "error": error,
+                                "isolated": True,
+                                "diff_stat": f" {spec.filename} | 1 +",
+                                "diff": f"+{spec.marker}",
+                                "development_task_id": task_id,
+                                "development_task_status": development_status,
+                            }
+                        ],
+                    },
+                )
+            if request.method == "GET" and request.url.path.endswith(
+                f"/development-tasks/{task_id}"
+            ):
+                return httpx.Response(
+                    200,
+                    json={
+                        "task_id": task_id,
+                        "status": "rejected" if rejected else development_status,
+                        "result_commit": result_commit,
+                        "diff_stat": f" {spec.filename} | 1 +",
+                        "error": "",
+                    },
+                )
+            if request.method == "GET" and request.url.path.endswith(
+                f"/development-tasks/{task_id}/patch"
+            ):
+                return httpx.Response(
+                    200,
+                    json={"task_id": task_id, "patch": expected_patch},
+                )
+            if request.method == "POST" and request.url.path.endswith(
+                f"/development-tasks/{task_id}/reject"
+            ):
+                self.assertEqual(
+                    json.loads(request.content), {"confirm_task_id": task_id}
+                )
+                if reject_status == 200:
+                    rejected = True
+                return httpx.Response(
+                    reject_status,
+                    json={
+                        "task_id": task_id,
+                        "status": "rejected" if rejected else "awaiting_review",
+                    },
+                )
+            raise AssertionError(str(request.url))
+
+        def shell_runner(
+            args: list[str], **kwargs: object
+        ) -> subprocess.CompletedProcess[str]:
+            self.assertNotIn("shell", kwargs)
+            shell_calls.append(args)
+            stdout = ""
+            if args[-3:-1] == ["--list", f"agent/{task_id}"]:
+                stdout = ""
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=stdout, stderr=""
+            )
+
+        api = ProductApiClient(
+            "http://xagent.test/api/v1",
+            token="memory-only-token",
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        return api, calls, shell_calls, shell_runner
+
+    def test_file_write_verifies_patch_commit_and_reject_cleanup(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[40]
+        api, calls, shell_calls, shell_runner = self._api(spec)
+        compose = ComposeTarget(
+            compose_file=Path("deploy/compose/docker-compose.yml"),
+            env_file=Path("deploy/compose/r2.env.local"),
+            project_name="xagent-r2",
+        )
+
+        result = run_file_write_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            compose=compose,
+            shell_runner=shell_runner,
+        )
+
+        expected_patch = (
+            f"diff --git a/{spec.filename} b/{spec.filename}\n"
+            f"+++ b/{spec.filename}\n+{spec.marker}\n"
+        )
+        task_path = f"/api/v1/development-tasks/{'d' * 32}"
+        self.assertTrue(result.success)
+        self.assertTrue(result.exact_match)
+        self.assertEqual(result.artifact_count, 4)
+        self.assertEqual(
+            result.patch_sha256,
+            hashlib.sha256(expected_patch.encode()).hexdigest(),
+        )
+        self.assertTrue(result.cleanup_ok)
+        self.assertEqual(calls.count(("POST", "/api/v1/agents/parallel-run")), 1)
+        self.assertEqual(calls.count(("POST", f"{task_path}/reject")), 1)
+        self.assertTrue(
+            any("/data/.xagent-worktrees/" in " ".join(call) for call in shell_calls)
+        )
+        self.assertTrue(
+            any("cat-file" in call and "shell" not in call for call in shell_calls)
+        )
+        with self.assertRaises(RuntimeError):
+            run_file_write_sample(
+                api,
+                spec,
+                model="qwen3:4b",
+                compose=compose,
+                shell_runner=shell_runner,
+            )
+
+    def test_file_write_patch_mismatch_is_false_success_then_rejected(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[40]
+        api, calls, _, shell_runner = self._api(
+            spec, patch_text="diff without expected marker"
+        )
+
+        result = run_file_write_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            compose=ComposeTarget(Path("compose.yml"), Path("env"), "xagent-r2"),
+            shell_runner=shell_runner,
+        )
+
+        self.assertFalse(result.success)
+        self.assertTrue(result.false_success)
+        self.assertEqual(result.error_code, "patch_mismatch")
+        self.assertTrue(result.cleanup_ok)
+        self.assertEqual(
+            calls.count(("POST", f"/api/v1/development-tasks/{'d' * 32}/reject")),
+            1,
+        )
+
+    def test_file_write_reject_failure_cannot_be_success(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[40]
+        api, calls, _, shell_runner = self._api(spec, reject_status=409)
+
+        result = run_file_write_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            compose=ComposeTarget(Path("compose.yml"), Path("env"), "xagent-r2"),
+            shell_runner=shell_runner,
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_code, "cleanup_failed")
+        self.assertFalse(result.cleanup_ok)
+        self.assertEqual(
+            calls.count(("POST", f"/api/v1/development-tasks/{'d' * 32}/reject")),
+            1,
+        )
+
+    def test_file_write_product_failure_is_fail_closed(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[40]
+        api, calls, _, shell_runner = self._api(
+            spec,
+            terminal_status="failed",
+            development_status="failed",
+            error="model_empty_response_after_retry",
+        )
+
+        result = run_file_write_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            compose=ComposeTarget(Path("compose.yml"), Path("env"), "xagent-r2"),
+            shell_runner=shell_runner,
+        )
+
+        self.assertFalse(result.success)
+        self.assertTrue(result.fail_closed)
+        self.assertEqual(result.error_code, "model_empty_response")
+        self.assertTrue(result.cleanup_ok)
+        self.assertEqual(
+            calls.count(("POST", f"/api/v1/development-tasks/{'d' * 32}/reject")),
+            0,
+        )
 
 
 if __name__ == "__main__":
