@@ -1398,12 +1398,7 @@ def run_scheduler_sample(
                     (
                         run
                         for run in runs
-                        if isinstance(run, dict)
-                        and run.get("attempt") == 1
-                        and (
-                            not scheduled_run_id
-                            or run.get("run_id") == scheduled_run_id
-                        )
+                        if isinstance(run, dict) and run.get("attempt") == 1
                     ),
                     None,
                 )

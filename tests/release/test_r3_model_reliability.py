@@ -495,11 +495,14 @@ class R3SchedulerTests(unittest.TestCase):
         result_text: str,
         error: str = "",
         toggle_status: int = 200,
+        run_response_id: str = "",
+        attempt_run_id: str = "",
     ) -> tuple[ProductApiClient, list[tuple[str, str]], list[dict[str, object]]]:
         calls: list[tuple[str, str]] = []
         bodies: list[dict[str, object]] = []
         job_id = "c" * 12
-        scheduler_run_id = "d" * 32
+        scheduler_run_id = attempt_run_id or "d" * 32
+        requested_run_id = run_response_id or scheduler_run_id
         agent_run_id = "e" * 32
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -523,7 +526,7 @@ class R3SchedulerTests(unittest.TestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "run_id": scheduler_run_id,
+                        "run_id": requested_run_id,
                         "job_id": job_id,
                         "status": "pending",
                         "attempt": 1,
@@ -626,6 +629,27 @@ class R3SchedulerTests(unittest.TestCase):
             calls.count(("PATCH", f"/api/v1/scheduler/jobs/{'c' * 12}/toggle")),
             1,
         )
+
+    def test_scheduler_uses_attempt_one_id_not_manual_request_id(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[30]
+        api, _, _ = self._api(
+            terminal_status="succeeded",
+            result_text=spec.marker,
+            run_response_id="a" * 32,
+            attempt_run_id="b" * 32,
+        )
+        ticks = iter((0.0, 601.0))
+
+        result = run_scheduler_sample(
+            api,
+            spec,
+            model="qwen3:4b",
+            sleep=lambda _seconds: None,
+            monotonic=lambda: next(ticks),
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.task_id, "b" * 32)
 
     def test_scheduler_cleanup_failure_cannot_be_success(self) -> None:
         spec = build_sample_plan(BATCH_ID)[30]
