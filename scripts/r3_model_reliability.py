@@ -3,16 +3,70 @@ from __future__ import annotations
 import math
 import json
 import re
+import time
 from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Sequence
+
+import httpx
 
 
 _SECRET_PATTERNS = (
     re.compile(r"(?i)Bearer\s+[^\s]+"),
     re.compile(r"(?i)(password|token|authorization)\s*[:=]\s*[^\s,;]+"),
 )
+FORBIDDEN_ROUTE_PATTERNS = (
+    "/creative",
+    "/canvas",
+    "/editor",
+    "/media/generate",
+    "/media/tasks",
+    "/produce",
+)
+
+
+class HarnessError(RuntimeError):
+    """测试工具合同、解析或本地执行错误；它会中止批次。"""
+
+
+class ProductApiClient:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        token: str = "",
+        client: httpx.Client | None = None,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.token = token
+        self.client = client or httpx.Client()
+        self.business_submissions: set[tuple[str, str]] = set()
+        self.forbidden_route_detected = False
+
+    def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        if any(pattern in path for pattern in FORBIDDEN_ROUTE_PATTERNS):
+            self.forbidden_route_detected = True
+        supplied_headers = kwargs.pop("headers", {})
+        headers = {**self._headers(), **supplied_headers}
+        return self.client.request(
+            method,
+            f"{self.base_url}{path}",
+            headers=headers,
+            **kwargs,
+        )
+
+    def claim_submission(self, sample_id: str, path: str) -> None:
+        key = (sample_id, path)
+        if key in self.business_submissions:
+            raise RuntimeError(f"duplicate business submission: {sample_id} {path}")
+        self.business_submissions.add(key)
+
+    def _headers(self) -> dict[str, str]:
+        if not self.token:
+            return {}
+        return {"Authorization": f"Bearer {self.token}"}
 
 
 class SampleKind(StrEnum):
@@ -194,6 +248,342 @@ def sanitize_error(value: str) -> str:
     for pattern in _SECRET_PATTERNS:
         text = pattern.sub("[REDACTED]", text)
     return text
+
+
+def parse_sse(response: httpx.Response) -> list[tuple[str, dict[str, Any]]]:
+    events: list[tuple[str, dict[str, Any]]] = []
+    event_name = "message"
+    data_lines: list[str] = []
+
+    def emit() -> None:
+        nonlocal event_name, data_lines
+        if not data_lines:
+            event_name = "message"
+            return
+        raw = "\n".join(data_lines)
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise HarnessError(f"invalid SSE JSON for {event_name}") from exc
+        if not isinstance(payload, dict):
+            raise HarnessError(f"SSE payload for {event_name} must be an object")
+        events.append((event_name, payload))
+        event_name = "message"
+        data_lines = []
+
+    for line in response.iter_lines():
+        if not line:
+            emit()
+            continue
+        if line.startswith(":"):
+            continue
+        if line.startswith("event:"):
+            event_name = line.removeprefix("event:").strip() or "message"
+        elif line.startswith("data:"):
+            data_lines.append(line.removeprefix("data:").lstrip())
+    emit()
+    return events
+
+
+def _chat_failure_result(
+    spec: SampleSpec,
+    *,
+    started_at: str,
+    started_monotonic: float,
+    model: str,
+    http_status: int,
+    error_code: FailureCode,
+    error: str,
+    terminal_status: str = "failed",
+    fail_closed: bool = False,
+    run_id: str = "",
+    conversation_id: str = "",
+    route: str = "",
+    tool_mode: str = "",
+    exact_match: bool = False,
+    false_success: bool = False,
+    tool_call_count: int = 0,
+    checkpoint_id: str = "",
+    finish_reason: str = "unknown",
+    forbidden_route_detected: bool = False,
+    mock_detected: bool = False,
+) -> SampleResult:
+    return SampleResult(
+        batch_id=spec.batch_id,
+        sample_id=spec.sample_id,
+        kind=spec.kind,
+        index=spec.index,
+        marker=spec.marker,
+        started_at=started_at,
+        finished_at=datetime.now(UTC).isoformat(),
+        duration_seconds=max(0.0, time.monotonic() - started_monotonic),
+        http_status=http_status,
+        terminal_status=terminal_status,
+        success=False,
+        exact_match=exact_match,
+        false_success=false_success,
+        fail_closed=fail_closed,
+        model=model,
+        route=route,
+        tool_mode=tool_mode,
+        run_id=run_id,
+        task_id=run_id,
+        conversation_id=conversation_id,
+        checkpoint_id=checkpoint_id,
+        error_code=error_code.value,
+        error=error,
+        finish_reason=finish_reason,
+        tool_call_count=tool_call_count,
+        mock_detected=mock_detected,
+        forbidden_route_detected=forbidden_route_detected,
+    )
+
+
+def run_chat_sample(
+    api: ProductApiClient,
+    spec: SampleSpec,
+    *,
+    model: str,
+) -> SampleResult:
+    if spec.kind is not SampleKind.CHAT:
+        raise ValueError("chat executor requires a chat sample")
+    path = "/stream/agents/run"
+    api.claim_submission(spec.sample_id, path)
+    started_at = datetime.now(UTC).isoformat()
+    started_monotonic = time.monotonic()
+    try:
+        response = api.request(
+            "POST",
+            path,
+            json={
+                "goal": f"请只回复：{spec.marker}",
+                "tool_mode": "none",
+                "capabilities": [],
+            },
+            timeout=600.0,
+        )
+    except httpx.TimeoutException as exc:
+        return _chat_failure_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            error_code=FailureCode.TIMEOUT,
+            error=str(exc) or "chat request timed out",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    except httpx.HTTPError as exc:
+        return _chat_failure_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=0,
+            error_code=FailureCode.HTTP_ERROR,
+            error=str(exc),
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+    if not response.is_success:
+        return _chat_failure_result(
+            spec,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            model=model,
+            http_status=response.status_code,
+            error_code=FailureCode.HTTP_ERROR,
+            error=f"chat HTTP {response.status_code}",
+            forbidden_route_detected=api.forbidden_route_detected,
+        )
+
+    events = parse_sse(response)
+    started_payload = next(
+        (payload for event, payload in events if event == "started"), {}
+    )
+    final_payloads = [payload for event, payload in events if event == "final"]
+    done_payloads = [payload for event, payload in events if event == "done"]
+    error_payloads = [payload for event, payload in events if event == "error"]
+    tool_call_count = sum(
+        1
+        for event, payload in events
+        if event in {"tool_call", "tool_result"}
+        or payload.get("kind") in {"tool_call", "tool_result"}
+    )
+    run_id = str(
+        started_payload.get("run_id")
+        or (done_payloads[-1].get("run_id") if done_payloads else "")
+        or (error_payloads[-1].get("run_id") if error_payloads else "")
+        or ""
+    )
+    conversation_id = str(started_payload.get("conversation_id") or "")
+    started_route = str(started_payload.get("route") or "")
+    sse_final = str(final_payloads[-1].get("content") or "") if final_payloads else ""
+    sse_error = (
+        str(error_payloads[-1].get("error") or error_payloads[-1].get("content") or "")
+        if error_payloads
+        else ""
+    )
+
+    task: dict[str, Any] = {}
+    runtime_payload: dict[str, Any] = {}
+    if run_id:
+        runtime_response = api.request("GET", f"/runs/{run_id}", timeout=30.0)
+        if runtime_response.is_success:
+            runtime_payload = runtime_response.json()
+            value = runtime_payload.get("task")
+            if isinstance(value, dict):
+                task = value
+    task_input = task.get("input") if isinstance(task.get("input"), dict) else {}
+    task_result = task.get("result") if isinstance(task.get("result"), dict) else {}
+    terminal_status = str(task.get("status") or "unknown")
+    persisted_final = str(task_result.get("final_answer") or "")
+    persisted_error = str(task.get("error") or task_result.get("error") or "")
+    route = str(task_input.get("route") or started_route)
+    tool_mode = str(task_input.get("tool_mode") or "")
+    finish_reason = str(
+        task_result.get("finish_reason")
+        or (done_payloads[-1].get("finish_reason") if done_payloads else "")
+        or "unknown"
+    )
+
+    checkpoint_id = ""
+    if run_id:
+        checkpoint_response = api.request(
+            "GET",
+            "/checkpoints",
+            params={"run_id": run_id},
+            timeout=30.0,
+        )
+        if checkpoint_response.is_success:
+            checkpoint_payload = checkpoint_response.json()
+            checkpoints = checkpoint_payload.get("checkpoints") or []
+            if checkpoints and isinstance(checkpoints[0], dict):
+                checkpoint_id = str(checkpoints[0].get("checkpoint_id") or "")
+
+    assistant_final = ""
+    conversation_loaded = False
+    if conversation_id:
+        conversation_response = api.request(
+            "GET",
+            f"/stream/conversations/{conversation_id}/messages",
+            timeout=30.0,
+        )
+        if conversation_response.is_success:
+            conversation_loaded = True
+            messages = conversation_response.json().get("messages") or []
+            assistant_messages = [
+                str(message.get("content") or "")
+                for message in messages
+                if isinstance(message, dict) and message.get("role") == "assistant"
+            ]
+            if assistant_messages:
+                assistant_final = assistant_messages[-1]
+
+    mock_detected = "MockLLM" in json.dumps(
+        {"events": events, "runtime": runtime_payload},
+        ensure_ascii=False,
+    )
+    exact_match = (
+        len(final_payloads) == 1
+        and sse_final == spec.marker
+        and persisted_final == spec.marker
+        and assistant_final == spec.marker
+    )
+    common = {
+        "started_at": started_at,
+        "started_monotonic": started_monotonic,
+        "model": model,
+        "http_status": response.status_code,
+        "terminal_status": terminal_status,
+        "run_id": run_id,
+        "conversation_id": conversation_id,
+        "route": route,
+        "tool_mode": tool_mode,
+        "exact_match": exact_match,
+        "tool_call_count": tool_call_count,
+        "checkpoint_id": checkpoint_id,
+        "finish_reason": finish_reason,
+        "forbidden_route_detected": api.forbidden_route_detected,
+        "mock_detected": mock_detected,
+    }
+
+    if terminal_status != "succeeded":
+        error = (
+            persisted_error or sse_error or f"chat terminal status {terminal_status}"
+        )
+        fail_closed = bool(error) and not done_payloads and not final_payloads
+        error_code = (
+            FailureCode.WRONG_FINAL
+            if done_payloads or final_payloads
+            else FailureCode.MODEL_EMPTY_RESPONSE
+            if "model_empty_response_after_retry" in error
+            else FailureCode.HTTP_ERROR
+        )
+        return _chat_failure_result(
+            spec,
+            error_code=error_code,
+            error=error,
+            fail_closed=fail_closed,
+            **common,
+        )
+
+    if not task or not conversation_loaded:
+        return _chat_failure_result(
+            spec,
+            error_code=FailureCode.MISSING_PERSISTENCE,
+            error="chat persistence is incomplete",
+            **common,
+        )
+    contract_mismatch = (
+        not exact_match
+        or len(done_payloads) != 1
+        or bool(error_payloads)
+        or tool_call_count != 0
+        or route != "chat_no_tools"
+        or tool_mode != "none"
+    )
+    if contract_mismatch:
+        return _chat_failure_result(
+            spec,
+            error_code=FailureCode.FALSE_SUCCESS,
+            error="chat contract mismatch",
+            false_success=True,
+            **common,
+        )
+    if not checkpoint_id:
+        return _chat_failure_result(
+            spec,
+            error_code=FailureCode.MISSING_CHECKPOINT,
+            error="chat checkpoint is missing",
+            **common,
+        )
+    return SampleResult(
+        batch_id=spec.batch_id,
+        sample_id=spec.sample_id,
+        kind=spec.kind,
+        index=spec.index,
+        marker=spec.marker,
+        started_at=started_at,
+        finished_at=datetime.now(UTC).isoformat(),
+        duration_seconds=max(0.0, time.monotonic() - started_monotonic),
+        http_status=response.status_code,
+        terminal_status=terminal_status,
+        success=True,
+        exact_match=True,
+        false_success=False,
+        fail_closed=None,
+        model=model,
+        route=route,
+        tool_mode=tool_mode,
+        run_id=run_id,
+        task_id=run_id,
+        conversation_id=conversation_id,
+        checkpoint_id=checkpoint_id,
+        finish_reason=finish_reason,
+        tool_call_count=0,
+        mock_detected=mock_detected,
+        forbidden_route_detected=api.forbidden_route_detected,
+    )
 
 
 def build_sample_plan(batch_id: str) -> tuple[SampleSpec, ...]:

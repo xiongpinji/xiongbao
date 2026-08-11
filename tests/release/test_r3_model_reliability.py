@@ -6,17 +6,21 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+import httpx
+
 from scripts.r3_model_reliability import (
     BatchRecorder,
     BatchStatus,
     FailureCode,
     LogsAudit,
+    ProductApiClient,
     SampleKind,
     SampleResult,
     build_sample_plan,
     build_summary,
     nearest_rank_percentile,
     render_markdown_report,
+    run_chat_sample,
 )
 
 
@@ -297,6 +301,172 @@ class R3EvidenceWriterTests(unittest.TestCase):
         self.assertIn("MockLLM 命中：1", report)
         self.assertNotIn("plain-secret", report)
         self.assertNotIn("reasoning", report.lower())
+
+
+class R3ChatTests(unittest.TestCase):
+    def _api(
+        self,
+        *,
+        sse_final: str,
+        terminal_status: str,
+        persisted_final: str,
+        assistant_final: str,
+        error: str = "",
+        include_done: bool = True,
+        include_final: bool = True,
+        include_checkpoint: bool = True,
+        include_tool_call: bool = False,
+    ) -> tuple[ProductApiClient, list[tuple[str, str]]]:
+        calls: list[tuple[str, str]] = []
+        run_id = "a" * 32
+        conversation_id = "b" * 32
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls.append((request.method, request.url.path))
+            if request.method == "POST" and request.url.path.endswith(
+                "/stream/agents/run"
+            ):
+                payload = json.loads(request.content)
+                self.assertEqual(payload["tool_mode"], "none")
+                self.assertEqual(payload["capabilities"], [])
+                chunks = [
+                    "event: started\n"
+                    f'data: {{"run_id":"{run_id}",'
+                    f'"conversation_id":"{conversation_id}",'
+                    '"route":"chat_no_tools"}\n\n'
+                ]
+                if include_tool_call:
+                    chunks.append(
+                        'event: tool_call\ndata: {"kind":"tool_call","tool":"echo"}\n\n'
+                    )
+                if include_final:
+                    chunks.append(
+                        "event: final\n"
+                        f'data: {{"kind":"final","content":"{sse_final}"}}\n\n'
+                    )
+                if error:
+                    chunks.append(
+                        f'event: error\ndata: {{"error":"{error}",'
+                        f'"run_id":"{run_id}"}}\n\n'
+                    )
+                if include_done:
+                    chunks.append(f'event: done\ndata: {{"run_id":"{run_id}"}}\n\n')
+                chunks.append("event: end\ndata: {}\n\n")
+                return httpx.Response(
+                    200,
+                    text="".join(chunks),
+                    headers={"content-type": "text/event-stream"},
+                )
+            if request.url.path.endswith(f"/runs/{run_id}"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "task": {
+                            "task_id": run_id,
+                            "status": terminal_status,
+                            "input": {
+                                "tool_mode": "none",
+                                "route": "chat_no_tools",
+                            },
+                            "result": {
+                                "final_answer": persisted_final,
+                                "events": [],
+                            },
+                            "error": error,
+                        }
+                    },
+                )
+            if request.url.path.endswith("/checkpoints"):
+                checkpoints = [{"checkpoint_id": "cp-1"}] if include_checkpoint else []
+                return httpx.Response(
+                    200,
+                    json={"total": len(checkpoints), "checkpoints": checkpoints},
+                )
+            if request.url.path.endswith(f"/conversations/{conversation_id}/messages"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "messages": [
+                            {"role": "user", "content": "prompt"},
+                            {"role": "assistant", "content": assistant_final},
+                        ]
+                    },
+                )
+            raise AssertionError(str(request.url))
+
+        api = ProductApiClient(
+            "http://xagent.test/api/v1",
+            token="memory-only-token",
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        return api, calls
+
+    def test_chat_reads_sse_runtime_conversation_and_checkpoint_once(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[0]
+        api, calls = self._api(
+            sse_final=spec.marker,
+            terminal_status="succeeded",
+            persisted_final=spec.marker,
+            assistant_final=spec.marker,
+        )
+
+        result = run_chat_sample(api, spec, model="qwen3:4b")
+
+        self.assertTrue(result.success)
+        self.assertTrue(result.exact_match)
+        self.assertEqual(result.route, "chat_no_tools")
+        self.assertEqual(result.tool_mode, "none")
+        self.assertEqual(result.checkpoint_id, "cp-1")
+        self.assertEqual(result.tool_call_count, 0)
+        self.assertEqual(
+            calls.count(("POST", "/api/v1/stream/agents/run")),
+            1,
+        )
+        with self.assertRaises(RuntimeError):
+            run_chat_sample(api, spec, model="qwen3:4b")
+
+    def test_chat_empty_response_failure_is_truthful_and_fail_closed(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[0]
+        api, calls = self._api(
+            sse_final="",
+            terminal_status="failed",
+            persisted_final="",
+            assistant_final="",
+            error="model_empty_response_after_retry",
+            include_done=False,
+            include_final=False,
+            include_checkpoint=False,
+        )
+
+        result = run_chat_sample(api, spec, model="qwen3:4b")
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_code, "model_empty_response")
+        self.assertEqual(result.terminal_status, "failed")
+        self.assertTrue(result.fail_closed)
+        self.assertFalse(result.false_success)
+        self.assertEqual(
+            calls.count(("POST", "/api/v1/stream/agents/run")),
+            1,
+        )
+
+    def test_chat_succeeded_with_wrong_final_is_false_success(self) -> None:
+        spec = build_sample_plan(BATCH_ID)[0]
+        api, _ = self._api(
+            sse_final="WRONG",
+            terminal_status="succeeded",
+            persisted_final="WRONG",
+            assistant_final="WRONG",
+            include_tool_call=True,
+        )
+
+        result = run_chat_sample(api, spec, model="qwen3:4b")
+
+        self.assertFalse(result.success)
+        self.assertFalse(result.exact_match)
+        self.assertTrue(result.false_success)
+        self.assertEqual(result.error_code, "false_success")
+        self.assertEqual(result.tool_call_count, 1)
 
 
 if __name__ == "__main__":
