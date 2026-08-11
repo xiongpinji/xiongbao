@@ -29,6 +29,18 @@ FORBIDDEN_ROUTE_PATTERNS = (
     "/produce",
 )
 ShellRunner = Callable[..., subprocess.CompletedProcess[str]]
+PREFLIGHT_SERVICES = (
+    "api",
+    "worker",
+    "web",
+    "postgres",
+    "redis",
+    "qdrant",
+    "platform-mcp",
+    "prometheus",
+    "grafana",
+)
+PROTECTED_CONTAINERS = ("aicg-minio", "aicg-postgres")
 
 
 class HarnessError(RuntimeError):
@@ -176,6 +188,19 @@ class ComposeTarget:
 
 
 @dataclass(frozen=True, slots=True)
+class PreflightSnapshot:
+    passed: bool
+    code: str
+    error: str
+    model: str = ""
+    service_ids: dict[str, str] = field(default_factory=dict)
+    protected_container_ids: dict[str, str] = field(default_factory=dict)
+
+    def to_public_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class LogsAudit:
     mock_hits: int = 0
     forbidden_route_hits: int = 0
@@ -184,6 +209,296 @@ class LogsAudit:
 
     def to_public_dict(self) -> dict[str, int]:
         return asdict(self)
+
+
+def audit_logs(text: str) -> LogsAudit:
+    return LogsAudit(
+        mock_hits=text.count("MockLLM"),
+        forbidden_route_hits=sum(text.count(item) for item in FORBIDDEN_ROUTE_PATTERNS),
+        traceback_hits=text.count("Traceback (most recent call last)"),
+        qwen_route_hits=text.count("qwen3:4b"),
+    )
+
+
+def _preflight_failure(
+    code: str,
+    error: str,
+    *,
+    service_ids: dict[str, str] | None = None,
+    protected_container_ids: dict[str, str] | None = None,
+) -> PreflightSnapshot:
+    return PreflightSnapshot(
+        passed=False,
+        code=code,
+        error=error,
+        service_ids=service_ids or {},
+        protected_container_ids=protected_container_ids or {},
+    )
+
+
+def _parse_json_rows(text: str) -> list[dict[str, Any]]:
+    stripped = text.strip()
+    if not stripped:
+        return []
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+    if isinstance(parsed, dict):
+        return [parsed]
+    rows: list[dict[str, Any]] = []
+    for line in stripped.splitlines():
+        item = json.loads(line)
+        if isinstance(item, dict):
+            rows.append(item)
+    return rows
+
+
+def _run_readonly(
+    shell_runner: ShellRunner,
+    args: list[str],
+    *,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    result = shell_runner(
+        args,
+        cwd=str(cwd) if cwd is not None else None,
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise HarnessError(result.stderr.strip() or f"command failed: {args[0]}")
+    return result
+
+
+def _read_deep_health(
+    health_url: str,
+    health_client: httpx.Client | None,
+) -> dict[str, Any]:
+    if health_client is not None:
+        response = health_client.get(health_url, timeout=10.0)
+    else:
+        with httpx.Client() as client:
+            response = client.get(health_url, timeout=10.0)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("deep health payload is not an object")
+    return payload
+
+
+def _model_probe_command(compose: ComposeTarget, service: str) -> list[str]:
+    code = (
+        "from xagent.adapters.llm import get_llm_client; "
+        "from xagent.infra.settings import get_settings; "
+        "cfg=get_settings().llm; "
+        "print(get_llm_client().effective_model); "
+        "print(cfg.ollama_model or cfg.default_model)"
+    )
+    return compose.command("exec", "-T", service, "python", "-c", code)
+
+
+def _celery_probe_command(compose: ComposeTarget, probe: str) -> list[str]:
+    return compose.command(
+        "exec",
+        "-T",
+        "worker",
+        "celery",
+        "-A",
+        "xagent.worker.celery_app",
+        "inspect",
+        probe,
+        "--timeout=5",
+        "--json",
+    )
+
+
+def run_preflight(
+    *,
+    repo_root: Path,
+    compose: ComposeTarget,
+    health_url: str,
+    shell_runner: ShellRunner = subprocess.run,
+    health_client: httpx.Client | None = None,
+) -> PreflightSnapshot:
+    service_ids: dict[str, str] = {}
+    protected_ids: dict[str, str] = {}
+    try:
+        git_status = _run_readonly(
+            shell_runner,
+            ["git", "status", "--short"],
+            cwd=repo_root,
+        )
+        if git_status.stdout.strip():
+            return _preflight_failure("git_dirty", "Git worktree is not clean")
+
+        ps = _run_readonly(
+            shell_runner,
+            compose.command(
+                "--profile",
+                "mcp",
+                "--profile",
+                "observability",
+                "ps",
+                "--format",
+                "json",
+            ),
+            cwd=repo_root,
+        )
+        rows = _parse_json_rows(ps.stdout)
+        services = {str(row.get("Service") or ""): row for row in rows}
+        for name in PREFLIGHT_SERVICES:
+            row = services.get(name)
+            if row is None:
+                return _preflight_failure(
+                    "service_unhealthy",
+                    f"required service is missing: {name}",
+                    service_ids=service_ids,
+                )
+            state = str(row.get("State") or "").lower()
+            health = str(row.get("Health") or "").lower()
+            if state != "running" or health != "healthy":
+                return _preflight_failure(
+                    "service_unhealthy",
+                    f"required service is not healthy: {name}",
+                    service_ids=service_ids,
+                )
+            service_ids[name] = str(row.get("ID") or row.get("Id") or "")
+
+        protected = _run_readonly(
+            shell_runner,
+            [
+                "docker",
+                "inspect",
+                "--format",
+                "{{json .}}",
+                *PROTECTED_CONTAINERS,
+            ],
+            cwd=repo_root,
+        )
+        protected_rows = _parse_json_rows(protected.stdout)
+        protected_by_name = {
+            str(row.get("Name") or "").removeprefix("/"): row for row in protected_rows
+        }
+        for name in PROTECTED_CONTAINERS:
+            row = protected_by_name.get(name)
+            state = row.get("State") if isinstance(row, dict) else None
+            if not isinstance(state, dict):
+                return _preflight_failure(
+                    "protected_container_unhealthy",
+                    f"protected container is missing: {name}",
+                    service_ids=service_ids,
+                    protected_container_ids=protected_ids,
+                )
+            health = state.get("Health")
+            health_status = health.get("Status") if isinstance(health, dict) else ""
+            if state.get("Status") != "running" or health_status != "healthy":
+                return _preflight_failure(
+                    "protected_container_unhealthy",
+                    f"protected container is not healthy: {name}",
+                    service_ids=service_ids,
+                    protected_container_ids=protected_ids,
+                )
+            protected_ids[name] = str(row.get("Id") or "")
+
+        deep = _read_deep_health(health_url, health_client)
+        checks = deep.get("checks")
+        if not isinstance(checks, dict) or any(
+            not isinstance(checks.get(name), dict)
+            or checks[name].get("status") != "healthy"
+            for name in ("database", "redis", "qdrant")
+        ):
+            return _preflight_failure(
+                "deep_health_failed",
+                "database, redis, or qdrant deep health is not healthy",
+                service_ids=service_ids,
+                protected_container_ids=protected_ids,
+            )
+
+        ping = _run_readonly(
+            shell_runner,
+            _celery_probe_command(compose, "ping"),
+            cwd=repo_root,
+        )
+        ping_payload = json.loads(ping.stdout or "{}")
+        if (
+            not isinstance(ping_payload, dict)
+            or not ping_payload
+            or any(
+                not isinstance(value, dict) or value.get("ok") != "pong"
+                for value in ping_payload.values()
+            )
+        ):
+            return _preflight_failure(
+                "worker_pong_failed",
+                "worker pong did not return a valid node",
+                service_ids=service_ids,
+                protected_container_ids=protected_ids,
+            )
+
+        accepted_models = {"ollama/qwen3:4b", "ollama_chat/qwen3:4b"}
+        for service in ("api", "worker"):
+            result = _run_readonly(
+                shell_runner,
+                _model_probe_command(compose, service),
+                cwd=repo_root,
+            )
+            lines = [
+                line.strip() for line in result.stdout.splitlines() if line.strip()
+            ]
+            if (
+                len(lines) != 2
+                or lines[0] not in accepted_models
+                or lines[1] != "qwen3:4b"
+            ):
+                return _preflight_failure(
+                    "model_mismatch",
+                    f"{service} model does not match the R3 baseline",
+                    service_ids=service_ids,
+                    protected_container_ids=protected_ids,
+                )
+
+        for probe in ("active", "reserved", "scheduled"):
+            result = _run_readonly(
+                shell_runner,
+                _celery_probe_command(compose, probe),
+                cwd=repo_root,
+            )
+            payload = json.loads(result.stdout or "{}")
+            if not isinstance(payload, dict) or any(payload.values()):
+                return _preflight_failure(
+                    "worker_not_idle",
+                    f"worker {probe} queue is not empty",
+                    service_ids=service_ids,
+                    protected_container_ids=protected_ids,
+                )
+    except (
+        HarnessError,
+        httpx.HTTPError,
+        json.JSONDecodeError,
+        ValueError,
+        TypeError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as exc:
+        return _preflight_failure(
+            "preflight_command_failed",
+            str(exc),
+            service_ids=service_ids,
+            protected_container_ids=protected_ids,
+        )
+    return PreflightSnapshot(
+        passed=True,
+        code="passed",
+        error="",
+        model="qwen3:4b",
+        service_ids=service_ids,
+        protected_container_ids=protected_ids,
+    )
 
 
 @dataclass(frozen=True, slots=True)

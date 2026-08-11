@@ -16,13 +16,16 @@ from scripts.r3_model_reliability import (
     ComposeTarget,
     FailureCode,
     LogsAudit,
+    PreflightSnapshot,
     ProductApiClient,
     SampleKind,
     SampleResult,
+    audit_logs,
     build_sample_plan,
     build_summary,
     nearest_rank_percentile,
     render_markdown_report,
+    run_preflight,
     run_chat_sample,
     run_file_write_sample,
     run_scheduler_sample,
@@ -865,6 +868,162 @@ class R3FileWriteTests(unittest.TestCase):
         self.assertEqual(
             calls.count(("POST", f"/api/v1/development-tasks/{'d' * 32}/reject")),
             0,
+        )
+
+
+class R3PreflightTests(unittest.TestCase):
+    service_names = (
+        "api",
+        "worker",
+        "web",
+        "postgres",
+        "redis",
+        "qdrant",
+        "platform-mcp",
+        "prometheus",
+        "grafana",
+    )
+
+    def _run(
+        self,
+        *,
+        dirty_git: bool = False,
+        unhealthy_service: str = "",
+        protected_healthy: bool = True,
+        deep_redis: str = "healthy",
+        pong: bool = True,
+        model: str = "ollama/qwen3:4b",
+        configured_model: str = "qwen3:4b",
+        busy_probe: str = "",
+    ) -> tuple[PreflightSnapshot, list[list[str]]]:
+        calls: list[list[str]] = []
+        services = [
+            {
+                "Service": name,
+                "State": "running",
+                "Health": "unhealthy" if name == unhealthy_service else "healthy",
+                "ID": f"id-{name}",
+            }
+            for name in self.service_names
+        ]
+        protected = [
+            {
+                "Id": f"protected-{name}",
+                "Name": f"/{name}",
+                "State": {
+                    "Status": "running",
+                    "Health": {
+                        "Status": "healthy" if protected_healthy else "unhealthy"
+                    },
+                },
+            }
+            for name in ("aicg-minio", "aicg-postgres")
+        ]
+
+        def shell_runner(
+            args: list[str], **_kwargs: object
+        ) -> subprocess.CompletedProcess[str]:
+            calls.append(args)
+            stdout = ""
+            if args[:2] == ["git", "status"]:
+                stdout = " M dirty.txt\n" if dirty_git else ""
+            elif args[:2] == ["docker", "inspect"]:
+                stdout = "\n".join(json.dumps(item) for item in protected)
+            elif "ps" in args and "--format" in args:
+                stdout = json.dumps(services)
+            elif "get_llm_client" in " ".join(args):
+                stdout = f"{model}\n{configured_model}\n"
+            elif "inspect" in args and "ping" in args:
+                stdout = json.dumps({"celery@worker": {"ok": "pong"}} if pong else {})
+            elif "inspect" in args:
+                probe = next(
+                    name for name in ("active", "reserved", "scheduled") if name in args
+                )
+                stdout = json.dumps(
+                    {"celery@worker": [{}] if probe == busy_probe else []}
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=stdout, stderr=""
+            )
+
+        def health_handler(_request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "status": "healthy" if deep_redis == "healthy" else "degraded",
+                    "checks": {
+                        "database": {"status": "healthy"},
+                        "redis": {"status": deep_redis},
+                        "qdrant": {"status": "healthy"},
+                    },
+                },
+            )
+
+        snapshot = run_preflight(
+            repo_root=Path("."),
+            compose=ComposeTarget(Path("compose.yml"), Path("env"), "xagent-r2"),
+            health_url="http://xagent.test/health/deep",
+            shell_runner=shell_runner,
+            health_client=httpx.Client(transport=httpx.MockTransport(health_handler)),
+        )
+        return snapshot, calls
+
+    def test_preflight_passes_with_read_only_commands(self) -> None:
+        snapshot, calls = self._run()
+
+        self.assertTrue(snapshot.passed)
+        self.assertEqual(snapshot.model, "qwen3:4b")
+        self.assertEqual(set(snapshot.service_ids), set(self.service_names))
+        self.assertEqual(
+            set(snapshot.protected_container_ids), {"aicg-minio", "aicg-postgres"}
+        )
+        forbidden = {"down", "up", "restart", "rm", "prune", "pause", "unpause"}
+        self.assertFalse(any(forbidden.intersection(call) for call in calls))
+
+    def test_preflight_rejects_dirty_git_before_docker(self) -> None:
+        snapshot, calls = self._run(dirty_git=True)
+
+        self.assertFalse(snapshot.passed)
+        self.assertEqual(snapshot.code, "git_dirty")
+        self.assertEqual(len(calls), 1)
+
+    def test_preflight_rejects_unhealthy_service_or_protected_container(self) -> None:
+        with self.subTest("service"):
+            snapshot, _ = self._run(unhealthy_service="grafana")
+            self.assertEqual(snapshot.code, "service_unhealthy")
+        with self.subTest("protected"):
+            snapshot, _ = self._run(protected_healthy=False)
+            self.assertEqual(snapshot.code, "protected_container_unhealthy")
+
+    def test_preflight_rejects_health_model_pong_and_busy_worker(self) -> None:
+        cases = (
+            ({"deep_redis": "degraded"}, "deep_health_failed"),
+            ({"pong": False}, "worker_pong_failed"),
+            ({"model": "ollama/qwen2.5:7b"}, "model_mismatch"),
+            ({"configured_model": "qwen2.5:7b"}, "model_mismatch"),
+            ({"busy_probe": "reserved"}, "worker_not_idle"),
+        )
+        for kwargs, code in cases:
+            with self.subTest(code=code, kwargs=kwargs):
+                snapshot, _ = self._run(**kwargs)
+                self.assertFalse(snapshot.passed)
+                self.assertEqual(snapshot.code, code)
+
+
+class R3LogsTests(unittest.TestCase):
+    def test_log_audit_returns_counts_only(self) -> None:
+        audit = audit_logs(
+            "MockLLM\nTraceback (most recent call last)\n"
+            "qwen3:4b qwen3:4b\n/api/v1/creative\n/api/v1/media/tasks"
+        )
+
+        self.assertEqual(audit.mock_hits, 1)
+        self.assertEqual(audit.traceback_hits, 1)
+        self.assertEqual(audit.qwen_route_hits, 2)
+        self.assertEqual(audit.forbidden_route_hits, 2)
+        self.assertEqual(
+            set(audit.to_public_dict()),
+            {"mock_hits", "forbidden_route_hits", "traceback_hits", "qwen_route_hits"},
         )
 
 
