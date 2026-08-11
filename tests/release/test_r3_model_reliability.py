@@ -905,13 +905,22 @@ class R3PreflightTests(unittest.TestCase):
         model: str = "ollama/qwen3:4b",
         configured_model: str = "qwen3:4b",
         busy_probe: str = "",
+        healthless_observability: bool = False,
+        observability_ok: bool = True,
+        celery_log_prefix: bool = False,
     ) -> tuple[PreflightSnapshot, list[list[str]]]:
         calls: list[list[str]] = []
         services = [
             {
                 "Service": name,
                 "State": "running",
-                "Health": "unhealthy" if name == unhealthy_service else "healthy",
+                "Health": (
+                    ""
+                    if healthless_observability and name in {"prometheus", "grafana"}
+                    else "unhealthy"
+                    if name == unhealthy_service
+                    else "healthy"
+                ),
                 "ID": f"id-{name}",
             }
             for name in self.service_names
@@ -935,6 +944,7 @@ class R3PreflightTests(unittest.TestCase):
         ) -> subprocess.CompletedProcess[str]:
             calls.append(args)
             stdout = ""
+            returncode = 0
             if args[:2] == ["git", "status"]:
                 stdout = " M dirty.txt\n" if dirty_git else ""
             elif args[:2] == ["docker", "inspect"]:
@@ -943,6 +953,9 @@ class R3PreflightTests(unittest.TestCase):
                 stdout = json.dumps(services)
             elif "get_llm_client" in " ".join(args):
                 stdout = f"{model}\n{configured_model}\n"
+            elif "prometheus:9090" in " ".join(args):
+                stdout = "healthy\n" if observability_ok else ""
+                returncode = 0 if observability_ok else 1
             elif "inspect" in args and "ping" in args:
                 stdout = json.dumps({"celery@worker": {"ok": "pong"}} if pong else {})
             elif "inspect" in args:
@@ -952,8 +965,10 @@ class R3PreflightTests(unittest.TestCase):
                 stdout = json.dumps(
                     {"celery@worker": [{}] if probe == busy_probe else []}
                 )
+            if celery_log_prefix and "celery" in args and "inspect" in args and stdout:
+                stdout = f"celery initialized\n{stdout}"
             return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=stdout, stderr=""
+                args=args, returncode=returncode, stdout=stdout, stderr=""
             )
 
         def health_handler(_request: httpx.Request) -> httpx.Response:
@@ -1018,6 +1033,23 @@ class R3PreflightTests(unittest.TestCase):
                 snapshot, _ = self._run(**kwargs)
                 self.assertFalse(snapshot.passed)
                 self.assertEqual(snapshot.code, code)
+
+    def test_preflight_accepts_healthless_observability_with_live_endpoints(
+        self,
+    ) -> None:
+        snapshot, _ = self._run(
+            healthless_observability=True,
+            celery_log_prefix=True,
+        )
+
+        self.assertTrue(snapshot.passed)
+
+        failed, _ = self._run(
+            healthless_observability=True,
+            observability_ok=False,
+        )
+        self.assertFalse(failed.passed)
+        self.assertEqual(failed.code, "service_unhealthy")
 
 
 class R3LogsTests(unittest.TestCase):

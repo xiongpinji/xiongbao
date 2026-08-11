@@ -43,6 +43,7 @@ PREFLIGHT_SERVICES = (
     "grafana",
 )
 PROTECTED_CONTAINERS = ("aicg-minio", "aicg-postgres")
+HEALTHLESS_OBSERVABILITY_SERVICES = {"prometheus", "grafana"}
 
 
 class HarnessError(RuntimeError):
@@ -340,6 +341,29 @@ def _celery_probe_command(compose: ComposeTarget, probe: str) -> list[str]:
     )
 
 
+def _observability_probe_command(compose: ComposeTarget) -> list[str]:
+    code = (
+        "import httpx,sys; "
+        "prom=httpx.get('http://prometheus:9090/-/healthy',timeout=5); "
+        "graf=httpx.get('http://grafana:3000/api/health',timeout=5); "
+        "ok=(prom.status_code==200 and graf.status_code==200 "
+        "and graf.json().get('database')=='ok'); "
+        "print('healthy' if ok else 'unhealthy'); sys.exit(0 if ok else 1)"
+    )
+    return compose.command("exec", "-T", "api", "python", "-c", code)
+
+
+def _parse_last_json_object(text: str) -> dict[str, Any]:
+    for line in reversed(text.splitlines()):
+        try:
+            payload = json.loads(line.strip())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    raise ValueError("command output does not contain a JSON object")
+
+
 def run_preflight(
     *,
     repo_root: Path,
@@ -384,13 +408,29 @@ def run_preflight(
                 )
             state = str(row.get("State") or "").lower()
             health = str(row.get("Health") or "").lower()
-            if state != "running" or health != "healthy":
+            health_ok = health == "healthy" or (
+                not health and name in HEALTHLESS_OBSERVABILITY_SERVICES
+            )
+            if state != "running" or not health_ok:
                 return _preflight_failure(
                     "service_unhealthy",
                     f"required service is not healthy: {name}",
                     service_ids=service_ids,
                 )
             service_ids[name] = str(row.get("ID") or row.get("Id") or "")
+
+        try:
+            _run_readonly(
+                shell_runner,
+                _observability_probe_command(compose),
+                cwd=repo_root,
+            )
+        except HarnessError:
+            return _preflight_failure(
+                "service_unhealthy",
+                "Prometheus or Grafana endpoint is not healthy",
+                service_ids=service_ids,
+            )
 
         protected = _run_readonly(
             shell_runner,
@@ -447,7 +487,7 @@ def run_preflight(
             _celery_probe_command(compose, "ping"),
             cwd=repo_root,
         )
-        ping_payload = json.loads(ping.stdout or "{}")
+        ping_payload = _parse_last_json_object(ping.stdout)
         if (
             not isinstance(ping_payload, dict)
             or not ping_payload
@@ -491,7 +531,7 @@ def run_preflight(
                 _celery_probe_command(compose, probe),
                 cwd=repo_root,
             )
-            payload = json.loads(result.stdout or "{}")
+            payload = _parse_last_json_object(result.stdout)
             if not isinstance(payload, dict) or any(payload.values()):
                 return _preflight_failure(
                     "worker_not_idle",
@@ -664,16 +704,26 @@ def _read_runtime_identity(
     service_ids: dict[str, str] = {}
     for name in PREFLIGHT_SERVICES:
         row = services.get(name)
+        health = str(row.get("Health") or "").lower() if row is not None else ""
+        health_ok = health == "healthy" or (
+            not health and name in HEALTHLESS_OBSERVABILITY_SERVICES
+        )
         if (
             row is None
             or str(row.get("State") or "").lower() != "running"
-            or str(row.get("Health") or "").lower() != "healthy"
+            or not health_ok
         ):
             raise HarnessError(f"runtime service is not healthy: {name}")
         container_id = str(row.get("ID") or row.get("Id") or "")
         if not container_id:
             raise HarnessError(f"runtime service identity is missing: {name}")
         service_ids[name] = container_id
+
+    _run_readonly(
+        shell_runner,
+        _observability_probe_command(compose),
+        cwd=repo_root,
+    )
 
     protected = _run_readonly(
         shell_runner,
