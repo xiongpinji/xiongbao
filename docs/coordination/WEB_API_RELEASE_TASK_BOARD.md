@@ -3,15 +3,16 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R2 Web/API 本地 Full Compose 试运行已完成，等待 reviewer/owner 后续发布决策。
-- 设计源：`docs/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design.md`。
+- 当前阶段：R3-A 真实 Ollama 可靠性基线已完成设计和实施计划，进入 READY。
+- 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
+- R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - P2 计划：`docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md`。
 - 当前分支：`feature/webapi-r2-staging-readiness`。
 - 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening`。
 - 排除范围：短剧业务链路、Tauri 桌面端、多机 HA、E2B 和客户现场演练。
 - Owner：Codex。
-- 最后更新时间：2026-08-10。
+- 最后更新时间：2026-08-11。
 
 ## In Progress
 
@@ -19,7 +20,7 @@
 
 ## Ready
 
-- 暂无。
+- [R3-A] 真实 Ollama 可靠性基线 | 状态：READY | 设计与逐步 TDD 计划已通过；正式工具、离线门和 50 样本均未开始。
 
 ## Queued
 
