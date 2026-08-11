@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-A 全新正式批次已获 Owner 批准，状态 CLAIMED；Scheduler harness 修复已通过合同，等待 clean preflight 后执行唯一新批次。
+- 当前阶段：R3-A 完整 50 样本正式批次已完成，状态 PARTIAL；Chat 存在 1 条假成功，file_write 仅 5/10 完整成功，等待可靠性缺陷修复规划。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -16,7 +16,7 @@
 
 ## In Progress
 
-- [R3-A] 真实 Ollama 可靠性基线 | 状态：CLAIMED | Owner 已批准启动全新正式批次；旧批次 `20260811T044822Z-9fb876` 保持 `aborted` 且不可续写，证据见 `docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。Scheduler attempt ID 映射修复 `8101768` 已通过合同；新批次仅在 clean Git、同 checkout 无冲突、Worker 空闲与 `--preflight-only` 全部通过后启动一次。
+- [R3-A] 真实 Ollama 可靠性基线 | 状态：PARTIAL | 批次 `20260811T064937Z-2ec342` 完整记录 50/50：Chat 29/30、P95 9.139 秒，但 `chat-001` 为 succeeded + 截断答案的假成功；Scheduler 10/10、P95 40.381 秒且全部暂停；file_write 5/10、P95 180.539 秒，另 5 条约 180 秒 timeout/missing_artifact，均 fail-closed 且清理成功。租户隔离通过，MockLLM/forbidden/cleanup failure 均为 0。下一门是先修复 Chat 假成功与 file_write 可靠性，不直接重跑。证据：`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。
 
 ## Ready
 
