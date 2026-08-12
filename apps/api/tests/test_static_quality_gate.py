@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sysconfig
 from datetime import date
 from pathlib import Path
 
@@ -47,6 +48,16 @@ def test_mypy_exemption_rejects_web_api_scope_error() -> None:
         assert "Web/API 范围" in str(exc)
     else:
         raise AssertionError("Web/API mypy 问题必须被拒绝")
+
+
+def test_mypy_command_uses_parent_site_packages_with_site_disabled() -> None:
+    gate = _load_quality_gate()
+
+    command = gate._tool_command("mypy", "xagent")
+    bootstrap = command[3]
+
+    assert repr(sysconfig.get_paths()["purelib"]) in bootstrap
+    assert "sysconfig.get_paths" not in bootstrap
 
 
 def test_static_quality_rejects_expired_or_changed_fingerprint() -> None:

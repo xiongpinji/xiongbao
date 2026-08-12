@@ -32,11 +32,11 @@
     "scope": "Ruff ASYNC221/ASYNC230/ASYNC240 的精确文件、规则、行列指纹"
   },
   "mypy_short_drama_excluded": {
-    "count": 0,
-    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "count": 4,
+    "sha256": "4be9c4ff75c9cb73f9c6987dfb2f7fa2f401200efba8c866087ac767a11aa95d",
     "owner": "creative-studio",
     "reason": "用户明确将独立运行的短剧项目排除，待其稳定后按独立接入计划处理",
     "expires_on": "2026-12-31",
-    "scope": "短剧路径继续排除在当前 Web/API 发布范围外；当前 mypy 发现为 0，其他 Web/API 问题仍为零容忍"
+    "scope": "仅 creative_studio 路径中的 4 个 mypy 问题；其他 Web/API 问题为零容忍"
   }
 }

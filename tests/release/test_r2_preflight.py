@@ -109,10 +109,11 @@ class R2PreflightTest(unittest.TestCase):
             root = Path(directory)
             template = root / "r2.env.example"
             target = root / "r2.env.local"
+            system32 = Path("C:/Windows/System32")
             template.write_text("POSTGRES_PASSWORD=__GENERATE__\n", encoding="utf-8")
 
             with mock.patch("scripts.r2_preflight.os.name", "nt"), \
-                    mock.patch("scripts.r2_preflight.get_windows_system32", return_value=Path("C:/Windows/System32")), \
+                    mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
                     mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
                 subprocess_run.return_value = mock.Mock(returncode=0, stdout="Everyone\n", stderr="")
                 with self.assertRaises(RuntimeError):

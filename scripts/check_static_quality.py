@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -132,9 +133,10 @@ def validate_baseline(
 
 def _tool_command(tool: str, *args: str) -> list[str]:
     if tool == "mypy":
+        purelib = sysconfig.get_paths()["purelib"]
         bootstrap = (
-            "import runpy,sys,sysconfig;"
-            "sys.path.append(sysconfig.get_paths()['purelib']);"
+            "import runpy,sys;"
+            f"sys.path.append({purelib!r});"
             "module=sys.argv.pop(1);"
             "runpy.run_module(module,run_name='__main__')"
         )
