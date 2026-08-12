@@ -118,6 +118,9 @@ jobs:
       - name: R2 compose contract
         run: python -m unittest discover -s tests/release -p "test_r2_*.py" -v
 
+      - name: R3 load contract
+        run: python -m unittest discover -s tests/release -p "test_r3_load_contract.py" -v
+
       - name: R2 compose render
         env:
           POSTGRES_PASSWORD: config-only-postgres-strong-value
@@ -274,6 +277,7 @@ jobs:
     env:
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "false"
+      XAGENT_SECURITY__RATE_LIMIT_ENABLED: "false"
       XAGENT_DB__URL: sqlite+aiosqlite:///./xagent-load.db
     steps:
       - uses: actions/checkout@v4

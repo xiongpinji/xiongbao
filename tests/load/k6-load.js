@@ -21,10 +21,12 @@ const apiLatency = new Trend("api_latency", true);
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
 
 export const options = {
+  summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
   scenarios: {
-    // 渐进加压
-    ramp_up: {
+    // API 渐进加压
+    api_traffic: {
       executor: "ramping-vus",
+      exec: "apiTraffic",
       startVUs: 0,
       stages: [
         { duration: "30s", target: 10 },   // 预热
@@ -33,29 +35,34 @@ export const options = {
         { duration: "30s", target: 0 },    // 冷却
       ],
     },
+    // 对齐生产 Prometheus 的 15 秒抓取周期，避免把观测端点当业务洪泛入口。
+    metrics_scrape: {
+      executor: "constant-arrival-rate",
+      exec: "metricsScrape",
+      rate: 1,
+      timeUnit: "15s",
+      duration: "2m30s",
+      preAllocatedVUs: 1,
+      maxVUs: 1,
+    },
   },
   thresholds: {
-    http_req_duration: ["p(95)<200", "p(99)<500"],
-    errors: ["rate<0.05"],
+    "http_req_duration{scenario:api_traffic}": ["p(95)<200", "p(99)<500"],
+    "http_req_duration{scenario:metrics_scrape}": ["p(95)<500"],
+    "errors{scenario:api_traffic}": ["rate<0.05"],
+    "errors{scenario:metrics_scrape}": ["rate<0.001"],
     api_latency: ["p(95)<300"],
+    "checks{scenario:api_traffic}": ["rate>0.99"],
+    "checks{scenario:metrics_scrape}": ["rate>0.999"],
   },
 };
 
-export default function () {
+export function apiTraffic() {
   group("健康检查", () => {
     const res = http.get(`${BASE_URL}/health`);
     check(res, {
       "health 200": (r) => r.status === 200,
       "health body": (r) => r.json("status") === "ok",
-    });
-    errorRate.add(res.status !== 200);
-  });
-
-  group("指标端点", () => {
-    const res = http.get(`${BASE_URL}/metrics`);
-    check(res, {
-      "metrics 200": (r) => r.status === 200,
-      "metrics prometheus": (r) => r.body.includes("xagent_"),
     });
     errorRate.add(res.status !== 200);
   });
@@ -86,13 +93,24 @@ export default function () {
       { headers: { "Content-Type": "application/json" } }
     );
     check(res, {
-      "auth reject": (r) => [401, 404, 422].includes(r.status),
+      "auth reject": (r) => [401, 404, 422, 429].includes(r.status),
     });
-    // 401 不算错误
+    // 认证拒绝（含防爆破 429）不算服务错误。
     errorRate.add(res.status >= 500);
   });
 
   sleep(0.1); // 100ms 间隔
+}
+
+export function metricsScrape() {
+  group("指标端点", () => {
+    const res = http.get(`${BASE_URL}/metrics`);
+    check(res, {
+      "metrics 200": (r) => r.status === 200,
+      "metrics prometheus": (r) => r.body.includes("xagent_"),
+    });
+    errorRate.add(res.status !== 200);
+  });
 }
 
 export function handleSummary(data) {
@@ -103,8 +121,9 @@ export function handleSummary(data) {
 
 function textSummary(data) {
   const metrics = data.metrics;
-  const p95 = metrics.http_req_duration?.values?.["p(95)"] || 0;
-  const p99 = metrics.http_req_duration?.values?.["p(99)"] || 0;
+  const apiDuration = metrics["http_req_duration{scenario:api_traffic}"];
+  const p95 = apiDuration?.values?.["p(95)"] || 0;
+  const p99 = apiDuration?.values?.["p(99)"] || 0;
   const errs = metrics.errors?.values?.rate || 0;
   const rps = metrics.http_reqs?.values?.rate || 0;
   return `
