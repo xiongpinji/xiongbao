@@ -4,6 +4,8 @@ import ast
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_PATH = REPO_ROOT / "scripts" / "run_webapi_release_tests.py"
@@ -64,6 +66,42 @@ class R2BackendReleaseScopeTests(unittest.TestCase):
             workflow,
         )
         self.assertNotIn("name: Test (pytest)\n        run: pytest -q", workflow)
+
+    def test_image_publish_waits_for_every_release_gate(self) -> None:
+        workflow = yaml.safe_load(CI_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            set(workflow["jobs"]["docker-build"]["needs"]),
+            {
+                "backend",
+                "frontend",
+                "license-gate",
+                "config-governance",
+                "e2e-api",
+                "load-test",
+                "promptfoo-eval",
+                "release-version",
+            },
+        )
+
+    def test_image_and_release_conditions_preserve_candidate_branch_safety(
+        self,
+    ) -> None:
+        workflow = yaml.safe_load(CI_PATH.read_text(encoding="utf-8"))
+        jobs = workflow["jobs"]
+
+        self.assertIn("refs/heads/master", jobs["docker-build"]["if"])
+        self.assertIn("refs/tags/v", jobs["docker-build"]["if"])
+        self.assertIn("refs/heads/master", jobs["release-version"]["if"])
+        self.assertIn("refs/tags/v", jobs["release-version"]["if"])
+        self.assertEqual(jobs["release"]["if"], "startsWith(github.ref, 'refs/tags/v')")
+        version_step = next(
+            step
+            for step in jobs["release-version"]["steps"]
+            if step.get("name") == "Verify release versions"
+        )
+        self.assertIn("refs/tags/v*", version_step["run"])
+        self.assertIn('--tag "${GITHUB_REF_NAME}"', version_step["run"])
 
 
 if __name__ == "__main__":
