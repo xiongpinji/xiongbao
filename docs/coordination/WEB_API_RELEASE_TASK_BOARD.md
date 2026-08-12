@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-A/R3-B 已 DONE；R3-C 远端候选 `773570e` 已触发 Hosted CI，但 run `31574864402` 在 backend/config 门失败；本地修正候选 `1b2acdb` 已完成并等待 Owner 对下一次 fast-forward 的单独授权。
+- 当前阶段：R3-A/R3-B 已 DONE；R3-C 远端候选 `1b2acdb` 的 Hosted CI run `31580023074` 仅 load-test 失败；本地负载门禁修正 `5fbf3fd` 已完成并等待 Owner 对该精确 SHA 的下一次 fast-forward 单独授权。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -20,7 +20,7 @@
 
 ## Ready
 
-- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | `1fb2098` 因 workflow branch allowlist 缺口未触发 CI；获批后快进的 `773570e` 已触发 run `31574864402`，frontend、license、API E2E 通过，backend 因短剧排除基线误写为 0 失败，config 因 Linux 上 mock `os.name` 后构造 `WindowsPath` 失败，load/promptfoo 因依赖门跳过，发布作业按设计跳过。本地修正候选 `1b2acdb905478ad025c7019ea1bd5dcc137990ac` 已通过独立复审、R2 43/43、后端发布范围 744 passed/8 skipped 和精确静态门。再次获批前不得更新远端候选、直推 `master`、创建 PR 或 `v*` tag。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
+- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | 远端候选 `1b2acdb905478ad025c7019ea1bd5dcc137990ac` 已触发 Hosted CI run `31580023074`；backend、frontend、license、config、API E2E 和 promptfoo 全绿，仅 load-test 因旧脚本以业务并发每轮实时抓取 `/metrics` 而超过 P95 门失败，发布作业按设计跳过。本地修正 `5fbf3fdae95a4261444357dbf13593155baa30e1` 将 Prometheus 抓取按生产 15 秒周期独立建模，保留业务 API P95 < 200 ms / P99 < 500 ms 门槛；同曲线本地结果从 exit 99、P95 233.5 ms 转为 exit 0、P95 167.2 ms、P99 292.7 ms，R2 43/43、R3 5/5、完整 Web/API 发布范围 exit 0、Python 3.11 精确静态指纹和两轮独立复审均通过。再次获批前不得更新远端候选、直推 `master`、创建 PR 或 `v*` tag。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
 
 ## Queued
 
