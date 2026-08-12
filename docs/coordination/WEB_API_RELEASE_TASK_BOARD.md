@@ -20,7 +20,7 @@
 
 ## Ready
 
-- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | 初始远端 SHA `1fb2098f0729909701f686b76ffe97c9b3409d13` 的 workflow runs 精确为 0，已废止为不可合并候选；本地已加入 `candidate/**` push 触发合同，修正候选的显式 SHA 由后续交接提交记录。再次获批前不得更新远端候选、不得直推 `master`、不得创建 PR 或 `v*` tag。镜像发布仍要求等待版本一致性、backend、frontend、license、config、API E2E、load 与 promptfoo 八门。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
+- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | 初始远端 SHA `1fb2098f0729909701f686b76ffe97c9b3409d13` 的 workflow runs 精确为 0，已废止为不可合并候选；本地修正候选为 `773570e12aadc4095434e8cd0a0c41db02d74f54`，已加入 `candidate/**` push 触发合同。再次获批前不得更新远端候选、不得直推 `master`、不得创建 PR 或 `v*` tag。镜像发布仍要求等待版本一致性、backend、frontend、license、config、API E2E、load 与 promptfoo 八门。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
 
 ## Queued
 

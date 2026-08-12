@@ -7,6 +7,7 @@
 
 - 本地准备基线：`43b395177a0a2cd4f682417a40e449638d7ec8b9`，`master` 相对 `origin/master` ahead 116。
 - 首次候选提交 `1fb2098f0729909701f686b76ffe97c9b3409d13` 已创建远端分支，但因旧 workflow 的 branch allowlist 排除 `candidate/**`，GitHub API 精确返回该 SHA 的 workflow runs 为 0。该提交已被后续修正候选取代，不得进入 PR、master 或 tag。
+- 修正候选提交：`773570e12aadc4095434e8cd0a0c41db02d74f54`。该提交加入 `candidate/**` push 触发合同，并保留候选分支不执行版本发布、镜像推送和 Release 的安全条件。
 - 远端 `origin/master`：`fa8c923c21534c53782d832aa5727735f1aafabd`。
 - `v1.0.0` 的 peeled commit 同为 `fa8c923c21534c53782d832aa5727735f1aafabd`；标签和历史 Release 不得移动或复用。
 - 当前本地 116 个提交没有 Hosted CI 证据；远端最近一次 master CI 只覆盖 `fa8c923`。
@@ -58,10 +59,10 @@
 首次远端动作的建议命令仅供审批后执行：
 
 ```powershell
-git push origin <corrected_candidate_sha>:refs/heads/candidate/webapi-v1.1.0-20260812
+git push origin 773570e12aadc4095434e8cd0a0c41db02d74f54:refs/heads/candidate/webapi-v1.1.0-20260812
 ```
 
-首次已获批命令仅创建了无 CI 运行的 `1fb2098` 分支。修正候选的显式 SHA 只记录在其后的本地交接提交中；在再次获得授权前，不得 fast-forward 远端分支。
+首次已获批命令仅创建了无 CI 运行的 `1fb2098` 分支。修正候选为 `773570e12aadc4095434e8cd0a0c41db02d74f54`；在再次获得授权前，不得 fast-forward 远端分支。
 
 ## 6. 候选分支 CI 通过标准
 
@@ -73,4 +74,4 @@ git push origin <corrected_candidate_sha>:refs/heads/candidate/webapi-v1.1.0-202
 
 ## 7. 当前结论
 
-远端存在初始候选分支，但 `1fb2098` 没有任何 Hosted CI 运行，不能作为可合并候选。候选触发器修复完成后，下一外部动作必须重新申请：只允许把本地交接提交记录的修正候选 SHA fast-forward 到同名候选分支。不得把既有授权解释为替代 SHA push、master push、PR、tag、Release 或部署授权。
+远端存在初始候选分支，但 `1fb2098` 没有任何 Hosted CI 运行，不能作为可合并候选。下一外部动作必须重新申请：只允许把修正候选 `773570e12aadc4095434e8cd0a0c41db02d74f54` fast-forward 到同名候选分支。不得把既有授权解释为替代 SHA push、master push、PR、tag、Release 或部署授权。
