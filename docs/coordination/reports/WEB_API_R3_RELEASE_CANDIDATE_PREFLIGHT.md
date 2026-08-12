@@ -7,10 +7,11 @@
 
 - 本地准备基线：`43b395177a0a2cd4f682417a40e449638d7ec8b9`，`master` 相对 `origin/master` ahead 116。
 - 首次候选提交 `1fb2098f0729909701f686b76ffe97c9b3409d13` 已创建远端分支，但因旧 workflow 的 branch allowlist 排除 `candidate/**`，GitHub API 精确返回该 SHA 的 workflow runs 为 0。该提交已被后续修正候选取代，不得进入 PR、master 或 tag。
-- 修正候选提交：`773570e12aadc4095434e8cd0a0c41db02d74f54`。该提交加入 `candidate/**` push 触发合同，并保留候选分支不执行版本发布、镜像推送和 Release 的安全条件。
+- 第二候选提交 `773570e12aadc4095434e8cd0a0c41db02d74f54` 加入 `candidate/**` push 触发合同，并保留候选分支不执行版本发布、镜像推送和 Release 的安全条件。获批快进后已触发 Hosted CI run `31574864402`，但未全绿，不可合并。
+- 当前本地修正候选：`1b2acdb905478ad025c7019ea1bd5dcc137990ac`。该提交仅修复 Hosted CI 暴露的两个门禁根因及一个复审发现的虚拟环境依赖目录漂移；未改短剧产品代码或扩大发布范围。
 - 远端 `origin/master`：`fa8c923c21534c53782d832aa5727735f1aafabd`。
 - `v1.0.0` 的 peeled commit 同为 `fa8c923c21534c53782d832aa5727735f1aafabd`；标签和历史 Release 不得移动或复用。
-- 当前本地 116 个提交没有 Hosted CI 证据；远端最近一次 master CI 只覆盖 `fa8c923`。
+- Hosted CI 已覆盖到 `773570e`，但结论为 failure；新修正提交 `1b2acdb` 仍只有本地验证，尚无 Hosted CI 证据。远端 master 仍停留在 `fa8c923`。
 - API、Web、README 和 Web lockfile 已统一准备为 `1.1.0`；标签一致性仍由 `scripts/verify_release_versions.py` 强制。
 
 ## 2. 版本判断
@@ -56,13 +57,13 @@
 5. **tag/Release 授权**：再次核对版本事实源均为 `1.1.0`，Owner 单独批准后才创建 `v1.1.0`；等待 tag workflow 自动创建 Release。
 6. **部署授权**：目标环境、secret、备份、变更窗口、回滚负责人和签字齐备后，才按 Runbook 部署。tag/Release 不是部署授权。
 
-首次远端动作的建议命令仅供审批后执行：
+下一次远端动作的建议命令仅供重新审批后执行：
 
 ```powershell
-git push origin 773570e12aadc4095434e8cd0a0c41db02d74f54:refs/heads/candidate/webapi-v1.1.0-20260812
+git push origin 1b2acdb905478ad025c7019ea1bd5dcc137990ac:refs/heads/candidate/webapi-v1.1.0-20260812
 ```
 
-首次已获批命令仅创建了无 CI 运行的 `1fb2098` 分支。修正候选为 `773570e12aadc4095434e8cd0a0c41db02d74f54`；在再次获得授权前，不得 fast-forward 远端分支。
+`773570e` 的快进已单独获批并执行，但 CI run `31574864402` 失败。在再次获得对精确 SHA `1b2acdb905478ad025c7019ea1bd5dcc137990ac` 的授权前，不得再次 fast-forward 远端分支。
 
 ## 6. 候选分支 CI 通过标准
 
@@ -72,6 +73,18 @@ git push origin 773570e12aadc4095434e8cd0a0c41db02d74f54:refs/heads/candidate/we
 - CI 日志没有 secret、JWT 或真实凭据泄漏。
 - `origin/master` 与 `v1.0.0` 保持 `fa8c923`，直到后续 PR/merge 获得独立批准。
 
+### 6.1 首次真实 Hosted CI 结果
+
+- Run：`31574864402`，候选 SHA：`773570e12aadc4095434e8cd0a0c41db02d74f54`，结论：`failure`。
+- 通过：frontend、license-gate、e2e-api。
+- 失败：backend 的静态质量基线；config-governance 的 R2 contract。
+- 依赖跳过：load-test、promptfoo-eval。安全条件跳过：release-version、docker-build、release。
+- 完整 4112 行 CI 日志中 Bearer、JWT、private key 和 GitHub token 模式命中均为 0。
+- Backend 根因：R3 收口提交将明确排除的 `creative_studio` 4 项 mypy 精确基线误写为 0；CI 实测仍为 4 项，指纹 `4be9c4ff75c9cb73f9c6987dfb2f7fa2f401200efba8c866087ac767a11aa95d`。
+- Config 根因：Linux 测试在 mock `os.name="nt"` 后才构造 `Path("C:/Windows/System32")`，导致 `WindowsPath` 在非 Windows 平台抛 `NotImplementedError`。
+- 复审追加根因：静态门的 `-S` 子进程会在部分虚拟环境重新解析错误的 `site-packages`，可产生假 0。修复后子进程使用父解释器解析的 `purelib`，依赖漂移会 fail-closed。
+- 本地绿灯：R2 release contracts 43/43；后端发布范围 744 passed / 8 skipped；静态门 4 项短剧排除精确匹配；Linux Python 3.11 跨平台定向测试通过；独立复审 PASS，0 问题。
+
 ## 7. 当前结论
 
-远端存在初始候选分支，但 `1fb2098` 没有任何 Hosted CI 运行，不能作为可合并候选。下一外部动作必须重新申请：只允许把修正候选 `773570e12aadc4095434e8cd0a0c41db02d74f54` fast-forward 到同名候选分支。不得把既有授权解释为替代 SHA push、master push、PR、tag、Release 或部署授权。
+远端候选已在 `773570e` 触发真实 Hosted CI，但 run `31574864402` 失败，不能作为可合并候选。下一外部动作必须重新申请：只允许把本地修正候选 `1b2acdb905478ad025c7019ea1bd5dcc137990ac` fast-forward 到同名候选分支。不得把既有授权解释为替代 SHA push、master push、PR、tag、Release 或部署授权。
