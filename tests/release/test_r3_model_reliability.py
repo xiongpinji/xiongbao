@@ -11,7 +11,6 @@ from dataclasses import replace
 from pathlib import Path
 
 import httpx
-
 from scripts.r3_model_reliability import (
     BatchRecorder,
     BatchRunOutcome,
@@ -33,14 +32,13 @@ from scripts.r3_model_reliability import (
     generate_batch_id,
     nearest_rank_percentile,
     render_markdown_report,
-    run_preflight,
     run_chat_sample,
     run_file_write_sample,
+    run_preflight,
     run_reliability_batch,
     run_scheduler_sample,
     run_tenant_isolation_probe,
 )
-
 
 BATCH_ID = "20260811T010203Z-ab12cd"
 
@@ -55,9 +53,7 @@ def _sample_result(
     fail_closed: bool | None = None,
 ) -> SampleResult:
     spec = next(
-        item
-        for item in build_sample_plan(BATCH_ID)
-        if item.kind is kind and item.index == index
+        item for item in build_sample_plan(BATCH_ID) if item.kind is kind and item.index == index
     )
     return SampleResult(
         batch_id=BATCH_ID,
@@ -79,12 +75,8 @@ def _sample_result(
 
 def _passing_results() -> list[SampleResult]:
     results = [_sample_result(SampleKind.CHAT, index) for index in range(1, 31)]
-    results.extend(
-        _sample_result(SampleKind.SCHEDULER, index) for index in range(1, 11)
-    )
-    results.extend(
-        _sample_result(SampleKind.FILE_WRITE, index) for index in range(1, 11)
-    )
+    results.extend(_sample_result(SampleKind.SCHEDULER, index) for index in range(1, 11))
+    results.extend(_sample_result(SampleKind.FILE_WRITE, index) for index in range(1, 11))
     return results
 
 
@@ -94,12 +86,8 @@ class R3PlanAndSummaryTests(unittest.TestCase):
 
         self.assertEqual(len(plan), 50)
         self.assertEqual([item.kind for item in plan[:30]], [SampleKind.CHAT] * 30)
-        self.assertEqual(
-            [item.kind for item in plan[30:40]], [SampleKind.SCHEDULER] * 10
-        )
-        self.assertEqual(
-            [item.kind for item in plan[40:]], [SampleKind.FILE_WRITE] * 10
-        )
+        self.assertEqual([item.kind for item in plan[30:40]], [SampleKind.SCHEDULER] * 10)
+        self.assertEqual([item.kind for item in plan[40:]], [SampleKind.FILE_WRITE] * 10)
         self.assertEqual(plan[0].sample_id, "chat-001")
         self.assertEqual(plan[30].sample_id, "scheduler-001")
         self.assertEqual(plan[40].sample_id, "file-write-001")
@@ -258,9 +246,7 @@ class R3EvidenceWriterTests(unittest.TestCase):
             sample_payload = json.loads(sample_text)
             summary_text = (batch_dir / "summary.json").read_text("utf-8")
             summary_payload = json.loads(summary_text)
-            logs_payload = json.loads(
-                (batch_dir / "logs-audit.json").read_text("utf-8")
-            )
+            logs_payload = json.loads((batch_dir / "logs-audit.json").read_text("utf-8"))
             self.assertEqual(sample_payload["kind"], "chat")
             self.assertEqual(summary_payload["status"], "aborted")
             self.assertEqual(logs_payload["qwen_route_hits"], 1)
@@ -341,9 +327,7 @@ class R3ChatTests(unittest.TestCase):
 
         def handler(request: httpx.Request) -> httpx.Response:
             calls.append((request.method, request.url.path))
-            if request.method == "POST" and request.url.path.endswith(
-                "/stream/agents/run"
-            ):
+            if request.method == "POST" and request.url.path.endswith("/stream/agents/run"):
                 payload = json.loads(request.content)
                 self.assertEqual(payload["tool_mode"], "none")
                 self.assertEqual(payload["capabilities"], [])
@@ -354,18 +338,14 @@ class R3ChatTests(unittest.TestCase):
                     '"route":"chat_no_tools"}\n\n'
                 ]
                 if include_tool_call:
-                    chunks.append(
-                        'event: tool_call\ndata: {"kind":"tool_call","tool":"echo"}\n\n'
-                    )
+                    chunks.append('event: tool_call\ndata: {"kind":"tool_call","tool":"echo"}\n\n')
                 if include_final:
                     chunks.append(
-                        "event: final\n"
-                        f'data: {{"kind":"final","content":"{sse_final}"}}\n\n'
+                        f'event: final\ndata: {{"kind":"final","content":"{sse_final}"}}\n\n'
                     )
                 if error:
                     chunks.append(
-                        f'event: error\ndata: {{"error":"{error}",'
-                        f'"run_id":"{run_id}"}}\n\n'
+                        f'event: error\ndata: {{"error":"{error}","run_id":"{run_id}"}}\n\n'
                     )
                 if include_done:
                     chunks.append(f'event: done\ndata: {{"run_id":"{run_id}"}}\n\n')
@@ -509,9 +489,7 @@ class R3SchedulerTests(unittest.TestCase):
             calls.append((request.method, request.url.path))
             if request.content:
                 bodies.append(json.loads(request.content))
-            if request.method == "POST" and request.url.path.endswith(
-                "/scheduler/jobs"
-            ):
+            if request.method == "POST" and request.url.path.endswith("/scheduler/jobs"):
                 payload = bodies[-1]
                 self.assertEqual(payload["interval_seconds"], 86_400)
                 self.assertEqual(payload["max_retries"], 0)
@@ -554,9 +532,7 @@ class R3SchedulerTests(unittest.TestCase):
             if request.method == "PATCH" and request.url.path.endswith(
                 f"/scheduler/jobs/{job_id}/toggle"
             ):
-                self.assertEqual(
-                    bodies[-1], {"confirm_job_id": job_id, "enabled": False}
-                )
+                self.assertEqual(bodies[-1], {"confirm_job_id": job_id, "enabled": False})
                 return httpx.Response(
                     toggle_status,
                     json={"job_id": job_id, "enabled": False},
@@ -704,9 +680,7 @@ class R3FileWriteTests(unittest.TestCase):
         def handler(request: httpx.Request) -> httpx.Response:
             nonlocal rejected
             calls.append((request.method, request.url.path))
-            if request.method == "POST" and request.url.path.endswith(
-                "/agents/parallel-run"
-            ):
+            if request.method == "POST" and request.url.path.endswith("/agents/parallel-run"):
                 payload = json.loads(request.content)
                 self.assertEqual(payload["tasks"][0]["capabilities"], ["file_write"])
                 self.assertTrue(payload["use_worktrees"])
@@ -755,9 +729,7 @@ class R3FileWriteTests(unittest.TestCase):
             if request.method == "POST" and request.url.path.endswith(
                 f"/development-tasks/{task_id}/reject"
             ):
-                self.assertEqual(
-                    json.loads(request.content), {"confirm_task_id": task_id}
-                )
+                self.assertEqual(json.loads(request.content), {"confirm_task_id": task_id})
                 if reject_status == 200:
                     rejected = True
                 return httpx.Response(
@@ -769,17 +741,13 @@ class R3FileWriteTests(unittest.TestCase):
                 )
             raise AssertionError(str(request.url))
 
-        def shell_runner(
-            args: list[str], **kwargs: object
-        ) -> subprocess.CompletedProcess[str]:
+        def shell_runner(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
             self.assertNotIn("shell", kwargs)
             shell_calls.append(args)
             stdout = ""
             if args[-3:-1] == ["--list", f"agent/{task_id}"]:
                 stdout = ""
-            return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout=stdout, stderr=""
-            )
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
 
         api = ProductApiClient(
             "http://xagent.test/api/v1",
@@ -820,12 +788,8 @@ class R3FileWriteTests(unittest.TestCase):
         self.assertTrue(result.cleanup_ok)
         self.assertEqual(calls.count(("POST", "/api/v1/agents/parallel-run")), 1)
         self.assertEqual(calls.count(("POST", f"{task_path}/reject")), 1)
-        self.assertTrue(
-            any("/data/.xagent-worktrees/" in " ".join(call) for call in shell_calls)
-        )
-        self.assertTrue(
-            any("cat-file" in call and "shell" not in call for call in shell_calls)
-        )
+        self.assertTrue(any("/data/.xagent-worktrees/" in " ".join(call) for call in shell_calls))
+        self.assertTrue(any("cat-file" in call and "shell" not in call for call in shell_calls))
         with self.assertRaises(RuntimeError):
             run_file_write_sample(
                 api,
@@ -837,9 +801,7 @@ class R3FileWriteTests(unittest.TestCase):
 
     def test_file_write_patch_mismatch_is_false_success_then_rejected(self) -> None:
         spec = build_sample_plan(BATCH_ID)[40]
-        api, calls, _, shell_runner = self._api(
-            spec, patch_text="diff without expected marker"
-        )
+        api, calls, _, shell_runner = self._api(spec, patch_text="diff without expected marker")
 
         result = run_file_write_sample(
             api,
@@ -955,17 +917,13 @@ class R3PreflightTests(unittest.TestCase):
                 "Name": f"/{name}",
                 "State": {
                     "Status": "running",
-                    "Health": {
-                        "Status": "healthy" if protected_healthy else "unhealthy"
-                    },
+                    "Health": {"Status": "healthy" if protected_healthy else "unhealthy"},
                 },
             }
             for name in ("aicg-minio", "aicg-postgres")
         ]
 
-        def shell_runner(
-            args: list[str], **_kwargs: object
-        ) -> subprocess.CompletedProcess[str]:
+        def shell_runner(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
             calls.append(args)
             stdout = ""
             returncode = 0
@@ -983,12 +941,8 @@ class R3PreflightTests(unittest.TestCase):
             elif "inspect" in args and "ping" in args:
                 stdout = json.dumps({"celery@worker": {"ok": "pong"}} if pong else {})
             elif "inspect" in args:
-                probe = next(
-                    name for name in ("active", "reserved", "scheduled") if name in args
-                )
-                stdout = json.dumps(
-                    {"celery@worker": [{}] if probe == busy_probe else []}
-                )
+                probe = next(name for name in ("active", "reserved", "scheduled") if name in args)
+                stdout = json.dumps({"celery@worker": [{}] if probe == busy_probe else []})
             if celery_log_prefix and "celery" in args and "inspect" in args and stdout:
                 stdout = f"celery initialized\n{stdout}"
             return subprocess.CompletedProcess(
@@ -1023,9 +977,7 @@ class R3PreflightTests(unittest.TestCase):
         self.assertTrue(snapshot.passed)
         self.assertEqual(snapshot.model, "qwen3:4b")
         self.assertEqual(set(snapshot.service_ids), set(self.service_names))
-        self.assertEqual(
-            set(snapshot.protected_container_ids), {"aicg-minio", "aicg-postgres"}
-        )
+        self.assertEqual(set(snapshot.protected_container_ids), {"aicg-minio", "aicg-postgres"})
         forbidden = {"down", "up", "restart", "rm", "prune", "pause", "unpause"}
         self.assertFalse(any(forbidden.intersection(call) for call in calls))
 
@@ -1109,25 +1061,17 @@ class R3BatchExecutionTests(unittest.TestCase):
                     fail_closed=True if spec.sample_id == "chat-003" else None,
                 )
 
-            outcome = execute_sample_plan(
-                build_sample_plan(BATCH_ID), recorder, executor
-            )
+            outcome = execute_sample_plan(build_sample_plan(BATCH_ID), recorder, executor)
 
             self.assertIsInstance(outcome, ExecutionOutcome)
-            self.assertEqual(
-                seen, [item.sample_id for item in build_sample_plan(BATCH_ID)]
-            )
+            self.assertEqual(seen, [item.sample_id for item in build_sample_plan(BATCH_ID)])
             self.assertEqual(len(seen), 50)
             self.assertEqual(len(set(seen)), 50)
             self.assertEqual(len(outcome.results), 50)
             self.assertFalse(outcome.results[2].success)
             self.assertEqual(outcome.aborted_error, "")
             self.assertTrue(
-                all(
-                    item.cleanup_ok
-                    for item in outcome.results
-                    if item.kind != SampleKind.CHAT
-                )
+                all(item.cleanup_ok for item in outcome.results if item.kind != SampleKind.CHAT)
             )
             lines = recorder.samples_path.read_text("utf-8").splitlines()
             self.assertEqual(len(lines), 50)
@@ -1145,16 +1089,12 @@ class R3BatchExecutionTests(unittest.TestCase):
                     raise KeyboardInterrupt
                 return _sample_result(spec.kind, spec.index)
 
-            outcome = execute_sample_plan(
-                build_sample_plan(BATCH_ID), recorder, executor
-            )
+            outcome = execute_sample_plan(build_sample_plan(BATCH_ID), recorder, executor)
 
             self.assertEqual(seen, ["chat-001", "chat-002", "chat-003"])
             self.assertEqual(len(outcome.results), 2)
             self.assertIn("KeyboardInterrupt", outcome.aborted_error)
-            self.assertEqual(
-                len(recorder.samples_path.read_text("utf-8").splitlines()), 2
-            )
+            self.assertEqual(len(recorder.samples_path.read_text("utf-8").splitlines()), 2)
             summary = build_summary(
                 BATCH_ID,
                 outcome.results,
@@ -1198,9 +1138,7 @@ class R3IsolationTests(unittest.TestCase):
             f"/api/v1/development-tasks/{'d' * 32}": 404,
         }
 
-        result = run_tenant_isolation_probe(
-            self._api(statuses), self._results_with_anchors()
-        )
+        result = run_tenant_isolation_probe(self._api(statuses), self._results_with_anchors())
 
         self.assertIsInstance(result, IsolationProbeResult)
         self.assertTrue(result.ok)
@@ -1213,9 +1151,7 @@ class R3IsolationTests(unittest.TestCase):
             f"/api/v1/development-tasks/{'d' * 32}": 404,
         }
 
-        result = run_tenant_isolation_probe(
-            self._api(statuses), self._results_with_anchors()
-        )
+        result = run_tenant_isolation_probe(self._api(statuses), self._results_with_anchors())
 
         self.assertFalse(result.ok)
         self.assertEqual(result.error_code, "tenant_isolation_breach")
@@ -1286,9 +1222,7 @@ class R3CliTests(unittest.TestCase):
                                 error="",
                                 model="qwen3:4b",
                             ),
-                            batch_runner=lambda **_kwargs: self._batch_outcome(
-                                status, root
-                            ),
+                            batch_runner=lambda **_kwargs: self._batch_outcome(status, root),
                         )
                     self.assertEqual(actual, exit_code)
                     output = stdout.getvalue()
@@ -1351,13 +1285,9 @@ class R3BatchOrchestrationTests(unittest.TestCase):
                         "tenant_id": body["tenant_id"],
                     },
                 )
-            if request.method == "GET" and request.url.path.endswith(
-                f"/runs/{'r' * 32}"
-            ):
+            if request.method == "GET" and request.url.path.endswith(f"/runs/{'r' * 32}"):
                 return httpx.Response(404, json={"detail": "hidden"})
-            if request.method == "GET" and request.url.path.endswith(
-                f"/checkpoints/{'c' * 32}"
-            ):
+            if request.method == "GET" and request.url.path.endswith(f"/checkpoints/{'c' * 32}"):
                 return httpx.Response(403, json={"detail": "hidden"})
             if request.method == "GET" and request.url.path.endswith(
                 f"/development-tasks/{'d' * 32}"
@@ -1426,11 +1356,7 @@ class R3BatchOrchestrationTests(unittest.TestCase):
             )
             self.assertTrue(events[51].startswith("register:r3-reliability-isolation-"))
             self.assertEqual(
-                len(
-                    (outcome.directory / "samples.jsonl")
-                    .read_text("utf-8")
-                    .splitlines()
-                ),
+                len((outcome.directory / "samples.jsonl").read_text("utf-8").splitlines()),
                 50,
             )
             self.assertTrue((outcome.directory / "summary.json").is_file())

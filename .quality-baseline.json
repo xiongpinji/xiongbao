@@ -1,7 +1,7 @@
 {
   "ruff_line_length": {
     "count": 187,
-    "sha256": "4313c16632f26b36bf18caeeeb4eaeaa000c4bd369212fe9540d42965f80aab4",
+    "sha256": "ff523ea47fecc29029755f25d055693e3e4842ccb4d2902cd984243649698f55",
     "owner": "backend-platform",
     "reason": "历史长行需要按模块拆分格式化，避免在发布加固中制造大面积无关差异",
     "expires_on": "2026-09-30",
@@ -17,7 +17,7 @@
   },
   "ruff_controlled_subprocess": {
     "count": 15,
-    "sha256": "7c410d5054e5fb21c8c9444ed173770a677e279ed0cc12ed328413917982c499",
+    "sha256": "76684fc4fa5d31e6424ca9b50283f3b4c81efee61d80291f401bcc555161913e",
     "owner": "agent-runtime",
     "reason": "开发任务运行器的 Git 与验证命令需迁移到统一异步受控执行器",
     "expires_on": "2026-09-30",
@@ -25,18 +25,18 @@
   },
   "ruff_async_blocking": {
     "count": 6,
-    "sha256": "4455af6c8ff369328c8192107f3b2249d876868c58396f0834224dae0eef4d13",
+    "sha256": "ee8bcd04a8d034dafcfc37a232ee2f6e7da25681f6650a12de4790aef844017b",
     "owner": "agent-runtime",
     "reason": "存量同步文件与进程调用需迁移到线程池或异步进程接口并做并发回归",
     "expires_on": "2026-09-30",
     "scope": "Ruff ASYNC221/ASYNC230/ASYNC240 的精确文件、规则、行列指纹"
   },
   "mypy_short_drama_excluded": {
-    "count": 4,
-    "sha256": "4be9c4ff75c9cb73f9c6987dfb2f7fa2f401200efba8c866087ac767a11aa95d",
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
     "owner": "creative-studio",
     "reason": "用户明确将独立运行的短剧项目排除，待其稳定后按独立接入计划处理",
     "expires_on": "2026-12-31",
-    "scope": "仅 creative_studio 路径中的 4 个 mypy 问题；其他 Web/API 问题为零容忍"
+    "scope": "短剧路径继续排除在当前 Web/API 发布范围外；当前 mypy 发现为 0，其他 Web/API 问题仍为零容忍"
   }
 }

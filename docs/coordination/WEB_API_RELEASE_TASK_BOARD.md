@@ -3,21 +3,20 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-B 修复与 API-only 定向 Live 验证已通过；新 R3-A 正式 50 样本批次满足全部冻结 SLO，R3-A/R3-B 均进入 REVIEW，等待独立复审与 Owner 决策。
+- 当前阶段：R3-A/R3-B 独立验收通过并转为 DONE；当前本地 `master` 已达到冻结的 Web/API R3 发布候选门，远端 push、CI、新 tag 与正式发布仍需 Owner 单独授权。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
 - P2 计划：`docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md`。
-- 当前分支：`feature/webapi-r2-staging-readiness`。
-- 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening`。
+- 当前分支：`master`。
+- 当前 worktree：`D:\AI编程库\项目库\进行中的项目\xiong bao\xagent`。
 - 排除范围：短剧业务链路、Tauri 桌面端、多机 HA、E2B 和客户现场演练。
 - Owner：Codex。
 - 最后更新时间：2026-08-12。
 
 ## In Progress
 
-- [R3-B] Chat 截断终态与隔离 file_write 超时边界 | 状态：REVIEW | Chat 截断首答改为一次有界恢复、二次截断 fail-closed；严格隔离 file_write 使用 270 秒而普通并行仍为 180 秒。相关回归 191 项、release contracts 77 项（另 87 subtests）与 API-only 定向 Live 通过；随后正式批次 `20260811T230626Z-f9a73d` 中 Chat 30/30、file_write 10/10，假成功与超时均为 0。证据：`docs/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE.md`、`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。
-- [R3-A] 真实 Ollama 可靠性基线 | 状态：REVIEW | 新正式不可变批次 `20260811T230626Z-f9a73d` 完整记录 50/50：Chat 30/30、P95 8.152 秒；Scheduler 10/10、P95 38.346 秒；file_write 10/10、P95 177.452 秒。假成功、MockLLM、forbidden、租户泄漏和 cleanup failure 均为 0；10 个 Scheduler 已暂停，10 个 development task 已 reject 且 worktree/branch 已清理。证据：`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`。
+- 暂无。
 
 ## Ready
 
@@ -29,6 +28,8 @@
 
 ## Done
 
+- [R3-B] Chat 截断终态与隔离 file_write 超时边界 | 状态：DONE | 截断首答只允许一次有界恢复、二次截断 fail-closed；严格隔离 file_write 使用 270 秒而普通并行仍为 180 秒。修复回归、API-only Live 与正式批次中的 Chat 30/30、file_write 10/10 均通过；独立复审未发现新增静态问题。证据：`docs/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE.md`、`docs/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md`。
+- [R3-A] 真实 Ollama 可靠性基线 | 状态：DONE | 单一不可变批次 `20260811T230626Z-f9a73d` 完成 50/50：Chat 30/30、Scheduler 10/10、file_write 10/10，三类 P95 均低于冻结门槛；假成功、MockLLM、forbidden、租户泄漏和 cleanup failure 均为 0。独立复算、数据库/patch/清理复读、当前发布回归与静态门均通过。证据：`docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md`、`docs/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md`。
 - [R2-A] R2 运行入口、配置门禁与任务板初始化 | 状态：DONE | 证据：最终候选 `bad1aa8` 的 preflight、Compose config、CI Web/API 后端范围入口、镜像内 `739 passed / 8 skipped`、release contracts `40/40`、Ruff/mypy 精确基线、许可证与版本门均通过；核心、扩展及受保护服务边界明确。详见 `docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md`。
 - [R2-B] R2 核心六服务 Full Compose 试运行 | 状态：DONE | 证据：最终 headed Chromium 同轮 `6/6 passed`、workers=1、retries=0、总用时 2.0 分钟；真实 `qwen3:4b` Chat、Run/reload、scheduler exact result、完整 Skill ZIP、真实 file_write worktree/patch、第二租户隔离全部通过，console/pageerror/短剧媒体请求均 0；六张 1280×720 脱敏截图已复核。
 - [R2-C] R2 重启、故障恢复与持久化复验 | 状态：DONE | 证据：API/Worker restart、Nginx Docker DNS/WS 恢复、Worker pause/unpause、Redis degraded/恢复、无 `-v` down/up、四卷与全部业务锚点复读均通过；无重复终态、跨 loop 或 terminal checkpoint 错误。

@@ -8,15 +8,14 @@ import re
 import secrets
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import httpx
-
 
 _SECRET_PATTERNS = (
     re.compile(r"(?i)Bearer\s+[^\s]+"),
@@ -471,8 +470,7 @@ def run_preflight(
         deep = _read_deep_health(health_url, health_client)
         checks = deep.get("checks")
         if not isinstance(checks, dict) or any(
-            not isinstance(checks.get(name), dict)
-            or checks[name].get("status") != "healthy"
+            not isinstance(checks.get(name), dict) or checks[name].get("status") != "healthy"
             for name in ("database", "redis", "qdrant")
         ):
             return _preflight_failure(
@@ -510,14 +508,8 @@ def run_preflight(
                 _model_probe_command(compose, service),
                 cwd=repo_root,
             )
-            lines = [
-                line.strip() for line in result.stdout.splitlines() if line.strip()
-            ]
-            if (
-                len(lines) != 2
-                or lines[0] not in accepted_models
-                or lines[1] != "qwen3:4b"
-            ):
+            lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            if len(lines) != 2 or lines[0] not in accepted_models or lines[1] != "qwen3:4b":
                 return _preflight_failure(
                     "model_mismatch",
                     f"{service} model does not match the R3 baseline",
@@ -708,11 +700,7 @@ def _read_runtime_identity(
         health_ok = health == "healthy" or (
             not health and name in HEALTHLESS_OBSERVABILITY_SERVICES
         )
-        if (
-            row is None
-            or str(row.get("State") or "").lower() != "running"
-            or not health_ok
-        ):
+        if row is None or str(row.get("State") or "").lower() != "running" or not health_ok:
             raise HarnessError(f"runtime service is not healthy: {name}")
         container_id = str(row.get("ID") or row.get("Id") or "")
         if not container_id:
@@ -1002,9 +990,7 @@ def run_chat_sample(
         )
 
     events = parse_sse(response)
-    started_payload = next(
-        (payload for event, payload in events if event == "started"), {}
-    )
+    started_payload = next((payload for event, payload in events if event == "started"), {})
     final_payloads = [payload for event, payload in events if event == "final"]
     done_payloads = [payload for event, payload in events if event == "done"]
     error_payloads = [payload for event, payload in events if event == "error"]
@@ -1113,9 +1099,7 @@ def run_chat_sample(
     }
 
     if terminal_status != "succeeded":
-        error = (
-            persisted_error or sse_error or f"chat terminal status {terminal_status}"
-        )
+        error = persisted_error or sse_error or f"chat terminal status {terminal_status}"
         fail_closed = bool(error) and not done_payloads and not final_payloads
         error_code = (
             FailureCode.WRONG_FINAL
@@ -1255,9 +1239,7 @@ def _pause_scheduler_job(api: ProductApiClient, job_id: str) -> bool:
             return False
         jobs = jobs_response.json().get("jobs") or []
         return any(
-            isinstance(job, dict)
-            and job.get("job_id") == job_id
-            and job.get("enabled") is False
+            isinstance(job, dict) and job.get("job_id") == job_id and job.get("enabled") is False
             for job in jobs
         )
     except (httpx.HTTPError, ValueError, TypeError):
@@ -1395,19 +1377,13 @@ def run_scheduler_sample(
                     break
                 runs = runs_response.json().get("runs") or []
                 attempt_one = next(
-                    (
-                        run
-                        for run in runs
-                        if isinstance(run, dict) and run.get("attempt") == 1
-                    ),
+                    (run for run in runs if isinstance(run, dict) and run.get("attempt") == 1),
                     None,
                 )
                 if attempt_one is not None:
                     terminal_status = str(attempt_one.get("status") or "unknown")
                     if terminal_status in {"succeeded", "failed", "interrupted"}:
-                        scheduled_run_id = str(
-                            attempt_one.get("run_id") or scheduled_run_id
-                        )
+                        scheduled_run_id = str(attempt_one.get("run_id") or scheduled_run_id)
                         agent_run_id = str(attempt_one.get("agent_run_id") or "")
                         result_text = str(attempt_one.get("result") or "")
                         terminal_error = str(attempt_one.get("error") or "")
@@ -1602,11 +1578,7 @@ def _reject_file_write_task(
             "--list",
             f"agent/{task_id}",
         )
-        return (
-            worktree.returncode == 0
-            and branch.returncode == 0
-            and not branch.stdout.strip()
-        )
+        return worktree.returncode == 0 and branch.returncode == 0 and not branch.stdout.strip()
     except (
         httpx.HTTPError,
         ValueError,
@@ -1729,9 +1701,7 @@ def run_file_write_sample(
             if detail_response.is_success:
                 detail = detail_response.json()
             else:
-                inspection_error = (
-                    f"development task HTTP {detail_response.status_code}"
-                )
+                inspection_error = f"development task HTTP {detail_response.status_code}"
             readable_status = str(detail.get("status") or task_status)
             if readable_status == "awaiting_review":
                 patch_response = api.request(
@@ -1791,8 +1761,7 @@ def run_file_write_sample(
         inspection_error = str(exc)
     finally:
         if safe_task_id and (
-            task_status == "awaiting_review"
-            or str(detail.get("status") or "") == "awaiting_review"
+            task_status == "awaiting_review" or str(detail.get("status") or "") == "awaiting_review"
         ):
             cleanup_ok = _reject_file_write_task(api, compose, task_id, shell_runner)
 
@@ -1940,9 +1909,7 @@ def build_summary(
 
     failures = [item for item in results if not item.success]
     fail_closed: bool | str = (
-        "not_applicable"
-        if not failures
-        else all(item.fail_closed is True for item in failures)
+        "not_applicable" if not failures else all(item.fail_closed is True for item in failures)
     )
     hard_failures: list[str] = []
     if any(item.false_success for item in results):
@@ -1951,9 +1918,7 @@ def build_summary(
         hard_failures.append("fail_closed")
     if logs_audit.mock_hits or any(item.mock_detected for item in results):
         hard_failures.append("mock_detected")
-    if logs_audit.forbidden_route_hits or any(
-        item.forbidden_route_detected for item in results
-    ):
+    if logs_audit.forbidden_route_hits or any(item.forbidden_route_detected for item in results):
         hard_failures.append("forbidden_route")
     if not isolation_ok:
         hard_failures.append("tenant_isolation_breach")
@@ -2130,9 +2095,7 @@ def run_reliability_batch(
     ]
     if extra_failures:
         status = (
-            BatchStatus.ABORTED
-            if summary.status is BatchStatus.ABORTED
-            else BatchStatus.FAILED
+            BatchStatus.ABORTED if summary.status is BatchStatus.ABORTED else BatchStatus.FAILED
         )
         summary = replace(
             summary,

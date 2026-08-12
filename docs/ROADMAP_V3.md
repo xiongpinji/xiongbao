@@ -73,6 +73,15 @@ git status 零污染断言、分支/worktree 清理断言、降级路径）。
 证据：`tests/test_platform_mcp_server.py` 9 项（工具注册面/参数校验/导入+匹配链路/
 评审无 LLM 诚实降级/Bearer 中间件 401·200/HTTP 应用构建）。
 
+## R3 Web/API 可靠性硬化 ✅（2026-08-12 本地独立验收）
+
+- Chat 截断响应只允许一次有界恢复，二次截断 fail-closed；严格隔离 file_write 使用 270 秒执行预算，普通并行仍为 180 秒。
+- 单一不可变真实 Ollama 批次 `20260811T230626Z-f9a73d` 完成 50/50：Chat 30/30、Scheduler 10/10、file_write 10/10；三类 P95 均低于冻结门槛，假成功、MockLLM、forbidden route、租户泄漏和 cleanup failure 均为 0。
+- 独立验收复算原始 JSONL、复读数据库与 10 份 patch/清理证据，并重新通过 R3/R2 合同、Web/API 后端发布范围和精确静态质量门。
+- 当前只证明本机单实例受控私有部署候选；远端 push/CI、新版本发布、多机 HA、E2B、付费 provider 和客户现场仍不在本结论内。
+
+证据：`docs/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md`。
+
 ## 维护约定
 
 - 每轨道完成须：测试证据 + 本文件状态勾选 + SOT 同步（如涉及对外口径）
