@@ -121,6 +121,9 @@ jobs:
       - name: R3 load contract
         run: python -m unittest discover -s tests/release -p "test_r3_load_contract.py" -v
 
+      - name: R3 Promptfoo contract
+        run: python -m unittest discover -s tests/release -p "test_r3_promptfoo_contract.py" -v
+
       - name: R2 compose render
         env:
           POSTGRES_PASSWORD: config-only-postgres-strong-value
@@ -317,12 +320,23 @@ jobs:
     if: github.event_name == 'push'
     env:
       XAGENT_MODE: lite
-      XAGENT_SECURITY__REQUIRE_AUTH: "false"
+      XAGENT_SECURITY__REQUIRE_AUTH: "true"
       XAGENT_DB__URL: sqlite+aiosqlite:///./xagent-ci.db
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - name: Configure CI JWT secret
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+
+          secret = secrets.token_urlsafe(48)
+          print(f"::add-mask::{secret}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"XAGENT_SECURITY__JWT_SECRET={secret}\n")
+          PY
       - name: Install API deps
         working-directory: apps/api
         run: |
@@ -347,13 +361,52 @@ jobs:
           echo "API did not become ready" >&2
           cat /tmp/xagent.log >&2 || true
           exit 1
+      - name: Create Promptfoo member token
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import secrets
+          import urllib.error
+          import urllib.request
+
+          identity = f"promptfoo-ci-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
+          payload = json.dumps({
+              "username": identity,
+              "password": secrets.token_urlsafe(32),
+              "tenant_id": identity,
+          }).encode("utf-8")
+          request = urllib.request.Request(
+              "http://127.0.0.1:8000/api/v1/auth/register",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  body = json.load(response)
+          except urllib.error.HTTPError as exc:
+              raise SystemExit(f"Promptfoo CI registration failed: HTTP {exc.code}") from None
+
+          token = str(body.get("access_token") or "")
+          if body.get("tenant_id") != identity or "member" not in body.get("roles", []) or not token:
+              raise SystemExit("Promptfoo CI registration returned an invalid member identity")
+          print(f"::add-mask::{token}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"PROMPTFOO_API_TOKEN={token}\n")
+              env_file.write(f"PROMPTFOO_TENANT_ID={identity}\n")
+          PY
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Install promptfoo
-        run: npm install -g promptfoo
+        run: npm install -g promptfoo@0.122.0
       - name: Run eval
-        run: promptfoo eval -c .promptfoo/config.yaml --no-cache
+        run: |
+          promptfoo eval -c .promptfoo/config.yaml --no-cache --max-concurrency 1 \
+            --output /tmp/promptfoo-results.json
+          python scripts/check_promptfoo_results.py \
+            /tmp/promptfoo-results.json --expected 8
 
   release-version:
     if: >-
