@@ -3,7 +3,7 @@
 ## Board Meta
 
 - 总目标：X-Agent Web/API 达到可复现发布标准，并补齐 Codex/Hermes 关键产品闭环。
-- 当前阶段：R3-A/R3-B 已 DONE；`1.1.0` 本地候选包与远端安全发布顺序已准备，R3-C 等待 Owner 对首次候选分支 push 的单独授权。
+- 当前阶段：R3-A/R3-B 已 DONE；R3-C 首次候选 `1fb2098` 已推送但因 branch allowlist 未触发 CI，现已在本地修复并等待 Owner 对修正 SHA fast-forward 的单独授权。
 - 设计源：`docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md`。
 - R3 计划：`docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md`。
 - P0 计划：`docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md`。
@@ -20,7 +20,7 @@
 
 ## Ready
 
-- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | 冻结候选 SHA 为 `1fb2098f0729909701f686b76ffe97c9b3409d13`；首次外部动作只允许把该 SHA 推到 `candidate/webapi-v1.1.0-20260812`，不得使用漂移的 `HEAD`、不得直推 `master`、不得创建 `v*` tag；候选分支 CI 通过后再分别申请 PR/merge 与 `v1.1.0` tag/Release 授权。镜像发布现已要求等待版本一致性、backend、frontend、license、config、API E2E、load 与 promptfoo 八个门全部通过。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
+- [R3-C] `1.1.0` 远端候选与发布签发 | 状态：READY | 初始远端 SHA `1fb2098f0729909701f686b76ffe97c9b3409d13` 的 workflow runs 精确为 0，已废止为不可合并候选；本地已加入 `candidate/**` push 触发合同，修正候选的显式 SHA 由后续交接提交记录。再次获批前不得更新远端候选、不得直推 `master`、不得创建 PR 或 `v*` tag。镜像发布仍要求等待版本一致性、backend、frontend、license、config、API E2E、load 与 promptfoo 八门。证据：`docs/coordination/reports/WEB_API_R3_RELEASE_CANDIDATE_PREFLIGHT.md`。
 
 ## Queued
 

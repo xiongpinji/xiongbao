@@ -103,6 +103,13 @@ class R2BackendReleaseScopeTests(unittest.TestCase):
         self.assertIn("refs/tags/v*", version_step["run"])
         self.assertIn('--tag "${GITHUB_REF_NAME}"', version_step["run"])
 
+    def test_candidate_branch_push_triggers_ci(self) -> None:
+        workflow = yaml.load(
+            CI_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
+        )
+
+        self.assertIn("candidate/**", workflow["on"]["push"]["branches"])
+
 
 if __name__ == "__main__":
     unittest.main()

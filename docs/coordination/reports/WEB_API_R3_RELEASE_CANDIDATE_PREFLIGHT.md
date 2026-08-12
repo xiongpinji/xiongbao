@@ -1,12 +1,12 @@
 # Web/API R3 `1.1.0` 远端发布前置审计
 
 > 日期：2026-08-12
-> 范围：只读远端核验、本地版本候选与发布流水线安全门；未 push、未建 PR、未合并、未打 tag、未发布或部署。
+> 范围：远端候选分支创建、本地版本候选与发布流水线安全门；未建 PR、未合并、未打 tag、未发布或部署。
 
 ## 1. 冻结事实
 
 - 本地准备基线：`43b395177a0a2cd4f682417a40e449638d7ec8b9`，`master` 相对 `origin/master` ahead 116。
-- 冻结的 `1.1.0` 候选提交：`1fb2098f0729909701f686b76ffe97c9b3409d13`。该提交包含版本事实源、Release Notes、CI 门禁和回归合同；本交接报告提交位于其后，不属于首次候选分支 push 的对象。
+- 首次候选提交 `1fb2098f0729909701f686b76ffe97c9b3409d13` 已创建远端分支，但因旧 workflow 的 branch allowlist 排除 `candidate/**`，GitHub API 精确返回该 SHA 的 workflow runs 为 0。该提交已被后续修正候选取代，不得进入 PR、master 或 tag。
 - 远端 `origin/master`：`fa8c923c21534c53782d832aa5727735f1aafabd`。
 - `v1.0.0` 的 peeled commit 同为 `fa8c923c21534c53782d832aa5727735f1aafabd`；标签和历史 Release 不得移动或复用。
 - 当前本地 116 个提交没有 Hosted CI 证据；远端最近一次 master CI 只覆盖 `fa8c923`。
@@ -18,7 +18,7 @@
 
 结论：按 SemVer 选择 `1.1.0`。功能增长要求 MINOR，不应只升 PATCH；没有破坏性变更证据，不升 MAJOR。
 
-## 3. 首轮审计发现并关闭的流水线风险
+## 3. 审计发现并关闭的流水线风险
 
 旧 `docker-build` 只依赖 backend/frontend。由于 master push 会生成并推送 `latest`、sha 和 semver metadata，这可能在 license、config、API E2E、load 和 promptfoo 尚未通过时提前覆盖镜像。
 
@@ -34,6 +34,8 @@
 8. release-version
 
 其中 `release-version` 在 master 校验 API/Web/README 一致，在 tag 上额外校验 tag；错误 tag 无法先行推送镜像。合同测试先在旧配置稳定失败，再以最小 YAML 修改转绿。候选分支 push 因 workflow 条件不会执行 docker-build；只有 master 或 `v*` tag push 才会构建并推送镜像。
+
+首次远端创建还暴露第二个真实缺口：`on.push.branches` 原先只包含 `main/master/develop`，所以合法的候选分支不会触发任何 CI。修复合同先证明 `candidate/**` 缺失，再将该模式加入 push allowlist。修正后候选分支会执行 backend、frontend、license、config、API E2E、load 和 promptfoo，而 version、docker-build、release 仍按条件跳过。
 
 ## 4. 远端治理边界
 
@@ -56,10 +58,10 @@
 首次远端动作的建议命令仅供审批后执行：
 
 ```powershell
-git push origin 1fb2098f0729909701f686b76ffe97c9b3409d13:refs/heads/candidate/webapi-v1.1.0-20260812
+git push origin <corrected_candidate_sha>:refs/heads/candidate/webapi-v1.1.0-20260812
 ```
 
-本报告生成阶段没有执行该命令。
+首次已获批命令仅创建了无 CI 运行的 `1fb2098` 分支。修正候选的显式 SHA 只记录在其后的本地交接提交中；在再次获得授权前，不得 fast-forward 远端分支。
 
 ## 6. 候选分支 CI 通过标准
 
@@ -71,4 +73,4 @@ git push origin 1fb2098f0729909701f686b76ffe97c9b3409d13:refs/heads/candidate/we
 
 ## 7. 当前结论
 
-本地 `1.1.0` 候选包可以进入“候选分支 push”审批门，但尚未形成远端候选、Hosted CI 或正式发布证据。当前唯一允许申请的外部动作是第 5 节第 1 步；不得把“继续”解释为 master push、tag、Release 或部署授权。
+远端存在初始候选分支，但 `1fb2098` 没有任何 Hosted CI 运行，不能作为可合并候选。候选触发器修复完成后，下一外部动作必须重新申请：只允许把本地交接提交记录的修正候选 SHA fast-forward 到同名候选分支。不得把既有授权解释为替代 SHA push、master push、PR、tag、Release 或部署授权。
