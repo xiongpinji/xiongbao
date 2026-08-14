@@ -256,7 +256,9 @@ function WorkflowsInner() {
     try {
       const steps = extractSteps();
       if (!steps.length) { setError("画布中至少需要一个 Agent 步骤或审批门"); return; }
-      const view = await runWorkflow({ name, steps });
+      // 异步提交：秒回 running 视图并立即跳转运行详情页（2.5s 轮询直至终态），
+      // 不再同步等待整条工作流——含 LLM 步骤的工作流必然超过 30s HTTP 超时。
+      const view = await runWorkflow({ name, steps, run_async: true });
       setLastView(view);
       syncRunTask(view.run_id, { source: "workflow" });
       navigate(`/runs/${encodeURIComponent(view.run_id)}`);

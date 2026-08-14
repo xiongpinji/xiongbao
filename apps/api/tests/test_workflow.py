@@ -555,3 +555,40 @@ async def test_workflow_api_viewer_forbidden(client: AsyncClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403
+
+
+async def test_workflow_api_run_async_returns_immediately_and_completes(
+    client: AsyncClient,
+) -> None:
+    """P1 回归：run_async=True 必须立即返回 running 视图（不被 30s HTTP 超时截断），
+    后台执行随后落盘为终态。"""
+    import asyncio
+
+    token = create_access_token(user_id="u", tenant_id="t1", roles=["member"])
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = await client.post(
+        "/api/v1/workflows",
+        json={
+            "name": "api-wf-async",
+            "run_async": True,
+            "steps": [{"id": "s1", "name": "打招呼", "goal": "你好"}],
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    view = resp.json()
+    # 立即返回，状态为 pending/running（非终态）
+    assert view["status"] in ("pending", "running", "completed")
+    run_id = view["run_id"]
+
+    # 后台任务在同一事件循环推进；轮询直至终态
+    final = None
+    for _ in range(50):
+        await asyncio.sleep(0.1)
+        r = await client.get(f"/api/v1/workflows/{run_id}", headers=headers)
+        assert r.status_code == 200
+        final = r.json()
+        if final["status"] in ("completed", "failed", "cancelled", "awaiting_approval"):
+            break
+    assert final is not None
+    assert final["status"] in ("completed", "awaiting_approval"), final["status"]

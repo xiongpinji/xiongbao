@@ -59,6 +59,9 @@ class SpecIn(BaseModel):
     spine_task_id: str = ""
     description: str = ""
     steps: list[StepIn]
+    # True = 提交后立即返回（后台执行），前端轮询状态；
+    # 解决画布「执行」被 axios 30s 默认超时截断的问题（P1 实测缺陷）。
+    run_async: bool = False
 
 
 def _to_spec(body: SpecIn) -> WorkflowSpec:
@@ -623,6 +626,55 @@ async def _try_attach_spine_workflow_run(
         return None
 
 
+async def _execute_workflow_in_background(
+    *,
+    run_id: str,
+    principal: Principal,
+    strict_spine: bool,
+) -> None:
+    """后台执行工作流并持久化终态（run_async=True 路径）。
+
+    使用独立 DB 会话，不受请求生命周期约束；失败也会落盘为 failed 终态，
+    避免「前端超时但后端裸奔无记录」。
+    """
+    engine: WorkflowEngine = get_engine()
+    try:
+        run = await engine.execute(run_id, principal)
+        view = run.to_view()
+    except Exception as exc:  # noqa: BLE001  后台任务必须自行收口
+        logger.error("workflow_async_execute_failed", run_id=run_id, error=str(exc))
+        run = engine.get_run(run_id)
+        view = run.to_view() if run else {"run_id": run_id, "status": "failed", "steps": []}
+        if run is None:
+            view["status"] = "failed"
+    try:
+        async with get_sessionmaker()() as session:
+            await _persist_workflow_runtime_and_view(
+                session,
+                view=view,
+                owner_id=principal.user_id,
+                tenant_id=principal.tenant_id,
+            )
+            board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+            await update_task_status_by_run_id(
+                session,
+                tenant_id=principal.tenant_id,
+                run_id=run_id,
+                next_status=board_status,
+                blocker_reason=blocker_reason,
+            )
+            await session.commit()
+        get_audit_log().record(
+            tenant_id=principal.tenant_id,
+            actor=principal.user_id,
+            action="workflow.run.async.completed",
+            resource="workflow",
+            detail={"run_id": run_id, "status": str(view.get("status"))},
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("workflow_async_persist_failed", run_id=run_id, error=str(exc))
+
+
 @router.post("", summary="创建并启动工作流")
 async def create_and_run(
     body: SpecIn,
@@ -655,6 +707,46 @@ async def create_and_run(
             raise HTTPException(status_code=409, detail="spine task 挂接失败")
     else:
         linkage = None
+    if body.run_async:
+        # 异步路径：立即返回 running 视图，后台执行任务并自行持久化终态。
+        # 前端 30s HTTP 超时不再截断真实执行（P1 修复）。
+        run = engine.create_run(spec, principal, run_id=planned_run_id)
+        view = run.to_view()
+        view["goal_id"] = resolved_goal_id
+        view["spine_task_id"] = resolved_spine_task_id
+        linkage = await _try_attach_spine_workflow_run(
+            run_id=str(view.get("run_id") or ""),
+            task_title=body.name,
+            goal_id=resolved_goal_id,
+            spine_task_id=resolved_spine_task_id,
+            allow_legacy_title_fallback=not strict_spine,
+            tenant_id=principal.tenant_id,
+        )
+        _apply_spine_provenance(view, linkage)
+        await _persist_workflow_runtime_and_view(
+            session,
+            view=view,
+            owner_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+        )
+        await session.commit()
+        get_audit_log().record(
+            tenant_id=principal.tenant_id,
+            actor=principal.user_id,
+            action="workflow.run.async",
+            resource="workflow",
+            detail={"run_id": run.run_id, "status": run.status.value},
+        )
+        import asyncio
+
+        asyncio.create_task(
+            _execute_workflow_in_background(
+                run_id=run.run_id,
+                principal=principal,
+                strict_spine=strict_spine,
+            )
+        )
+        return view
     try:
         run = engine.create_run(spec, principal, run_id=planned_run_id)
         run = await engine.execute(run.run_id, principal)

@@ -102,6 +102,8 @@ export interface WorkflowStepInput {
 export const runWorkflow = (body: {
   name: string;
   steps: WorkflowStepInput[];
+  /** true = 后端立即返回 running 视图并后台执行（避免 30s HTTP 超时截断长工作流） */
+  run_async?: boolean;
 }) => api.post<WorkflowView>("/workflows", body).then((r) => r.data);
 
 export const listWorkflows = () =>

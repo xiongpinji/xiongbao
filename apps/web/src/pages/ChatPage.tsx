@@ -29,6 +29,20 @@ interface ChatMessage {
   steps?: StepInfo[];
   streaming?: boolean;
   timestamp?: number;
+  /** 纯对话模式下检测到执行意图但未调用工具时，展示提示条（P2） */
+  noToolsHint?: boolean;
+}
+
+/* ================================================================== */
+/*  执行意图检测（P2）                                                  */
+/* ================================================================== */
+
+/** 纯对话（tool_mode=none）下，goal 含明显执行意图时应提示用户工具未生效 */
+const EXECUTION_INTENT_RE =
+  /(创建|新建|写入|写一|生成文件|修改|删除|运行|执行|部署|安装|爬|抓取|下载|file_write|file_read|python_exec|shell_exec|创建一个?)/i;
+
+export function hasExecutionIntent(goal: string): boolean {
+  return EXECUTION_INTENT_RE.test(goal);
 }
 
 /* ================================================================== */
@@ -232,9 +246,11 @@ export default function ChatPage() {
       } else {
         try {
           const nextRun = await runAgent({ goal: nextGoal, tool_mode: "none" });
+          // P2：fallback 路径同样是纯对话无工具
+          const noToolsHint = hasExecutionIntent(nextGoal);
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun, timestamp: Date.now() },
+            { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun, timestamp: Date.now(), noToolsHint },
           ]);
           syncRunTask(nextRun.run_id, { source: "chat" });
         } catch (e: unknown) {
@@ -299,9 +315,12 @@ export default function ChatPage() {
       finalContent = `任务已执行完成（共 ${toolCallCount} 次工具调用），但模型未生成文字总结。`;
     }
     if (sseRunId || finalContent) {
+      // P2：纯对话模式下若 goal 有执行意图且全程未调用工具，标记提示
+      const usedTools = collectedSteps.some((s) => s.kind === "tool_call");
+      const noToolsHint = hasExecutionIntent(nextGoal) && !usedTools;
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps], timestamp: Date.now() },
+        { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps], timestamp: Date.now(), noToolsHint },
       ]);
     }
   }
@@ -770,6 +789,14 @@ const MessageBlock = memo(function MessageBlock({ msg, canRegenerate, onRegenera
       <div className="text-[14px] leading-7 text-neutral-300">
         <MarkdownRenderer content={msg.content} />
       </div>
+
+      {/* P2：纯对话模式执行意图提示（防止模型幻觉"已完成"被当成真实执行） */}
+      {msg.noToolsHint && (
+        <div className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-[12px] leading-5 text-amber-200/90">
+          当前为纯对话模式，未调用任何工具——以上内容仅为模型的文字回答，未真实创建/修改/运行任何文件。
+          如需实际执行，请前往「工作流」编排或「开发任务」。
+        </div>
+      )}
 
       {/* 底部操作行 */}
       <div className="mt-2 flex items-center gap-3 opacity-0 transition-opacity group-hover/msg:opacity-100">
