@@ -29,6 +29,16 @@
 
 ---
 
+## 1.5 2026-08-14 状态刷新（v1.1.1 后）
+
+- 候选/master/tag 三段 CI 与双 Release（v1.1.0、v1.1.1）已完成，本机等价环境全栈演练已完成（见 `RELEASE_SIGNOFF_PACKAGE_V1.1.1.md`）。
+- 剩余外部条件均已"一键可执行化"：
+  - 发布签字 → `docs/RELEASE_SIGNOFF_PACKAGE_V1.1.1.md` 第 6 节签字矩阵
+  - 多机 HA 演练 → `scripts/ha_drill.py`（已在本机双实例实测 PASS；共享 Redis 部署加 `--expect-shared-lock`）
+  - E2B L2 实测 → `scripts/verify_e2b_sandbox.py`（取得 E2B_API_KEY 后一条命令完成）
+
+---
+
 ## 2. 当前只剩哪些外部条件
 
 | 阻断项 | 当前状态 | 需要谁提供 | 完成定义 |
