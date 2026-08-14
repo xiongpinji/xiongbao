@@ -24,7 +24,10 @@ class WarmupResult:
 
 def _raw_ollama_model_name(cfg: LLMSettings) -> str:
     model = cfg.ollama_model or cfg.default_model
-    return model.removeprefix("ollama/")
+    # LiteLLM 路由前缀（ollama/ 走 generate、ollama_chat/ 走 chat）都不是
+    # Ollama 原生模型名，调 Ollama HTTP API 前必须全部剥离；
+    # 漏剥 ollama_chat/ 会让 warmup 用不存在的模型名打到 /api/chat 而超时。
+    return model.removeprefix("ollama_chat/").removeprefix("ollama/")
 
 
 def _target_model(cfg: LLMSettings) -> str:

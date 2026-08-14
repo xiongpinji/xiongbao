@@ -99,14 +99,15 @@ X-Agent 默认按「最小权限」启动，所有放宽都必须显式配置：
 # Bash:       export PYTHONPATH="$PWD"
 
 # 1. 安装 Ollama + 拉取模型
-ollama pull qwen3:4b          # 或 qwen2.5:1.5b（更小更快）
+ollama pull qwen3:4b
+ollama create xagent-qwen3 -f deploy/ollama/Modelfile.xagent-qwen3  # 关闭默认思考，避免空响应
 
 # 2. 后端（指向本地 Ollama）
 cd apps/api
 pip install -e ".[dev]"
 export XAGENT_LLM__OLLAMA_BASE_URL=http://localhost:11434
-export XAGENT_LLM__OLLAMA_MODEL=qwen3:4b
-export XAGENT_LLM__DEFAULT_MODEL=qwen3:4b
+export XAGENT_LLM__OLLAMA_MODEL=xagent-qwen3
+export XAGENT_LLM__DEFAULT_MODEL=xagent-qwen3
 xagent serve                  # http://localhost:8000
 
 # 3. 前端

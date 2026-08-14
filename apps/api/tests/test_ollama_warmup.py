@@ -375,3 +375,26 @@ async def test_warmup_ollama_model_zero_wait_budget_still_makes_one_attempt(
     assert attempts["count"] == 1
     assert timeouts == [60]
     assert sleeps == []
+
+
+def test_raw_ollama_model_name_strips_litellm_route_prefixes() -> None:
+    # 回归：ollama_chat/ 与 ollama/ 都是 LiteLLM 路由前缀，不是 Ollama 模型名。
+    # 漏剥 ollama_chat/ 曾导致 warmup 以不存在的模型名请求 /api/chat 而超时，
+    # API 容器陷入重启循环（2026-08-14 容器演练实测发现）。
+    from xagent.scripts.ollama_warmup import _raw_ollama_model_name
+
+    assert (
+        _raw_ollama_model_name(LLMSettings(ollama_model="ollama_chat/qwen3:4b"))
+        == "qwen3:4b"
+    )
+    assert (
+        _raw_ollama_model_name(LLMSettings(ollama_model="ollama/qwen3:4b"))
+        == "qwen3:4b"
+    )
+    assert _raw_ollama_model_name(LLMSettings(ollama_model="qwen3:4b")) == "qwen3:4b"
+    assert (
+        _raw_ollama_model_name(
+            LLMSettings(ollama_model="", default_model="ollama_chat/qwen3:4b")
+        )
+        == "qwen3:4b"
+    )
