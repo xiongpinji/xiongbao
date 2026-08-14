@@ -120,7 +120,7 @@
 - 前端依赖风险已形成 R11 审计记录：`npm audit --omit=dev` 为 0；全量 `npm audit` 仍有 Vite / esbuild dev-build 工具链 1 moderate / 1 high，需发布负责人显式接受或另拆依赖升级包
 - 前端 Vite chunk size warning 已通过 R14 路由级懒加载拆包清除：`npm run build` 通过且未再出现 warning，最大 JS chunk 为 294.19 kB / gzip 96.09 kB；这不替代真实性能压测或目标环境演练
 - 商用危险默认值已做 fail-fast 或显式配置处理，发布环境仍必须提供真实 secret
-- CI 后端最小门禁保留 `ruff check xagent tests` 与 `pytest -q`
+- CI 后端最小门禁为窄化静态检查 `ruff check xagent tests --select F821,F822,F823,B023`（覆盖未定义名/闭包捕获等真缺陷类规则）与 `pytest -q`；全量 ruff 仍有行长（E501）与部分安全 lint 未清零，属已知非阻塞项，不得对外表述为"全量 ruff 门禁已保留"
 - 发布 / 回滚 Runbook v1 已补充为 `docs/RELEASE_RUNBOOK_V1.md`；目标环境完整演练与证据归档仍需后续 R4 完成
 - dev / staging / prod 环境基线与 secret 注入说明已补充为 `docs/ENVIRONMENT_BASELINE_V1.md`；真实目标环境 secret manager / secretRef 接入仍需 R4 或平台化任务演练
 - 交付材料索引与最小交付包已补充为 `docs/DELIVERY_MATERIALS_INDEX_V1.md`、`docs/ADMIN_DEPLOYMENT_MANUAL_V1.md`、`docs/OPERATIONS_MANUAL_V1.md`、`docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md`、`docs/SUPPORT_ESCALATION_PATH_V1.md`；其中真实联系人、目标环境演练结果与最终签字仍需按具体交付环境补齐

@@ -104,6 +104,29 @@ class R2PreflightTest(unittest.TestCase):
             self.assertNotIn("Everyone:F", commands[1])
             self.assertNotIn("BUILTIN\\Everyone:F", commands[1])
 
+    def test_windows_acl_decodes_whoami_with_console_codepage(self) -> None:
+        # 回归：中文 Windows 的 whoami 输出为 GBK（cp936），按 UTF-8 解码会乱码，
+        # 导致 icacls 报 1332「账户名与安全标识间无任何映射」。
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "r2.env.local"
+            target.write_text("POSTGRES_PASSWORD=secret\n", encoding="utf-8")
+            system32 = Path("C:/Windows/System32")
+            whoami_bytes = "峰哥工作站\\canqu\r\n".encode("cp936")
+            responses = [
+                mock.Mock(returncode=0, stdout=whoami_bytes, stderr=b""),
+                mock.Mock(returncode=0, stdout=b"", stderr=b""),
+            ]
+
+            with mock.patch("scripts.r2_preflight.os.name", "nt"), \
+                    mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
+                    mock.patch("scripts.r2_preflight._console_codepage", return_value="cp936"), \
+                    mock.patch("scripts.r2_preflight.subprocess.run", side_effect=responses) as subprocess_run:
+                restrict_env_permissions(target)
+
+            commands = [call.args[0] for call in subprocess_run.call_args_list]
+            self.assertEqual(commands[0][0], str(system32 / "whoami.exe"))
+            self.assertIn("峰哥工作站\\canqu:F", commands[1])
+
     def test_init_env_removes_file_when_windows_identity_is_dangerous(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -124,19 +124,29 @@ def get_windows_system32() -> Path:
 def get_windows_identity(system32: Path) -> str:
     result = subprocess.run(
         [str(system32 / "whoami.exe")],
-        text=True,
         capture_output=True,
-        encoding="utf-8",
-        errors="replace",
         timeout=15,
         check=False,
     )
     if result.returncode != 0:
         raise RuntimeError("failed to identify current user")
-    identity = result.stdout.strip()
+    stdout = result.stdout
+    if isinstance(stdout, bytes):
+        # whoami.exe 按控制台 OEM 代码页输出（中文 Windows 为 GBK/cp936），
+        # 不能按 UTF-8 解码，否则非 ASCII 机器名/用户名乱码导致 icacls 1332。
+        stdout = stdout.decode(_console_codepage(), errors="replace")
+    identity = stdout.strip()
     if not is_safe_windows_identity(identity):
         raise RuntimeError("failed to identify current user")
     return identity
+
+
+def _console_codepage() -> str:
+    windll = getattr(ctypes, "windll", None)
+    if windll is None:
+        return "utf-8"
+    oemcp = windll.kernel32.GetOEMCP()
+    return f"cp{oemcp}" if oemcp else "utf-8"
 
 
 def is_safe_windows_identity(identity: str) -> bool:
