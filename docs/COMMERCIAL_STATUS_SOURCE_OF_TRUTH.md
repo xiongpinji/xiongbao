@@ -18,6 +18,20 @@
 - 冻结的 Codex/Hermes 差距清单已在本地实现和验收，但这不等同于对竞品全部能力的永久完全等价；多机 HA、E2B、付费 provider 与客户现场仍未验证。
 - 第 1～9 节保留了此前 G1/G2/G3 和 Roadmap v2 的历史证据与口径。若与本节或第 10 节冲突，以本节和第 10 节为准。
 
+## 0.2 2026-08-14 交付收口实录（v1.1.0 → v1.1.1）
+
+- **发布治理已闭环**：候选分支 `candidate/webapi-v1.1.0-20260814` CI 全绿（run 31771271879）；master CI 全绿含 docker-build（run 31771819353）；`v1.1.0` tag 推送后 tag CI 全绿并自动创建 GitHub Release（run 31776468207）。
+- **演练中新发现并已修复的交付缺陷**（全部含回归测试）：
+  1. `r2_preflight.py` Windows 身份乱码：whoami 按 UTF-8 解码 GBK 输出 → icacls 1332 → init-env 权限加固在中文 Windows 必失败；已改为 OEM 代码页解码并真机验证。
+  2. `ollama_warmup.py` 漏剥 `ollama_chat/` LiteLLM 路由前缀 → warmup 用不存在的模型名打 `/api/chat` 超时、API 容器重启循环；已修复并加回归测试。
+  3. 原生 `qwen3:4b` 默认思考模式吃光 512 max_tokens → 编排链路空响应；已将推荐本地模型 `xagent-qwen3` 的 Modelfile 配方收编入库（`deploy/ollama/Modelfile.xagent-qwen3`），重建模型在编排条件下实测非空。
+  4. hosted runner 负载门 P95<200 噪声抖动：CI 门校准为 P95<350/P99<800 作回归兜底，生产冻结门槛仍由受控环境 R3 正式压测裁定。
+  5. compose 合同测试在仅有独立 docker-compose.exe 的 Windows 上失败：已加插件/独立二进制自动回退。
+- **目标环境等价演练（本机 Docker Engine 29.5.3）**：隔离项目 `xagentdrill` 全栈 6 核心服务全 healthy（postgres/redis/qdrant/api/worker/web）；`alembic current` 为 head；full 模式默认 admin 401（不 seed 默认管理员，符合预期）；注册→登录→真实模型代理运行 HTTP 200 全通。
+- **TS SDK 产品化**：dist 构建 + 类型声明 + exports/files + 5 项 node:test 合同测试 + npm pack 验证通过。
+- 上述修复以 **v1.1.1** 补丁发布（v1.0.0/v1.1.0 tag 均未移动）。
+- 剩余边界不变：多机 HA、E2B、付费 provider、客户现场签字仍是独立外部条件。
+
 ---
 
 ## 1. 状态口径定义
