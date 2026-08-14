@@ -28,9 +28,15 @@ curl -sf -X PUT -H "$AUTH" -H "Accept: application/vnd.github+json" \
     "required_linear_history": true
   }' > /dev/null && echo "master protection: OK"
 
-echo "== 2/3 v* 标签保护（禁止删除/重打发布标签）=="
-curl -sf -X POST -H "$AUTH" "$API/repos/$REPO/tags/protection" \
-  -d '{"pattern":"v*"}' > /dev/null && echo "tag protection: OK"
+echo "== 2/3 v* 发布标签不可变（tag ruleset：禁止 update/deletion；旧 tag-protection API 已废弃）=="
+curl -sf -X POST -H "$AUTH" -H "Accept: application/vnd.github+json" \
+  "$API/repos/$REPO/rulesets" -d '{
+    "name": "release-tags-immutable",
+    "target": "tag",
+    "enforcement": "active",
+    "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+    "rules": [{"type": "update"}, {"type": "deletion"}]
+  }' > /dev/null && echo "tag ruleset: OK"
 
 echo "== 3/3 ruleset 兜底（分支规则集，双保险）=="
 curl -sf -X POST -H "$AUTH" "$API/repos/$REPO/rulesets" -d '{
