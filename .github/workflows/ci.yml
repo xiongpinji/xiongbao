@@ -423,6 +423,9 @@ jobs:
             python scripts/verify_release_versions.py
           fi
 
+      - name: Release tag immutability sentinel
+        run: python scripts/verify_release_tags.py
+
   release:
     needs:
       - backend
