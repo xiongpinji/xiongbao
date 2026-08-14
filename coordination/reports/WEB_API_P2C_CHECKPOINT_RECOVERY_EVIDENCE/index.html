@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_P2C_CHECKPOINT_RECOVERY_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P2-C Checkpoint 恢复与受控回滚证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P2-C Checkpoint \u6062\u590d\u4e0e\u53d7\u63a7\u56de\u6eda\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_P2C_CHECKPOINT_RECOVERY_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_P2C_CHECKPOINT_RECOVERY_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P2-C Checkpoint 恢复与受控回滚证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_P2C_CHECKPOINT_RECOVERY_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p2-c-checkpoint">Web/API P2-C Checkpoint 恢复与受控回滚证据</h1>
+<h2 id="_1">结论</h2>
+<ul>
+<li>审计日期：2026-08-07。</li>
+<li>分支：<code>feature/webapi-release-hardening</code>。</li>
+<li>审计范围：数据库 checkpoint、会话恢复、父子 run 谱系、租户隔离、受控 Git 回滚、Web 时间线和重复恢复幂等性。</li>
+<li>排除范围：短剧、Tauri 桌面、任意文件快照回滚和未审查任务回滚。</li>
+<li>结论：P2-C 通过。恢复会创建新的子 run，不覆盖历史；回滚只接受同租户、同 run、已应用且路径受控的开发任务 commit/patch。下一阶段为 P2-D MCP 会话、运行、审批与事件接口。</li>
+</ul>
+<h2 id="_2">数据模型与安全边界</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据库事实源</td>
+<td><code>checkpoints</code> 保存 tenant、conversation、run、parent checkpoint、step、状态、脱敏消息、workspace 相对变更路径、恢复 run 和回滚结果</td>
+</tr>
+<tr>
+<td>自动 checkpoint</td>
+<td>内置编排每 5 步及取消时使用独立事务落库；成功后保留历史，不再依赖用户目录 30 分钟 JSON</td>
+</tr>
+<tr>
+<td>敏感信息</td>
+<td>Bearer、API key/token/secret/password/authorization 和 provider token 在 checkpoint 写入前递归脱敏；消息数量、正文长度和 JSON 总量均有上限</td>
+</tr>
+<tr>
+<td>路径约束</td>
+<td>只保存 workspace 内相对路径，拒绝 workspace 外路径；回滚 artifact 路径必须是 checkpoint 变更路径的子集</td>
+</tr>
+<tr>
+<td>租户隔离</td>
+<td>checkpoint list/detail/resume/rollback、会话消息/read/delete/continue 均按 Principal tenant 约束，跨租户返回 404</td>
+</tr>
+<tr>
+<td>恢复谱系</td>
+<td>恢复复制经过脱敏的消息、goal、step 和 changed files，创建新 run/子 checkpoint；完成或失败状态独立写回</td>
+</tr>
+<tr>
+<td>重复恢复</td>
+<td>父 checkpoint 通过数据库条件更新原子认领；已有 <code>resumed_run_id</code> 或处于 pending/running 时返回 409，Web 同步禁用按钮</td>
+</tr>
+<tr>
+<td>受控回滚</td>
+<td>仅允许同 run、已 apply、分支匹配的开发任务 commit 或受控 patch；要求干净工作区，成功生成新的 Git commit，失败写回结构化原因</td>
+</tr>
+</tbody>
+</table>
+<h2 id="apiweb">API、Web 与真实浏览器</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API 契约</td>
+<td>list/detail 不泄露其他租户；resume 要求精确 checkpoint ID；rollback 还要求开发任务 ID、来源类型和 admin <code>agent/manage</code> 权限</td>
+</tr>
+<tr>
+<td>Web 时间线</td>
+<td>Chat 按 conversation 展示紧凑时间线；Run Console 按 run 展示状态、step、变更文件、父 checkpoint、恢复 run 链接、回滚 commit/error</td>
+</tr>
+<tr>
+<td>人工确认</td>
+<td>恢复使用确认对话框并创建新 run；回滚需要开发任务 ID、commit/patch 来源和危险操作确认</td>
+</tr>
+<tr>
+<td>Playwright 同链</td>
+<td>独立 SQLite 从空库迁移至 head，写入 checkpoint 和 run 后启动隔离 API/Vite；真实登录、打开 Run Console、确认创建恢复 run、进入子 run 页面均成功</td>
+</tr>
+<tr>
+<td>浏览器结果</td>
+<td>父 checkpoint <code>79a5942637de4ae7bb138407bf81ba06</code> 创建子 run <code>e316e14c43c94359befc7b2b502c3364</code>；子 checkpoint <code>d54a6ea035864f0ca71f6326b6d92350</code> 显示“恢复完成”和父来源</td>
+</tr>
+<tr>
+<td>后端回读</td>
+<td>API 回读父 <code>resumed_run_id</code>、子 <code>parent_checkpoint_id</code>、<code>completed</code> 状态和 run <code>succeeded</code> 全部一致</td>
+</tr>
+<tr>
+<td>控制台</td>
+<td>Run Console 与恢复后子 run 页面均为 0 error、2 条 React Router 既有 warning；登录页最初仅有 favicon 404，导航后新页面错误为 0</td>
+</tr>
+</tbody>
+</table>
+<p>浏览器截图、独立数据库和服务日志位于仓库外 <code>C:\Users\canqu\AppData\Local\Temp\xagent-p2c-browser-evidence-20260807-043746</code>。回滚按钮在真实页面完成渲染；为避免对当前仓库制造无必要 Git 变更，实际 commit/patch 回滚由隔离临时 Git 仓库测试提供证据，浏览器链未执行破坏性回滚。</p>
+<h2 id="_3">新鲜验证</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>后端关联回归</td>
+<td><code>test_checkpoints.py</code>、<code>test_checkpoints_api.py</code>、<code>test_checkpoint_rollback.py</code>、<code>test_checkpoint_resume_orchestration.py</code>、<code>test_conversation_tenant.py</code> 共 11/11 通过</td>
+</tr>
+<tr>
+<td>Runtime 回归</td>
+<td><code>test_runtime_runs.py</code> 23/23 通过</td>
+</tr>
+<tr>
+<td>TDD 幂等性</td>
+<td>新增重复 resume 用例先得到 202 并失败；原子认领修复后返回 409，完整关联链通过</td>
+</tr>
+<tr>
+<td>目标静态检查</td>
+<td>Checkpoint domain/API Ruff 0；目标 mypy（<code>--follow-imports=skip</code>）0</td>
+</tr>
+<tr>
+<td>全仓静态门禁</td>
+<td>Ruff <code>262 &lt;= 286</code>；mypy <code>65 &lt;= 74</code></td>
+</tr>
+<tr>
+<td>fresh migration</td>
+<td>空 SQLite 完整升级到 <code>20260807_checkpoints (head)</code>，<code>checkpoints</code> 表和列已回读</td>
+</tr>
+<tr>
+<td>Web 回归</td>
+<td>21/21、typecheck、lint 0 error / 100 条存量 warning、生产 build（2379 modules）全部通过</td>
+</tr>
+<tr>
+<td>差异审计</td>
+<td><code>git diff --check</code> 和分文件提交检查通过；Playwright 临时快照已从工作树清除，API/Vite 监听进程已停止</td>
+</tr>
+</tbody>
+</table>
+<h2 id="p2-c">P2-C 实现提交</h2>
+<ul>
+<li><code>40433d8</code>：增加数据库 checkpoint、会话恢复、父子 run 和受控回滚后端链。</li>
+<li><code>81aa2f2</code>：以数据库原子认领阻止重复创建恢复 run。</li>
+<li><code>4f95d23</code>：增加 Web checkpoint 时间线、恢复确认、回滚控制和状态测试。</li>
+</ul>
+<h2 id="_4">已知剩余风险</h2>
+<ul>
+<li>Web 仍有 100 条存量 ESLint warning；R1 必须归零或形成逐项 owner、理由与失效日期豁免。</li>
+<li>完整 mypy 仍保留 65 项基线债务；当前门禁阻止新增，但 R1 需要确认发布豁免清单。</li>
+<li>SQLite 单机路径已用原子条件更新阻止重复 resume；多机 HA 不在本轮范围，生产 PostgreSQL/部署拓扑仍需在 R1 明确。</li>
+<li>P2-D MCP 和 R1 全量发布门禁尚未完成，因此不能判定整个 Web/API 已达到最终发布标准。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

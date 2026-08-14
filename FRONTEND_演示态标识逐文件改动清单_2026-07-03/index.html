@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/FRONTEND_%E6%BC%94%E7%A4%BA%E6%80%81%E6%A0%87%E8%AF%86%E9%80%90%E6%96%87%E4%BB%B6%E6%94%B9%E5%8A%A8%E6%B8%85%E5%8D%95_2026-07-03/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>前端“演示态标识”逐文件改动清单（2026-07-03） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u524d\u7aef\u201c\u6f14\u793a\u6001\u6807\u8bc6\u201d\u9010\u6587\u4ef6\u6539\u52a8\u6e05\u5355\uff082026-07-03\uff09";
+        var mkdocs_page_input_path = "FRONTEND_\u6f14\u793a\u6001\u6807\u8bc6\u9010\u6587\u4ef6\u6539\u52a8\u6e05\u5355_2026-07-03.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/FRONTEND_%E6%BC%94%E7%A4%BA%E6%80%81%E6%A0%87%E8%AF%86%E9%80%90%E6%96%87%E4%BB%B6%E6%94%B9%E5%8A%A8%E6%B8%85%E5%8D%95_2026-07-03/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">前端“演示态标识”逐文件改动清单（2026-07-03）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/FRONTEND_演示态标识逐文件改动清单_2026-07-03.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="2026-07-03">前端“演示态标识”逐文件改动清单（2026-07-03）</h1>
+<blockquote>
+<p>目标：把“演示态标识方案”进一步落成可执行的逐文件改动说明。
+范围：仅覆盖当前最容易让用户误解为“真实智能执行”的页面与组件。
+不包含代码实现，只说明“改哪里、加什么、优先级如何”。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 改动优先级</h2>
+<h3 id="p0">P0（本轮建议必须补）</h3>
+<ol>
+<li><code>src/pages/AgentsPage.tsx</code></li>
+<li><code>src/pages/MemoryPage.tsx</code></li>
+<li><code>src/pages/OpenSourcePage.tsx</code></li>
+<li><code>src/components/settings/SettingsLayout.tsx</code></li>
+<li><code>src/components/layout/ShellContextPanel.tsx</code></li>
+</ol>
+<h3 id="p1">P1（建议补）</h3>
+<ol>
+<li><code>src/components/runs/RunConsole.tsx</code></li>
+<li><code>src/pages/WorkflowsPage.tsx</code></li>
+<li><code>src/pages/CreativeStudioPage.tsx</code></li>
+</ol>
+<h3 id="p2">P2（当前不建议动）</h3>
+<ul>
+<li><code>src/pages/LoginPage.tsx</code></li>
+<li><code>src/pages/ChatPage.tsx</code></li>
+<li><code>src/pages/ProfessionalModePage.tsx</code></li>
+<li><code>src/components/layout/AppShell.tsx</code></li>
+</ul>
+<p>原因：这些页面当前更接近真实主入口或壳层，不适合统一打上“预览态”标签。</p>
+<hr />
+<h2 id="2">2. 逐文件改动清单</h2>
+<h2 id="21-srcpagesagentspagetsx">2.1 <code>src/pages/AgentsPage.tsx</code></h2>
+<h3 id="_1">当前问题</h3>
+<p>页面视觉上像“可真实调度多个专业智能体”，但实际上：</p>
+<ul>
+<li>后端失败时会显示 <code>fallbackRoles</code></li>
+<li>对话助手当前主要返回本地建议文案</li>
+<li>“设为当前角色”按钮也更偏演示态</li>
+</ul>
+<h3 id="a">建议改动位置 A</h3>
+<p><strong>位置：</strong> 角色标题区下方，<code>selected.description</code> 下方附近。</p>
+<p><strong>当前代码参考区域：</strong>
+- <code>Agent profile</code>
+- 角色名
+- <code>selected.description</code></p>
+<h3 id="_2">建议新增文案</h3>
+<pre><code class="language-text">当前页用于浏览和预览智能体角色。角色说明与调度建议可用于工作流设计，但真实执行能力仍以后端返回的可用角色与工具链为准。
+</code></pre>
+<h3 id="b">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 上方，作为一条轻提示。</p>
+<h3 id="_3">建议新增文案</h3>
+<pre><code class="language-text">预览态：当前“角色调度”优先生成任务拆解建议，不直接触发真实智能体执行。
+</code></pre>
+<h3 id="c">建议改动位置 C</h3>
+<p><strong>位置：</strong> 保留现有 <code>error</code> 提示框，但把文案再说透一点。</p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>后端角色接口暂不可用，当前展示本地预览角色用于 UI 演示。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">后端角色接口暂不可用，当前展示的是本地演示角色，仅用于 UI 预览，不代表真实可调度角色集合。
+</code></pre>
+<h3 id="_4">优先级</h3>
+<ul>
+<li><strong>必须改</strong>：A、C</li>
+<li><strong>建议改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="22-srcpagesmemorypagetsx">2.2 <code>src/pages/MemoryPage.tsx</code></h2>
+<h3 id="_5">当前问题</h3>
+<p>“记忆检索助手”看起来像可以直接从知识库返回结果，但当前行为更偏：</p>
+<ul>
+<li>整理检索意图</li>
+<li>给出记忆隔离建议</li>
+<li>跳转到设置页</li>
+</ul>
+<h3 id="a_1">建议改动位置 A</h3>
+<p><strong>位置：</strong> header 段落下方、<code>ConversationalCommand</code> 上方。</p>
+<h3 id="_6">建议新增文案</h3>
+<pre><code class="language-text">辅助模式：当前入口主要用于整理检索意图与跳转索引配置，不直接展示真实知识库命中结果。
+</code></pre>
+<h3 id="b_1">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 的 <code>initialAssistantMessage</code>。</p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>你可以直接问知识库，也可以要求我把当前信息沉淀到某个项目或智能体的专属记忆区。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">你可以先描述检索或沉淀目标。我会优先整理检索意图、隔离边界和下一步入口；真实知识库结果仍需进入索引库或后端检索链路查看。
+</code></pre>
+<h3 id="_7">优先级</h3>
+<ul>
+<li><strong>必须改</strong>：A</li>
+<li><strong>建议改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="23-srcpagesopensourcepagetsx">2.3 <code>src/pages/OpenSourcePage.tsx</code></h2>
+<h3 id="_8">当前问题</h3>
+<p>“开源比选助手”很容易让用户误会成实时仓库搜索，但当前更接近：</p>
+<ul>
+<li>能力缺口整理</li>
+<li>比选维度建议</li>
+<li>配置页导航</li>
+</ul>
+<h3 id="a_2">建议改动位置 A</h3>
+<p><strong>位置：</strong> header 段落下方、<code>ConversationalCommand</code> 上方。</p>
+<h3 id="_9">建议新增文案</h3>
+<pre><code class="language-text">预览态：当前入口优先整理开源比选目标与接入策略，不直接返回实时仓库搜索结果。
+</code></pre>
+<h3 id="b_2">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 的 <code>initialAssistantMessage</code>。</p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>告诉我你要补齐的能力，我会先按功能、许可证、成熟度和接入方式拆分比选。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">告诉我你要补齐的能力，我会先整理比选目标、许可证关注点和接入策略。真实候选仓库列表仍需进入开源发现链路进一步检索。
+</code></pre>
+<h3 id="_10">优先级</h3>
+<ul>
+<li><strong>必须改</strong>：A</li>
+<li><strong>建议改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="24-srccomponentssettingssettingslayouttsx">2.4 <code>src/components/settings/SettingsLayout.tsx</code></h2>
+<h3 id="_11">当前问题</h3>
+<p>“配置助手”容易让用户误解为：</p>
+<ul>
+<li>输入一句话后，配置已经真的被修改</li>
+</ul>
+<p>但当前更偏：</p>
+<ul>
+<li>生成检查清单</li>
+<li>输出建议</li>
+<li>转成交付任务</li>
+</ul>
+<h3 id="a_3">建议改动位置 A</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 上方。</p>
+<h3 id="_12">建议新增文案</h3>
+<pre><code class="language-text">辅助模式：配置助手当前只生成检查清单与调整建议，不会直接修改本地或远端配置。
+</code></pre>
+<h3 id="b_3">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>initialAssistantMessage</code></p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>你可以直接告诉我想怎么配置「xxx」，我会把自然语言转成可执行的配置检查清单。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">你可以直接告诉我想怎么配置「xxx」。我会把自然语言整理成检查清单与调整建议，但不会直接写入配置。
+</code></pre>
+<h3 id="_13">优先级</h3>
+<ul>
+<li><strong>必须改</strong>：A</li>
+<li><strong>建议改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="25-srccomponentslayoutshellcontextpaneltsx">2.5 <code>src/components/layout/ShellContextPanel.tsx</code></h2>
+<h3 id="_14">当前问题</h3>
+<p>右侧“上下文助手”很像“当前页真实智能代理”，但当前更偏：</p>
+<ul>
+<li>总结当前页</li>
+<li>给下一步建议</li>
+<li>帮助转成工作流任务</li>
+</ul>
+<h3 id="a_4">建议改动位置 A</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 上方。</p>
+<h3 id="_15">建议新增文案</h3>
+<pre><code class="language-text">辅助模式：当前为上下文助手，优先提供总结、建议与跳转，不直接执行后台任务。
+</code></pre>
+<h3 id="b_4">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>initialAssistantMessage</code></p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>我会根据当前页面上下文回答，并把你的意图转成下一步操作。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">我会根据当前页面上下文给出总结、建议与下一步入口，必要时再引导你进入真实执行页面。
+</code></pre>
+<h3 id="_16">优先级</h3>
+<ul>
+<li><strong>必须改</strong>：A</li>
+<li><strong>建议改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="26-srccomponentsrunsrunconsoletsx">2.6 <code>src/components/runs/RunConsole.tsx</code></h2>
+<h3 id="_17">当前问题</h3>
+<p>“运行分析助手”当前主要根据现有 <code>RunDetail</code> 本地组织回答，容易被理解成“已经触发后台深度诊断”。</p>
+<h3 id="a_5">建议改动位置 A</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 上方。</p>
+<h3 id="_18">建议新增文案</h3>
+<pre><code class="language-text">说明：当前分析助手优先基于已加载的运行详情做本地总结，帮助你快速查看 Timeline、Evidence 和 Artifacts。
+</code></pre>
+<h3 id="b_5">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>initialAssistantMessage</code></p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>我会把运行详情当成一条可追问的会话，按时间线、证据和产物回答。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">我会基于当前已加载的运行详情回答，并按时间线、证据和产物帮你快速定位信息。
+</code></pre>
+<h3 id="_19">优先级</h3>
+<ul>
+<li><strong>建议改</strong>：A</li>
+<li><strong>可选改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="27-srcpagesworkflowspagetsx">2.7 <code>src/pages/WorkflowsPage.tsx</code></h2>
+<h3 id="_20">当前问题</h3>
+<p>“工作流编排助手”当前会把输入直接写成页面步骤草案，但用户可能误会为已经进入正式后端工作流编排。</p>
+<h3 id="a_6">建议改动位置 A</h3>
+<p><strong>位置：</strong> <code>ConversationalCommand</code> 上方。</p>
+<h3 id="_21">建议新增文案</h3>
+<pre><code class="language-text">预览态：这里会先生成页面内步骤草案；正式执行仍以“创建并执行”按钮触发的后端工作流为准。
+</code></pre>
+<h3 id="b_6">建议改动位置 B</h3>
+<p><strong>位置：</strong> <code>initialAssistantMessage</code></p>
+<p><strong>当前文案：</strong></p>
+<blockquote>
+<p>你说一句目标，我会把它写入工作流步骤，并同步到画布节点。</p>
+</blockquote>
+<p><strong>建议替换为：</strong></p>
+<pre><code class="language-text">你说一句目标，我会先把它写成页面内步骤草案并同步到画布；确认后再通过执行按钮提交后端工作流。
+</code></pre>
+<h3 id="_22">优先级</h3>
+<ul>
+<li><strong>建议改</strong>：A</li>
+<li><strong>可选改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="28-srcpagescreativestudiopagetsx">2.8 <code>src/pages/CreativeStudioPage.tsx</code></h2>
+<h3 id="_23">当前问题</h3>
+<p>Creative / Drama 页里既有草案、画布、节点编辑，又有真实执行动作。若缺少提示，用户容易混淆“草案生成”和“正式生产”。</p>
+<h3 id="a_7">建议改动位置 A</h3>
+<p><strong>位置：</strong> 对话式入口附近（如果存在独立 <code>ConversationalCommand</code>，就放其上方；如果没有，放在 brief / 画布入口上方）。</p>
+<h3 id="_24">建议新增文案</h3>
+<pre><code class="language-text">说明：当前输入会优先生成创作草案与页面节点意图；正式生产链路仍以明确的执行按钮和后端返回结果为准。
+</code></pre>
+<h3 id="b_7">建议改动位置 B</h3>
+<p><strong>位置：</strong> 若页面已有“创建画布 / 生成 / 运行”区块，可在按钮区附近增加一句短提示。</p>
+<p><strong>建议文案：</strong></p>
+<pre><code class="language-text">“创建画布”用于生成草案；“执行 / 生产”才会进入真实后端链路。
+</code></pre>
+<h3 id="_25">优先级</h3>
+<ul>
+<li><strong>建议改</strong>：A</li>
+<li><strong>可选改</strong>：B</li>
+</ul>
+<hr />
+<h2 id="3">3. 建议的统一样式</h2>
+<p>为了避免每个页面都做成大黄条或大红条，建议统一采用“轻提示卡片”或“小字说明”。</p>
+<h3 id="a_8">方案 A：小字说明（推荐）</h3>
+<p>适合放在 <code>ConversationalCommand</code> 上方：</p>
+<pre><code class="language-text">辅助模式：当前入口只整理意图与建议，不直接触发真实执行。
+</code></pre>
+<h3 id="b_8">方案 B：细边框轻提示卡片</h3>
+<p>适合 Agents fallback 和 Settings：</p>
+<pre><code class="language-text">当前展示的是本地演示数据，仅用于 UI 预览。
+</code></pre>
+<h3 id="c_1">方案 C：标题旁小标签</h3>
+<p>适合 Run Console / ShellContextPanel：</p>
+<ul>
+<li><code>辅助模式</code></li>
+<li><code>预览态</code></li>
+<li><code>本地分析</code></li>
+</ul>
+<hr />
+<h2 id="4">4. 最小改动落地顺序</h2>
+<p>如果本轮只想最小成本降低误导风险，建议按下面顺序落：</p>
+<ol>
+<li><code>AgentsPage.tsx</code></li>
+<li><code>MemoryPage.tsx</code></li>
+<li><code>OpenSourcePage.tsx</code></li>
+<li><code>SettingsLayout.tsx</code></li>
+<li><code>ShellContextPanel.tsx</code></li>
+</ol>
+<p>这 5 个改完，误导风险会明显下降。</p>
+<p>如果还有余力，再补：</p>
+<ol>
+<li><code>RunConsole.tsx</code></li>
+<li><code>WorkflowsPage.tsx</code></li>
+<li><code>CreativeStudioPage.tsx</code></li>
+</ol>
+<hr />
+<h2 id="5">5. 与提交方案的对应关系</h2>
+<p>建议这些“演示态标识”改动归入你前面拆的 <strong>第二次提交</strong>：</p>
+<blockquote>
+<p><code>feat(web): add conversational entry points across workspace pages</code></p>
+</blockquote>
+<p>原因：</p>
+<ul>
+<li>它们都服务于“页面内对话式交互增强”的真实边界说明</li>
+<li>不适合混进“壳层 / 导航 / 主题重构”那次提交</li>
+</ul>
+<hr />
+<h2 id="6">6. 下一步建议</h2>
+<p>如果要继续推进，最顺的方式是：</p>
+<ol>
+<li>先按本清单改 P0 的 5 个文件。</li>
+<li>跑一遍页面点击验收。</li>
+<li>再决定是否补 P1 的 3 个文件。</li>
+</ol>
+<p>这样能避免一次性改太多文案，反而打断你当前前端收口节奏。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/delivery-templates/UPGRADE_PACK_TEMPLATE/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>标准升级包模板（P3 商业复制） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u6807\u51c6\u5347\u7ea7\u5305\u6a21\u677f\uff08P3 \u5546\u4e1a\u590d\u5236\uff09";
+        var mkdocs_page_input_path = "delivery-templates/UPGRADE_PACK_TEMPLATE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/delivery-templates/UPGRADE_PACK_TEMPLATE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">标准升级包模板（P3 商业复制）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/delivery-templates/UPGRADE_PACK_TEMPLATE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="p3">标准升级包模板（P3 商业复制）</h1>
+<blockquote>
+<p>用途：从版本 A 升级到版本 B 的标准动作集。依据 RELEASE_RUNBOOK_V1 + alembic 迁移纪律。</p>
+</blockquote>
+<h2 id="1">1. 升级对象</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>从版本</td>
+<td><code>&lt;tag/commit&gt;</code></td>
+</tr>
+<tr>
+<td>到版本</td>
+<td><code>&lt;tag/commit + CI run id&gt;</code></td>
+</tr>
+<tr>
+<td>环境</td>
+<td><code>&lt;试点/生产；compose/helm&gt;</code></td>
+</tr>
+<tr>
+<td>数据</td>
+<td><code>&lt;SQLite/Postgres；数据量级&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="2">2. 升级前检查</h2>
+<ul>
+<li>[ ] 目标版本 CI 全绿</li>
+<li>[ ] 备份完成（DB dump + 数据目录；恢复演练在本周期内做过）</li>
+<li>[ ] <code>alembic current</code> 与目标 head 的迁移路径已审阅（含 SQLite/Postgres 双方言）</li>
+<li>[ ] 配置 diff 已审阅（settings 新增项/废弃项；secretRef 引用可达）</li>
+<li>[ ] 回滚镜像/包已就位</li>
+</ul>
+<h2 id="3">3. 执行步骤</h2>
+<ol>
+<li>公告与冻结写入（如适用）</li>
+<li>备份 → 记录校验值</li>
+<li>部署新版本（compose pull/up 或 helm upgrade）</li>
+<li><code>alembic upgrade head</code>（如需）</li>
+<li>smoke：<code>/health</code> <code>/ready</code> 登录 主链路一发</li>
+<li>发布后观测（post_deploy_summary.py，≥30min 窗口）</li>
+</ol>
+<h2 id="4">4. 回滚触发与动作</h2>
+<table>
+<thead>
+<tr>
+<th>触发</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>smoke 任一失败</td>
+<td>立即回滚到备份版本 + <code>alembic downgrade</code>（如迁移过）</td>
+</tr>
+<tr>
+<td>观测窗 5xx 率 &gt; 基线 2×</td>
+<td>ROLLBACK_RECOMMENDED 评估，30min 内决策</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5">5. 归档</h2>
+<ul>
+<li>[ ] 升级记录（时间/版本/操作人/观测结论）</li>
+<li>[ ] 备份位置与校验值</li>
+<li>[ ] 遗留问题清单</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

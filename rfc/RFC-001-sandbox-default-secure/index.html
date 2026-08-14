@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/rfc/RFC-001-sandbox-default-secure/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>RFC-001：沙箱默认安全姿态与分级演进 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "RFC-001\uff1a\u6c99\u7bb1\u9ed8\u8ba4\u5b89\u5168\u59ff\u6001\u4e0e\u5206\u7ea7\u6f14\u8fdb";
+        var mkdocs_page_input_path = "rfc/RFC-001-sandbox-default-secure.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/rfc/RFC-001-sandbox-default-secure/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">RFC-001：沙箱默认安全姿态与分级演进</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/rfc/RFC-001-sandbox-default-secure.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="rfc-001">RFC-001：沙箱默认安全姿态与分级演进</h1>
+<ul>
+<li><strong>状态</strong>：Draft（提案，未实施）</li>
+<li><strong>作者</strong>：工作流 F（竞品差距推进）</li>
+<li><strong>日期</strong>：2026-08-02</li>
+<li><strong>关联</strong>：README「安全默认姿态」、<code>xagent/adapters/sandbox/base.py</code>、<code>xagent/infra/settings.py</code>（<code>ToolsSettings</code>）</li>
+</ul>
+<h2 id="1">1. 背景与问题</h2>
+<p>X-Agent 当前执行类能力的安全默认：</p>
+<ul>
+<li><code>shell_exec</code> 工具默认禁用（<code>XAGENT_TOOLS__ENABLE_SHELL=true</code> 显式放开）；</li>
+<li>沙箱适配层默认 <code>DisabledSandbox</code>：拒绝执行，绝不在宿主机直接 exec 不可信代码；</li>
+<li><code>python_exec</code> / <code>file_write</code> 等 power tools 直接运行在 API 进程内，仅靠 <code>_WORKSPACE</code> 目录约束。</li>
+</ul>
+<p>问题：一旦用户显式打开 shell / python 执行，代码实际跑在<strong>宿主机 API 进程</strong>里，文件系统隔离是「自律式」的（路径前缀检查），无法防御：</p>
+<ul>
+<li>路径逃逸（symlink、<code>..</code> 变体、绝对路径绕过）；</li>
+<li>资源耗尽（fork bomb、磁盘写满、内存打爆）；</li>
+<li>网络侧信道（执行代码随意外连，数据外泄）；</li>
+<li>多租户串扰（同进程内不同租户的任务互相可见）。</li>
+</ul>
+<p>随着短剧工厂开放给外部试点客户，「agent 能跑代码」与「私有化交付安全底线」之间的矛盾必须先于 GA 解决。</p>
+<h2 id="2">2. 目标与非目标</h2>
+<p><strong>目标</strong></p>
+<ol>
+<li>保持 lite 模式「默认禁执行」的零配置安全体验不变；</li>
+<li>为需要执行能力的部署提供<strong>有真实隔离边界</strong>的分级选项；</li>
+<li>每一级的开启都是显式配置，且 <code>validate_for_production()</code> 能硬校验「生产模式不允许宿主机裸奔执行」。</li>
+</ol>
+<p><strong>非目标</strong></p>
+<ul>
+<li>不自研容器运行时 / microVM；</li>
+<li>不引入 AGPL 组件（Daytona 等）；</li>
+<li>不改变 lite 单机零依赖的交付形态（Docker 不是 lite 的硬依赖）。</li>
+</ul>
+<h2 id="3">3. 方案：三级演进</h2>
+<h3 id="level-0-lite">Level 0 — lite 默认：禁执行（现状，保持）</h3>
+<ul>
+<li><code>enable_shell=false</code>、<code>DisabledSandbox</code>；执行类工具不注册。</li>
+<li>适用：本地演示、单机试点、只读型 agent 场景。</li>
+<li>成本：零。</li>
+</ul>
+<h3 id="level-1-docker">Level 1 — Docker 沙箱（私有化主力，建议下个迭代落地）</h3>
+<ul>
+<li>新增 <code>DockerSandbox(Sandbox)</code>：<code>docker run --rm --network=none --memory=512m --cpus=1 --read-only -v &lt;workspace-ro&gt;:/work</code> 一次性容器执行，stdout/stderr 回收为 <code>SandboxResult</code>。</li>
+<li>配置：<code>XAGENT_SANDBOX__BACKEND=docker</code>，<code>XAGENT_SANDBOX__DOCKER_IMAGE=xagent-sandbox:py3.12</code>（预装 python/node 最小镜像，离线可构建）。</li>
+<li>shell/python 工具在 <code>backend=docker</code> 时把调用路由进沙箱，而非宿主机；<code>_WORKSPACE</code> 以只读 + 显式可写子目录挂载。</li>
+<li>隔离收益：网络默认关闭、资源限额、只读根 fs、进程级隔离，多租户串扰面收敛到 Docker daemon 本身。</li>
+<li>生产硬校验新增：<code>is_production and tools.enable_shell and sandbox.backend in ("disabled","host")</code> → 配置问题清单报错。</li>
+<li>风险与缓解：Windows 宿主机需 Docker Desktop/WSL2（部署文档标注）；镜像构建纳入 release 流水线。</li>
+</ul>
+<h3 id="level-2-e2b">Level 2 — E2B（云托管 / 高并发租户隔离，企业版选项）</h3>
+<ul>
+<li>新增 <code>E2BSandbox(Sandbox)</code>：走 E2B（Apache-2.0 SDK）firecracker microVM，每任务独立 VM，秒级冷启动。</li>
+<li>配置：<code>XAGENT_SANDBOX__BACKEND=e2b</code> + <code>XAGENT_SANDBOX__E2B_API_KEY</code>。</li>
+<li>适用：SaaS 化 / 多租户高并发 / 不可信代码占比高的场景；私有化纯内网部署留在 Level 1。</li>
+<li>与现有架构对齐：README 架构表已把 <code>adapters/sandbox</code> 定位为「E2B / microsandbox (+docker 兜底)」，本 RFC 是把该叙事落到分级实现。</li>
+</ul>
+<h3 id="_1">分级对照</h3>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>后端</th>
+<th>隔离边界</th>
+<th>网络</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td>disabled</td>
+<td>不执行</td>
+<td>—</td>
+<td>lite 默认</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>docker</td>
+<td>容器（namespace/cgroup）</td>
+<td>默认禁</td>
+<td>私有化主力</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>e2b</td>
+<td>microVM</td>
+<td>受控白名单</td>
+<td>云/企业版</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-level-1">4. 实施步骤（Level 1，建议范围）</h2>
+<ol>
+<li><code>adapters/sandbox/</code> 新增 <code>docker_sandbox.py</code>，实现 <code>Sandbox</code> 协议（run_code/health）；</li>
+<li><code>SandboxSettings</code> 增加 <code>backend / docker_image / mem_limit / cpu_limit / network</code> 字段；</li>
+<li><code>power_tools.shell_exec</code> / <code>python_exec</code> 增加沙箱路由分支（backend!=host 时走沙箱）；</li>
+<li>沙箱镜像 Dockerfile + 离线构建脚本（<code>scripts/</code>）；</li>
+<li><code>validate_for_production()</code> 增加「生产禁宿主机执行」硬校验；</li>
+<li>测试：mock docker CLI 验证命令拼装与限额参数；集成测试（有 docker 时）跑通 hello-world。</li>
+</ol>
+<h2 id="5">5. 度量</h2>
+<ul>
+<li>生产部署中 <code>backend=host</code> 配置数为 0（硬校验保证）；</li>
+<li>沙箱任务 P95 启动开销 &lt; 3s（L1）/ &lt; 5s（L2）；</li>
+<li>逃逸类安全工单为 0。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

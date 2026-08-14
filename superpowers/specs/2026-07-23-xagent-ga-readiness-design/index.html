@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-07-23-xagent-ga-readiness-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 正式商用 GA 收口设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u6b63\u5f0f\u5546\u7528 GA \u6536\u53e3\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-07-23-xagent-ga-readiness-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-07-23-xagent-ga-readiness-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 正式商用 GA 收口设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-07-23-xagent-ga-readiness-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-ga">X-Agent 正式商用 GA 收口设计</h1>
+<ul>
+<li>日期：2026-07-23</li>
+<li>目标：将当前可内部试点 / 受控私有部署状态收口为正式商用 GA</li>
+<li>首发范围：方案 A</li>
+<li>发布形态：单实例 Docker Compose <code>full</code></li>
+<li>环境证据：可复现的 staging Compose <code>full</code> 演练</li>
+<li>发布策略：先完成门禁，再生成版本候选、发布签字与 GA 材料</li>
+</ul>
+<h2 id="1-ga">1. GA 首发范围</h2>
+<h3 id="_1">纳入</h3>
+<ul>
+<li>Web 工作台：登录、对话、智能体、工作流、Run Console、设置</li>
+<li>短剧工厂自由画布及其工作流执行</li>
+<li>企业鉴权、RBAC、租户隔离、审计</li>
+<li>API、worker、web 的 Docker Compose <code>full</code> 部署</li>
+<li>Postgres、Redis、Qdrant、Langfuse/LiteLLM 声明的依赖链</li>
+<li>至少一条真实 LLM、一个图像 provider、一个视频 provider</li>
+</ul>
+<h3 id="_2">不纳入</h3>
+<ul>
+<li>Helm/Kubernetes 平台化及 enterprise secretRef</li>
+<li>Tauri 桌面端正式交付</li>
+<li>多实例 HA、多地域部署、SaaS 级容量承诺</li>
+<li>实验性 provider 的厂商级兼容承诺</li>
+<li>跨多个历史版本的数据库直接升级</li>
+</ul>
+<h2 id="2-ga">2. GA 硬门禁</h2>
+<p>任一 P0 门禁未通过，不得发布 GA。</p>
+<h3 id="p0-a">P0-A：候选与范围冻结</h3>
+<ul>
+<li>建立独立 GA 发布分支、版本号和 Git tag 计划</li>
+<li>工作区清洁；未提交改动必须明确排除或纳入候选</li>
+<li>首发页面、接口、能力域和明确不支持范围冻结</li>
+<li>README、状态事实源、ROADMAP、已知问题和交付索引口径一致</li>
+<li>当前候选的远端 CI 证据与候选提交一一对应</li>
+</ul>
+<h3 id="p0-b">P0-B：安全与密钥</h3>
+<ul>
+<li>立即轮换工作区中暴露过的 DeepSeek、图像和视频 provider key，并确认旧 key 失效</li>
+<li>任何 staging/prod secret 不进入 Git、构建产物、日志和截图</li>
+<li><code>full</code> 模式拒绝弱 JWT secret、关闭鉴权、通配 CORS 和默认管理员</li>
+<li>Compose 启动要求显式 JWT、Langfuse、数据库和必要 provider secret</li>
+<li>安全扫描验证鉴权、租户隔离、SQL 注入防护、限流和安全响应头</li>
+<li>数据库、Redis、Qdrant 不直接公网暴露；明确 HTTPS/TLS 终止位置</li>
+</ul>
+<h3 id="p0-c">P0-C：质量门禁</h3>
+<p>后端：</p>
+<ul>
+<li><code>ruff check xagent tests</code> 通过</li>
+<li><code>mypy xagent --ignore-missing-imports</code> 通过，不允许 <code>|| true</code> 吞错</li>
+<li><code>PYTHONPATH</code> 或可编辑安装后的 <code>pytest -q</code> 入口可直接复现</li>
+<li>pytest 全部通过，无未解释失败和超时</li>
+</ul>
+<p>前端：</p>
+<ul>
+<li><code>npm run lint</code> 通过</li>
+<li><code>npm run typecheck</code> 通过</li>
+<li><code>npm run build</code> 通过</li>
+</ul>
+<p>集成：</p>
+<ul>
+<li>关键 Playwright E2E 覆盖登录、对话/SSE、运行详情、工作流、短剧画布和设置</li>
+<li>E2E 在 staging Compose full 环境通过</li>
+<li>许可证门禁和生产依赖审计通过；dev 工具链风险有明确处置结论</li>
+</ul>
+<h3 id="p0-dstaging-full">P0-D：staging Full 演练</h3>
+<p>使用全新 staging 环境和显式 secret 完成：</p>
+<ol>
+<li>Compose 配置校验与从零部署</li>
+<li>Postgres/Redis/Qdrant/Langfuse/LiteLLM/worker 健康检查</li>
+<li>显式账号登录和权限验证</li>
+<li>文本主链、工作流、Run Console、短剧画布执行</li>
+<li>真实 LLM、图像 provider、视频 provider 调用</li>
+<li>失败、重试、恢复和日志排障演练</li>
+<li>发布后 smoke 验收</li>
+<li>相邻 GA 版本升级、迁移和回滚演练</li>
+</ol>
+<p>必须归档命令输出、版本信息、配置摘要、日志、截图和结果，不得以本地 lite 证据替代。</p>
+<h3 id="p0-e">P0-E：数据恢复</h3>
+<ul>
+<li>Postgres、Qdrant、审计数据具备备份方案</li>
+<li>完成真实备份与恢复演练</li>
+<li>RPO ≤ 24 小时</li>
+<li>RTO ≤ 4 小时</li>
+<li>记录恢复步骤、耗时、数据完整性和责任人</li>
+<li>GA 只承诺相邻 GA 版本升级；升级前必须备份，失败可回滚</li>
+</ul>
+<h3 id="p0-f">P0-F：容量与运行基线</h3>
+<p>在单实例 Compose 环境完成 50 并发负载测试并记录：</p>
+<ul>
+<li>API P95 延迟</li>
+<li>错误率</li>
+<li>429 限流比例和触发阈值</li>
+<li>worker backlog、任务耗时和失败率</li>
+<li>LLM、Redis、Qdrant、数据库的主要瓶颈</li>
+<li>明确超出基线后的行为和扩容建议</li>
+</ul>
+<h3 id="p0-g">P0-G：交付与支持签发</h3>
+<ul>
+<li>管理员部署、运维、升级/回滚、备份恢复、已知问题和边界文档齐全</li>
+<li>定义健康检查、指标、日志、Langfuse trace 和告警责任人</li>
+<li>P0 事件：30 分钟响应，4 小时内给出恢复方案</li>
+<li>P1 事件：4 小时响应</li>
+<li>完成 PR/release review package</li>
+<li>TL、QA、DevOps、Owner 分别基于证据签字</li>
+</ul>
+<h2 id="3">3. 任务分层与依赖</h2>
+<h3 id="0">阶段 0：候选清理与安全止血</h3>
+<p>依赖：无。必须最先完成。</p>
+<ul>
+<li>轮换并撤销已暴露 provider key</li>
+<li>标记或清理工作区未跟踪/未提交产物</li>
+<li>建立 GA release 分支和候选范围清单</li>
+<li>统一互相矛盾的 GA / 试点状态文档</li>
+<li>修复 CI 中吞掉 mypy 失败的门禁逻辑</li>
+</ul>
+<p>出口：无活动密钥暴露、范围冻结草案、质量门禁真实失败可见。</p>
+<h3 id="1">阶段 1：代码质量与可复现验证</h3>
+<p>依赖：阶段 0 的范围确定。</p>
+<ul>
+<li>修复当前 16 个 mypy 错误</li>
+<li>修正 pytest 直接入口，使文档命令可复现</li>
+<li>固化后端、前端、许可证和依赖审计命令</li>
+<li>补齐关键 E2E 和安全扫描脚本的 staging 参数化</li>
+</ul>
+<p>出口：本地全套门禁通过，且命令无需临时手工环境修补。</p>
+<h3 id="2staging-compose-full">阶段 2：Staging Compose full 验收</h3>
+<p>依赖：阶段 1。</p>
+<ul>
+<li>准备隔离 staging 主机、域名/TLS 或明确终止方案</li>
+<li>通过 secret manager/CI secret 注入配置</li>
+<li>从零启动全依赖链并保存证据</li>
+<li>验收核心链路、真实 provider、失败恢复和安全边界</li>
+<li>完成 Playwright、security scan 和发布 smoke</li>
+</ul>
+<p>出口：形成完整 R4 类演练包，所有关键链路有可追溯证据。</p>
+<h3 id="3_1">阶段 3：恢复、升级与容量</h3>
+<p>依赖：阶段 2 已有可用 staging 数据。</p>
+<ul>
+<li>执行 Postgres/Qdrant/审计备份恢复</li>
+<li>执行相邻版本升级、迁移和回滚</li>
+<li>执行 50 并发负载测试</li>
+<li>形成 RPO/RTO、P95、错误率、backlog 和容量边界报告</li>
+</ul>
+<p>出口：恢复、升级、回滚和容量四类报告通过负责人复核。</p>
+<h3 id="4-ga">阶段 4：发布包与 GA 签发</h3>
+<p>依赖：阶段 0-3 全部出口通过。</p>
+<ul>
+<li>生成版本 manifest、变更说明和兼容性声明</li>
+<li>组装 PR/release evidence matrix</li>
+<li>清理并重新验证候选 tag 的 CI</li>
+<li>完成支持联系人、升级路径和事件响应材料</li>
+<li>TL/QA/DevOps/Owner 签字</li>
+<li>发布 GA tag；发布后执行 smoke 和观察窗口</li>
+</ul>
+<p>出口：GA 发布包可由管理员独立部署、验证、升级、回滚和求助。</p>
+<h2 id="4">4. 失败处理规则</h2>
+<ul>
+<li>任一 P0 失败，候选回到对应阶段，不得以文档声明覆盖运行证据</li>
+<li>staging 与本地结果冲突时，以 staging full 结果为准</li>
+<li>发现 secret 泄露时立即停止发布，先撤销/轮换，再重新执行受影响验证</li>
+<li>发现数据迁移不可逆或回滚失败时，暂停 GA，恢复到备份并重新设计迁移</li>
+<li>50 并发未达到基线时，只能降低并公开承诺范围，不得默认为通过</li>
+<li>未签字的 REVIEW 证据不计入 GA 通过条件</li>
+</ul>
+<h2 id="5-ga">5. GA 通过判定</h2>
+<p>只有同时满足以下条件，才允许对外称为正式商用 GA：</p>
+<ol>
+<li>P0-A 至 P0-G 全部通过</li>
+<li>staging Compose full 演练完整归档</li>
+<li>所有关键质量、安全、恢复、升级和容量报告无未解释阻断项</li>
+<li>版本 tag 与所有证据提交一致</li>
+<li>四类发布角色完成签字</li>
+</ol>
+<p>否则口径只能是：<strong>内部试点可用</strong>或<strong>受控私有部署候选</strong>。</p>
+<h2 id="6-ga">6. GA 后明确不承诺</h2>
+<ul>
+<li>多实例 HA、多地域容灾和 SaaS 级规模</li>
+<li>Helm/Kubernetes secretRef 平台化</li>
+<li>Tauri 桌面端正式分发</li>
+<li>跨多个历史版本直接升级</li>
+<li>超过 50 并发基线的固定 SLA</li>
+<li>未列入验收矩阵的 provider 厂商兼容性</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

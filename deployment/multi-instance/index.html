@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/deployment/multi-instance/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>多实例部署 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u591a\u5b9e\u4f8b\u90e8\u7f72";
+        var mkdocs_page_input_path = "deployment/multi-instance.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/deployment/multi-instance/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">多实例部署</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1">1. 必配清单</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#11-redis">1.1 Redis（必配）——登录限流 + 调度器分布式锁</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#12-qdrant-server">1.2 Qdrant Server（必配）——禁用本地磁盘模式</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#13-webhook">1.3 数据库（必配）——审计链 / 计费 / Webhook 注册已共享</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#14-sse-websocket-sticky-session">1.4 负载均衡：SSE / WebSocket 需要 sticky session</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2">2. 共享盘注意事项</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3">3. 多实例风险清单</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#s2-3">✅ 已解决（本工作流 S2-3）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_1">⚠️ 待解决（已排查，未修复）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4">4. 最小多实例配置样例</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">多实例部署</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/deployment/multi-instance.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="horizontal-scaling">多实例部署指南（Horizontal Scaling）</h1>
+<blockquote>
+<p>适用场景：在负载均衡器后运行 ≥2 个 <code>xagent-api</code> 实例（<code>full</code> 模式）。
+单实例 / lite 模式无需本文档的任何额外配置。</p>
+</blockquote>
+<p>X-Agent 默认假设单进程运行，代码中存在若干<strong>进程内状态</strong>。多实例部署时
+必须按下文清单完成外部化，否则会出现限流被绕过、定时任务重复触发、
+向量库文件锁冲突、配置漂移等问题。</p>
+<hr />
+<h2 id="1">1. 必配清单</h2>
+<h3 id="11-redis">1.1 Redis（必配）——登录限流 + 调度器分布式锁</h3>
+<p>配置（所有实例指向同一 Redis）：</p>
+<pre><code class="language-bash">XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
+</code></pre>
+<p>配置后自动启用：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>登录限流</td>
+<td><code>LoginRateLimiter</code> 自动切换 <code>RedisBackend</code>：失败计数为 Redis 有序集合滑动窗口（key <code>xagent:login_rl:fail:*</code>，TTL=窗口），锁定标记 <code>SET ... PX</code>（key <code>xagent:login_rl:lock:*</code>）。多实例共享计数与锁定，爆破无法靠轮询实例绕过。</td>
+</tr>
+<tr>
+<td>调度器防重</td>
+<td><code>Scheduler</code> 启动时自动创建 <code>RedisJobLock</code>：每个 job 触发前 <code>SET xagent:scheduler:lock:{job_id} {instance} NX PX</code>，<strong>锁租约 = 调度间隔 × 90%（&lt; 间隔）</strong>，同一轮只有一个实例执行；持锁实例崩溃后锁自然过期，其他实例可接管。</td>
+</tr>
+</tbody>
+</table>
+<p>降级语义：</p>
+<ul>
+<li><strong>未配置 Redis</strong>：登录限流为进程内实现（lite/单实例现状）；调度器启动时打
+  一次性 warning（<code>scheduler_no_distributed_lock</code>）并保持单实例行为。</li>
+<li><strong>Redis 运行中挂掉</strong>：</li>
+<li>登录限流：打 warning（<code>login_rate_limit_redis_error</code>）并降级到进程内存计数，
+    限流功能不中断，但多实例下计数退化为各实例独立统计。</li>
+<li>调度器：打 warning（<code>scheduler_lock_redis_error</code>），本轮<strong>不触发</strong>——
+    宁可漏触发一轮，也不冒多实例重复执行的风险。</li>
+</ul>
+<h3 id="12-qdrant-server">1.2 Qdrant Server（必配）——禁用本地磁盘模式</h3>
+<p>本地磁盘模式（默认 <code>apps/data/qdrant</code> 或 <code>XAGENT_MEMORY__QDRANT_LOCAL_PATH</code>）
+使用<strong>独占文件锁</strong>，多实例同时打开会直接报错。多实例必须使用 Qdrant server：</p>
+<pre><code class="language-bash">docker run -d --name qdrant -p 6333:6333 -p 6334:6334 \
+  -v qdrantdata:/qdrant/storage qdrant/qdrant:latest
+</code></pre>
+<pre><code class="language-bash">XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+# 清空本地路径，避免误用磁盘模式
+XAGENT_MEMORY__QDRANT_LOCAL_PATH=
+</code></pre>
+<p><code>deploy/compose/docker-compose.yml</code> 已包含 qdrant 服务并接好
+<code>XAGENT_MEMORY__QDRANT_URL</code>；根 <code>docker-compose.yml</code> 也已补充。</p>
+<h3 id="13-webhook">1.3 数据库（必配）——审计链 / 计费 / Webhook 注册已共享</h3>
+<p>审计事件、计费、Webhook 注册表等均落共享数据库（Postgres），多实例天然一致，
+无需额外配置。注意审计哈希链以 DB 表尾恢复 <code>seq</code>/<code>prev_hash</code>（见 §3 风险清单）。</p>
+<h3 id="14-sse-websocket-sticky-session">1.4 负载均衡：SSE / WebSocket 需要 sticky session</h3>
+<ul>
+<li>Agent 运行流（<code>POST /api/v1/agents/run</code>，SSE）和 <code>/ws</code>（WebSocket）是
+  <strong>长连接</strong>，连接状态只在单个实例内存中（<code>ConnectionManager</code>）。</li>
+<li>负载均衡器必须开启<strong>会话亲和</strong>（sticky session，按 cookie 或源 IP），
+  否则同一会话的后续 HTTP 请求落到其他实例会丢失上下文。</li>
+<li>SSE 已内置心跳防 LB 空闲超时；仍建议 LB 的 idle timeout ≥ 300s。</li>
+<li>WebSocket 的广播只覆盖本实例连接（见 §3 风险清单）。</li>
+</ul>
+<hr />
+<h2 id="2">2. 共享盘注意事项</h2>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>状态</th>
+<th>多实例建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定时任务定义 <code>data/scheduler/*.json</code></td>
+<td>文件</td>
+<td><strong>不要让多个实例挂载同一目录做"共享"</strong>：<code>next_run</code> 只在执行实例内存中推进，共享文件反而会造成状态错乱。每个实例用自己的 job 存储 + Redis 分布式锁即可（锁保证同一轮只有一个实例真正执行）。</td>
+</tr>
+<tr>
+<td>runtime_config overrides</td>
+<td><strong>纯进程内存，无文件持久化</strong></td>
+<td>通过 API 修改的 overrides 只作用于处理该请求的实例，重启即丢失。多实例下避免使用运行时配置 API 改关键配置；改用环境变量/<code>.env</code> 统一下发并滚动重启。</td>
+</tr>
+<tr>
+<td>Qdrant 本地存储</td>
+<td>独占文件锁</td>
+<td>见 §1.2，禁用本地模式。</td>
+</tr>
+<tr>
+<td>画布快照 / 草稿（creative-studio）</td>
+<td>进程内存 + 本地快照文件</td>
+<td>多实例下草稿/画布在实例间不可见，待解决（§3）。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3">3. 多实例风险清单</h2>
+<h3 id="s2-3">✅ 已解决（本工作流 S2-3）</h3>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>原风险</th>
+<th>解决方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>登录限流 <code>enterprise/auth/login_rate_limit.py</code></td>
+<td>各实例独立计数，限流可被绕过</td>
+<td><code>RedisBackend</code>（滑动窗口 + PX 锁定），Redis 挂降级内存 + warning</td>
+</tr>
+<tr>
+<td>定时调度器 <code>core/scheduler</code></td>
+<td>各实例独立触发，任务重复执行</td>
+<td><code>RedisJobLock</code>（SET NX PX，租约 &lt; 调度间隔），无锁跳过本轮</td>
+</tr>
+<tr>
+<td>Qdrant 本地模式 <code>adapters/memory/qdrant_store.py</code></td>
+<td>独占文件锁，多实例启动冲突</td>
+<td>文档强制 <code>XAGENT_MEMORY__QDRANT_URL</code> 指向 server（<code>qdrant_local_path</code> 此前已可配）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_1">⚠️ 待解决（已排查，未修复）</h3>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>位置</th>
+<th>风险</th>
+<th>建议方向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WebSocket 连接管理</td>
+<td><code>api/ws.py</code> <code>ConnectionManager</code></td>
+<td>在线用户/广播只在单实例内存，跨实例广播丢失</td>
+<td>Redis pub/sub 做跨实例广播</td>
+</tr>
+<tr>
+<td>runtime_config overrides</td>
+<td><code>api/runtime_config.py</code></td>
+<td>纯内存 dict，实例间配置漂移、重启丢失</td>
+<td>overrides 落 DB/Redis + 变更事件广播</td>
+</tr>
+<tr>
+<td>媒体任务表</td>
+<td><code>api/v1/creative_studio.py</code>（<code>_media_runtime_tasks</code> 等进程内 dict）</td>
+<td>任务状态只在提交实例可见，轮询请求落到其他实例查不到</td>
+<td>任务状态落 DB（Celery result backend 或专表）</td>
+</tr>
+<tr>
+<td>画布/草稿</td>
+<td><code>api/v1/canvas.py</code>、<code>creative_studio.py</code></td>
+<td>进程内存 + 本地快照，实例间不可见</td>
+<td>落 DB 或共享对象存储</td>
+</tr>
+<tr>
+<td>审计哈希链</td>
+<td><code>enterprise/audit/chain.py</code>（<code>persist=True</code> 时从 DB 恢复）</td>
+<td>DB 共享后链状态以<strong>表尾</strong>为准；若内存链（<code>persist=False</code>）实例各自为链，且 DB 不可用时降级纯内存会导致实例间链不一致</td>
+<td>强制 <code>persist=True</code>（full 模式默认）；审计写失败告警</td>
+</tr>
+<tr>
+<td>Webhook 投递</td>
+<td><code>core/webhooks.py</code> <code>emit()</code></td>
+<td>注册表已落 DB 共享，但投递动作由处理事件的实例直接发起；实例崩溃则该次投递丢失（无持久队列/重试）</td>
+<td>投递改走 Celery 任务（broker=Redis，自动重试）</td>
+</tr>
+<tr>
+<td>任务租户映射</td>
+<td><code>api/v1/tasks.py</code>（<code>_task_tenants</code> 等）</td>
+<td>进程内存映射，实例重启/漂移后丢失</td>
+<td>落 DB</td>
+</tr>
+<tr>
+<td>skills 存储</td>
+<td><code>core/skills</code> <code>SkillStore</code></td>
+<td>本地文件目录（compose 中为 named volume）</td>
+<td>多实例挂共享卷或对象存储，只读分发</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4">4. 最小多实例配置样例</h2>
+<pre><code class="language-bash">XAGENT_MODE=full
+XAGENT_DB__URL=postgresql+asyncpg://xagent:***@postgres:5432/xagent
+XAGENT_CACHE__REDIS_URL=redis://redis:6379/0
+XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
+XAGENT_SECURITY__JWT_SECRET=&lt;至少 32 字符随机串，所有实例一致&gt;
+</code></pre>
+<p>验证清单：</p>
+<ol>
+<li>所有实例 <code>/health</code> 中 Redis/Qdrant 检查通过；</li>
+<li>连续失败登录 5 次（分散打到不同实例）→ 第 5 次后任意实例访问均 429；</li>
+<li>创建 1 分钟级定时任务 → 日志中同一轮只有一个实例出现 <code>job_executing</code>，
+   其余实例出现 <code>job_skipped_lock_held</code>；</li>
+<li>停掉任一实例 → 任务在下一个周期由存活实例接管（锁租约到期）。</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../DEPLOYMENT_RUNBOOK/" class="btn btn-neutral float-left" title="部署指南"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../TESTING/" class="btn btn-neutral float-right" title="测试指南">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../../DEPLOYMENT_RUNBOOK/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../TESTING/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

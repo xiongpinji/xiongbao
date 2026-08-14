@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/FRONTEND_%E9%A1%B5%E9%9D%A2%E9%AA%8C%E6%94%B6%E6%89%A7%E8%A1%8C%E7%89%88_2026-07-03/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>前端页面验收执行版（2026-07-03） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u524d\u7aef\u9875\u9762\u9a8c\u6536\u6267\u884c\u7248\uff082026-07-03\uff09";
+        var mkdocs_page_input_path = "FRONTEND_\u9875\u9762\u9a8c\u6536\u6267\u884c\u7248_2026-07-03.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/FRONTEND_%E9%A1%B5%E9%9D%A2%E9%AA%8C%E6%94%B6%E6%89%A7%E8%A1%8C%E7%89%88_2026-07-03/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">前端页面验收执行版（2026-07-03）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/FRONTEND_页面验收执行版_2026-07-03.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="2026-07-03">前端页面验收执行版（2026-07-03）</h1>
+<blockquote>
+<p>适用范围：<code>apps/web</code> 当前未提交改动。
+目标：把“收口清单”变成可直接执行的页面点击验收单。
+执行前提：</p>
+<ul>
+<li>后端可访问：<code>http://127.0.0.1:8000</code></li>
+<li>前端可访问：<code>http://127.0.0.1:3000</code></li>
+<li>当前已确认 <code>typecheck</code> 与 <code>build</code> 通过</li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="1">1. 验收记录模板</h2>
+<p>每个页面按同一格式记录，避免只记“好像有问题”：</p>
+<ul>
+<li><strong>步骤：</strong> 点了什么、输入了什么。</li>
+<li><strong>预期：</strong> 应该看到什么。</li>
+<li><strong>实际：</strong> 实际出现了什么。</li>
+<li><strong>结果：</strong> 通过 / 不通过 / 待确认。</li>
+<li><strong>备注：</strong> 截图路径、报错文案、接口状态码。</li>
+</ul>
+<p>建议记录成下面格式：</p>
+<pre><code class="language-markdown">### 验收项：登录后跳转
+- 步骤：输入 admin / admin，点击“登录”
+- 预期：跳转到 /chat
+- 实际：跳转到 /chat，页面正常显示
+- 结果：通过
+- 备注：无
+</code></pre>
+<hr />
+<h2 id="2">2. 启动前准备</h2>
+<h3 id="21">2.1 启动后端</h3>
+<p>在 <code>apps/api</code> 目录执行：</p>
+<pre><code class="language-bash">xagent serve
+</code></pre>
+<h3 id="22">2.2 启动前端</h3>
+<p>在 <code>apps/web</code> 目录执行：</p>
+<pre><code class="language-bash">npm run dev
+</code></pre>
+<h3 id="23-3">2.3 启动后先做 3 个快速确认</h3>
+<ul>
+<li>[ ] 打开 <code>http://127.0.0.1:8000/health</code>，看到 <code>status=ok</code></li>
+<li>[ ] 打开 <code>http://127.0.0.1:3000</code>，页面可加载</li>
+<li>[ ] 如走登录模式，确认 <code>admin / admin</code> 可登录</li>
+</ul>
+<hr />
+<h2 id="3">3. 第一轮：登录与进入路径</h2>
+<blockquote>
+<p>目标：先确认“进得去”。如果第一轮不稳，不要继续验深层页面。</p>
+</blockquote>
+<h3 id="31">3.1 登录页</h3>
+<p><strong>入口：</strong> <code>/login</code></p>
+<ul>
+<li>[ ] 页面加载后，确认 Logo、标题、输入框、按钮样式正常。</li>
+<li>[ ] 用户名为空、密码为空时，登录按钮应不可用。</li>
+<li>[ ] 输入用户名但不输入密码时，登录按钮仍不可用。</li>
+<li>[ ] 输入用户名密码后，登录按钮应可点击。</li>
+</ul>
+<p><strong>记录重点：</strong>
+- 是否有布局错位
+- 是否有按钮状态错误
+- 深色背景下文字是否可读</p>
+<h3 id="32">3.2 正常登录</h3>
+<p><strong>步骤：</strong>
+1. 输入 <code>admin</code>
+2. 输入 <code>admin</code>
+3. 点击“登录”</p>
+<p><strong>预期：</strong>
+- 跳转到 <code>/chat</code>
+- 不停留在 loading
+- 不显示错误提示</p>
+<p><strong>失败时记录：</strong>
+- 是否出现错误提示
+- 错误提示具体文案
+- 后端日志是否有 <code>/auth/login</code> 失败</p>
+<h3 id="33">3.3 匿名进入</h3>
+<p><strong>步骤：</strong> 点击“匿名进入工作区”</p>
+<p><strong>预期：</strong>
+- 跳转到 <code>/chat</code>
+- 页面正常可见
+- 刷新后仍处于工作区，而不是被踢回登录页</p>
+<p><strong>额外检查：</strong>
+- [ ] 匿名进入后直接访问 <code>/agents</code>
+- [ ] 匿名进入后直接访问 <code>/professional?mode=workflow</code>
+- [ ] 匿名进入后直接访问 <code>/runs/不存在的id</code></p>
+<p><strong>记录重点：</strong>
+- 哪些页面匿名可进
+- 哪些页面匿名会 401 或 fallback</p>
+<hr />
+<h2 id="4-professional-mode">4. 第二轮：路由兼容与 Professional Mode</h2>
+<blockquote>
+<p>目标：确认新导航模型没有把旧入口搞坏。</p>
+</blockquote>
+<h3 id="41">4.1 旧入口跳转</h3>
+<p>依次在浏览器直接访问：</p>
+<ul>
+<li>[ ] <code>/workflows</code></li>
+<li>[ ] <code>/creative</code></li>
+<li>[ ] <code>/canvas</code></li>
+<li>[ ] <code>/home</code></li>
+</ul>
+<p><strong>预期：</strong>
+- <code>/workflows</code> → <code>/professional?mode=workflow</code>
+- <code>/creative</code> → <code>/professional?mode=drama</code>
+- <code>/canvas</code> → <code>/professional?mode=drama</code>
+- <code>/home</code> → 等价进入 <code>/chat</code></p>
+<p><strong>记录重点：</strong>
+- 地址栏是否真的变化
+- 页面是否对应正确模式
+- 跳转后是否有白屏或短暂闪烁</p>
+<h3 id="42-professional-mode">4.2 Professional Mode 双模式切换</h3>
+<p><strong>入口：</strong> <code>/professional?mode=drama</code></p>
+<p><strong>执行：</strong>
+- [ ] 点击切到 <code>workflow</code>
+- [ ] 再切回 <code>drama</code>
+- [ ] 带上 <code>workspace</code> 参数后再切换一次</p>
+<p><strong>预期：</strong>
+- 顶部模式 tab 激活态正确
+- 主内容区切换正确
+- 没有整页刷新感
+- 不出现空白内容区</p>
+<p><strong>记录重点：</strong>
+- mode 切换是否丢查询参数
+- 页头 / 右侧上下文是否同步变化</p>
+<h3 id="43">4.3 高级剪辑入口</h3>
+<p><strong>入口：</strong> Professional Mode 页头中的“高级剪辑”</p>
+<ul>
+<li>[ ] 点击后能进入 <code>/editor</code></li>
+<li>[ ] 从 <code>/editor</code> 返回主要工作区路径是否顺畅</li>
+</ul>
+<hr />
+<h2 id="5">5. 第三轮：核心执行链路</h2>
+<blockquote>
+<p>目标：先验“主链路能走”，再看辅助页。</p>
+</blockquote>
+<h3 id="51-chat">5.1 Chat 页</h3>
+<p><strong>入口：</strong> <code>/chat</code></p>
+<h4 id="a">用例 A：空输入</h4>
+<ul>
+<li>[ ] 输入框为空时，“发送”按钮应不可用。</li>
+</ul>
+<h4 id="b">用例 B：普通任务提交</h4>
+<ul>
+<li>[ ] 输入一句简单任务，例如“写一个函数”</li>
+<li>[ ] 点击发送</li>
+</ul>
+<p><strong>预期：</strong>
+- 出现用户消息气泡
+- 出现“正在分析任务并调用 Agent...”状态
+- 若 SSE 成功，应显示流式结果或最终结果
+- 若 SSE 失败，应回退到普通 <code>runAgent</code>
+- 成功后出现“查看运行详情”按钮</p>
+<p><strong>记录重点：</strong>
+- 是走了 SSE 还是 fallback
+- 错误提示是否可读
+- 是否拿到了 <code>runId</code></p>
+<h4 id="c">用例 C：运行详情跳转</h4>
+<ul>
+<li>[ ] 点击“查看运行详情”</li>
+<li>[ ] 确认进入 <code>/runs/:runId</code></li>
+</ul>
+<h3 id="52-workflow">5.2 Workflow 页</h3>
+<p><strong>入口：</strong> <code>/professional?mode=workflow</code></p>
+<h4 id="a_1">用例 A：手动新增步骤</h4>
+<ul>
+<li>[ ] 点击“添加步骤”</li>
+<li>[ ] 确认步骤列表新增一项</li>
+<li>[ ] 确认画布中新增一个节点</li>
+</ul>
+<h4 id="b_1">用例 B：对话助手新增步骤</h4>
+<ul>
+<li>[ ] 在“工作流编排助手”里输入一句，例如“增加人工审批节点”</li>
+<li>[ ] 确认步骤列表新增</li>
+<li>[ ] 确认画布节点同步新增</li>
+</ul>
+<h4 id="c_1">用例 C：删除步骤</h4>
+<ul>
+<li>[ ] 删除某个步骤</li>
+<li>[ ] 确认列表项消失</li>
+<li>[ ] 确认节点与相关边也消失</li>
+</ul>
+<h4 id="d">用例 D：创建并执行</h4>
+<ul>
+<li>[ ] 至少保留 1 个有目标的步骤</li>
+<li>[ ] 点击“创建并执行”</li>
+</ul>
+<p><strong>预期：</strong>
+- 无前端报错
+- 若后端成功返回，跳转 <code>/runs/:runId</code>
+- 若失败，应有可见错误提示</p>
+<h3 id="53-creative-drama">5.3 Creative / Drama 页</h3>
+<p><strong>入口：</strong> <code>/professional?mode=drama</code></p>
+<h4 id="a_2">用例 A：创建画布</h4>
+<ul>
+<li>[ ] 输入 brief</li>
+<li>[ ] 点击创建或等价操作</li>
+<li>[ ] 确认节点生成、画布更新</li>
+</ul>
+<h4 id="b-produce">用例 B：执行 produce</h4>
+<ul>
+<li>[ ] 触发生产流程</li>
+<li>[ ] 观察 loading、错误提示、结果区</li>
+<li>[ ] 若成功，确认是否跳转到运行详情页</li>
+</ul>
+<h4 id="c_2">用例 C：节点编辑 / 时间线相关入口</h4>
+<ul>
+<li>[ ] 点击节点</li>
+<li>[ ] 检查右侧或详情区域是否响应</li>
+<li>[ ] 若有 timeline / editor 入口，检查是否可进入</li>
+</ul>
+<p><strong>记录重点：</strong>
+- 失败时错误提示是否明确
+- 成功后 <code>runId</code> / <code>timelineId</code> 是否合理</p>
+<h3 id="54-run-detail">5.4 Run Detail 页</h3>
+<h4 id="a-runid">用例 A：有效 runId</h4>
+<ul>
+<li>[ ] 从 Chat / Workflow / Creative 成功跳转进入</li>
+<li>[ ] 检查 Run Console 是否完整渲染</li>
+<li>[ ] 检查 Timeline / Evidence / Artifacts 面板能展开</li>
+</ul>
+<h4 id="b-runid">用例 B：无效 runId</h4>
+<ul>
+<li>[ ] 手工输入一个不存在的 <code>runId</code></li>
+<li>[ ] 确认进入 fallback 页，而不是白屏</li>
+</ul>
+<h4 id="c-runid">用例 C：缺少 runId</h4>
+<ul>
+<li>[ ] 访问异常路径或构造无参数场景</li>
+<li>[ ] 确认 fallback 文案合理</li>
+</ul>
+<h4 id="dfallback">用例 D：fallback 动作</h4>
+<ul>
+<li>[ ] 点击“重试”</li>
+<li>[ ] 点击“返回对话”</li>
+<li>[ ] 点击“打开工作流”</li>
+</ul>
+<p><strong>记录重点：</strong>
+- fallback 页是否清晰说明问题
+- 按钮动作是否都真的可用</p>
+<hr />
+<h2 id="6">6. 第四轮：壳层与布局验收</h2>
+<blockquote>
+<p>目标：确认“新壳子好不好用”，而不只是“能不能显示”。</p>
+</blockquote>
+<h3 id="61-rail">6.1 左侧 Rail</h3>
+<ul>
+<li>[ ] 所有图标可点击</li>
+<li>[ ] 当前页高亮正确</li>
+<li>[ ] hover 态明显</li>
+<li>[ ] Logo 显示正常</li>
+</ul>
+<h3 id="62-workspace-sidebar">6.2 Workspace Sidebar</h3>
+<ul>
+<li>[ ] 展开态下内容完整</li>
+<li>[ ] 点击折叠按钮后收起</li>
+<li>[ ] 收起后可再次展开</li>
+<li>[ ] “新建会话 / 技能 / 专业模式 / 智能体角色”入口可点击</li>
+</ul>
+<h3 id="63-context-panel">6.3 右侧 Context Panel</h3>
+<ul>
+<li>[ ] 在大屏 (<code>xl</code>) 下可见</li>
+<li>[ ] Recent sessions 区块不空白错位</li>
+<li>[ ] 上下文助手输入框样式正常</li>
+<li>[ ] <code>Past actions</code> 区块在无数据时展示合理</li>
+</ul>
+<h3 id="64-topbar">6.4 TopBar</h3>
+<ul>
+<li>[ ] 大屏下菜单按钮不重叠</li>
+<li>[ ] 小屏下标题区不挤压</li>
+<li>[ ] Pro / Bell / profile 类按钮显示正常</li>
+</ul>
+<h3 id="65">6.5 视觉可读性</h3>
+<p>对以下内容做肉眼检查：</p>
+<ul>
+<li>[ ] 输入框 placeholder 是否够清楚</li>
+<li>[ ] 次级说明文字是否过暗</li>
+<li>[ ] 黑金主题下边框层级是否可辨认</li>
+<li>[ ] 按钮 hover / disabled 状态是否明确</li>
+<li>[ ] 长内容区域滚动条是否可见且不突兀</li>
+</ul>
+<hr />
+<h2 id="7">7. 第五轮：辅助 / 演示页面验收</h2>
+<blockquote>
+<p>目标：确认这些页面至少“不会误导、不会崩”。</p>
+</blockquote>
+<h3 id="71-agentspage">7.1 AgentsPage</h3>
+<ul>
+<li>[ ] 后端可用时，真实角色能否正常显示</li>
+<li>[ ] 后端不可用时，fallback 角色是否显示</li>
+<li>[ ] 是否有明确提示“当前展示的是本地预览角色”</li>
+</ul>
+<h3 id="72-memorypage">7.2 MemoryPage</h3>
+<ul>
+<li>[ ] 对话助手可输入</li>
+<li>[ ] 点击“打开知识库配置”后，能进入 <code>settings?section=index&amp;tab=knowledge</code></li>
+<li>[ ] 页面文案不会让用户误以为这里已直接显示真实检索结果</li>
+</ul>
+<h3 id="73-opensourcepage">7.3 OpenSourcePage</h3>
+<ul>
+<li>[ ] 对话助手可输入</li>
+<li>[ ] 点击“打开开源发现配置”后，能进入 <code>settings?section=index&amp;tab=open-source</code></li>
+<li>[ ] 页面文案不会让用户误以为这里已直接返回实时仓库结果</li>
+</ul>
+<h3 id="74-settingspage">7.4 SettingsPage</h3>
+<ul>
+<li>[ ] section 切换正常</li>
+<li>[ ] “配置助手”可输入</li>
+<li>[ ] 不会给人“已经真实改了配置”的误解</li>
+</ul>
+<hr />
+<h2 id="8">8. 问题分级规则</h2>
+<p>验收时，把问题分成 3 类，避免所有问题都堆成一团。</p>
+<h3 id="_1">阻断</h3>
+<p>满足任一项：</p>
+<ul>
+<li>页面打不开 / 白屏</li>
+<li>主链路无法走通</li>
+<li>登录或路由跳转失效</li>
+<li>点击关键按钮无反应且无提示</li>
+<li>匿名 / 登录态把用户卡死在错误状态</li>
+</ul>
+<h3 id="_2">非阻断</h3>
+<p>满足任一项：</p>
+<ul>
+<li>文案误导</li>
+<li>fallback 提示不清楚</li>
+<li>某些次级入口行为不顺</li>
+<li>样式错位但不影响主流程</li>
+</ul>
+<h3 id="_3">后续优化</h3>
+<p>满足任一项：</p>
+<ul>
+<li>chunk 过大 warning</li>
+<li>视觉细节可再打磨</li>
+<li>演示态标识可增强</li>
+<li>静态假数据后续接真数据</li>
+</ul>
+<hr />
+<h2 id="9">9. 建议的执行顺序（最省时间版本）</h2>
+<p>如果时间有限，按下面顺序走：</p>
+<ol>
+<li>登录页</li>
+<li>匿名进入</li>
+<li><code>/workflows</code> / <code>/creative</code> / <code>/canvas</code> 跳转</li>
+<li>Chat 提交一次任务</li>
+<li>打开 Run Detail</li>
+<li>Professional Mode 的 workflow / drama 切换</li>
+<li>Workflow 新增步骤 + 执行</li>
+<li>Creative 创建 brief + 运行</li>
+<li>Agents / Memory / OpenSource / Settings 做快速冒烟</li>
+</ol>
+<hr />
+<h2 id="10">10. 执行后输出建议</h2>
+<p>建议验收结束后，产出一份简短结论，格式如下：</p>
+<pre><code class="language-markdown">## 前端验收结论
+
+### 通过
+- 登录 / 匿名进入正常
+- Professional Mode 路由兼容正常
+- Chat → Run Detail 主链正常
+
+### 阻断问题
+- xxx
+
+### 非阻断问题
+- xxx
+
+### 后续优化
+- chunk 体积较大
+- 演示态标识需补齐
+</code></pre>
+<p>这样后续就能直接进入“修问题 / 拆提交 / 补标识”阶段。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

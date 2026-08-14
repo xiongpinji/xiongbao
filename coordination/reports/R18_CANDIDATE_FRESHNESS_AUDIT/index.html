@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R18 Candidate Freshness Audit - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R18 Candidate Freshness Audit";
+        var mkdocs_page_input_path = "coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R18 Candidate Freshness Audit</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r18-candidate-freshness-audit">R18 Candidate Freshness Audit</h1>
+<blockquote>
+<p>Date: 2026-07-07
+Owner: Codex
+Scope: compare current local workspace with draft PR #6 / commit <code>d59faa3</code>; decide whether R5 can reuse that remote CI evidence.</p>
+</blockquote>
+<h2 id="conclusion">Conclusion</h2>
+<p>Draft PR #6 is still valid remote CI evidence for its own head commit, <code>d59faa3d66fa6848920fec8995e8d9f50ed68437</code>. It is not current-workspace evidence.</p>
+<p>The active local workspace is not the PR #6 candidate:</p>
+<ul>
+<li>Current <code>HEAD</code>: <code>a98cea09506243ca2b585029c2c5b677f172845c</code></li>
+<li>Current branch state: <code>master...origin/master [ahead 1, behind 2]</code></li>
+<li>PR #6 head: <code>worktree-r1-remote-ci</code> at <code>d59faa3d66fa6848920fec8995e8d9f50ed68437</code></li>
+<li>Merge base between local <code>HEAD</code> and PR #6 head: <code>da811423be37c870ca904487cd96c53ce64366cd</code></li>
+<li>Working tree: 54 tracked modified files and 53 untracked files</li>
+</ul>
+<p>R5 must not claim that PR #6 CI covers the current local readiness evidence chain. If R5 includes current local worktree changes, the release owner needs a new frozen candidate branch and a new remote CI run.</p>
+<h2 id="evidence">Evidence</h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gh pr view 6</code></td>
+<td>PR #6 is <code>OPEN</code>, <code>isDraft=true</code>, <code>mergeStateStatus=CLEAN</code>, <code>headRefName=worktree-r1-remote-ci</code>, <code>headRefOid=d59faa3d66fa6848920fec8995e8d9f50ed68437</code></td>
+</tr>
+<tr>
+<td>PR #6 CI checks</td>
+<td><code>backend</code>, <code>frontend</code>, <code>license-gate</code>, and <code>promptfoo-eval</code> are all <code>SUCCESS</code> on run <code>28789809193</code></td>
+</tr>
+<tr>
+<td><code>git rev-parse HEAD</code></td>
+<td><code>a98cea09506243ca2b585029c2c5b677f172845c</code></td>
+</tr>
+<tr>
+<td><code>git status --short --branch</code></td>
+<td><code>## master...origin/master [ahead 1, behind 2]</code> plus tracked and untracked workspace changes</td>
+</tr>
+<tr>
+<td><code>git log --oneline --left-right --cherry-pick d59faa3...HEAD</code></td>
+<td>PR side has <code>d59faa3</code>, <code>0df469b</code>, <code>feff648</code>; local side has <code>a98cea0</code></td>
+</tr>
+<tr>
+<td><code>git diff --name-only d59faa3..HEAD</code></td>
+<td>18 tracked path differences between PR #6 candidate and local <code>HEAD</code></td>
+</tr>
+<tr>
+<td><code>git diff --name-only</code></td>
+<td>54 tracked modified files in the current working tree</td>
+</tr>
+<tr>
+<td><code>git ls-files --others --exclude-standard</code></td>
+<td>53 untracked files in the current working tree</td>
+</tr>
+</tbody>
+</table>
+<h2 id="difference-classification">Difference Classification</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th style="text-align: right;">Current local tracked changes</th>
+<th style="text-align: right;">Current local untracked files</th>
+<th>R5 impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.github</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td>CI definition changed locally; PR #6 CI result cannot validate the changed workflow definition.</td>
+</tr>
+<tr>
+<td><code>apps/api</code></td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">5</td>
+<td>Backend code/tests/log artifacts differ from PR #6; any included runtime changes require fresh backend CI.</td>
+</tr>
+<tr>
+<td><code>apps/web</code></td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">15</td>
+<td>Frontend app/tests/assets differ from PR #6; any included UI/build/E2E changes require fresh frontend CI.</td>
+</tr>
+<tr>
+<td><code>deploy</code></td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">0</td>
+<td>Compose/Helm/Keycloak config changed locally; target environment and release rehearsal evidence cannot be inferred from PR #6.</td>
+</tr>
+<tr>
+<td><code>docs</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">27</td>
+<td>Coordination/release evidence docs are largely untracked relative to local <code>HEAD</code>; R5 can cite them only after a new candidate includes them.</td>
+</tr>
+<tr>
+<td><code>README</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td>Public status wording differs locally; PR #6 does not cover this wording.</td>
+</tr>
+<tr>
+<td><code>tests/e2e</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td>E2E specs differ locally; PR #6 cannot prove these exact specs.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="gate-decision-for-r5">Gate Decision For R5</h2>
+<ul>
+<li>Safe to cite: PR #6 / run <code>28789809193</code> as remote CI evidence for commit <code>d59faa3d66fa6848920fec8995e8d9f50ed68437</code> only.</li>
+<li>Not safe to cite: PR #6 as proof for the current local workspace, R8/R15/R17 refreshed evidence, R18 itself, R19, or any uncommitted/untracked change.</li>
+<li>Required before PR review package can treat the current workspace as candidate evidence: freeze the intended files into a candidate branch, push it, and obtain a fresh remote CI run that covers that branch.</li>
+</ul>
+<h2 id="remaining-risk">Remaining Risk</h2>
+<ul>
+<li>R18 was claimable in <code>TASK_BOARD.md</code>, but its original dependency label said <code>R17(DONE)</code> while the live board still has <code>R17(REVIEW)</code>. R18 records that drift and does not change R17 to DONE.</li>
+<li>The current workspace contains runtime, frontend, deploy, E2E, and docs changes from multiple prior packages. R18 does not decide which of those should enter the next candidate; it only states that PR #6 does not cover them.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-06-29-xagent-unified-agent-platform-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 全面 Agent 平台首发版设计说明 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5168\u9762 Agent \u5e73\u53f0\u9996\u53d1\u7248\u8bbe\u8ba1\u8bf4\u660e";
+        var mkdocs_page_input_path = "superpowers/specs/2026-06-29-xagent-unified-agent-platform-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-06-29-xagent-unified-agent-platform-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 全面 Agent 平台首发版设计说明</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-06-29-xagent-unified-agent-platform-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-agent">X-Agent 全面 Agent 平台首发版设计说明</h1>
+<h2 id="1">1．文档目标</h2>
+<p>本文档定义 X-Agent 首发版的目标形态：不是单点的 Coding Agent、Multi-Agent Gateway 或 Remote Assistant，而是一个面向 AI Native 代理工作室／运营团队的全面 Agent 平台。</p>
+<p>首发版必须同时具备以下 4 类能力，并且在同一套运行时内完成统一交付：</p>
+<ol>
+<li><strong>Codex 式执行与证据闭环</strong>：真实执行、测试验证、失败可解释、结果可交付。</li>
+<li><strong>OpenClaw 式多 Agent 路由与治理</strong>：角色注册、能力匹配、策略化路由、隔离与审批。</li>
+<li><strong>Hermes 式远程入口与持续运行</strong>：Web、IM／Telegram、异步通知、阻塞恢复与长任务续航。</li>
+<li><strong>X-Agent 自身优势并轨</strong>：workflow view、企业审计、安全、多租户、creative workflow 全量并入统一平台。</li>
+</ol>
+<p>本文档的设计结论用于指导后续的实现计划、模块拆分、接口收口与验证验收。</p>
+<hr />
+<h2 id="2">2．首发版产品定义</h2>
+<h3 id="21">2.1 产品一句话定义</h3>
+<p>X-Agent 首发版是一个面向 AI Native 代理工作室／运营团队的统一任务运行平台，能够将需求、研究、编码、工作流编排、创意生产、远程协作、审计回放与最终交付收敛到同一套 Task／Run Runtime 中。</p>
+<h3 id="22">2.2 目标用户</h3>
+<p>首发版的第一优先用户是 <strong>AI Native 代理工作室／运营团队</strong>。</p>
+<p>这类用户的共性包括：</p>
+<ul>
+<li>同时处理开发、内容、运营、交付等复合任务。</li>
+<li>需要多个 Agent 分工协作，而不是单个聊天机器人。</li>
+<li>需要远程异步工作，不能把平台限定在本地浏览器停留期间。</li>
+<li>需要可审计、可回放、可转交、可归档的交付结果。</li>
+<li>需要私有部署优先，以便在工作室或项目团队内部快速落地。</li>
+</ul>
+<h3 id="23">2.3 首发版默认部署形态</h3>
+<p>首发版默认真形态为 <strong>单机／工作室私有部署优先</strong>。</p>
+<p>设计要求如下：</p>
+<ul>
+<li>支持 Docker Compose 或等价的工作室私有部署方式。</li>
+<li>所有核心控制平面、运行时、审计与证据存储必须可在私有环境内独立运行。</li>
+<li>远程入口、异步通知与长期运行能力必须在私有部署条件下成立，而不是依赖 SaaS-only 架构。</li>
+<li>后续云端 SaaS 形态可以扩展，但首发版不以 SaaS 为第一部署目标。</li>
+</ul>
+<hr />
+<h2 id="3">3．产品总体设计结论</h2>
+<h3 id="31-runtime">3.1 首发版不是功能拼盘，而是统一 Runtime 平台</h3>
+<p>X-Agent 首发版必须围绕统一运行时建模，而不是把下列能力各做一套：</p>
+<ul>
+<li>Coding Agent</li>
+<li>Workflow Engine</li>
+<li>Creative Studio</li>
+<li>Remote Assistant</li>
+<li>Audit Console</li>
+</ul>
+<p>所有入口都必须进入同一套 Runtime，统一映射为：</p>
+<ul>
+<li><code>Task</code></li>
+<li><code>Run</code></li>
+<li><code>StepExecution</code></li>
+<li><code>AgentAssignment</code></li>
+<li><code>Evidence</code></li>
+<li><code>Artifact</code></li>
+<li><code>ApprovalDecision</code></li>
+<li><code>DeliveryBundle</code></li>
+</ul>
+<h3 id="32">3.2 首发版的一镜到底主链</h3>
+<p>平台首发版必须能完整演示以下超级场景：</p>
+<blockquote>
+<p>用户提交一个新项目 brief 或复合需求，平台创建任务并生成运行实例；多个 Agent 根据策略自动拆解并并行执行研究、规划、编码、工作流编排与创意生产；任务在远程入口中持续运行、等待审批或补料时进入阻塞态；最终系统输出可审计、可交付、可回放、可恢复的结果包。</p>
+</blockquote>
+<p>这个主链分为 5 段：</p>
+<ol>
+<li>任务接入</li>
+<li>多 Agent 拆解与编排</li>
+<li>真实执行与持续运行</li>
+<li>证据、产物与审批收束</li>
+<li>最终交付与回放</li>
+</ol>
+<h3 id="33">3.3 设计原则</h3>
+<p>首发版必须遵守以下原则：</p>
+<ol>
+<li><strong>统一 Runtime 优先于功能堆叠</strong>：新增能力必须挂到同一套 Task／Run 模型下。</li>
+<li><strong>治理优先于自由调度</strong>：多 Agent 协作必须受策略、隔离、审批和审计约束。</li>
+<li><strong>证据优先于成功文案</strong>：任务完成不是状态变绿，而是可证明完成。</li>
+<li><strong>交付优先于日志堆积</strong>：最终结果必须可消费、可转交、可归档。</li>
+<li><strong>私有部署优先于云端假设</strong>：首发版的一切核心能力必须可在工作室私有环境中成立。</li>
+<li><strong>Creative 与 Coding 并轨</strong>：创意生产不是旁支，而是与编码、工作流并列的一种任务主干。</li>
+</ol>
+<hr />
+<h2 id="4-5">4．首发版的 5 个核心子系统</h2>
+<h3 id="41-mission-control">4.1 Mission Control（任务与运行时中枢）</h3>
+<p>Mission Control 是平台的大脑，负责承接所有任务入口，统一创建 <code>Task</code> 与 <code>Run</code>，驱动阶段流转、状态管理、阻塞恢复、审批等待、回放恢复与最终收束。</p>
+<p>它的职责包括：</p>
+<ul>
+<li>创建与更新 Task／Run。</li>
+<li>维护 Run phase、Run status、resume point。</li>
+<li>根据任务类型切换到 coding spine、workflow spine、creative spine 或 hybrid spine。</li>
+<li>管理 queued、planning、running、awaiting_approval、blocked、recovering、succeeded、failed 等运行态。</li>
+<li>统一触发通知、交付、回放、恢复。</li>
+</ul>
+<p>Mission Control 只关心任务如何流转，不关心具体由哪种 Agent 或执行器完成。</p>
+<h3 id="42-agent-mesh-agent">4.2 Agent Mesh（多 Agent 路由与治理层）</h3>
+<p>Agent Mesh 是多智能体系统的治理内核，负责：</p>
+<ul>
+<li>Agent Registry</li>
+<li>Capability Manifest</li>
+<li>Route／Binding Rules</li>
+<li>Agent-to-Agent Communication Policy</li>
+<li>Context Isolation Policy</li>
+<li>Tool Policy</li>
+<li>Sandbox Policy</li>
+<li>Escalation／Approval Policy</li>
+</ul>
+<p>Agent Mesh 的目标不是“支持多个 Agent”，而是“让多个 Agent 的协作决策、权限范围与隔离边界可解释、可追踪、可约束”。</p>
+<h3 id="43-execution-fabric">4.3 Execution Fabric（执行织布层）</h3>
+<p>Execution Fabric 负责统一调度不同类型的执行器，包括：</p>
+<ul>
+<li>Coding Executor</li>
+<li>Browser Executor</li>
+<li>Desktop Executor</li>
+<li>MCP／Tools Executor</li>
+<li>Creative／Media Executor</li>
+<li>Validation Executor</li>
+</ul>
+<p>Codex 式执行闭环在这一层落地：命令执行、测试验证、Patch 生成、失败恢复、证据沉淀都由 Execution Fabric 驱动。</p>
+<p>Creative Workflow、Browser Automation 与 Desktop Automation 也不应自成体系，而应作为不同的 Executor 类型纳入同一层。</p>
+<h3 id="44-evidence-delivery">4.4 Evidence &amp; Delivery（证据与交付层）</h3>
+<p>Evidence &amp; Delivery 负责将平台执行过程沉淀为：</p>
+<ul>
+<li><code>Evidence</code></li>
+<li><code>Artifact</code></li>
+<li><code>ValidationSummary</code></li>
+<li><code>ApprovalDecision</code></li>
+<li><code>DeliveryBundle</code></li>
+</ul>
+<p>这一层决定平台是否真正具备竞争力。平台不能只告诉用户“任务成功了”，而必须能回答：</p>
+<ul>
+<li>做了什么。</li>
+<li>为什么这么做。</li>
+<li>哪些验证通过了。</li>
+<li>哪些风险仍然存在。</li>
+<li>有哪些结果可以交付。</li>
+<li>如何回放与继续。</li>
+</ul>
+<h3 id="45-remote-ops-surface">4.5 Remote Ops Surface（远程协作与操作面）</h3>
+<p>Remote Ops Surface 负责统一 Web 工作台、IM／Telegram 入口、异步通知、远程审批、阻塞补料与持续运行的用户表面。</p>
+<p>这不是一个轻量通知模块，而是 Hermes 式远程续航能力在 X-Agent 平台中的正式承载层。</p>
+<hr />
+<h2 id="5">5．统一数据模型</h2>
+<h3 id="51-task">5.1 Task</h3>
+<p><code>Task</code> 表示“用户想完成什么”。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>task_id</code></li>
+<li><code>tenant_id</code></li>
+<li><code>workspace_id</code></li>
+<li><code>source</code>（web / api / im / schedule / creative / coding）</li>
+<li><code>intent_type</code>（coding / workflow / creative / research / ops / hybrid）</li>
+<li><code>goal</code></li>
+<li><code>requester</code></li>
+<li><code>priority</code></li>
+<li><code>policy_profile</code></li>
+<li><code>desired_outputs</code></li>
+<li><code>created_at</code></li>
+<li><code>updated_at</code></li>
+</ul>
+<p>Task 是业务目标对象，一个 Task 可以对应多次 Run。</p>
+<h3 id="52-run">5.2 Run</h3>
+<p><code>Run</code> 表示一次真实执行实例，是全平台的第一主对象。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>run_id</code></li>
+<li><code>task_id</code></li>
+<li><code>runtime_mode</code>（single-agent / multi-agent / creative / hybrid）</li>
+<li><code>status</code>（queued / planning / running / awaiting_approval / blocked / failed / succeeded / cancelled / recovering）</li>
+<li><code>current_phase</code></li>
+<li><code>entrypoint</code></li>
+<li><code>started_at</code></li>
+<li><code>finished_at</code></li>
+<li><code>resumed_from_run_id</code></li>
+<li><code>delivery_status</code></li>
+</ul>
+<p>所有 UI、审计、通知、交付、回放、恢复都围绕 Run 展开。</p>
+<h3 id="53-stepexecution">5.3 StepExecution</h3>
+<p><code>StepExecution</code> 表示 Run 内部的执行单元。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>step_id</code></li>
+<li><code>run_id</code></li>
+<li><code>parent_step_id</code></li>
+<li><code>kind</code>（plan / code / test / review / creative / media / approval / notify / handoff）</li>
+<li><code>title</code></li>
+<li><code>assigned_agent_role</code></li>
+<li><code>assigned_executor_type</code></li>
+<li><code>depends_on</code></li>
+<li><code>status</code></li>
+<li><code>input_payload</code></li>
+<li><code>output_payload</code></li>
+<li><code>error</code></li>
+<li><code>retry_count</code></li>
+<li><code>started_at</code></li>
+<li><code>finished_at</code></li>
+</ul>
+<p>它统一承载 workflow node、coding step、creative node、approval gate 与 verification step。</p>
+<h3 id="54-agentassignment">5.4 AgentAssignment</h3>
+<p><code>AgentAssignment</code> 记录“这一步为什么由这个 Agent 来做”。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>assignment_id</code></li>
+<li><code>step_id</code></li>
+<li><code>agent_id</code></li>
+<li><code>role</code></li>
+<li><code>capability_match_result</code></li>
+<li><code>route_source</code>（manual / static_rule / planner / fallback）</li>
+<li><code>communication_scope</code></li>
+<li><code>sandbox_scope</code></li>
+<li><code>tool_scope</code></li>
+<li><code>memory_scope</code></li>
+</ul>
+<p>这个模型是多 Agent 治理的关键落点。</p>
+<h3 id="55-evidence">5.5 Evidence</h3>
+<p><code>Evidence</code> 表示可审查的执行证据。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>evidence_id</code></li>
+<li><code>run_id</code></li>
+<li><code>step_id</code></li>
+<li><code>type</code>（command_output / test_result / trace / model_summary / approval_record / browser_capture / patch_summary / policy_decision）</li>
+<li><code>source</code></li>
+<li><code>content_ref</code></li>
+<li><code>summary</code></li>
+<li><code>machine_verdict</code></li>
+<li><code>human_verdict</code></li>
+<li><code>created_at</code></li>
+</ul>
+<p>Evidence 用于证明过程，而不是承载最终交付本身。</p>
+<h3 id="56-artifact">5.6 Artifact</h3>
+<p><code>Artifact</code> 表示真正交付出来的结果物。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>artifact_id</code></li>
+<li><code>run_id</code></li>
+<li><code>step_id</code></li>
+<li><code>type</code>（code_patch / file_bundle / workflow_spec / canvas_snapshot / image / video / timeline / report / delivery_package）</li>
+<li><code>uri</code></li>
+<li><code>preview</code></li>
+<li><code>version</code></li>
+<li><code>lineage</code></li>
+</ul>
+<p>Artifact 与 Evidence 必须严格区分：前者是结果，后者是证明。</p>
+<h3 id="57-approvaldecision">5.7 ApprovalDecision</h3>
+<p><code>ApprovalDecision</code> 统一承载审批行为。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>approval_id</code></li>
+<li><code>run_id</code></li>
+<li><code>step_id</code></li>
+<li><code>approver_type</code>（human / policy / reviewer_agent）</li>
+<li><code>approver_identity</code></li>
+<li><code>decision</code>（approved / denied / escalated / timed_out）</li>
+<li><code>rationale</code></li>
+<li><code>scope</code></li>
+<li><code>created_at</code></li>
+</ul>
+<p>审批不是 workflow 特例，而是平台基础能力。</p>
+<h3 id="58-deliverybundle">5.8 DeliveryBundle</h3>
+<p><code>DeliveryBundle</code> 是最终面向用户或客户的交付包。</p>
+<p>建议字段：</p>
+<ul>
+<li><code>delivery_id</code></li>
+<li><code>run_id</code></li>
+<li><code>summary</code></li>
+<li><code>artifact_refs</code></li>
+<li><code>validation_summary</code></li>
+<li><code>approval_summary</code></li>
+<li><code>risk_summary</code></li>
+<li><code>replay_pointer</code></li>
+<li><code>export_formats</code>（web / pdf / zip / json）</li>
+</ul>
+<p>DeliveryBundle 是平台对外输出的标准收束对象。</p>
+<hr />
+<h2 id="6">6．一镜到底主链设计</h2>
+<h3 id="61">6.1 第一段：任务接入</h3>
+<p>平台支持以下入口进入统一 Runtime：</p>
+<ul>
+<li>Web 新建任务</li>
+<li>API／SDK</li>
+<li>IM／Telegram</li>
+<li>定时调度</li>
+<li>Creative Brief</li>
+<li>Coding Issue／PR／Backlog Item</li>
+</ul>
+<p>所有入口的接入动作统一为：</p>
+<ol>
+<li>创建 Task。</li>
+<li>创建 Run。</li>
+<li>进入 planning phase。</li>
+<li>根据任务类型选择 coding spine、workflow spine、creative spine 或 hybrid spine。</li>
+</ol>
+<h3 id="62-agent">6.2 第二段：多 Agent 拆解与编排</h3>
+<p>Planner／Coordinator 负责将任务拆成执行图，例如：</p>
+<ul>
+<li>researcher：研究与检索</li>
+<li>planner：拆步骤与定义交付标准</li>
+<li>coder：改代码与实现能力</li>
+<li>reviewer：审查质量</li>
+<li>verifier：跑测试与验证</li>
+<li>operator：生成通知与交付包</li>
+<li>creative roles：screenwriter、director、editor_agent</li>
+</ul>
+<p>此时 Agent Mesh 负责：</p>
+<ul>
+<li>capability match</li>
+<li>route／binding decision</li>
+<li>policy resolution</li>
+<li>并行关系判定</li>
+<li>审批门设置</li>
+<li>context sharing 约束</li>
+<li>sandbox 与 tool scope 分配</li>
+</ul>
+<h3 id="63">6.3 第三段：真实执行与持续运行</h3>
+<p>执行阶段必须允许混合任务同时存在，例如：</p>
+<ul>
+<li>coder 在隔离执行环境中改代码与跑测试。</li>
+<li>researcher 调 MCP、知识库与 Web。</li>
+<li>creative agent 生成 workflow draft、media 与 timeline。</li>
+<li>reviewer 对 Evidence 与 Artifact 做审核。</li>
+<li>remote operator 在 IM 中接收阶段通知与补料请求。</li>
+</ul>
+<p>对于长任务，Run 必须支持：</p>
+<ul>
+<li>持续运行</li>
+<li>阻塞等待</li>
+<li>审批暂停</li>
+<li>失败 repair loop</li>
+<li>从 resume point 恢复</li>
+</ul>
+<h3 id="64">6.4 第四段：证据、产物与审批收束</h3>
+<p>执行过程中每个关键步骤都必须产出：</p>
+<ul>
+<li>Evidence：日志、命令、测试、trace、策略决定</li>
+<li>Artifact：代码、文档、画布、素材、时间线、导出包</li>
+<li>Validation：对应类型的验证结果</li>
+<li>Approval：人工或策略审批记录</li>
+</ul>
+<p>平台必须能让用户清晰回答：</p>
+<ul>
+<li>谁做了什么。</li>
+<li>为什么这么做。</li>
+<li>哪一步成功或失败。</li>
+<li>哪些产物已经形成。</li>
+<li>哪些结果需要人工确认。</li>
+</ul>
+<h3 id="65">6.5 第五段：最终交付与回放</h3>
+<p>Run 结束后，系统自动形成 DeliveryBundle，并暴露：</p>
+<ul>
+<li>任务摘要</li>
+<li>关键产物</li>
+<li>验证结果</li>
+<li>审批记录</li>
+<li>风险说明</li>
+<li>完整 Timeline</li>
+<li>Replay／Resume 入口</li>
+</ul>
+<p>失败态也必须具有标准收束面，不能直接掉入“无结果”状态。</p>
+<hr />
+<h2 id="7">7．控制平面与治理规则</h2>
+<h3 id="71-agent-registry">7.1 Agent Registry</h3>
+<p>每个 Agent 必须有正式注册信息，而不能只是一段 Prompt 或一个 role 名称。</p>
+<p>建议注册内容包括：</p>
+<ul>
+<li><code>agent_id</code></li>
+<li><code>role</code></li>
+<li><code>description</code></li>
+<li><code>capability_manifest</code></li>
+<li><code>allowed_task_classes</code></li>
+<li><code>preferred_executor</code></li>
+<li><code>default_sandbox_scope</code></li>
+<li><code>default_tool_policy</code></li>
+<li><code>memory_visibility_policy</code></li>
+<li><code>communication_policy</code></li>
+<li><code>approval_escalation_policy</code></li>
+</ul>
+<h3 id="72-routingbinding-rules">7.2 Routing／Binding Rules</h3>
+<p>平台必须支持显式路由规则，并记录每次决策来源：</p>
+<ol>
+<li>静态规则：固定任务类型绑定固定 Agent。</li>
+<li>Planner 规则：由 Planner 动态拆解后绑定。</li>
+<li>Fallback 规则：默认代理或人工兜底。</li>
+</ol>
+<p>每次路由都应留下：</p>
+<ul>
+<li>规则来源</li>
+<li>命中原因</li>
+<li>候选 Agent</li>
+<li>最终选择</li>
+<li>回退原因</li>
+</ul>
+<h3 id="73-context-isolation-model">7.3 Context Isolation Model</h3>
+<p>上下文共享边界必须显式定义，建议分为 4 档：</p>
+<ol>
+<li><code>private</code>：仅当前 Agent 可见。</li>
+<li><code>team-shared</code>：同一 Run 中授权 Agent 可共享。</li>
+<li><code>artifact-shared</code>：只共享结构化产物，不共享全量上下文。</li>
+<li><code>tenant-visible</code>：租户内可审计、可归档的数据。</li>
+</ol>
+<h3 id="74-tool-policy">7.4 Tool Policy</h3>
+<p>工具权限不能默认开放，至少按 3 层收口：</p>
+<ul>
+<li>全局层：平台允许的工具类别</li>
+<li>Agent 层：Agent 默认权限</li>
+<li>Step 层：单步临时扩权或降权</li>
+</ul>
+<p>每次工具调用都应记录：</p>
+<ul>
+<li>policy version</li>
+<li>granted scope</li>
+<li>escalation requirement</li>
+<li>approval requirement</li>
+<li>actual tool used</li>
+</ul>
+<h3 id="75-sandbox-policy">7.5 Sandbox Policy</h3>
+<p>首发版必须显式区分执行环境：</p>
+<ul>
+<li><code>none</code></li>
+<li><code>shared_workspace</code></li>
+<li><code>isolated_worktree_or_container</code></li>
+<li><code>browser_isolated</code></li>
+<li><code>creative_isolated</code></li>
+<li><code>elevated</code></li>
+</ul>
+<p>并定义：</p>
+<ul>
+<li>默认沙箱策略</li>
+<li>扩权触发条件</li>
+<li>审批规则</li>
+<li>失败后的回滚与清理方式</li>
+</ul>
+<h3 id="76-approval-policy">7.6 Approval Policy</h3>
+<p>审批必须支持 4 类情形：</p>
+<ol>
+<li>执行前审批</li>
+<li>结果审批</li>
+<li>策略审批</li>
+<li>人工接管审批</li>
+</ol>
+<h3 id="77-tenantworkspace-boundary">7.7 Tenant／Workspace Boundary</h3>
+<p>建议边界如下：</p>
+<ul>
+<li><code>tenant</code>：商业或组织边界</li>
+<li><code>workspace</code>：项目或工作室工作区边界</li>
+<li><code>task</code>、<code>run</code>、<code>artifact</code>、<code>evidence</code>、<code>memory</code>、<code>schedule</code> 全挂在 workspace 下</li>
+<li>tenant 级策略可覆盖 workspace 默认策略</li>
+</ul>
+<h3 id="78-audit-as-native-projection">7.8 Audit as Native Projection</h3>
+<p>审计不应作为外部附加模块存在，而应作为 Runtime 的原生投影：</p>
+<ul>
+<li>Run 关键事件天然写入 audit projection。</li>
+<li>policy decision 天然可回查。</li>
+<li>approval 天然可归档。</li>
+<li>delivery bundle 天然关联审计摘要。</li>
+</ul>
+<hr />
+<h2 id="8">8．用户表面统一方案</h2>
+<h3 id="81">8.1 首发版第一心智</h3>
+<p>用户看到的第一对象必须是：</p>
+<ul>
+<li>Task</li>
+<li>Run</li>
+<li>Inbox／Queue</li>
+<li>Delivery</li>
+<li>Replay</li>
+</ul>
+<p>而不是先看到 chat、workflow、creative 或 settings 等二级能力页。</p>
+<h3 id="82">8.2 四个统一操作面</h3>
+<h4 id="821-mission-inbox">8.2.1 Mission Inbox</h4>
+<p>Mission Inbox 承接所有任务来源，展示：</p>
+<ul>
+<li>新任务</li>
+<li>运行中任务</li>
+<li>等待审批</li>
+<li>等待补料</li>
+<li>已完成交付</li>
+</ul>
+<h4 id="822-run-console">8.2.2 Run Console</h4>
+<p>每个 Run 必须有统一控制台，至少包含：</p>
+<ul>
+<li>概览</li>
+<li>Timeline</li>
+<li>Step Graph</li>
+<li>Active Agents</li>
+<li>Evidence</li>
+<li>Artifacts</li>
+<li>Approvals</li>
+<li>Validation</li>
+<li>Replay／Recovery</li>
+</ul>
+<h4 id="823-specialized-workspaces">8.2.3 Specialized Workspaces</h4>
+<p>复杂任务允许切换到专用工作区，但这些工作区必须是 Run 的投影，而不是独立产品：</p>
+<ul>
+<li>Coding Workspace</li>
+<li>Workflow Workspace</li>
+<li>Creative Workspace</li>
+</ul>
+<h4 id="824-delivery-replay-surface">8.2.4 Delivery &amp; Replay Surface</h4>
+<p>完成任务后，用户进入 Delivery &amp; Replay Surface，查看：</p>
+<ul>
+<li>交付摘要</li>
+<li>导出包</li>
+<li>验证结论</li>
+<li>风险说明</li>
+<li>回放与恢复入口</li>
+</ul>
+<h3 id="83">8.3 远程入口统一原则</h3>
+<p>远程入口只做两类事情：</p>
+<ol>
+<li>进入平台任务</li>
+<li>让平台运行继续</li>
+</ol>
+<p>它不是主控制台的复制品，而是触发与续航层。</p>
+<h3 id="84-creative-coding">8.4 Creative 与 Coding 的统一原则</h3>
+<p>Creative 不应作为独立产品线存在，而应作为一种 Task Type、Execution Spine 与 Specialized Workspace 与 Coding、Workflow 并轨。</p>
+<p>这样平台才能支持：</p>
+<ul>
+<li>coder 与 screenwriter 同时参与同一 Run</li>
+<li>workflow view 同时承载代码节点与内容节点</li>
+<li>delivery bundle 同时包含 patch、报告、timeline 与 media 导出物</li>
+</ul>
+<hr />
+<h2 id="9">9．验证、证据包与交付标准</h2>
+<h3 id="91">9.1 “完成”的平台定义</h3>
+<p>平台中的“完成”必须同时满足：</p>
+<ol>
+<li><strong>Execution Complete</strong>：计划步骤已执行，无关键阻塞与未决强制审批。</li>
+<li><strong>Validation Complete</strong>：对应类型验证已运行，结果达到接受阈值，风险已显式记录。</li>
+<li><strong>Delivery Ready</strong>：产物可读、证据可审、回放可用、可导出与可转交。</li>
+</ol>
+<p>因此：</p>
+<blockquote>
+<p>完成 = 执行完成 × 验证完成 × 可交付完成</p>
+</blockquote>
+<h3 id="92-validation-profile">9.2 Validation Profile</h3>
+<p>首发版至少内置 4 类验证模板：</p>
+<h4 id="coding-validation">Coding Validation</h4>
+<ul>
+<li>syntax／lint／typecheck</li>
+<li>targeted tests</li>
+<li>integration tests</li>
+<li>reviewer verdict</li>
+<li>regression summary</li>
+</ul>
+<h4 id="workflow-validation">Workflow Validation</h4>
+<ul>
+<li>step completeness</li>
+<li>routing policy satisfaction</li>
+<li>approval integrity</li>
+<li>replayability</li>
+<li>recovery point correctness</li>
+</ul>
+<h4 id="creative-validation">Creative Validation</h4>
+<ul>
+<li>draft completeness</li>
+<li>required assets produced</li>
+<li>timeline／export integrity</li>
+<li>approval review status</li>
+<li>delivery readiness</li>
+</ul>
+<h4 id="remoteops-validation">Remote／Ops Validation</h4>
+<ul>
+<li>notification delivered</li>
+<li>blocked／resume path valid</li>
+<li>run continuation consistent</li>
+<li>audit trail complete</li>
+</ul>
+<h3 id="93-evidence-bundle">9.3 Evidence Bundle</h3>
+<p>每个 Run 必须可生成 Evidence Bundle，至少包括：</p>
+<ul>
+<li>task summary</li>
+<li>run timeline</li>
+<li>agent assignments</li>
+<li>policy decisions</li>
+<li>tool invocations</li>
+<li>validation results</li>
+<li>approval decisions</li>
+<li>key logs／traces</li>
+<li>artifact references</li>
+<li>final risk summary</li>
+</ul>
+<p>输出格式至少支持：</p>
+<ul>
+<li>Web 审阅视图</li>
+<li>JSON</li>
+<li>ZIP</li>
+</ul>
+<h3 id="94-delivery-bundle">9.4 Delivery Bundle</h3>
+<p>Delivery Bundle 用于对外交付，至少包括：</p>
+<ul>
+<li>一页摘要</li>
+<li>关键产物集合</li>
+<li>验证结论</li>
+<li>风险说明</li>
+<li>下一步建议</li>
+<li>replay／resume 入口</li>
+</ul>
+<h3 id="95-failure-as-deliverable-state">9.5 Failure as Deliverable State</h3>
+<p>失败态也必须产品化收束，至少提供：</p>
+<ul>
+<li>failure summary</li>
+<li>blocking step</li>
+<li>evidence of failure</li>
+<li>suggested repair actions</li>
+<li>resume point</li>
+<li>escalation path</li>
+</ul>
+<h3 id="96-replayrecovery">9.6 Replay／Recovery 进入交付面</h3>
+<p>回放与恢复不是内部调试能力，而必须成为交付面的一部分，至少支持：</p>
+<ul>
+<li>timeline replay</li>
+<li>graph replay</li>
+<li>evidence replay</li>
+<li>resume-from-step</li>
+<li>branch-from-run</li>
+</ul>
+<h3 id="97">9.7 首发版完成标准</h3>
+<p>平台首发版至少需要满足：</p>
+<ol>
+<li>任意任务都进入统一 Task／Run 模型。</li>
+<li>单 Agent 与多 Agent 都能真实执行。</li>
+<li>coding、workflow、creative、remote 至少各有一条完整主链。</li>
+<li>每次 Run 都能生成 Evidence Bundle。</li>
+<li>每次完成态都能生成 Delivery Bundle。</li>
+<li>审批、恢复、回放是平台原生能力。</li>
+<li>多租户与审计边界不能被旁路绕过。</li>
+</ol>
+<hr />
+<h2 id="10">10．首发版非目标</h2>
+<p>为了避免平台再次发散，以下内容不作为首发版新增目标：</p>
+<ol>
+<li>以 SaaS 为前提的云端控制面重写。</li>
+<li>大规模插件市场生态化运营能力。</li>
+<li>面向大众消费者的轻量聊天产品形态。</li>
+<li>与首发主链无关的 UI 视觉翻新优先级高于 Runtime 收口。</li>
+<li>为了“显得全面”而继续扩展未进入主链的适配器名录。</li>
+</ol>
+<p>这些能力可以存在于平台后续阶段，但不能挤占首发版的统一 Runtime 与交付闭环建设。</p>
+<hr />
+<h2 id="11-x-agent">11．与现有 X-Agent 的并轨要求</h2>
+<p>首发版不是另起炉灶，而是要求现有 X-Agent 的能力收口并轨到统一 Runtime 中。</p>
+<p>必须并轨的现有优势包括：</p>
+<ul>
+<li>workflow structured view</li>
+<li>timeline</li>
+<li>approval／replay 语义</li>
+<li>企业审计链</li>
+<li>多租户安全边界</li>
+<li>creative workflow draft</li>
+<li>canvas／timeline／export 产线</li>
+</ul>
+<p>并轨原则如下：</p>
+<ol>
+<li>保留现有差异化语义，不做功能降级。</li>
+<li>把现有差异化能力挂到统一 Task／Run 模型下。</li>
+<li>不再允许 workflow、creative、audit 各自维持独立主模型。</li>
+<li>前端工作台必须围绕统一 Run Console 和 Delivery Surface 重组。</li>
+</ol>
+<hr />
+<h2 id="12">12．最终设计结论</h2>
+<p>X-Agent 首发版必须被设计为一个 <strong>Run-centric 的统一 Agent 平台</strong>。</p>
+<p>它不是某一个竞品的复制品，而是：</p>
+<ul>
+<li>用 Codex 的执行与证据闭环，建立真实交付能力。</li>
+<li>用 OpenClaw 的多 Agent 路由与治理，建立平台级协作能力。</li>
+<li>用 Hermes 的远程入口与持续运行，建立异步续航能力。</li>
+<li>用 X-Agent 原有的 workflow view、creative workflow、审计、安全、多租户，建立差异化价值。</li>
+</ul>
+<p>首发版的真正竞争力不来自“功能更多”，而来自：</p>
+<blockquote>
+<p>所有能力被收敛到同一套 Runtime 中，并能在私有部署环境下稳定地产生可执行、可审计、可回放、可交付的结果。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

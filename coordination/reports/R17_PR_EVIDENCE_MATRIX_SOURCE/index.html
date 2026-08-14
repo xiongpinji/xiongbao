@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R17 PR Evidence Matrix Source - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R17 PR Evidence Matrix Source";
+        var mkdocs_page_input_path = "coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R17 PR Evidence Matrix Source</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r17-pr-evidence-matrix-source">R17 PR Evidence Matrix Source</h1>
+<blockquote>
+<p>Date: 2026-07-06
+Owner: Codex
+Scope: source data for R5 PR review package, not the final PR body.
+Recovery refresh: 2026-07-07</p>
+</blockquote>
+<h2 id="purpose">Purpose</h2>
+<p>R17 maps the current DONE / REVIEW evidence packages to <code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> so R5 can assemble a reviewer-ready PR package without re-mining the entire coordination history.</p>
+<p>The 2026-07-07 refresh keeps the source data aligned with the live task board after R8 and R15 were rechecked in the fixed recovery chain.</p>
+<p>This is source data only:</p>
+<ul>
+<li>It does not mark the release as formally ready.</li>
+<li>It does not sign off checklist boxes.</li>
+<li>It does not replace R4 target-environment rehearsal.</li>
+<li>It does not convert REVIEW packages to DONE.</li>
+</ul>
+<h2 id="candidate-and-gate-context">Candidate And Gate Context</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Current source</th>
+<th>R5 handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Remote CI</td>
+<td>R1 records draft PR #6, commit <code>d59faa3</code>, run <code>28789809193</code>, all checks green</td>
+<td>Treat as remote CI evidence for that candidate; re-check if PR candidate changes after R13-R17 docs/code changes</td>
+</tr>
+<tr>
+<td>Current task board</td>
+<td><code>docs/coordination/TASK_BOARD.md</code></td>
+<td>Use as live status source; do not infer DONE from delivery evidence without scheduler review</td>
+</tr>
+<tr>
+<td>Release truth source</td>
+<td><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></td>
+<td>Use for public/reviewer status wording</td>
+</tr>
+<tr>
+<td>Release checklist</td>
+<td><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></td>
+<td>Use as checklist mapping target; boxes remain release-owner signoff items</td>
+</tr>
+<tr>
+<td>Target environment</td>
+<td>R4 BLOCKED, R16 REVIEW prep checklist</td>
+<td>R5 must keep R4 as unresolved unless target rehearsal evidence appears</td>
+</tr>
+<tr>
+<td>Codex follow-up candidates</td>
+<td>R18/R19 are visible as READY in <code>TASK_BOARD.md</code></td>
+<td>Treat as follow-up work only; dependency labels reference R17/R16/U2 completion states that still need reviewer/scheduler confirmation before claim</td>
+</tr>
+</tbody>
+</table>
+<h2 id="evidence-chain-closure-notes">Evidence Chain Closure Notes</h2>
+<ul>
+<li>R8 messaging audit, R15 evidence sync, this R17 source file, and <code>TASK_BOARD.md</code> now consistently describe R17 as REVIEW, not a claimable task.</li>
+<li>R8 is reviewer-ready for its bounded purpose: external messaging / release-status wording consistency for PR review preparation.</li>
+<li>R15 is reviewer-ready for its bounded purpose: coordination state and evidence-link consistency.</li>
+<li>R17 is reviewer-ready for its bounded purpose: R5 source data and checklist evidence matrix.</li>
+<li>None of these packages converts R4, R5, R14, R15, R16, or R17 to DONE; that remains a scheduler/reviewer decision.</li>
+<li>2026-07-07 refresh: R18/R19 are tracked as READY follow-up candidates, but R17 does not use their existence as release readiness evidence and does not clear their dependency-label drift.</li>
+</ul>
+<h2 id="checklist-evidence-matrix">Checklist Evidence Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Checklist area</th>
+<th>Relevant items</th>
+<th>Evidence packages</th>
+<th>Current state</th>
+<th>R5 note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Version and scope</td>
+<td>version/tag, frozen scope, included/excluded capability, status docs</td>
+<td>R1, R8, R15, SOT, ROADMAP, R18 candidate task</td>
+<td>Partial</td>
+<td>PR #6 / <code>d59faa3</code> is the only remote-CI candidate evidence; local worktree still contains later readiness changes and must not be silently treated as the same frozen release candidate; R18 is the follow-up audit candidate, not current proof</td>
+</tr>
+<tr>
+<td>2.1 Docs and messaging</td>
+<td>README / ROADMAP consistency, owner-reviewed external wording</td>
+<td>R8 REVIEW, R15 REVIEW, SOT</td>
+<td>Review pending</td>
+<td>Messaging is aligned for PR-prep wording, not formal GA; owner review still required before public use</td>
+</tr>
+<tr>
+<td>2.2 Frontend first release scope</td>
+<td>page scope, assets under version control, screenshots</td>
+<td>R2 DONE, R9 DONE, R14 REVIEW</td>
+<td>Mostly covered locally</td>
+<td>R9 is local dev evidence; target/staging screenshots remain tied to R4 or release-owner signoff</td>
+</tr>
+<tr>
+<td>2.3 Runtime failure closure</td>
+<td>direct/stream/workflow failure visibility, blocked/failed UI, failure rehearsal</td>
+<td>P0-A DONE, R3 DONE, R10 DONE, R13 DONE</td>
+<td>Functional evidence covered locally</td>
+<td>R10 originally found Chat SSE gap; R13 closes it locally with full-flow 9/9; target-environment failure rehearsal still not proven</td>
+</tr>
+<tr>
+<td>2.4 Security defaults</td>
+<td>no <code>admin/admin</code> in prod, JWT secret, compose/Helm defaults, CORS, auth, Langfuse defaults</td>
+<td>P0-D DONE, R7 DONE, R16 REVIEW</td>
+<td>Baseline covered, target secrets pending</td>
+<td>Full-mode account source, Langfuse secrets and secret manager injection still need R4/U2 execution</td>
+</tr>
+<tr>
+<td>2.5 Release and rollback</td>
+<td>runbook, DB migration, rollback, staging rehearsal logs</td>
+<td>R6 DONE, R12 DONE, R16 REVIEW, R4 BLOCKED</td>
+<td>Runbook and prep covered; rehearsal blocked</td>
+<td>R4 is the main release blocker; R16 is only a prerequisite checklist</td>
+</tr>
+<tr>
+<td>2.6 CI and quality gates</td>
+<td>backend pytest/ruff, frontend lint/typecheck/build, Playwright, CI green</td>
+<td>P0-E DONE, R1 DONE, R2 DONE, R3 DONE, R10 DONE, R13 DONE, R14 REVIEW, R11 DONE</td>
+<td>Strong local/remote evidence, with caveats</td>
+<td>R1 CI covers <code>d59faa3</code>; R14 clears chunk warning locally; R11 still has full <code>npm audit</code> dev/build-tool risk</td>
+</tr>
+<tr>
+<td>3. Function and UX acceptance</td>
+<td>health/ready/login/workbench/run console/core flows/empty states</td>
+<td>R3 DONE, R9 DONE, R13 DONE, R14 REVIEW</td>
+<td>Local dev evidence</td>
+<td>R4 or release owner must decide whether local UI/E2E is sufficient for PR review entry</td>
+</tr>
+<tr>
+<td>4. Environment and config baseline</td>
+<td>dev/staging/prod config, secret source, external dependencies, LLM path, OIDC/OpenFGA/storage</td>
+<td>R7 DONE, R16 REVIEW, P0-D DONE</td>
+<td>Documented baseline, not environment-proven</td>
+<td>R4 needs real or equivalent environment values, services and LLM path</td>
+</tr>
+<tr>
+<td>5. Security and compliance</td>
+<td>license gate, security scan, tenant/auth/header/rate-limit, exposure, TLS</td>
+<td>R1 DONE, P0-D DONE, P0-E DONE, security middleware tests in P0 evidence</td>
+<td>Partial</td>
+<td>Remote license-gate passed in R1; host security scan, TLS, direct exposure and full target auth scenarios remain checklist signoff items</td>
+</tr>
+<tr>
+<td>6. Observability and operations</td>
+<td>metrics, Grafana, Langfuse trace, worker, logs</td>
+<td>R6 DONE, R16 REVIEW</td>
+<td>Partial</td>
+<td>R16 lists prerequisites; actual metrics/traces/worker verification belongs to R4 or later ops package</td>
+</tr>
+<tr>
+<td>7. Data and recovery</td>
+<td>target DB migration, backup, restore, RTO/RPO</td>
+<td>R6 DONE, R12 DONE</td>
+<td>Partial</td>
+<td>Fresh SQLite migration is proven; target DB migration/backup/restore rehearsal is not</td>
+</tr>
+<tr>
+<td>8. Performance and capacity</td>
+<td>load test, capacity, bottlenecks</td>
+<td>R14 REVIEW, R11 DONE</td>
+<td>Mostly open</td>
+<td>Bundle warning cleared; no load/capacity evidence yet</td>
+</tr>
+<tr>
+<td>9. Delivery materials</td>
+<td>admin/deploy/ops/upgrade/rollback/known issues/trial boundary/contact</td>
+<td>README, R6 DONE, R7 DONE, R8 REVIEW, R15 REVIEW, this R17 source, R19 candidate task</td>
+<td>Partial</td>
+<td>R5 can reuse these as PR evidence links; R19 may add a secret handoff template later, but it is not current release evidence</td>
+</tr>
+<tr>
+<td>10. Final release decision</td>
+<td>formal commercial / internal trial / no release</td>
+<td>SOT, checklist, TASK_BOARD</td>
+<td>Not formal GA</td>
+<td>Current evidence supports PR review preparation only; final decision blocked by R4/R5 and reviewer signoff</td>
+</tr>
+</tbody>
+</table>
+<h2 id="evidence-index-for-r5">Evidence Index For R5</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Status now</th>
+<th>Evidence entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0-A</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#p0-a-orchestration-await-bug</code></td>
+</tr>
+<tr>
+<td>P0-B</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#p0-b-前端-lint-阻断</code></td>
+</tr>
+<tr>
+<td>P0-C</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#p0-c-previewdemo-污染清理</code></td>
+</tr>
+<tr>
+<td>P0-D</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#p0-d-危险默认值清零</code></td>
+</tr>
+<tr>
+<td>P0-E</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#p0-e-ci-最小门禁与真实状态文档对齐</code></td>
+</tr>
+<tr>
+<td>R1</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r1-远端-ci-全绿收口与失败项清零</code></td>
+</tr>
+<tr>
+<td>R2</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r2-frontend-build-可复现验证与构建门禁补齐</code></td>
+</tr>
+<tr>
+<td>R3</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r3-关键-e2e-冒烟包补齐并跑通</code></td>
+</tr>
+<tr>
+<td>R4</td>
+<td>BLOCKED</td>
+<td><code>docs/coordination/reports/delivery-report.md#r4-目标环境演练与发布证据归档</code></td>
+</tr>
+<tr>
+<td>R6</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r6-发布回滚-runbook-v1-补齐</code></td>
+</tr>
+<tr>
+<td>R7</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r7-环境基线与-secret-注入说明补齐</code></td>
+</tr>
+<tr>
+<td>R8</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/delivery-report.md#r8-对外口径一致性终检包</code>; <code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></td>
+</tr>
+<tr>
+<td>R9</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></td>
+</tr>
+<tr>
+<td>R10</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R10_FULL_FLOW_E2E_TRIAGE.md</code></td>
+</tr>
+<tr>
+<td>R11</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK.md</code></td>
+</tr>
+<tr>
+<td>R12</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></td>
+</tr>
+<tr>
+<td>R13</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></td>
+</tr>
+<tr>
+<td>R14</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R14_VITE_CHUNK_SPLIT.md</code></td>
+</tr>
+<tr>
+<td>R15</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R15_EVIDENCE_SYNC.md</code></td>
+</tr>
+<tr>
+<td>R16</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></td>
+</tr>
+<tr>
+<td>R17</td>
+<td>REVIEW</td>
+<td>this file</td>
+</tr>
+<tr>
+<td>R18</td>
+<td>READY</td>
+<td><code>docs/coordination/TASK_BOARD.md</code>; follow-up candidate only</td>
+</tr>
+<tr>
+<td>R19</td>
+<td>READY</td>
+<td><code>docs/coordination/TASK_BOARD.md</code>; follow-up candidate only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="remaining-risks-to-surface-in-r5">Remaining Risks To Surface In R5</h2>
+<ul>
+<li>R4 target-environment rehearsal is still BLOCKED; local lite/dev evidence is not enough for formal release.</li>
+<li>R8/R14/R15/R16/R17 are REVIEW, not DONE, until scheduler/reviewer accepts them.</li>
+<li>R1 remote CI evidence covers draft PR #6 / <code>d59faa3</code>; R5 must re-check remote CI if the PR candidate includes later local changes.</li>
+<li>R18/R19 are READY follow-up candidates, but their dependency labels still reference DONE states that are not all reflected by the live REVIEW board; the claimant or scheduler must resolve that before using them as gate evidence.</li>
+<li>R11 leaves full <code>npm audit</code> dev/build-tool risk unresolved unless release owner accepts it or opens an upgrade package.</li>
+<li>R12 proves fresh DB migration, not target-environment data migration, backup or restore.</li>
+<li>R17 is source data only and must not be pasted as final PR signoff without R5 owner review.</li>
+</ul>
+<h2 id="2026-07-07-verification">2026-07-07 Verification</h2>
+<ul>
+<li>Structure scan command: <code>rg -n "Codex follow-up candidates|R18/R19 are visible as READY|R8/R14/R15/R16/R17 are REVIEW|R17 is source data only" docs\coordination\reports\R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li>Board status scan command: <code>rg -n "R17.*状态: REVIEW|R18.*状态: READY|R19.*状态: READY|R4.*BLOCKED|R5.*PR 审查包" docs\coordination\TASK_BOARD.md</code></li>
+<li>Result: source data now includes R18/R19 as follow-up candidates, keeps R17 in REVIEW, and preserves R4/R5 as unresolved gates.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

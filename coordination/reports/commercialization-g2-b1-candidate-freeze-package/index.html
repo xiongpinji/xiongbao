@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b1-candidate-freeze-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G2-B1 候选冻结包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G2-B1 \u5019\u9009\u51bb\u7ed3\u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g2-b1-candidate-freeze-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b1-candidate-freeze-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G2-B1 候选冻结包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g2-b1-candidate-freeze-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g2-b1">G2-B1 候选冻结包</h1>
+<blockquote>
+<p>适用阶段：G2 正式商用 GA</p>
+<p>用途：冻结当前候选版本、候选范围、CI 证据与发布前材料入口，确保从 G1 进入 G2 后，项目不再以“持续变化的工作树”作为交付对象，而是以唯一候选版本作为正式商用收口起点。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G2-B1 的目标是：</p>
+<blockquote>
+<p><strong>把当前 <code>xagent</code> 的正式商用候选对象固定下来，避免后续发布、演练、签字、回滚都围绕漂移中的内容展开。</strong></p>
+</blockquote>
+<p>这一步不是做目标环境演练，也不是做发布签字；它只负责：</p>
+<ul>
+<li>冻结版本对象；</li>
+<li>冻结交付范围；</li>
+<li>冻结 CI / 证据入口；</li>
+<li>冻结正式商用 GA 的起始候选。</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前候选冻结对象</h2>
+<p>当前冻结候选如下：</p>
+<ul>
+<li>branch / candidate line：<code>commercialization-ladder</code>（基于 <code>candidate/min-send-review-20260707-claude</code>）</li>
+<li>commit SHA：<code>3a1eb28dd50c9357538356dda1d19752b012412c</code></li>
+<li>PR：<a href="https://github.com/xiongpinji/xiongbao/pull/11">#11</a></li>
+<li>PR URL：<code>https://github.com/xiongpinji/xiongbao/pull/11</code></li>
+<li>mergeStateStatus：<code>CLEAN</code></li>
+<li>对应 CI run（PR #11）：</li>
+<li><code>backend</code> ✅</li>
+<li><code>frontend</code> ✅</li>
+<li><code>license-gate</code> ✅</li>
+<li><code>promptfoo-eval</code> ✅</li>
+<li>交付材料入口：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></li>
+<li>当前真实状态口径：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li>已知问题 / 试点边界：<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+</ul>
+<h3 id="_1">当前说明</h3>
+<p>在 G2-B1 中，当前候选对象的答案是：</p>
+<ol>
+<li>这次 GA 候选对象：<code>commercialization-ladder @ 3a1eb28</code>，对应 PR #11；</li>
+<li>这次候选范围：Goal 结构、G1 阶段四个执行包、G1 Gate 评估与稳定性恢复演练记录；</li>
+<li>这些内容属于正式 GA 收口的起始候选，因为它们把“如何从 G1 进入 G2”冻结成了可交接材料；</li>
+<li>G2 后续仍未纳入的内容包括：目标环境演练、正式发布 / 回滚闭环、签字 / 证据包以及 G3 的长期运营能力；</li>
+<li>当前候选的验证证据来自 PR #11 的全绿 checks 与现有交付材料索引。</li>
+</ol>
+<hr />
+<h2 id="3">3. 候选冻结输入</h2>
+<p>冻结候选前必须能提供：</p>
+<ul>
+<li>当前候选 commit</li>
+<li>关联 PR</li>
+<li>远端 CI 全绿证据</li>
+<li>交付材料索引</li>
+<li>当前真实状态文档</li>
+<li>已知问题 / 边界说明</li>
+</ul>
+<p>参考文档入口：</p>
+<ul>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></li>
+<li><code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+<li><code>docs/coordination/reports/auto-delivery-phase1-report.md</code></li>
+</ul>
+<hr />
+<h2 id="4">4. 冻结后的最小要求</h2>
+<p>一旦进入 G2-B1，必须满足：</p>
+<ul>
+<li>不再把未冻结内容混入候选；</li>
+<li>不再用脏工作树或未提交改动代表交付对象；</li>
+<li>不再用旧 CI 或无关 PR 的记录冒充当前候选；</li>
+<li>发布、回滚、签字都必须指向同一个候选对象。</li>
+</ul>
+<hr />
+<h2 id="5">5. 当前结论</h2>
+<p>G2-B1 是正式商用 GA 的第一个执行包，它的作用不是“验证系统能不能跑”，而是：</p>
+<blockquote>
+<p><strong>确认接下来所有 G2 工作都围绕同一个正式候选对象展开。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API R2 本地试运行证据报告 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API R2 \u672c\u5730\u8bd5\u8fd0\u884c\u8bc1\u636e\u62a5\u544a";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API R2 本地试运行证据报告</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-r2">Web/API R2 本地试运行证据报告</h1>
+<blockquote>
+<p>日期：2026-08-10
+分支：<code>feature/webapi-r2-staging-readiness</code>
+最终候选：<code>bad1aa8</code>（运行镜像功能基线：<code>2ad8a1d</code>）
+环境：Windows + Docker Desktop，<code>xagent-r2</code> 本地 Full Compose，真实本地 <code>qwen3:4b</code>
+结论：R2 Web/API 范围达到本地受控试运行发布标准；不等同于正式商用 GA、远端 CI 签发或生产部署。</p>
+</blockquote>
+<h2 id="1">1. 范围与判定</h2>
+<p>本轮覆盖 Web、API、Worker、PostgreSQL、Redis、Qdrant、Platform MCP、Prometheus、Grafana，以及真实 Ollama 对话、调度、技能包、隔离开发任务、租户隔离、重启、故障恢复和备份恢复。</p>
+<p>明确排除：短剧业务链、媒体生成、Tauri 桌面端、多机 HA、E2B、付费 provider、客户现场与生产环境。排除项没有被写成已验证能力，也没有为通过门禁而调用短剧或媒体 API。</p>
+<p>最终判定：</p>
+<ul>
+<li>R2-A 至 R2-E 均满足各自本地试运行完成标准，转为 <code>DONE</code>。</li>
+<li>本地候选可以进入 reviewer/owner 的后续发布决策。</li>
+<li>未执行 push、tag、PR 合并、远端部署或生产写入。</li>
+</ul>
+<h2 id="2">2. 源码、镜像与测试</h2>
+<h3 id="21-apiworker">2.1 API/Worker</h3>
+<ul>
+<li>最终候选 API 镜像原始全量收集 860 项：<code>833 passed / 13 failed / 14 skipped</code>。</li>
+<li>13 项失败全部位于明确排除的短剧/媒体路径：audio pipeline 3 项、creative studio 6 项、media 1 项、pipeline 2 项、runtime creative status 1 项；<code>network=none</code> 下外部 Pollinations 路由不可用。本报告不把原始全仓结果描述为全绿。</li>
+<li>R2 Web/API 范围以完整产品模块为边界，排除短剧、画布、编辑器、媒体、producer、pipeline、audio 和 E2B 测试模块，并在共享 runtime 文件中排除 1 个 creative production node。最终 API 镜像结果为 <code>739 passed / 8 skipped / 2 warnings</code>，用时 233.3 秒。</li>
+<li>8 项 skip 均为默认关闭的 Docker integration 实机测试。</li>
+<li>2 条 warning：passlib <code>crypt</code> 弃用；OIDC 伪造 HS256 安全测试故意使用短 HMAC key。</li>
+<li>CI 已使用 <code>scripts/run_webapi_release_tests.py</code> 执行同一 Web/API 范围，合同测试锁定完整排除边界，禁止退回裸 <code>pytest -q</code>。</li>
+<li>当前源码相关回归：checkpoint、resume、orchestration、evidence、ops 共 <code>80/80</code>；evidence/ops 独立 <code>25/25</code>；release unittest <code>40/40</code>。</li>
+<li>最终镜像包含且只包含所需运维脚本；安装布局和源码布局均可导入 evidence/ops 脚本。</li>
+</ul>
+<h3 id="22">2.2 静态与发布门</h3>
+<ul>
+<li>关键 Ruff <code>F821,F822,F823,B023</code>：通过。</li>
+<li>完整 Ruff：精确基线通过；E501 为 187 条固定指纹，exception fallback 17、subprocess 15、async 6，均未漂移。</li>
+<li>mypy：仅剩 4 条短剧排除项固定指纹，Web/API 范围 0 条新增错误。</li>
+<li>Python 许可证门：通过。</li>
+<li>API、Web、README 版本：均为 <code>v1.0.0</code>。</li>
+<li>Compose 与 R2 release contracts：<code>40/40</code>。</li>
+<li><code>scripts/r2-preflight.ps1 -AllowRunningProject</code>：13 个端口均确认属于目标 project，退出 0。</li>
+<li>Compose <code>config --quiet</code>：通过。</li>
+</ul>
+<h3 id="23-web">2.3 Web</h3>
+<ul>
+<li>标准 Web 测试：<code>35/35</code>。</li>
+<li><code>npm run typecheck</code>：通过。</li>
+<li><code>npm run lint</code>：0 error / 99 warnings。</li>
+<li><code>npm run lint:release</code>：89 条 React compiler migration + 10 条 effect dependency，精确指纹通过。</li>
+<li><code>npm run build</code>：通过。</li>
+<li><code>npm run audit:release</code>：生产依赖 0 漏洞。</li>
+</ul>
+<h2 id="3-compose">3. Compose 与运行态</h2>
+<p>最终本地 project 为 <code>xagent-r2</code>。最终浏览器轮前后：</p>
+<table>
+<thead>
+<tr>
+<th>服务</th>
+<th>容器 ID</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>api</td>
+<td><code>49aeb2a5f83c</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>worker</td>
+<td><code>36371148e0f2</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>web</td>
+<td><code>0c04e51d5054</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>postgres</td>
+<td><code>718b16067ca6</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>redis</td>
+<td><code>d4c436c4f4db</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>qdrant</td>
+<td><code>1b4098d037b2</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>platform-mcp</td>
+<td><code>8d41785c2a5c</code></td>
+<td>running / healthy</td>
+</tr>
+<tr>
+<td>prometheus</td>
+<td><code>e3cc8e1cf4db</code></td>
+<td>running，端点已验收</td>
+</tr>
+<tr>
+<td>grafana</td>
+<td><code>61a2dd886d6c</code></td>
+<td>running，端点已验收</td>
+</tr>
+</tbody>
+</table>
+<p>受保护的 <code>aicg-minio</code> / <code>aicg-postgres</code> 保持原容器 ID <code>07e3c2aef1a1</code> / <code>3af4cf4c653d</code>，均 healthy，未被本轮重建。</p>
+<p>最终健康复验：</p>
+<ul>
+<li><code>/health/deep</code>：overall、database、redis、qdrant 均 <code>healthy</code>。</li>
+<li>Worker Celery inspect：1 node <code>pong</code>。</li>
+<li>API/Worker strict warmup：<code>qwen3:4b</code>，route=<code>ollama</code>，成功。</li>
+<li>Web 宿主构建与容器 bundle SHA-256 一致。</li>
+<li>API、Worker、数据库、扩展和受保护容器未因两次 Web-only 修复被替换。</li>
+</ul>
+<h2 id="4-ollama">4. 真实 Ollama 与浏览器同轮证据</h2>
+<p>最终证据轮命令固定为 headed Chromium、<code>workers=1</code>、<code>retries=0</code>，使用随机新租户和临时 ZIP。结果：<code>6/6 passed</code>，总用时 2.0 分钟。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL / Redis / Qdrant deep health</td>
+<td>通过，1.3 秒</td>
+</tr>
+<tr>
+<td>真实 Ollama Chat → Run Console → reload/history</td>
+<td>精确 <code>R2-WEB-OLLAMA-OK</code>，通过，18.5 秒</td>
+</tr>
+<tr>
+<td>durable scheduler create/run/pause/reload</td>
+<td>attempt 1 <code>succeeded</code>，result 精确 <code>R2-SCHEDULER-OK</code>，error 为空，13.0 秒</td>
+</tr>
+<tr>
+<td>完整 Skill ZIP 导入</td>
+<td><code>SKILL.md</code>、assets、references、scripts 四文件可见，2.1 秒</td>
+</tr>
+<tr>
+<td>隔离开发任务</td>
+<td>真实 <code>file_write</code>、worktree、commit、diff、patch、下载/审查链通过，1.4 分钟</td>
+</tr>
+<tr>
+<td>第二租户隔离</td>
+<td>Skill、checkpoint、development task 均 403/404，1.6 秒</td>
+</tr>
+</tbody>
+</table>
+<p>同轮附加合同：</p>
+<ul>
+<li>Chat 请求使用 <code>tool_mode=none</code> / <code>route=chat_no_tools</code>，无工具事件，最终回复可刷新恢复。</li>
+<li>开发任务必须先调用 <code>file_write</code>，只有真实 diff 和成功终态才能进入 <code>awaiting_review</code>。</li>
+<li>浏览器 <code>console.error=0</code>、<code>pageerror=0</code>、短剧/媒体 forbidden request=0。</li>
+<li>API/Worker 当前窗口 <code>MockLLM=0</code>，真实 route 为 Ollama。</li>
+<li>临时技能 ZIP 在 <code>finally</code> 中删除，未进入仓库。</li>
+<li>同轮锚点：Chat run <code>6470571438ff4f6d8c296fa90ca71735</code>、checkpoint <code>3da7b254abe644d2a01ccfdbcc1d020f</code>、Scheduler run <code>064cb64295ff4a8296d2f49e96b45990</code>、Skill Package <code>14de4d83cedf42d3a4a5030d6bb5bcd3</code>、Development Task <code>538074005c6d48a49af24bc685ea0832</code>。</li>
+<li>Development Patch SHA-256 为 <code>71907736a92515f0e93d4d36e1e8cd20efcc252cb4df352e19cc8b4b63763986</code>，正文包含 <code>R2-DEVELOPMENT-TASK-OK</code>。</li>
+</ul>
+<h2 id="5">5. 截图与客观视觉复核</h2>
+<p>六张截图均为 1280×720，并逐张人工查看：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th style="text-align: right;">字节</th>
+<th>SHA-256</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r2-chat.png</code></td>
+<td style="text-align: right;">50,470</td>
+<td><code>2050b7293da717381fa7e9c2cc717df5cd520b439ff8177a602b8b1977a16795</code></td>
+</tr>
+<tr>
+<td><code>r2-run-console.png</code></td>
+<td style="text-align: right;">67,197</td>
+<td><code>9dce48dae15785f31dd1faf26427c9ab46512e262256fc613122ccc43b4c271b</code></td>
+</tr>
+<tr>
+<td><code>r2-reload.png</code></td>
+<td style="text-align: right;">67,197</td>
+<td><code>9dce48dae15785f31dd1faf26427c9ab46512e262256fc613122ccc43b4c271b</code></td>
+</tr>
+<tr>
+<td><code>r2-scheduler.png</code></td>
+<td style="text-align: right;">69,548</td>
+<td><code>0b153005d38f7cceefff4d04b3234720edfe919b66bcc10e78c9f4aeb7887d28</code></td>
+</tr>
+<tr>
+<td><code>r2-skill.png</code></td>
+<td style="text-align: right;">81,456</td>
+<td><code>4a671c453c26c5638aaa9f4bd75c31a17d94ea74e1e8a220f09ae3a1536c3e03</code></td>
+</tr>
+<tr>
+<td><code>r2-development-task.png</code></td>
+<td style="text-align: right;">82,916</td>
+<td><code>b83fce5281cb05e9bf29ff1d2eb6725288566083982a56385de3c4bba8cb108c</code></td>
+</tr>
+</tbody>
+</table>
+<p>截图审计发现并修复两项发布可见问题：</p>
+<ol>
+<li>右侧预览曾默认硬编码并加载 <code>http://localhost:5175</code>；现默认为空状态，只有用户输入 URL 后才创建 iframe。</li>
+<li>开发任务窄详情区曾被全局 <code>xl</code> 断点强制成四列，元数据逐字竖排；现固定为可读的 2×2 网格。</li>
+</ol>
+<p><code>r2-run-console.png</code> 与 reload 后的 <code>r2-reload.png</code> 哈希相同，代表持久化页面稳定，不是遗漏截图。仓库没有对应 <code>reference.png</code> 或正式视觉规格，因此这里只判定客观可读性、无破图和功能状态可见；不宣称像素级对标完成。</p>
+<h2 id="6">6. 重启、故障与持久化</h2>
+<p>R2-C 已完成：</p>
+<ul>
+<li>API/Worker restart 后，Web HTTP/WS 代理可恢复；发现的 Nginx Docker DNS 固定解析和 <code>/ws</code> 尾斜杠问题均以 TDD 修复。</li>
+<li>Worker pause 时任务保持非终态，unpause 后唯一成功终态和 checkpoint 可读。</li>
+<li>Redis pause 2 秒后，deep health 在有界超时内返回 Redis degraded；unpause 后恢复 healthy。</li>
+<li><code>docker compose down</code> 未带 <code>-v</code>，再 <code>up</code> 后四个项目卷保留；Chat、Run、Checkpoint、Scheduler、Skill、Development Patch 锚点一致。</li>
+<li>Celery 单任务异步生命周期统一为一个 event loop，dispose 异常不再覆盖业务终态。</li>
+</ul>
+<h2 id="7-mcp">7. MCP 与观测</h2>
+<p>R2-D 已完成：</p>
+<ul>
+<li>Platform MCP initialize 成功，可列出 15 个工具。</li>
+<li>同租户 conversation/run/events/approval 可读；无 token 与真实第二租户 JWT 均 401；跨租户 run 返回 <code>run_not_found</code>。</li>
+<li>Prometheus target <code>api:8000/metrics</code> 为 up；<code>/metrics</code> 已绕过响应缓存并保持实时文本响应。</li>
+<li>唯一真实 <code>qwen3:4b</code> metrics 探针形成 run counter。</li>
+<li>Grafana datasource uid=<code>prometheus</code>、X-Agent Overview 和 datasource query 均通过；provisioning mount 为只读。</li>
+</ul>
+<h2 id="8">8. 备份恢复</h2>
+<p>R2-E 已完成：</p>
+<ul>
+<li>在停止源 Web/API/Worker/MCP 写入面后，生成 PostgreSQL、Qdrant、Redis、xagentdata 四件仓库外备份并记录 SHA-256；manifest 无 secret。</li>
+<li>在独立 project、network、端口、secret 和四个 fresh volume 中恢复 migration、租户表计数、Qdrant 27 points、Skill 四文件和 Development Patch。</li>
+<li>首次 restore 模型运行因 qwen3 Thinking 两次耗尽 512 tokens 而 fail-closed；修复只在 <code>finish_reason=length</code> 时把恢复预算提高到 1024，并保留空响应失败语义。</li>
+<li>新镜像下唯一 restore run 精确返回 <code>R2-RESTORE-OK</code>，工具事件 0、MockLLM 0；源 DB 未出现该 run。</li>
+<li>restore project 已执行 <code>down</code>，未使用 <code>-v</code>；恢复卷和仓库外备份保留。</li>
+</ul>
+<h2 id="9">9. 日志与敏感信息审计</h2>
+<p>最终 15 分钟 API/Worker/Web/MCP/Prometheus/Grafana 日志计数：</p>
+<ul>
+<li>Traceback 0</li>
+<li>Unhandled 0</li>
+<li>MockLLM 0</li>
+<li>502 Bad Gateway 0</li>
+<li>cross-event-loop 0</li>
+<li>terminal checkpoint failure 0</li>
+<li><code>model_empty_response_after_retry</code> 0</li>
+<li>本地 env 中 secret/password/token/API key 实际值命中 0</li>
+</ul>
+<p>浏览器截图未见密码、JWT、API key；<code>git diff --check</code> 通过；<code>apps/api/uv.lock</code> 不存在；最终只提交白名单文档和六张脱敏截图。</p>
+<h2 id="10-codex-hermes">10. Codex / Hermes 差距收敛与剩余差距</h2>
+<p>本轮已收敛的产品差距：</p>
+<ul>
+<li>对 Codex 类编码 Agent：隔离 worktree、强制首工具、真实 diff/commit/patch、人工审查、apply/reject、状态和 checkpoint 证据链已形成。</li>
+<li>对 Hermes 类长程自治 Agent：durable scheduler、重试/暂停、Skill Package、checkpoint 恢复、Platform MCP、观测和备份恢复已形成 Web/API 主链。</li>
+<li>普通 Chat 与工具型任务已分路，避免把全工具 schema 注入简单对话。</li>
+</ul>
+<p>仍存在的差距和风险：</p>
+<ul>
+<li>本地 <code>qwen3:4b</code> 仍有偶发空响应历史；当前系统会 fail-closed，不会伪装成功，但尚无长期稳定性/SLO 数据。</li>
+<li>尚未完成客户现场、生产流量、多机 HA、远程沙箱、Tauri 桌面或付费 provider 验收。</li>
+<li>缺少正式视觉基准，不能宣称与竞品像素级一致。</li>
+<li>13 个原始全仓失败属于本轮明确排除的短剧/媒体路径；短剧独立项目接入后需另做同级真实验收。</li>
+</ul>
+<h2 id="11">11. 最终结论</h2>
+<p>R2 Web/API 本地 Full Compose 试运行形成了同一候选上的源码、镜像、真实模型、浏览器、状态回写、可下载开发产物、租户隔离、故障恢复、MCP、观测和备份恢复证据。就用户批准的 Web 优先范围而言，可以转 <code>DONE</code> 并进入后续 reviewer/owner 发布决策。</p>
+<p>该结论不包含生产部署、正式商用 GA、短剧链、桌面端或多机能力。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

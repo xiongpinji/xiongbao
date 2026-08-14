@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/FRONTEND_%E6%BC%94%E7%A4%BA%E6%80%81%E6%A0%87%E8%AF%86%E6%96%B9%E6%A1%88_2026-07-03/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>前端“预览 / 演示态”标识方案（2026-07-03） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u524d\u7aef\u201c\u9884\u89c8 / \u6f14\u793a\u6001\u201d\u6807\u8bc6\u65b9\u6848\uff082026-07-03\uff09";
+        var mkdocs_page_input_path = "FRONTEND_\u6f14\u793a\u6001\u6807\u8bc6\u65b9\u6848_2026-07-03.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/FRONTEND_%E6%BC%94%E7%A4%BA%E6%80%81%E6%A0%87%E8%AF%86%E6%96%B9%E6%A1%88_2026-07-03/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">前端“预览 / 演示态”标识方案（2026-07-03）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/FRONTEND_演示态标识方案_2026-07-03.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="2026-07-03">前端“预览 / 演示态”标识方案（2026-07-03）</h1>
+<blockquote>
+<p>目标：减少用户误解，明确哪些页面当前是“真实执行入口”，哪些页面仍是“预览 / 导航 / 本地回显辅助”。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 标识原则</h2>
+<p>当前前端改动引入了大量 <code>ConversationalCommand</code> 入口。视觉上它们都像“智能助手”，但并不是每一个都会触发真实后端执行。</p>
+<p>因此需要统一规则：</p>
+<ul>
+<li><strong>真实执行入口：</strong> 不额外标“预览”，但要让用户知道会触发什么。</li>
+<li><strong>本地回显 / 导航辅助：</strong> 必须标“预览”或“辅助”。</li>
+<li><strong>fallback 演示数据：</strong> 必须明确写出“当前显示的是本地预览数据”。</li>
+</ul>
+<p>建议统一采用以下 3 种标签之一：</p>
+<ul>
+<li><code>预览态</code></li>
+<li><code>辅助模式</code></li>
+<li><code>本地演示数据</code></li>
+</ul>
+<hr />
+<h2 id="2">2. 优先需要补标识的页面</h2>
+<h3 id="21-agentspage">2.1 AgentsPage</h3>
+<p><strong>文件：</strong> <code>src/pages/AgentsPage.tsx</code></p>
+<p><strong>原因：</strong>
+- 接口失败时会展示 <code>fallbackRoles</code>
+- 页面视觉上像“真的能切换多个专业智能体并调度”</p>
+<p><strong>建议标识位置：</strong>
+- 页面主标题下方说明区
+- fallback 提示框中保留更明确措辞</p>
+<p><strong>建议文案：</strong></p>
+<h4 id="_1">默认提示（可长期保留）</h4>
+<blockquote>
+<p>当前页用于浏览和预览智能体角色，角色调度入口仍以真实后端能力为准。</p>
+</blockquote>
+<h4 id="fallback">fallback 提示（接口失败时）</h4>
+<blockquote>
+<p>后端角色接口暂不可用，当前展示的是本地演示角色，仅用于 UI 预览，不代表真实可调度角色集合。</p>
+</blockquote>
+<hr />
+<h3 id="22-memorypage">2.2 MemoryPage</h3>
+<p><strong>文件：</strong> <code>src/pages/MemoryPage.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前“记忆检索助手”主要是整理意图、给建议、跳配置页
+- 并不直接返回真实知识库命中结果</p>
+<p><strong>建议标识位置：</strong>
+- <code>ConversationalCommand</code> 上方增加一行细说明
+- 或在 header 段落后增加一个小提示卡片</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前为检索意图整理与导航辅助模式，不直接展示真实知识库结果。实际检索仍需进入索引库或后端检索链路。</p>
+</blockquote>
+<hr />
+<h3 id="23-opensourcepage">2.3 OpenSourcePage</h3>
+<p><strong>文件：</strong> <code>src/pages/OpenSourcePage.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前“开源比选助手”主要做目标整理与策略建议
+- 用户容易误以为已经在实时搜索仓库</p>
+<p><strong>建议标识位置：</strong>
+- header 段落后
+- <code>ConversationalCommand</code> 组件上方或下方</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前为开源比选预览入口，优先整理能力缺口与比选目标，不直接返回实时仓库搜索结果。</p>
+</blockquote>
+<hr />
+<h3 id="24-settingslayout">2.4 SettingsLayout 中的“配置助手”</h3>
+<p><strong>文件：</strong> <code>src/components/settings/SettingsLayout.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前主要生成配置检查建议
+- 不会真实写入配置</p>
+<p><strong>建议标识位置：</strong>
+- <code>ConversationalCommand</code> 上方
+- 或组件内部标题旁边增加小标签</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>配置助手当前用于生成检查清单与调整建议，不会直接修改本地或远端配置。</p>
+</blockquote>
+<hr />
+<h3 id="25-shellcontextpanel">2.5 ShellContextPanel 中的“上下文助手”</h3>
+<p><strong>文件：</strong> <code>src/components/layout/ShellContextPanel.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前更像“上下文建议器”
+- 不应被误解为当前页的真实执行代理</p>
+<p><strong>建议标识位置：</strong>
+- <code>ConversationalCommand</code> 上方
+- 或标题右上角加一个“辅助”标签</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前为上下文辅助助手，优先提供总结、建议与跳转，不直接执行后台任务。</p>
+</blockquote>
+<hr />
+<h2 id="3">3. 可选补标识的页面</h2>
+<h3 id="31-run-console">3.1 Run Console 的“运行分析助手”</h3>
+<p><strong>文件：</strong> <code>src/components/runs/RunConsole.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前回答主要基于已有 <code>RunDetail</code> 做本地总结
+- 若未真正调用后台分析，则应避免被理解成“深度诊断代理”</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前为基于运行详情的本地分析视图，优先帮助你快速梳理 Timeline、Evidence 和 Artifacts。</p>
+</blockquote>
+<hr />
+<h3 id="32-workflowspage">3.2 WorkflowsPage 的“工作流编排助手”</h3>
+<p><strong>文件：</strong> <code>src/pages/WorkflowsPage.tsx</code></p>
+<p><strong>原因：</strong>
+- 当前输入主要写入页面局部状态并新增步骤
+- 不等于已经进入正式后端编排</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前优先生成页面内步骤草案；正式执行仍以“创建并执行”按钮触发的后端工作流为准。</p>
+</blockquote>
+<hr />
+<h3 id="33-creativestudiopage">3.3 CreativeStudioPage 中的对话式入口</h3>
+<p><strong>文件：</strong> <code>src/pages/CreativeStudioPage.tsx</code></p>
+<p><strong>原因：</strong>
+- 如果当前更多是在页面侧生成草案 / 节点意图，而不是所有输入都立即触发真实后端
+- 建议明确区分“草案”和“执行”</p>
+<p><strong>建议文案：</strong></p>
+<blockquote>
+<p>当前输入优先生成创作草案与页面节点意图；正式生产链路仍以明确的执行按钮和后端返回结果为准。</p>
+</blockquote>
+<hr />
+<h2 id="4">4. 不建议补“预览态”标识的页面</h2>
+<p>以下页面当前更接近真实主入口，不建议泛化为“预览”，避免削弱可信度：</p>
+<h3 id="41-loginpage">4.1 LoginPage</h3>
+<ul>
+<li>登录与匿名进入是实际入口，不是演示页。</li>
+</ul>
+<h3 id="42-chatpage">4.2 ChatPage</h3>
+<ul>
+<li>即使内部有 SSE fallback，它仍是主执行入口。</li>
+<li>不应标成“预览态”。</li>
+</ul>
+<h3 id="43-professionalmodepage">4.3 ProfessionalModePage</h3>
+<ul>
+<li>这是导航聚合页，不是助手预览页。</li>
+<li>可说明“模式入口”，但不应一概标预览。</li>
+</ul>
+<h3 id="44-appshell">4.4 AppShell / 顶层壳层</h3>
+<ul>
+<li>属于产品框架层，不需要“预览”标签。</li>
+</ul>
+<hr />
+<h2 id="5">5. 标识样式建议</h2>
+<p>为了不把页面搞得太重，建议统一用轻提示，不要做成大块 warning。</p>
+<h3 id="a">样式建议 A：细说明文字</h3>
+<p>适合：Memory / Open Source / Settings</p>
+<pre><code class="language-text">当前为导航辅助模式，不直接执行真实检索。
+</code></pre>
+<h3 id="b">样式建议 B：小标签 + 一句话</h3>
+<p>适合：ShellContextPanel / Run Console</p>
+<pre><code class="language-text">辅助模式
+当前为上下文辅助助手，优先提供建议与跳转。
+</code></pre>
+<h3 id="cfallback">样式建议 C：fallback 提示框</h3>
+<p>适合：AgentsPage</p>
+<pre><code class="language-text">当前展示的是本地演示数据，仅用于 UI 预览。
+</code></pre>
+<hr />
+<h2 id="6">6. 推荐落地顺序</h2>
+<p>建议按误导风险从高到低补：</p>
+<ol>
+<li>AgentsPage</li>
+<li>MemoryPage</li>
+<li>OpenSourcePage</li>
+<li>SettingsLayout</li>
+<li>ShellContextPanel</li>
+<li>RunConsole</li>
+<li>WorkflowsPage</li>
+<li>CreativeStudioPage</li>
+</ol>
+<hr />
+<h2 id="7">7. 最小落地标准</h2>
+<p>如果本轮时间有限，至少补完前 5 项：</p>
+<ul>
+<li>AgentsPage</li>
+<li>MemoryPage</li>
+<li>OpenSourcePage</li>
+<li>SettingsLayout</li>
+<li>ShellContextPanel</li>
+</ul>
+<p>只要这 5 个补齐，就能显著降低“用户把辅助入口误解为真实智能执行”的风险。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Web/API 发布硬化与竞品差距补齐设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Web/API \u53d1\u5e03\u786c\u5316\u4e0e\u7ade\u54c1\u5dee\u8ddd\u8865\u9f50\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Web/API 发布硬化与竞品差距补齐设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-08-07-xagent-webapi-competitive-parity-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-webapi">X-Agent Web/API 发布硬化与竞品差距补齐设计</h1>
+<blockquote>
+<p>日期：2026-08-07</p>
+<p>状态：已获 Owner 批准进入执行
+当前交付面：Web + API</p>
+</blockquote>
+<h2 id="1">1. 目标</h2>
+<p>将 X-Agent 的 Web/API 版本从“功能骨架已存在”推进到可复现、可审查、可恢复的发布状态，并补齐相对 OpenAI Codex 与 Hermes Agent 的关键产品深度。</p>
+<p>完成后必须同时满足：</p>
+<ol>
+<li>并发工具执行不会把成功调用误报为运行时异常。</li>
+<li>CI 不再吞掉未定义变量等高风险静态错误，发布只能发生在完整门禁成功之后。</li>
+<li>并行编码任务的 worktree 结果可以在 Web 中查看、审查、接受、拒绝或导出，不再执行后立即销毁。</li>
+<li>定时任务具有持久运行记录、重试、重启恢复和 Web 管理入口。</li>
+<li>SKILL.md 导入保留完整技能包，不再只截取正文提示。</li>
+<li>会话和 checkpoint 可以查询、恢复与回滚，并通过 API 与 Web 暴露真实状态。</li>
+<li>X-Agent MCP 服务扩展到会话、运行、审批和事件读取，而不只提供 4 个一次性工具。</li>
+</ol>
+<h2 id="2">2. 范围边界</h2>
+<h3 id="21">2.1 本阶段包含</h3>
+<ul>
+<li>FastAPI 后端、React Web 前端、Web/API Docker 镜像及相关 CI。</li>
+<li>编排内核、并行 Agent、worktree 生命周期、代码审查、调度器、技能包、会话/checkpoint、平台 MCP 服务。</li>
+<li>Web/API 发布文档、版本口径、测试矩阵和发布证据。</li>
+</ul>
+<h3 id="22">2.2 本阶段不包含</h3>
+<ul>
+<li>短剧工厂的模型、媒体生成、画布、剪辑和行业交付链路。</li>
+<li>Tauri 桌面端的图标、打包、签名、自动更新与发布门禁。</li>
+<li>多机 HA、云托管编码任务、E2B 商用验证和客户现场异构环境演练。</li>
+<li>DSPy/GEPA 等重型提示优化框架。</li>
+</ul>
+<p>短剧与桌面代码不删除。Web 正式交付入口默认不展示短剧能力，待独立短剧项目稳定后通过单独集成规格接入。</p>
+<h2 id="3">3. 当前基线与已确认缺陷</h2>
+<h3 id="31">3.1 可用基线</h3>
+<ul>
+<li><code>apps/api/tests/test_orchestration.py</code>：10/10 通过。</li>
+<li>Web 单元测试：3/3 通过。</li>
+<li>Web typecheck：通过。</li>
+<li>Web production build：通过。</li>
+<li>Web lint：0 error / 100 warnings。</li>
+</ul>
+<h3 id="32-p0">3.2 P0 已确认缺陷</h3>
+<ul>
+<li><code>core/orchestration/loop.py</code> 的流式并发工具嵌套函数修改 <code>_tool_success</code> 和 <code>_tool_fail</code> 时缺少正确的状态传递，实际双工具调用稳定产生 <code>UnboundLocalError</code>。</li>
+<li>Ruff 已定位 2 个 <code>F823</code> 和 3 个 <code>B023</code>，但 CI 使用 <code>|| true</code> 忽略结果。</li>
+<li>mypy 当前同样使用 <code>|| true</code>，无法形成可发布门禁。</li>
+<li>README 仍宣称版本 <code>0.1.0</code>，而 API/Web/tag 已为 <code>1.0.0</code>。</li>
+<li>v1.0.0 Release 创建早于 tag CI 完成；仓库没有“全部发布门禁成功后再创建 Release”的自动化约束。</li>
+</ul>
+<h3 id="33">3.3 竞品深度缺口</h3>
+<ul>
+<li>worktree 只采集截断 diff，随后强制删除 worktree 和分支，没有人工审查与落地生命周期。</li>
+<li>Scheduler 使用本地 JSON 作 job 存储，缺少 run history、attempt、通知、崩溃回收和 Web 页面。</li>
+<li>SKILL.md 导入只映射摘要提示，未保留 <code>references/</code>、<code>scripts/</code>、<code>assets/</code> 和完整正文。</li>
+<li>checkpoint 是本机短期 JSON，过期时间固定为 30 分钟，没有 API、租户隔离和 rollback 生命周期。</li>
+<li>Platform MCP Server 只有 run、review、skill match、skill import 4 个工具。</li>
+</ul>
+<h2 id="4">4. 总体架构</h2>
+<p>按依赖关系分为 3 个阶段，每个阶段都必须形成独立的测试、迁移、API、Web 和证据闭环。</p>
+<pre><code class="language-text">P0 发布可信基线
+  ├─ 运行时正确性
+  ├─ 静态质量阻断
+  ├─ Web 发布范围与版本口径
+  └─ CI 成功后发布
+          ↓
+P1 Codex 开发任务闭环
+  ├─ 持久 worktree 运行记录
+  ├─ diff / review / approve / reject / export
+  ├─ apply/cherry-pick 冲突状态
+  └─ Web 开发任务控制台
+          ↓
+P2 Hermes 持久自治闭环
+  ├─ durable scheduler + run history + retry/recovery
+  ├─ 完整 Skill Package
+  ├─ session/checkpoint/rollback
+  └─ MCP 会话、审批与事件接口
+</code></pre>
+<h2 id="5-p0">5. P0：发布可信基线</h2>
+<h3 id="51">5.1 并发工具执行</h3>
+<p>流式和非流式工具路径必须使用同一份显式执行结果模型：</p>
+<pre><code class="language-text">ToolExecutionOutcome
+  name
+  call_id
+  text
+  ok
+  elapsed_seconds
+</code></pre>
+<p>单工具协程只返回结果，不直接修改外层计数器。聚合阶段按结果统一更新成功数、失败数、按工具类型统计和事件。这消除闭包局部变量错误，也避免并发协程共享可变计数状态。</p>
+<p>回归测试必须构造 2 个流式原生 tool call，断言：</p>
+<ul>
+<li>两个真实工具结果均回填；</li>
+<li>结果中没有 <code>UnboundLocalError</code>；</li>
+<li>成功/失败统计与事件一致；</li>
+<li>第二轮模型调用前存在配对的 tool message。</li>
+</ul>
+<h3 id="52">5.2 静态质量门禁</h3>
+<p>CI 采用渐进式阻断，不伪装一次清完全部存量问题：</p>
+<ul>
+<li>立即阻断：<code>F821,F822,F823,B023</code>。</li>
+<li>立即报告且建立固定基线：完整 Ruff、mypy。</li>
+<li>每个后续任务只能降低基线，不能新增错误。</li>
+<li>P2 完成前，完整 Ruff 与 mypy 必须归零或形成逐文件、带理由和失效日期的最小豁免。</li>
+</ul>
+<h3 id="53-web">5.3 Web 发布范围</h3>
+<ul>
+<li>正式导航与默认路由不展示短剧入口。</li>
+<li>直接访问已排除入口时显示“当前 Web/API 发布不包含此模块”，不宣称能力可用。</li>
+<li>桌面端不进入本阶段 CI 和 Release 资产。</li>
+<li>README、状态事实源和发布检查表明确当前发布边界。</li>
+</ul>
+<h3 id="54-release">5.4 Release 顺序</h3>
+<p>tag push 先运行完整 Web/API gate。只有 backend、frontend、license、config、API E2E、load、eval 和 Docker image 全部成功，Release job 才能创建或更新 GitHub Release。Release job 必须校验 tag 版本与 API/Web 版本一致。</p>
+<h2 id="6-p1codex">6. P1：Codex 开发任务闭环</h2>
+<h3 id="61">6.1 状态模型</h3>
+<p>并行子任务新增持久状态：</p>
+<pre><code class="language-text">running → awaiting_review → approved → applied
+                    ├──────→ rejected
+                    ├──────→ conflict
+                    └──────→ expired
+</code></pre>
+<p>每个任务保留：租户、创建者、主工作区、基线 commit、临时分支、worktree 路径、结果 commit、diff stat、完整 patch 路径、测试摘要、状态和审计时间。</p>
+<h3 id="62-git">6.2 Git 生命周期</h3>
+<ol>
+<li>从固定基线 commit 创建临时分支和 worktree。</li>
+<li>Agent 完成后，在临时分支创建结果 commit；未提交文件不得被静默丢弃。</li>
+<li><code>awaiting_review</code> 状态保留 worktree、分支和 patch。</li>
+<li>Approve 只表示审查通过；Apply 在显式权限检查后将结果 commit cherry-pick 到目标分支。</li>
+<li>冲突时保留双方状态并返回冲突文件，不自动覆盖。</li>
+<li>Reject 或过期清理 worktree/branch，但保留审计记录和 patch 摘要。</li>
+</ol>
+<h3 id="63-web">6.3 Web 控制台</h3>
+<p>Web 提供开发任务列表与详情：</p>
+<ul>
+<li>子任务状态、耗时、模型、基线 commit；</li>
+<li>文件级 diff 和测试摘要；</li>
+<li>Approve、Reject、Apply、Download Patch；</li>
+<li>运行中的 cancel/interrupt；</li>
+<li>冲突文件与人工恢复说明。</li>
+</ul>
+<p>所有变更动作都要求明确确认，并写入现有审计链。</p>
+<h2 id="7-p2hermes">7. P2：Hermes 持久自治闭环</h2>
+<h3 id="71-durable-scheduler">7.1 Durable Scheduler</h3>
+<p>Job 与 Job Run 使用数据库持久化，不再以 JSON 文件作为发布路径事实源。</p>
+<p>Job Run 至少记录：<code>scheduled_for</code>、<code>claimed_at</code>、<code>started_at</code>、<code>finished_at</code>、<code>status</code>、<code>attempt</code>、<code>run_id</code>、<code>error</code>、<code>next_retry_at</code> 和通知结果。</p>
+<p>调度规则：</p>
+<ul>
+<li>数据库原子 claim + Redis lease 防止重复执行；</li>
+<li>服务启动时回收租约过期的 <code>running</code> 记录；</li>
+<li>指数退避，默认最多 3 次；</li>
+<li>missed run 默认只补最近 1 次，避免重启后洪峰；</li>
+<li>Web 可查看历史、手动重跑、暂停和删除；</li>
+<li>终态通过现有 webhook 通知，通知失败不改变任务终态，但单独记录。</li>
+</ul>
+<h3 id="72-skill-package">7.2 Skill Package</h3>
+<p>技能导入支持目录或 ZIP，安全解包后保留：</p>
+<ul>
+<li>原始 <code>SKILL.md</code>；</li>
+<li>frontmatter；</li>
+<li>完整正文；</li>
+<li><code>references/</code>、<code>scripts/</code>、<code>assets/</code>；</li>
+<li>内容摘要、SHA-256、来源和导入时间。</li>
+</ul>
+<p>拒绝绝对路径、<code>..</code> 穿越、符号链接逃逸和超限文件。运行时仍由现有技能匹配器选择技能，但提示注入引用完整正文；脚本执行继续受工具权限和 sandbox 限制。</p>
+<h3 id="73-session-checkpoint">7.3 Session 与 Checkpoint</h3>
+<p>Checkpoint 进入数据库并绑定 tenant、conversation、run 和 step。API 提供列表、查看、恢复和回滚；恢复创建新 run 并记录 parent checkpoint，不覆盖历史。回滚文件改动必须通过 Git commit/patch 执行，禁止按不可信路径直接覆盖工作区。</p>
+<p>Web 在对话和 Run Console 中展示 checkpoint 时间线、恢复来源和 rollback 结果。</p>
+<h3 id="74-platform-mcp">7.4 Platform MCP</h3>
+<p>在现有工具之上增加：</p>
+<ul>
+<li>conversation list/get/message；</li>
+<li>run get/cancel/events；</li>
+<li>approval list/resolve；</li>
+<li>scheduler job/run read；</li>
+<li>skill package read。</li>
+</ul>
+<p>所有 MCP 调用复用现有 Principal、租户隔离、权限检查和审计，不建立第二套安全模型。</p>
+<h2 id="8">8. 数据与迁移原则</h2>
+<ul>
+<li>新持久模型使用 SQLAlchemy/Alembic，SQLite 用于本地验证，PostgreSQL 为 full 模式发布路径。</li>
+<li>所有查询必须显式包含 tenant 约束。</li>
+<li>文件型 artifact 只保存不可执行数据或受控技能包，数据库保存路径、摘要和所有权。</li>
+<li>迁移必须支持从现有 v1.0.0 schema 前向升级，不修改历史 migration。</li>
+</ul>
+<h2 id="9">9. 错误处理与安全</h2>
+<ul>
+<li>Git、scheduler、checkpoint 和 MCP 的失败必须形成结构化状态，不能仅记录日志后返回成功。</li>
+<li>Apply、rollback、脚本运行和外部通知属于高风险动作，沿用现有权限模式与审批机制。</li>
+<li>worktree 路径、skill archive 路径和 patch 路径必须限制在配置的受控根目录。</li>
+<li>token、secret、环境变量和值守信息不得进入 diff、checkpoint、通知或 MCP 事件正文。</li>
+</ul>
+<h2 id="10">10. 验收与发布证据</h2>
+<p>每个任务完成前必须提供：</p>
+<ul>
+<li>先失败后通过的最小回归测试；</li>
+<li>相关模块测试；</li>
+<li>静态检查；</li>
+<li>API 契约测试；</li>
+<li>Web 单元测试、typecheck、lint 和 build；</li>
+<li>关键 Web 流程 Playwright；</li>
+<li>migration upgrade 验证；</li>
+<li><code>git diff --check</code> 和精确变更清单。</li>
+</ul>
+<p>最终发布必须证明：</p>
+<ol>
+<li>Web/API release gate 全绿且没有 <code>|| true</code> 掩盖阻断项。</li>
+<li>并行代码任务能从创建走到 review、apply/reject 和 cleanup。</li>
+<li>scheduler 在进程重启后能恢复未完成记录并按策略重试。</li>
+<li>完整 Skill Package 可导入、读取和安全拒绝恶意 archive。</li>
+<li>checkpoint 能恢复为新 run，并保留父子审计关系。</li>
+<li>MCP 能读取同一会话/run/审批状态且租户隔离成立。</li>
+<li>README、事实源、版本和 Release Notes 与真实验证范围一致。</li>
+</ol>
+<h2 id="11">11. 交付顺序</h2>
+<ol>
+<li>P0-A：流式并发工具执行回归与修复。</li>
+<li>P0-B：关键 Ruff 门禁、闭包风险修复与 mypy/Ruff 基线。</li>
+<li>P0-C：Web 发布范围、版本事实源和 CI 后发布。</li>
+<li>P1-A：worktree 结果持久模型与 Git 生命周期。</li>
+<li>P1-B：审查/apply API 与 Web 开发任务控制台。</li>
+<li>P2-A：durable scheduler、运行历史、重试恢复与 Web 页面。</li>
+<li>P2-B：完整 Skill Package 导入、存储与安全门禁。</li>
+<li>P2-C：数据库 checkpoint、恢复/回滚与 Web 时间线。</li>
+<li>P2-D：MCP 会话、运行、审批、事件接口。</li>
+<li>发布级全量审计、文档一致性检查与 Release gate 实跑。</li>
+</ol>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

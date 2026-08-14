@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/delivery-templates/RECOVERY_PACK_TEMPLATE/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>标准恢复包模板（P3 商业复制） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u6807\u51c6\u6062\u590d\u5305\u6a21\u677f\uff08P3 \u5546\u4e1a\u590d\u5236\uff09";
+        var mkdocs_page_input_path = "delivery-templates/RECOVERY_PACK_TEMPLATE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/delivery-templates/RECOVERY_PACK_TEMPLATE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">标准恢复包模板（P3 商业复制）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/delivery-templates/RECOVERY_PACK_TEMPLATE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="p3">标准恢复包模板（P3 商业复制）</h1>
+<blockquote>
+<p>用途：灾难恢复（误删/损坏/主机丢失）的标准动作集。依据 OPERATIONS_MANUAL_V1 与 R12 迁移诊断。</p>
+</blockquote>
+<h2 id="1-rtorpo">1. 恢复对象与 RTO/RPO</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>场景</td>
+<td><code>&lt;误删数据 / DB 损坏 / 整机丢失&gt;</code></td>
+</tr>
+<tr>
+<td>RTO（恢复时间目标）</td>
+<td><code>&lt;如 2h&gt;</code></td>
+</tr>
+<tr>
+<td>RPO（数据丢失容忍）</td>
+<td><code>&lt;如 24h，对应每日备份&gt;</code></td>
+</tr>
+<tr>
+<td>最近备份</td>
+<td><code>&lt;位置 + 校验值&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="2">2. 恢复前检查</h2>
+<ul>
+<li>[ ] 备份完整性校验通过（可打开/可挂载/行数合理）</li>
+<li>[ ] 恢复目标环境干净（无残留半损坏状态）</li>
+<li>[ ] secret 可用（secretRef 引用路径可达，不依赖原机器本地文件）</li>
+</ul>
+<h2 id="3">3. 恢复步骤</h2>
+<ol>
+<li>重建基础环境（compose/helm 拉起依赖件：Postgres/Redis/Qdrant）</li>
+<li>恢复 DB（pg_restore 或 SQLite 文件归位）</li>
+<li><code>alembic current</code> 核对迁移 head，必要时 <code>alembic upgrade head</code></li>
+<li>恢复数据目录（skills/scheduler/uploads/qdrant snapshot）</li>
+<li>启动应用，smoke：<code>/health</code> <code>/ready</code> 登录 主链路一发</li>
+<li>数据抽验（关键业务对象数量与样本）</li>
+</ol>
+<h2 id="4">4. 恢复后动作</h2>
+<ul>
+<li>[ ] 事故时间线记录（发现→定位→恢复→验证）</li>
+<li>[ ] 根因与防复发措施</li>
+<li>[ ] 备份策略复核（频率/保留/异地）</li>
+</ul>
+<h2 id="5">5. 演练纪律</h2>
+<ul>
+<li>每 <code>&lt;季度&gt;</code> 至少一次恢复演练；演练证据归档到 evidence 目录</li>
+<li>未演练过的备份视为不存在</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/INTEGRATION_GUIDE/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>真实接入指南 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u771f\u5b9e\u63a5\u5165\u6307\u5357";
+        var mkdocs_page_input_path = "INTEGRATION_GUIDE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/INTEGRATION_GUIDE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">真实接入指南</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/INTEGRATION_GUIDE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="_1">真实接入指南</h1>
+<blockquote>
+<p>本文档说明各"接口就绪"能力如何配置真实 key/运行时启用。
+未配置时均走降级实现（Null/stub/内存），不影响核心流程。</p>
+</blockquote>
+<h2 id="1">1. 媒体生成（图像 + 视频）</h2>
+<h3 id="gpt-image-2-dalle-3openai">图像：gpt-image-2 / DALL·E 3（OpenAI 兼容）</h3>
+<pre><code class="language-bash"># .env
+XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER=openai
+XAGENT_MEDIA__OPENAI_IMAGE_API_KEY=sk-your-key
+XAGENT_MEDIA__OPENAI_IMAGE_MODEL=gpt-image-2
+# 可选：指向代理
+# XAGENT_MEDIA__OPENAI_IMAGE_BASE_URL=https://api.openai.com/v1
+</code></pre>
+<p>验证：</p>
+<pre><code class="language-bash">curl -X POST localhost:8000/api/v1/creative-studio/media/generate \
+  -H &quot;Authorization: Bearer &lt;token&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;kind&quot;:&quot;image&quot;,&quot;prompt&quot;:&quot;夕阳下的城市天际线&quot;,&quot;mode&quot;:&quot;text_to_image&quot;,&quot;wait&quot;:true}'
+</code></pre>
+<h3 id="kling">视频：可灵 Kling</h3>
+<pre><code class="language-bash"># .env
+XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=kling
+XAGENT_MEDIA__KLING_API_KEY=your-kling-key
+XAGENT_MEDIA__KLING_SUBMIT_URL=https://api.klingai.com/v1/videos/text2video
+XAGENT_MEDIA__KLING_POLL_URL=https://api.klingai.com/v1/videos/{task_id}
+</code></pre>
+<h3 id="jimeng">视频：即梦 Jimeng</h3>
+<pre><code class="language-bash">XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=jimeng
+XAGENT_MEDIA__JIMENG_API_KEY=your-jimeng-key
+XAGENT_MEDIA__JIMENG_SUBMIT_URL=https://visual.volcengineapi.com/v1/videos/generate
+XAGENT_MEDIA__JIMENG_POLL_URL=https://visual.volcengineapi.com/v1/videos/{task_id}
+</code></pre>
+<h3 id="api">视频：通用任务式（对接任意 API）</h3>
+<pre><code class="language-bash">XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=generic
+XAGENT_MEDIA__GENERIC_VIDEO_SUBMIT_URL=https://your-api.com/submit
+XAGENT_MEDIA__GENERIC_VIDEO_POLL_URL=https://your-api.com/status/{task_id}
+XAGENT_MEDIA__GENERIC_VIDEO_API_KEY=your-key
+XAGENT_MEDIA__GENERIC_VIDEO_MODEL=your-model
+</code></pre>
+<p>详见 <code>docs/CREATIVE_STUDIO_MEDIA.md</code>。</p>
+<hr />
+<h2 id="2-keycloak-sso-oidc">2. Keycloak SSO（企业 OIDC）</h2>
+<h3 id="keycloak">部署 Keycloak</h3>
+<pre><code class="language-bash"># compose 已含 langfuse，Keycloak 需单独起
+docker run -d --name keycloak -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=&quot;${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}&quot; \
+  quay.io/keycloak/keycloak:latest start-dev
+</code></pre>
+<h3 id="realm">导入 realm</h3>
+<pre><code class="language-bash"># 用 deploy/keycloak/xagent-realm.json 导入
+# Keycloak UI: http://localhost:8080 → Administration → Import
+</code></pre>
+<p>realm 预设了：
+- 角色：admin / member / viewer
+- 客户端：xagent-api（OIDC）
+- 用户：不再预设默认管理员；请在 Keycloak 中显式创建管理员并分配 admin 角色</p>
+<h3 id="_2">配置后端</h3>
+<pre><code class="language-bash"># .env
+XAGENT_SECURITY__OIDC_JWKS_URL=http://localhost:8080/realms/xagent/protocol/openid-connect/certs
+XAGENT_SECURITY__OIDC_ISSUER=xagent-api
+</code></pre>
+<p>配置后，Bearer token 走 RS256/JWKS 验签（Keycloak realm_access.roles 映射为 X-Agent 角色）。</p>
+<hr />
+<h2 id="3-mcp">3. MCP 真实工具接入</h2>
+<h3 id="mcp-server">配置 MCP server</h3>
+<pre><code class="language-bash"># .env（JSON 数组格式）
+XAGENT_MCP__SERVERS='[{&quot;name&quot;:&quot;filesystem&quot;,&quot;command&quot;:&quot;npx&quot;,&quot;args&quot;:[&quot;-y&quot;,&quot;@modelcontextprotocol/server-filesystem&quot;,&quot;./data&quot;]}]'
+</code></pre>
+<p>启动时 MCPManager 自动连接 server，<code>list_tools</code> 发现工具，包装为 <code>adapters.tools.Tool</code> 注册进 ToolRegistry。</p>
+<h3 id="mcp-server_1">可用 MCP server</h3>
+<table>
+<thead>
+<tr>
+<th>Server</th>
+<th>安装</th>
+<th>能力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>filesystem</td>
+<td><code>npx @modelcontextprotocol/server-filesystem</code></td>
+<td>文件读写</td>
+</tr>
+<tr>
+<td>github</td>
+<td><code>npx @modelcontextprotocol/server-github</code></td>
+<td>GitHub API</td>
+</tr>
+<tr>
+<td>sqlite</td>
+<td><code>npx @modelcontextprotocol/server-sqlite</code></td>
+<td>SQLite 查询</td>
+</tr>
+<tr>
+<td>fetch</td>
+<td><code>npx @modelcontextprotocol/server-fetch</code></td>
+<td>网页抓取</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-ui-tars-agent">4. UI-TARS 桌面 agent</h2>
+<pre><code class="language-bash"># 部署 UI-TARS 模型服务（Apache-2.0）
+# https://github.com/bytedance/UI-TARS-desktop
+export XAGENT_DESKTOP__UI_TARS_URL=http://&lt;ui-tars-host&gt;:&lt;port&gt;
+</code></pre>
+<hr />
+<h2 id="5-openhands-agent">5. OpenHands 编码 agent</h2>
+<pre><code class="language-bash"># 部署 OpenHands 运行时（MIT）
+# https://github.com/All-Hands-AI/OpenHands
+export XAGENT_CODING__OPENHANDS_URL=http://&lt;openhands-host&gt;:&lt;port&gt;
+</code></pre>
+<hr />
+<h2 id="6-langfuse">6. Langfuse 可观测</h2>
+<p>compose 已含 Langfuse v2（自动初始化项目 + key）。直接用：</p>
+<pre><code class="language-bash"># .env（compose 已预设）
+XAGENT_OBSERVABILITY__LANGFUSE_HOST=http://localhost:3001
+XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=pk-lf-xagent-local
+XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=sk-lf-xagent-local
+</code></pre>
+<p>UI: http://localhost:3001（账号和密码来自 <code>LANGFUSE_INIT_USER_EMAIL</code> / <code>LANGFUSE_INIT_USER_PASSWORD</code>）</p>
+<hr />
+<h2 id="7">7. 检查清单</h2>
+<p>配置以上任一项后，重启后端即可生效（<code>xagent serve</code> 或 <code>docker compose up -d api</code>）。
+未配置的项自动走降级，不影响其他功能。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

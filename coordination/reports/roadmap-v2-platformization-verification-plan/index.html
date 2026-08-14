@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/roadmap-v2-platformization-verification-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Roadmap v2 A 平台化增强真实验证计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Roadmap v2 A \u5e73\u53f0\u5316\u589e\u5f3a\u771f\u5b9e\u9a8c\u8bc1\u8ba1\u5212";
+        var mkdocs_page_input_path = "coordination/reports/roadmap-v2-platformization-verification-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/roadmap-v2-platformization-verification-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Roadmap v2 A 平台化增强真实验证计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/roadmap-v2-platformization-verification-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="roadmap-v2-a">Roadmap v2 A 平台化增强真实验证计划</h1>
+<blockquote>
+<p>适用阶段：Roadmap v2</p>
+<p>用途：把 A 平台化增强包从“方向定义”推进到“可执行验证”，明确 Helm / K8s / secretRef / external secret manager / 标准环境模板的验证范围、方法与证据要求。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>本计划的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 的平台化增强路线提供第一份真实验证计划，使 A 包不再停留在概念层，而进入可验证状态。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 验证范围</h2>
+<p>本次验证只覆盖以下内容：</p>
+<ol>
+<li>Helm chart 当前可表达的部署能力；</li>
+<li>secret 注入当前态与目标态之间的差距；</li>
+<li>标准环境模板是否已经具备最小抽象基础；</li>
+<li>哪些平台化能力当前已经真实存在，哪些仍只是方向目标。</li>
+</ol>
+<p>本次验证<strong>不</strong>要求一次性完成：
+- 完整 secretRef 落地；
+- 完整 external secret manager 接入；
+- 全量 K8s 集群验证；
+- 平台化自动部署流水线。</p>
+<hr />
+<h2 id="3">3. 验证环境</h2>
+<p>当前优先采用：
+- 仓库中已有 Helm 模板与环境基线文档的等价验证环境；
+- 用于确认 chart 渲染、secret 注入方式、模板边界与环境模板化能力。</p>
+<p>环境前提：
+- 可读取 <code>deploy/helm/values.yaml</code>；
+- 可执行 <code>helm template</code>；
+- 可读取 <code>ENVIRONMENT_BASELINE_V1.md</code>；
+- 可引用 <code>G3-C1</code> 的验证结果。</p>
+<hr />
+<h2 id="4">4. 验证项</h2>
+<h3 id="41-helm-k8s">4.1 Helm / K8s 渲染能力</h3>
+<p>验证：</p>
+<pre><code class="language-powershell">helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=&lt;32+ chars random&gt;
+</code></pre>
+<p>期望：
+- 当前 chart 能成功渲染；
+- API / worker / web 的基础结构存在；
+- <code>jwtSecret</code> 仍保持 fail-fast；
+- 不依赖危险默认值才可渲染。</p>
+<h3 id="42-secret">4.2 secret 注入当前态与目标态</h3>
+<p>验证：
+- 当前 secret 注入是否仍主要为 env / values；
+- 文档中是否已经明确 <code>secretRef</code> / external secret manager 是目标态；
+- 没有把“未来能力”误写为“当前已完成能力”。</p>
+<p>期望：
+- 能清楚区分当前态与目标态；
+- 能给出后续平台化优先级。</p>
+<h3 id="43">4.3 环境模板基础</h3>
+<p>验证：
+- <code>ENVIRONMENT_BASELINE_V1.md</code> 是否已清楚区分 dev / staging / prod / enterprise；
+- 当前是否已有环境模板最小骨架；
+- 是否已经有可以继续抽象的配置边界。</p>
+<p>期望：
+- 标准环境模板方向已具备材料基础；
+- 不是从零开始设想。</p>
+<hr />
+<h2 id="5">5. 通过标准</h2>
+<p>A 平台化增强包的真实验证通过，至少需要满足：</p>
+<ol>
+<li>Helm / K8s 当前能力已被真实确认；</li>
+<li>secret 注入当前态与目标态差距已明确；</li>
+<li>环境模板基础已被明确识别；</li>
+<li>可以区分当前已存在的平台化能力与后续真正要补的能力。</li>
+</ol>
+<p>这意味着：
+- A 包的“通过”不是平台化已经完成；
+- 而是平台化路线已经进入真实可执行验证阶段。</p>
+<hr />
+<h2 id="6">6. 证据要求</h2>
+<p>本计划要求输出的最小证据包括：</p>
+<ul>
+<li>Helm 渲染结果摘要</li>
+<li>当前 secret 注入方式说明</li>
+<li>目标 secret 注入方式说明</li>
+<li>当前环境模板基础说明</li>
+<li>最终判定：</li>
+<li>通过 / 不通过</li>
+<li>哪些已验证</li>
+<li>哪些仍是下一步目标</li>
+</ul>
+<p>建议归档到：
+- <code>docs/coordination/reports/roadmap-v2-platformization-verification.md</code></p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>当前 A 平台化增强包已完成方向定义；
+这份计划的作用是让它进入下一状态：</p>
+<blockquote>
+<p><strong>可执行验证</strong></p>
+</blockquote>
+<p>只有完成这一步，<code>A 平台化增强包</code> 才能从“方向定义”走向“验证完成”。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

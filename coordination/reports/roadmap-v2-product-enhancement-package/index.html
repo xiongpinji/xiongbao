@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/roadmap-v2-product-enhancement-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Roadmap v2 E 产品增强包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Roadmap v2 E \u4ea7\u54c1\u589e\u5f3a\u5305";
+        var mkdocs_page_input_path = "coordination/reports/roadmap-v2-product-enhancement-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/roadmap-v2-product-enhancement-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Roadmap v2 E 产品增强包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/roadmap-v2-product-enhancement-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="roadmap-v2-e">Roadmap v2 E 产品增强包</h1>
+<blockquote>
+<p>适用阶段：Roadmap v2</p>
+<p>用途：在当前商用交付标准已达成的前提下，把产品增强方向冻结成一份执行包，为后续 Goal / taskboard 自动推进、review / recover / evidence 自动化增强、工作台体验优化与更细粒度执行/治理视图建设提供统一入口。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>E 产品增强包的目标是：</p>
+<blockquote>
+<p><strong>把 <code>xagent</code> 从“已具备商用交付能力的系统”继续推进到“更强产品差异化与更强交付操作系统体验”的状态。</strong></p>
+</blockquote>
+<p>这一步不要求立即完成全部产品重构，但必须明确：</p>
+<ul>
+<li>Goal / taskboard 自动推进增强要落在哪里；</li>
+<li>review / recover / evidence 自动化还能往前补什么；</li>
+<li>工作台体验最值得继续增强的方向是什么；</li>
+<li>新增体验不应破坏当前已达成的交付基线。</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前已有基础</h2>
+<p>当前已经具备：</p>
+<ul>
+<li>Goal / G1 / G2 / G3 结构化交付体系；</li>
+<li>Goal Board、Release / Recovery 侧栏、Run Console 等工作台入口；</li>
+<li>完整的交付材料、发布 / 回滚、长期运营治理骨架；</li>
+<li>Roadmap v2 的 A / B / C / D 增强方向。</li>
+</ul>
+<p>当前可直接复用的材料：</p>
+<ul>
+<li><code>docs/coordination/reports/commercialization-goal-board.md</code></li>
+<li><code>docs/coordination/reports/commercialization-final-summary.md</code></li>
+<li><code>docs/ROADMAP_V2.md</code></li>
+<li><code>docs/coordination/reports/roadmap-v2-execution-board.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g1-a1-functional-package.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g1-a2-stability-package.md</code></li>
+</ul>
+<hr />
+<h2 id="3">3. 当前缺口</h2>
+<h3 id="31-goal-taskboard">3.1 Goal / taskboard 自动推进缺口</h3>
+<ul>
+<li>当前 Goal 体系和执行包已经建立；</li>
+<li>但仍更多依赖人工推进状态变化；</li>
+<li>后续可以把更多阶段推进、包状态流转和 evidence 收口自动化。</li>
+</ul>
+<h3 id="32-review-recover-evidence">3.2 review / recover / evidence 自动化缺口</h3>
+<ul>
+<li>当前 review / recover / evidence 已有材料与入口；</li>
+<li>但仍可进一步从“人工拼接”推进到“系统自动整理”。</li>
+</ul>
+<h3 id="33">3.3 工作台体验缺口</h3>
+<ul>
+<li>Goal Board、Run Console、Settings、Chat 已有入口；</li>
+<li>但仍可继续增强工作台一致性、状态表达和任务推进感。</li>
+</ul>
+<h3 id="34">3.4 执行 / 治理视图粒度缺口</h3>
+<ul>
+<li>当前已有 Goal / 包 / 报告三层；</li>
+<li>后续可继续增强更细粒度执行视图与治理视图，让 owner / TL / 执行者各自看到更适合自己的层级。</li>
+</ul>
+<hr />
+<h2 id="4">4. 下一步输出物</h2>
+<p>产品增强包后续应产出：</p>
+<ul>
+<li>Goal / taskboard 自动推进增强路线</li>
+<li>review / recover / evidence 自动化增强路线</li>
+<li>工作台体验增强清单</li>
+<li>执行 / 治理视图增强清单</li>
+<li>产品增强验证包</li>
+</ul>
+<hr />
+<h2 id="5">5. 当前结论</h2>
+<p>E 产品增强包的作用不是立刻重构整个产品，而是：</p>
+<blockquote>
+<p><strong>把后续真正属于产品竞争力的增强方向正式拉成一条新主线，并给后续设计与验证提供统一入口。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R20 最终收尾交付审计包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R20 \u6700\u7ec8\u6536\u5c3e\u4ea4\u4ed8\u5ba1\u8ba1\u5305";
+        var mkdocs_page_input_path = "coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R20 最终收尾交付审计包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r20">R20 最终收尾交付审计包</h1>
+<blockquote>
+<p>日期：2026-07-07
+目标：基于当前仓库、既有 readiness 证据、竞品/开源对标报告与本次新鲜验证结果，给出一份可直接用于“最后收尾交付”的统一结论。
+边界：本包不把 lite/dev 本地证据误写成 full-mode / staging 演练完成；不把历史阶段完成误写成正式商用 GA。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 结论摘要</h2>
+<p>当前 <code>xagent</code> 的最准确交付口径是：</p>
+<blockquote>
+<p><strong>主链可运行、功能版图完整、具备内部试点 / 受控私有部署基础；本轮 readiness 已补齐大量本地证据与最小 CI 基线，但截至 2026-07-07 仍不满足“正式商用可交付 / GA”签发条件。</strong></p>
+</blockquote>
+<p>本次新鲜验证进一步确认：</p>
+<ul>
+<li>前端静态检查与构建当前通过；</li>
+<li>后端 lint 与全量 <code>pytest -q</code> 当前通过；</li>
+<li>Python 许可证门禁当前通过；</li>
+<li>creative / workflow runtime 的 <code>delivery</code> 契约漂移已定位为<strong>测试预期滞后</strong>，并已通过同步 <code>tests/test_creative_studio.py</code> 与 <code>tests/test_workflow.py</code> 的断言复绿；</li>
+<li>当前候选工作树仍未冻结，且 <strong>PR #6 的远端 CI 不能覆盖当前本地 <code>HEAD</code></strong>；</li>
+<li><code>R4</code> 目标环境 / full-mode 演练仍是正式交付的硬阻断。</li>
+</ul>
+<p>因此，本次“最后收尾交付”的正确落点应为：</p>
+<ol>
+<li><strong>可形成一份完整、诚实、可审查的最终收尾包；</strong></li>
+<li><strong>可以对内给出“试点可交付 / 受控交付”的判断；</strong></li>
+<li><strong>不能对外宣称“正式商用 GA 已完成”。</strong></li>
+</ol>
+<hr />
+<h2 id="2-2026-07-07">2. 本次新鲜验证结果（2026-07-07）</h2>
+<h3 id="21">2.1 已实际运行并通过</h3>
+<ol>
+<li>前端 <code>lint / typecheck / build</code></li>
+<li>命令：<ul>
+<li><code>npm --prefix "xagent/apps/web" run lint</code></li>
+<li><code>npm --prefix "xagent/apps/web" run typecheck</code></li>
+<li><code>npm --prefix "xagent/apps/web" run build</code></li>
+</ul>
+</li>
+<li>结果：全部通过。</li>
+<li>
+<p>额外证据：Vite 构建产物中最大 JS chunk 为 <strong>294.19 kB / gzip 96.09 kB</strong>，本次构建未再出现 chunk warning。</p>
+</li>
+<li>
+<p>后端 lint</p>
+</li>
+<li>命令：<ul>
+<li><code>apps/api/.venv/Scripts/python.exe -m ruff check xagent tests</code></li>
+</ul>
+</li>
+<li>
+<p>结果：通过（<code>All checks passed!</code>）。</p>
+</li>
+<li>
+<p>Python 许可证门禁</p>
+</li>
+<li>命令：<ul>
+<li><code>apps/api/.venv/Scripts/python.exe scripts/license_check.py</code></li>
+</ul>
+</li>
+<li>结果：通过（未发现禁用许可依赖）。</li>
+</ol>
+<h3 id="22">2.2 已实际运行并通过</h3>
+<ol>
+<li>后端测试</li>
+<li>命令：<ul>
+<li><code>apps/api/.venv/Scripts/python.exe -m pytest -q</code></li>
+</ul>
+</li>
+<li>结果：通过，全量后端测试复绿。</li>
+<li>备注：测试输出保留 1 条 <code>opentelemetry</code> 相关 <code>DeprecationWarning</code>，不影响通过结论。</li>
+</ol>
+<h3 id="23">2.3 失败聚类与复绿结论</h3>
+<p>本轮曾出现 6 条后端失败，现已完成根因定位与复绿验证。</p>
+<p>此前失败测试为：</p>
+<ul>
+<li><code>tests/test_creative_studio.py::test_creative_media_poll_persists_final_state_to_db_after_memory_clear</code></li>
+<li><code>tests/test_creative_studio.py::test_creative_media_task_exposes_delivery_summary_via_runs</code></li>
+<li><code>tests/test_creative_studio.py::test_creative_production_exposes_delivery_summary_via_runs</code></li>
+<li><code>tests/test_creative_studio.py::test_creative_partial_production_maps_delivery_to_blocked</code></li>
+<li><code>tests/test_workflow.py::test_workflow_delivery_summary_is_visible_when_runtime_schema_degrades</code></li>
+<li><code>tests/test_workflow.py::test_workflow_api_persists_delivery_summary_for_runtime_run</code></li>
+</ul>
+<p>根因判断：</p>
+<blockquote>
+<p><strong>creative / workflow runtime 的 <code>delivery.failure</code> 契约已统一进入运行时返回，但旧测试仍按历史 shape 做整对象相等断言。</strong></p>
+</blockquote>
+<p>定位依据：</p>
+<ul>
+<li><code>apps/api/xagent/core/runtime/service.py</code> 在 <code>delivery</code> 合并阶段统一归一化 <code>failure</code> 字段；</li>
+<li><code>apps/api/xagent/api/v1/workflows.py</code> 与 <code>apps/api/xagent/api/v1/creative_studio.py</code> 已按新契约生成成功态 <code>failure: None</code> 或失败态结构化 <code>failure</code>；</li>
+<li>前端 runtime 消费层也已支持 <code>delivery.failure</code>；</li>
+<li>因而 6 条失败属于<strong>测试契约滞后</strong>，而不是当前运行时合并逻辑的新增实现 bug。</li>
+</ul>
+<p>修复动作：</p>
+<ul>
+<li>同步 <code>apps/api/tests/test_workflow.py</code> 成功态 <code>delivery</code> 断言，补入 <code>failure: None</code>；</li>
+<li>同步 <code>apps/api/tests/test_creative_studio.py</code> 中 media / production 成功态 <code>failure: None</code> 断言；</li>
+<li>为 creative partial blocked 场景补入结构化 <code>failure</code> 断言。</li>
+</ul>
+<p>复绿证据：</p>
+<ul>
+<li>定向 6 条 pytest 用例复跑通过；</li>
+<li>随后全量 <code>pytest -q</code> 复跑通过。</li>
+</ul>
+<hr />
+<h2 id="3">3. 竞品 / 开源对标结论对最终交付的影响</h2>
+<p>核心来源：<code>OSS_BENCHMARK_AND_REBUILD_PLAN_20260621.md</code></p>
+<p>本仓库当前对外叙事不应再是“全栈能力全部自研”，而应稳定收敛为：</p>
+<blockquote>
+<p><strong>X-Agent = 编排内核 + 适配层 + 独有语义。</strong></p>
+</blockquote>
+<h3 id="31">3.1 应保留并强调的差异化能力</h3>
+<ul>
+<li>workflow 结构化视图 / timeline / compensation view</li>
+<li>桌面自动化语义（IME / 剪贴板 / 快捷键语义）</li>
+<li>开源候选发现与多源打分</li>
+<li>多租户审计黑板 / 防篡改审计链</li>
+<li>业务层能力（计费 / 订阅 / 伙伴）</li>
+</ul>
+<h3 id="32-oss">3.2 应明确按成熟 OSS 底座承载的能力</h3>
+<ul>
+<li>编排：LangGraph</li>
+<li>工作流执行底座：Temporal</li>
+<li>LLM 路由：LiteLLM</li>
+<li>记忆 / 向量：Mem0 + Graphiti + Qdrant / pgvector</li>
+<li>可观测：Langfuse + Promptfoo / DeepEval</li>
+<li>浏览器：browser-use + Playwright</li>
+<li>桌面：UI-TARS</li>
+<li>沙箱：E2B / microsandbox</li>
+<li>MCP / 工具后端：ContextForge + Composio</li>
+<li>SSO / AuthZ：Keycloak + OpenFGA / Casbin / OPA</li>
+</ul>
+<h3 id="33">3.3 对最终交付口径的直接影响</h3>
+<p>这意味着最后收尾交付应强调：</p>
+<ol>
+<li><strong>方向正确：</strong> 已按对标结论收敛为“底座复用 + 语义自研”。</li>
+<li><strong>差异化真实：</strong> workflow view、开源发现、审计与桌面语义仍是护城河。</li>
+<li><strong>合规优先：</strong> 许可证边界是架构约束，不是附属条目。</li>
+<li><strong>交付克制：</strong> 这套方向正确，不等于今天已达到 GA。</li>
+</ol>
+<hr />
+<h2 id="4-top-4">4. 当前正式交付阻断 Top 4</h2>
+<h3 id="1-r4-full-mode-blocked">1) <code>R4</code> 目标环境 / full-mode 演练仍 BLOCKED</h3>
+<p>尽管本地验证已通过，现有文档仍显示 full-mode 演练缺少：</p>
+<ul>
+<li><code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li><code>LANGFUSE_SALT</code></li>
+<li><code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+<li>full-mode 显式账号</li>
+<li>依赖服务端口与至少一条 full-mode LLM 路径</li>
+</ul>
+<p>因此无法把本地 lite/dev 证据等同于 staging/full rehearsal 完成。</p>
+<h3 id="2-ci-head">2) 当前候选未冻结，远端 CI 证据不覆盖当前 <code>HEAD</code></h3>
+<ul>
+<li>当前本地：<code>master...origin/master [ahead 1, behind 2]</code></li>
+<li>PR #6 远端 CI 只覆盖 <code>d59faa3</code>，不覆盖当前本地候选</li>
+</ul>
+<p>这意味着不能把“已有远端 CI 绿”直接拿来背书当前收尾内容。</p>
+<h3 id="3-r5-pr-blocked">3) <code>R5</code> PR 审查包仍 BLOCKED</h3>
+<p>虽然 R17 已整理出 PR 证据矩阵源数据，但在 <code>R4</code> 未闭环、<code>R8</code> 等 REVIEW 项未验收前，R5 仍不能视为可签发。</p>
+<h3 id="4-review">4) 关键 REVIEW 包仍未完成验收</h3>
+<p>当前至少以下包仍在 <code>REVIEW</code>：</p>
+<ul>
+<li>R8</li>
+<li>R14</li>
+<li>R15</li>
+<li>R16</li>
+<li>R17</li>
+<li>R18</li>
+<li>R19</li>
+</ul>
+<p>这些包中的不少已经有价值，但 <strong>REVIEW ≠ DONE</strong>，正式交付前不能混淆。</p>
+<hr />
+<h2 id="5">5. 文档体系当前是否可用于最终收尾</h2>
+<p>结论：<strong>可以，但必须用“试点可交付 / 受控交付”口径，而不是 GA 口径。</strong></p>
+<p>目前文档体系已经具备：</p>
+<ul>
+<li>唯一事实源；</li>
+<li>发布检查表；</li>
+<li>任务板；</li>
+<li>delivery-report；</li>
+<li>R15/R17 的证据同步与 PR 证据矩阵源数据；</li>
+<li>R18 的候选新鲜度审计；</li>
+<li>R19 的无密交接模板；</li>
+<li>R16/U2 的 full-mode 恢复路径。</li>
+</ul>
+<p>也就是说：</p>
+<blockquote>
+<p><strong>现在欠缺的不是“怎么讲清楚”，而是“剩余几道硬门的真实通过证据”。</strong></p>
+</blockquote>
+<hr />
+<h2 id="6">6. 本次建议的最终交付判定</h2>
+<h3 id="_1">可以成立的判定</h3>
+<ul>
+<li><strong>A. 内部试点 / 受控私有部署可交付：可以成立。</strong></li>
+<li><strong>B. 最终收尾说明文档可出具：可以成立。</strong></li>
+<li><strong>C. 正式商用可交付 / GA：当前不能成立。</strong></li>
+</ul>
+<h3 id="_2">推荐对外一句话口径</h3>
+<blockquote>
+<p><code>xagent</code> 当前已形成完整功能版图与主链可运行能力，并完成本轮本地 readiness 收口；当前前端 <code>lint/typecheck/build</code>、后端 <code>ruff/pytest</code> 与 Python 许可证门禁已通过，适合内部试点与受控私有部署；但截至当前候选，正式商用发布仍需补齐目标环境演练、冻结最终候选并重建对应远端 CI、完成 PR 审查包与 reviewer 验收。</p>
+</blockquote>
+<hr />
+<h2 id="7">7. 最小闭环路径（从“现在”到“可送审”）</h2>
+<ol>
+<li><strong>冻结真正候选</strong></li>
+<li>选定要交付的当前工作树范围；</li>
+<li>
+<p>重新绑定分支 / PR / CI 证据。</p>
+</li>
+<li>
+<p><strong>恢复并完成 R4</strong></p>
+</li>
+<li>按 R16 + U2 + R19 补齐 full-mode secret、账号、依赖、LLM 路径；</li>
+<li>
+<p>完成目标环境或 staging 等价演练并归档。</p>
+</li>
+<li>
+<p><strong>验收 REVIEW 包并组装 R5</strong></p>
+</li>
+<li>至少清掉与发布 gate 强相关的 REVIEW 包；</li>
+<li>形成可直接送 reviewer 的 PR 审查包。</li>
+</ol>
+<hr />
+<h2 id="8">8. 交付负责人口径（建议直接复用）</h2>
+<h3 id="81-4">8.1 给老板 / 发布负责人的 4 句版本</h3>
+<ol>
+<li>当前仓库已经具备主链可运行和试点交付基础。</li>
+<li>本轮前端 <code>lint/typecheck/build</code>、后端 <code>ruff/pytest</code> 与 Python 许可证门禁都已通过。</li>
+<li>当前剩余的发布阻断已收敛到候选未冻结、R4 目标环境 / full-mode 演练未完成、以及 R5 / REVIEW gate 未闭环。</li>
+<li>因此现在可以交付“最终收尾审计包”和“试点可交付判断”，但不能签发正式商用 GA。</li>
+</ol>
+<h3 id="82-reviewer">8.2 给 reviewer 的一句话版本</h3>
+<blockquote>
+<p>请把当前候选视为“本地质量基线已通过，但 R4/R5 与候选冻结仍未闭环”的收尾前版本，而不是正式 release candidate。</p>
+</blockquote>
+<hr />
+<h2 id="9">9. 相关证据入口</h2>
+<ul>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></li>
+<li><code>docs/ADMIN_DEPLOYMENT_MANUAL_V1.md</code></li>
+<li><code>docs/OPERATIONS_MANUAL_V1.md</code></li>
+<li><code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+<li><code>docs/SUPPORT_ESCALATION_PATH_V1.md</code></li>
+<li><code>docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md</code></li>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+<li><code>docs/coordination/reports/delivery-report.md</code></li>
+<li><code>docs/coordination/reports/R15_EVIDENCE_SYNC.md</code></li>
+<li><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></li>
+<li><code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li><code>docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md</code></li>
+<li><code>docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md</code></li>
+<li><code>docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑</code></li>
+<li><code>docs/coordination/reports/FINAL_RELEASE_MANIFEST_20260708.md</code></li>
+<li><code>OSS_BENCHMARK_AND_REBUILD_PLAN_20260621.md</code></li>
+</ul>
+<hr />
+<h2 id="10">10. 本包的最终判断</h2>
+<blockquote>
+<p><strong>本轮“最后收尾交付”可以完成为：一份诚实、可审计、可继续执行的最终收尾包；不能完成为：正式商用 GA 的最终签发。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

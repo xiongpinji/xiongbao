@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-07-xagent-webapi-r2-local-full-compose/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Web/API R2 本机隔离 Full Compose 实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Web/API R2 \u672c\u673a\u9694\u79bb Full Compose \u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-07-xagent-webapi-r2-local-full-compose.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-07-xagent-webapi-r2-local-full-compose/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Web/API R2 本机隔离 Full Compose 实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-07-xagent-webapi-r2-local-full-compose.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-webapi-r2-full-compose">X-Agent Web/API R2 本机隔离 Full Compose 实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 把 R1 Web/API 候选放入隔离的单机 Full Compose，在本地真实 Ollama、PostgreSQL、Redis、Qdrant、worker、Web、MCP 和观测链上完成试用、重启、故障、备份与恢复验收。</p>
+<p><strong>架构：</strong> <code>deploy/compose/docker-compose.yml</code> 是唯一 R2 编排事实源，默认只启动六个核心服务，扩展服务通过 profile 分层。API 与 worker 共用 <code>/data</code> 持久卷，浏览器只访问 <code>127.0.0.1:18080</code>，API 只暴露 <code>127.0.0.1:18000</code>，真实推理走宿主机 <code>qwen3:4b</code>。</p>
+<p><strong>技术栈：</strong> Docker Compose 5、FastAPI/Python 3.11、PostgreSQL 16、Redis 7、Qdrant、Celery、React/Vite/Nginx、Ollama、Playwright、Prometheus、Grafana、Platform MCP。</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<h3 id="_2">创建</h3>
+<ul>
+<li><code>apps/api/tests/test_runtime_data_paths.py</code>：锁定 Skill Store 与完整 Skill Package 的可配置持久化根目录。</li>
+<li><code>tests/release/test_r2_compose_contract.py</code>：不依赖运行中 Docker 的 R2 Compose 静态合同门禁。</li>
+<li><code>tests/release/test_r2_preflight.py</code>：本机环境初始化、秘密校验和无泄漏输出的单元测试。</li>
+<li><code>scripts/r2_preflight.py</code>：跨平台的 env 初始化、配置安全、端口、Docker、Git、Ollama 和 Compose config 预检。</li>
+<li><code>scripts/r2-preflight.ps1</code>：Windows 用户入口，只负责可靠转发参数与退出码。</li>
+<li><code>deploy/compose/r2.env.example</code>：可提交、无真实 secret 的 R2 配置模板。</li>
+<li><code>deploy/grafana/provisioning/datasources/prometheus.yml</code>：自动创建 UID 为 <code>prometheus</code> 的同栈数据源。</li>
+<li><code>deploy/grafana/provisioning/dashboards/xagent.yml</code>：自动加载现有 X-Agent dashboard JSON。</li>
+<li><code>tests/e2e/specs/webapi-r2-full-compose.spec.ts</code>：排除短剧的 Full Compose 浏览器/API 同链验收。</li>
+<li><code>tests/e2e/fixtures/r2-skill/SKILL.md</code>：R2 完整技能包主文件。</li>
+<li><code>tests/e2e/fixtures/r2-skill/references/checklist.md</code>：技能包 reference 持久化探针。</li>
+<li><code>tests/e2e/fixtures/r2-skill/scripts/verify.py</code>：技能包脚本文件持久化探针，不在 R2 中执行。</li>
+<li><code>tests/e2e/fixtures/r2-skill/assets/badge.txt</code>：技能包 asset 持久化探针。</li>
+<li><code>tests/e2e/fixtures/r2-workspace/README.md</code>：容器内隔离 Git 验收仓库的种子文件。</li>
+<li><code>docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md</code>：R2 新鲜证据、恢复实例和剩余边界报告。</li>
+</ul>
+<h3 id="_3">修改</h3>
+<ul>
+<li><code>apps/api/xagent/core/skills/__init__.py</code>：让 Skill Store 尊重 <code>XAGENT_SKILLS_ROOT</code>。</li>
+<li><code>apps/api/xagent/domains/skill_packages/service.py</code>：让技能包文件尊重 <code>XAGENT_SKILL_PACKAGES_ROOT</code>。</li>
+<li><code>apps/api/xagent/api/v1/skill_packages.py</code>：调用运行时解析的技能包根目录，避免模块导入时固定旧路径。</li>
+<li><code>deploy/compose/docker-compose.yml</code>：端口、project、profiles、持久卷、健康依赖和 loopback 绑定。</li>
+<li><code>docker-compose.yml</code>：明确根编排仅供开发兼容，R2 不使用它。</li>
+<li><code>.github/workflows/ci.yml</code>：加入不启动容器的 R2 配置合同门禁。</li>
+<li><code>docs/DEPLOYMENT_RUNBOOK.md</code>：增加 R2 单一入口、预检、启动、停止、恢复与证据命令。</li>
+<li><code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>：记录 R2-A 至 R2-D 的 CLAIMED/REVIEW/DONE 与证据。</li>
+<li><code>.gitignore</code>：忽略 R2 原始运行日志和本机验收输出，保留显式选取的脱敏截图/报告。</li>
+</ul>
+<h3 id="_4">不修改</h3>
+<ul>
+<li>短剧、Tauri、E2B、多机 HA 和付费 provider 代码。</li>
+<li><code>scripts/backup.py</code> / <code>scripts/restore.py</code>：R2 使用 provider-native 快照和只读 volume 归档，不扩大通用脚本的危险恢复语义。</li>
+</ul>
+<hr />
+<h3 id="1">任务 1：让技能与技能包文件进入共享持久卷</h3>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/tests/test_runtime_data_paths.py</code>
+- 修改：<code>apps/api/xagent/core/skills/__init__.py:15-24,145-155</code>
+- 修改：<code>apps/api/xagent/domains/skill_packages/service.py:13-30</code>
+- 修改：<code>apps/api/xagent/api/v1/skill_packages.py:13-29,61-91</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的路径测试</strong></li>
+</ul>
+<pre><code class="language-python">from pathlib import Path
+
+from xagent.core.skills import SkillStore
+from xagent.domains.skill_packages.service import default_packages_root
+
+
+def test_skill_store_uses_configured_root(tmp_path: Path, monkeypatch) -&gt; None:
+    root = tmp_path / &quot;skills&quot;
+    monkeypatch.setenv(&quot;XAGENT_SKILLS_ROOT&quot;, str(root))
+    store = SkillStore()
+    assert store._dir == root
+
+
+def test_skill_package_root_uses_configured_root(tmp_path: Path, monkeypatch) -&gt; None:
+    root = tmp_path / &quot;skill-packages&quot;
+    monkeypatch.setenv(&quot;XAGENT_SKILL_PACKAGES_ROOT&quot;, str(root))
+    assert default_packages_root() == root
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试并确认旧代码失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api; pytest tests/test_runtime_data_paths.py -q</code></p>
+<p>预期：两个测试失败；一个仍使用项目 <code>data/skills</code>，另一个无法导入 <code>default_packages_root</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小的环境路径解析</strong></li>
+</ul>
+<p>在 <code>core/skills/__init__.py</code> 增加：</p>
+<pre><code class="language-python">import os
+
+
+def default_skills_root() -&gt; Path:
+    configured = os.environ.get(&quot;XAGENT_SKILLS_ROOT&quot;, &quot;&quot;).strip()
+    return Path(configured).expanduser() if configured else _PROJECT_ROOT / &quot;data&quot; / &quot;skills&quot;
+</code></pre>
+<p>并把 <code>SkillStore.__init__</code> 的第一行改为：</p>
+<pre><code class="language-python">base = storage_dir or default_skills_root()
+</code></pre>
+<p>在 <code>domains/skill_packages/service.py</code> 增加：</p>
+<pre><code class="language-python">import os
+
+
+def default_packages_root() -&gt; Path:
+    configured = os.environ.get(&quot;XAGENT_SKILL_PACKAGES_ROOT&quot;, &quot;&quot;).strip()
+    return (
+        Path(configured).expanduser()
+        if configured
+        else _PROJECT_ROOT / &quot;data&quot; / &quot;skill-packages&quot;
+    )
+</code></pre>
+<p>删除模块级 <code>DEFAULT_PACKAGES_ROOT</code>；所有函数的 <code>packages_root</code> 默认值改为 <code>None</code>，函数入口用 <code>packages_root = packages_root or default_packages_root()</code>。API 导入端点直接传 <code>default_packages_root()</code>，避免环境变量在测试/进程初始化后失效。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行定向与既有技能包测试</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">cd apps/api
+pytest tests/test_runtime_data_paths.py tests/test_skill_packages.py tests/test_skill_packages_api.py -q
+</code></pre>
+<p>预期：全部 PASS，且临时目录外没有新增技能文件。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交持久化路径改动</strong></li>
+</ul>
+<pre><code class="language-powershell">git add apps/api/xagent/core/skills/__init__.py apps/api/xagent/domains/skill_packages/service.py apps/api/xagent/api/v1/skill_packages.py apps/api/tests/test_runtime_data_paths.py
+git commit -m &quot;fix(存储): 持久化 Full 模式技能文件&quot;
+</code></pre>
+<hr />
+<h3 id="2-r2-compose">任务 2：用失败合同锁定 R2 Compose 结构</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/release/test_r2_compose_contract.py</code>
+- 修改：<code>deploy/compose/docker-compose.yml:1-280</code>
+- 创建：<code>deploy/compose/r2.env.example</code>
+- 修改：<code>docker-compose.yml:1-12</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：创建静态 Compose 合同测试</strong></li>
+</ul>
+<pre><code class="language-python">from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+COMPOSE = (ROOT / &quot;deploy/compose/docker-compose.yml&quot;).read_text(encoding=&quot;utf-8&quot;)
+ENV = (ROOT / &quot;deploy/compose/r2.env.example&quot;).read_text(encoding=&quot;utf-8&quot;)
+
+
+class R2ComposeContractTest(unittest.TestCase):
+    def test_project_and_ports_are_isolated(self) -&gt; None:
+        self.assertIn(&quot;name: ${COMPOSE_PROJECT_NAME:-xagent-r2}&quot;, COMPOSE)
+        for name in (
+            &quot;XAGENT_POSTGRES_PORT&quot;, &quot;XAGENT_REDIS_PORT&quot;, &quot;XAGENT_QDRANT_HTTP_PORT&quot;,
+            &quot;XAGENT_QDRANT_GRPC_PORT&quot;, &quot;XAGENT_API_PORT&quot;, &quot;XAGENT_WEB_PORT&quot;,
+            &quot;XAGENT_CONTEXTFORGE_PORT&quot;, &quot;XAGENT_OPENFGA_PORT&quot;, &quot;XAGENT_LITELLM_PORT&quot;,
+            &quot;XAGENT_LANGFUSE_PORT&quot;, &quot;XAGENT_MCP_PORT&quot;, &quot;XAGENT_PROMETHEUS_PORT&quot;,
+            &quot;XAGENT_GRAFANA_PORT&quot;,
+        ):
+            self.assertIn(name, COMPOSE)
+        self.assertNotIn('&quot;8000:8000&quot;', COMPOSE)
+        self.assertNotIn('&quot;3000:80&quot;', COMPOSE)
+
+    def test_default_core_and_optional_profiles(self) -&gt; None:
+        self.assertIn('profiles: [&quot;gateway&quot;]', COMPOSE)
+        self.assertIn('profiles: [&quot;tracing&quot;]', COMPOSE)
+        self.assertGreaterEqual(COMPOSE.count('profiles: [&quot;federation&quot;]'), 2)
+        self.assertGreaterEqual(COMPOSE.count('profiles: [&quot;observability&quot;]'), 2)
+        self.assertIn('profiles: [&quot;mcp&quot;]', COMPOSE)
+
+    def test_shared_runtime_data_is_explicit(self) -&gt; None:
+        self.assertGreaterEqual(COMPOSE.count(&quot;xagentdata:/data&quot;), 2)
+        for setting in (
+            &quot;XAGENT_WORKSPACE=/data/workspace&quot;,
+            &quot;XAGENT_STORAGE__LOCAL_ROOT=/data/storage&quot;,
+            &quot;XAGENT_SKILLS_ROOT=/data/skills&quot;,
+            &quot;XAGENT_SKILL_PACKAGES_ROOT=/data/skill-packages&quot;,
+        ):
+            self.assertGreaterEqual(COMPOSE.count(setting), 2)
+        self.assertNotIn(&quot;docker.sock&quot;, COMPOSE)
+
+    def test_health_dependencies_cover_deep_health_and_worker(self) -&gt; None:
+        self.assertIn(&quot;/health/deep&quot;, COMPOSE)
+        self.assertIn(&quot;inspect ping&quot;, COMPOSE)
+        self.assertIn(&quot;condition: service_healthy&quot;, COMPOSE)
+
+    def test_r2_template_contains_no_real_secret(self) -&gt; None:
+        self.assertIn(&quot;POSTGRES_PASSWORD=__GENERATE__&quot;, ENV)
+        self.assertIn(&quot;XAGENT_SECURITY__JWT_SECRET=__GENERATE__&quot;, ENV)
+        self.assertIn('XAGENT_CORS_ORIGINS=[&quot;http://127.0.0.1:18080&quot;]', ENV)
+        self.assertNotIn(&quot;admin/admin&quot;, ENV)
+
+
+if __name__ == &quot;__main__&quot;:
+    unittest.main()
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行合同并确认失败</strong></li>
+</ul>
+<p>运行：<code>python -m unittest discover -s tests/release -p "test_r2_compose_contract.py" -v</code></p>
+<p>预期：FAIL，至少报告 <code>r2.env.example</code> 不存在、固定端口或缺少 profile/volume。</p>
+<ul>
+<li>[ ] <strong>步骤 3：参数化 project、端口和核心数据库名</strong></li>
+</ul>
+<p>把 Compose 顶层和端口改成以下合同：</p>
+<pre><code class="language-yaml">name: ${COMPOSE_PROJECT_NAME:-xagent-r2}
+
+services:
+  postgres:
+    ports:
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_POSTGRES_PORT:-15432}:5432&quot;
+  redis:
+    ports:
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_REDIS_PORT:-16379}:6379&quot;
+  qdrant:
+    ports:
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_HTTP_PORT:-16333}:6333&quot;
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_GRPC_PORT:-16334}:6334&quot;
+  api:
+    ports:
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_API_PORT:-18000}:8000&quot;
+  web:
+    ports:
+      - &quot;${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_WEB_PORT:-18080}:80&quot;
+</code></pre>
+<p>所有 API/worker/Postgres URL 使用 <code>${POSTGRES_DB:-xagent}</code>，不再硬编码数据库名。</p>
+<p>可选服务也只能绑定 loopback，并使用下列宿主端口变量：ContextForge <code>XAGENT_CONTEXTFORGE_PORT</code>、OpenFGA <code>XAGENT_OPENFGA_PORT</code>、LiteLLM <code>XAGENT_LITELLM_PORT</code>、Langfuse <code>XAGENT_LANGFUSE_PORT</code>、Platform MCP <code>XAGENT_MCP_PORT</code>、Prometheus <code>XAGENT_PROMETHEUS_PORT</code>、Grafana <code>XAGENT_GRAFANA_PORT</code>。</p>
+<p>因为 Compose 会在 profile 筛选前插值整份文件，Langfuse 的三个 profile-only secret 改为 <code>${LANGFUSE_NEXTAUTH_SECRET:-}</code>、<code>${LANGFUSE_SALT:-}</code>、<code>${LANGFUSE_INIT_USER_PASSWORD:-}</code>；R2 不启用 tracing，不能让未启用服务阻断核心 config。JWT 与 PostgreSQL secret 仍保持核心必填。</p>
+<ul>
+<li>[ ] <strong>步骤 4：分层扩展服务并加入共享卷</strong></li>
+</ul>
+<p>为服务增加：</p>
+<pre><code class="language-yaml">contextforge:
+  profiles: [&quot;federation&quot;]
+openfga:
+  profiles: [&quot;federation&quot;]
+litellm:
+  profiles: [&quot;gateway&quot;]
+langfuse:
+  profiles: [&quot;tracing&quot;]
+platform-mcp:
+  profiles: [&quot;mcp&quot;]
+prometheus:
+  profiles: [&quot;observability&quot;]
+grafana:
+  profiles: [&quot;observability&quot;]
+</code></pre>
+<p>API 与 worker 同时增加：</p>
+<pre><code class="language-yaml">environment:
+  - XAGENT_WORKSPACE=/data/workspace
+  - XAGENT_STORAGE__LOCAL_ROOT=/data/storage
+  - XAGENT_SKILLS_ROOT=/data/skills
+  - XAGENT_SKILL_PACKAGES_ROOT=/data/skill-packages
+volumes:
+  - xagentdata:/data
+</code></pre>
+<p>底部增加 <code>xagentdata:</code>；不得挂载 Docker Socket。</p>
+<ul>
+<li>[ ] <strong>步骤 5：收紧健康依赖</strong></li>
+</ul>
+<p>API 健康检查解析 deep health：</p>
+<pre><code class="language-yaml">healthcheck:
+  test:
+    - CMD
+    - python
+    - -c
+    - &quot;import httpx; r=httpx.get('http://localhost:8000/health/deep', timeout=5); raise SystemExit(0 if r.status_code == 200 and r.json().get('status') == 'healthy' else 1)&quot;
+</code></pre>
+<p>worker 健康检查：</p>
+<pre><code class="language-yaml">healthcheck:
+  test: [&quot;CMD-SHELL&quot;, &quot;celery -A xagent.worker.celery_app inspect ping --timeout=5 | grep -q pong&quot;]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 60s
+</code></pre>
+<p>Qdrant 改为 <code>condition: service_healthy</code>；worker 和 web 对 API 使用 <code>condition: service_healthy</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 6：创建无 secret 模板并标记根 Compose 用途</strong></li>
+</ul>
+<p><code>deploy/compose/r2.env.example</code> 必须包含：</p>
+<pre><code class="language-dotenv">COMPOSE_PROJECT_NAME=xagent-r2
+XAGENT_BIND_ADDRESS=127.0.0.1
+XAGENT_POSTGRES_PORT=15432
+XAGENT_REDIS_PORT=16379
+XAGENT_QDRANT_HTTP_PORT=16333
+XAGENT_QDRANT_GRPC_PORT=16334
+XAGENT_API_PORT=18000
+XAGENT_WEB_PORT=18080
+XAGENT_MCP_PORT=18100
+XAGENT_PROMETHEUS_PORT=19090
+XAGENT_GRAFANA_PORT=13002
+XAGENT_CONTEXTFORGE_PORT=18081
+XAGENT_OPENFGA_PORT=18082
+XAGENT_LITELLM_PORT=14000
+XAGENT_LANGFUSE_PORT=13001
+POSTGRES_USER=xagent
+POSTGRES_PASSWORD=__GENERATE__
+POSTGRES_DB=xagent
+XAGENT_MODE=full
+XAGENT_DEBUG=false
+XAGENT_CORS_ORIGINS=[&quot;http://127.0.0.1:18080&quot;]
+XAGENT_SECURITY__JWT_SECRET=__GENERATE__
+XAGENT_SECURITY__REQUIRE_AUTH=true
+XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+XAGENT_LLM__OLLAMA_MODEL=qwen3:4b
+XAGENT_LLM__DEFAULT_MODEL=qwen3:4b
+XAGENT_TOOLS__ENABLE_SHELL=false
+XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false
+XAGENT_SANDBOX__BACKEND=disabled
+XAGENT_PLATFORM_MCP_TOKEN=__GENERATE__
+GRAFANA_ADMIN_PASSWORD=__GENERATE__
+</code></pre>
+<p>根 <code>docker-compose.yml</code> 文件头增加“开发兼容入口；R2/发布等价运行使用 <code>deploy/compose/docker-compose.yml</code>”，不改其服务行为。</p>
+<ul>
+<li>[ ] <strong>步骤 7：运行合同和 Compose 渲染</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m unittest discover -s tests/release -p &quot;test_r2_compose_contract.py&quot; -v
+$env:POSTGRES_PASSWORD='config-only-postgres-strong-value'
+$env:XAGENT_SECURITY__JWT_SECRET='config-only-jwt-secret-at-least-32-characters'
+$env:GRAFANA_ADMIN_PASSWORD='config-only-grafana-strong-value'
+docker compose -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.example config --quiet
+docker compose -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.example config --services
+</code></pre>
+<p>预期：合同全部 PASS，Compose config 退出码 0；<code>config --services</code> 只列出 <code>postgres redis qdrant api worker web</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 8：提交 Compose 合同和实现</strong></li>
+</ul>
+<pre><code class="language-powershell">git add tests/release/test_r2_compose_contract.py deploy/compose/docker-compose.yml deploy/compose/r2.env.example docker-compose.yml
+git commit -m &quot;feat(部署): 隔离 R2 Full Compose 核心栈&quot;
+</code></pre>
+<hr />
+<h3 id="3-secret">任务 3：生成强 secret 并执行可测试预检</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/release/test_r2_preflight.py</code>
+- 创建：<code>scripts/r2_preflight.py</code>
+- 创建：<code>scripts/r2-preflight.ps1</code>
+- 修改：<code>.gitignore</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 env 初始化和校验失败测试</strong></li>
+</ul>
+<pre><code class="language-python">from pathlib import Path
+import tempfile
+import unittest
+
+from scripts.r2_preflight import init_env, load_env, validate_env
+
+
+class R2PreflightTest(unittest.TestCase):
+    def test_init_env_generates_secrets_without_overwrite(self) -&gt; None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / &quot;r2.env.example&quot;
+            target = root / &quot;r2.env.local&quot;
+            template.write_text(
+                &quot;POSTGRES_PASSWORD=__GENERATE__\n&quot;
+                &quot;XAGENT_SECURITY__JWT_SECRET=__GENERATE__\n&quot;
+                &quot;GRAFANA_ADMIN_PASSWORD=__GENERATE__\n&quot;,
+                encoding=&quot;utf-8&quot;,
+            )
+            init_env(template, target)
+            values = load_env(target)
+            self.assertGreaterEqual(len(values[&quot;POSTGRES_PASSWORD&quot;]), 32)
+            self.assertGreaterEqual(len(values[&quot;XAGENT_SECURITY__JWT_SECRET&quot;]), 32)
+            with self.assertRaises(FileExistsError):
+                init_env(template, target)
+
+    def test_validate_env_rejects_weak_values(self) -&gt; None:
+        errors = validate_env({
+            &quot;POSTGRES_PASSWORD&quot;: &quot;xagent&quot;,
+            &quot;XAGENT_SECURITY__JWT_SECRET&quot;: &quot;short&quot;,
+            &quot;XAGENT_PLATFORM_MCP_TOKEN&quot;: &quot;&quot;,
+            &quot;GRAFANA_ADMIN_PASSWORD&quot;: &quot;admin&quot;,
+            &quot;XAGENT_SECURITY__REQUIRE_AUTH&quot;: &quot;false&quot;,
+            &quot;XAGENT_CORS_ORIGINS&quot;: &quot;*&quot;,
+            &quot;XAGENT_LLM__OLLAMA_MODEL&quot;: &quot;&quot;,
+        })
+        self.assertEqual(
+            {item[&quot;code&quot;] for item in errors},
+            {
+                &quot;weak_postgres_password&quot;, &quot;weak_jwt_secret&quot;, &quot;weak_mcp_token&quot;,
+                &quot;weak_grafana_password&quot;, &quot;auth_disabled&quot;, &quot;wildcard_cors&quot;,
+                &quot;missing_ollama_model&quot;,
+            },
+        )
+
+    def test_validation_result_never_contains_secret_value(self) -&gt; None:
+        secret = &quot;visible-secret-must-not-leak&quot;
+        errors = validate_env({
+            &quot;POSTGRES_PASSWORD&quot;: secret,
+            &quot;XAGENT_SECURITY__JWT_SECRET&quot;: &quot;short&quot;,
+            &quot;XAGENT_PLATFORM_MCP_TOKEN&quot;: &quot;mcp-token-value-at-least-32-characters&quot;,
+            &quot;GRAFANA_ADMIN_PASSWORD&quot;: &quot;grafana-password-value-at-least-16&quot;,
+            &quot;XAGENT_SECURITY__REQUIRE_AUTH&quot;: &quot;true&quot;,
+            &quot;XAGENT_CORS_ORIGINS&quot;: '[&quot;http://127.0.0.1:18080&quot;]',
+            &quot;XAGENT_LLM__OLLAMA_MODEL&quot;: &quot;qwen3:4b&quot;,
+        })
+        self.assertNotIn(secret, repr(errors))
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试并确认模块不存在</strong></li>
+</ul>
+<p>运行：<code>python -m unittest discover -s tests/release -p "test_r2_preflight.py" -v</code></p>
+<p>预期：FAIL，报 <code>No module named scripts.r2_preflight</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现 env 初始化和纯校验函数</strong></li>
+</ul>
+<p><code>scripts/r2_preflight.py</code> 必须暴露：</p>
+<pre><code class="language-python">GENERATED_KEYS = (
+    &quot;POSTGRES_PASSWORD&quot;,
+    &quot;XAGENT_SECURITY__JWT_SECRET&quot;,
+    &quot;XAGENT_PLATFORM_MCP_TOKEN&quot;,
+    &quot;GRAFANA_ADMIN_PASSWORD&quot;,
+)
+
+
+def load_env(path: Path) -&gt; dict[str, str]:
+    values: dict[str, str] = {}
+    for raw in path.read_text(encoding=&quot;utf-8&quot;).splitlines():
+        line = raw.strip()
+        if not line or line.startswith(&quot;#&quot;) or &quot;=&quot; not in line:
+            continue
+        key, value = line.split(&quot;=&quot;, 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+def init_env(template: Path, target: Path) -&gt; None:
+    if target.exists():
+        raise FileExistsError(f&quot;refusing to overwrite {target}&quot;)
+    text = template.read_text(encoding=&quot;utf-8&quot;)
+    for key in GENERATED_KEYS:
+        text = text.replace(f&quot;{key}=__GENERATE__&quot;, f&quot;{key}={secrets.token_urlsafe(36)}&quot;)
+    target.write_text(text, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;)
+
+
+def validate_env(values: dict[str, str]) -&gt; list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    if values.get(&quot;POSTGRES_PASSWORD&quot;, &quot;&quot;).lower() in {&quot;&quot;, &quot;xagent&quot;, &quot;password&quot;, &quot;__generate__&quot;}:
+        errors.append({&quot;code&quot;: &quot;weak_postgres_password&quot;, &quot;message&quot;: &quot;PostgreSQL password is not strong&quot;})
+    if len(values.get(&quot;XAGENT_SECURITY__JWT_SECRET&quot;, &quot;&quot;)) &lt; 32:
+        errors.append({&quot;code&quot;: &quot;weak_jwt_secret&quot;, &quot;message&quot;: &quot;JWT secret must contain at least 32 characters&quot;})
+    if len(values.get(&quot;XAGENT_PLATFORM_MCP_TOKEN&quot;, &quot;&quot;)) &lt; 32:
+        errors.append({&quot;code&quot;: &quot;weak_mcp_token&quot;, &quot;message&quot;: &quot;Platform MCP token must contain at least 32 characters&quot;})
+    if len(values.get(&quot;GRAFANA_ADMIN_PASSWORD&quot;, &quot;&quot;)) &lt; 16:
+        errors.append({&quot;code&quot;: &quot;weak_grafana_password&quot;, &quot;message&quot;: &quot;Grafana password must contain at least 16 characters&quot;})
+    if values.get(&quot;XAGENT_SECURITY__REQUIRE_AUTH&quot;, &quot;&quot;).lower() != &quot;true&quot;:
+        errors.append({&quot;code&quot;: &quot;auth_disabled&quot;, &quot;message&quot;: &quot;Full mode requires authentication&quot;})
+    if &quot;*&quot; in values.get(&quot;XAGENT_CORS_ORIGINS&quot;, &quot;&quot;):
+        errors.append({&quot;code&quot;: &quot;wildcard_cors&quot;, &quot;message&quot;: &quot;Wildcard CORS is forbidden&quot;})
+    if not values.get(&quot;XAGENT_LLM__OLLAMA_MODEL&quot;, &quot;&quot;).strip():
+        errors.append({&quot;code&quot;: &quot;missing_ollama_model&quot;, &quot;message&quot;: &quot;Ollama model is required&quot;})
+    return errors
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：实现只读系统预检 CLI</strong></li>
+</ul>
+<p>CLI 参数固定为：</p>
+<pre><code class="language-text">--env-file deploy/compose/r2.env.local
+--compose-file deploy/compose/docker-compose.yml
+--project-name xagent-r2
+--expected-branch feature/webapi-r2-staging-readiness
+--output output/r2-runtime/preflight.json
+--init-env deploy/compose/r2.env.local
+--validate-env-only
+--allow-running-project
+</code></pre>
+<p><code>--init-env</code> 生成文件并完成纯 env 校验后退出，不要求当时 Git clean。正常预检依次执行：加载/校验 env；验证 Git 分支和 clean status；调用 <code>docker version</code>、<code>docker compose version</code>；逐个 bind 候选端口；请求 <code>http://127.0.0.1:11434/api/tags</code> 并确认模型；运行目标 Compose 文件的 <code>config --quiet</code>。<code>--allow-running-project</code> 只在目标 project 已运行时使用：每个被占端口都必须与 <code>docker compose port</code> 返回的同 project 服务映射相同，否则仍失败。输出 JSON 只包含检查名、<code>ok</code>、非敏感 detail、commit、branch 和时间，不输出任何 env value。</p>
+<ul>
+<li>[ ] <strong>步骤 5：实现 PowerShell 薄入口</strong></li>
+</ul>
+<pre><code class="language-powershell">param(
+    [string]$EnvFile = &quot;deploy/compose/r2.env.local&quot;,
+    [string]$ProjectName = &quot;xagent-r2&quot;,
+    [switch]$Init,
+    [switch]$ValidateEnvOnly,
+    [switch]$AllowRunningProject
+)
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$python = (Get-Command python -ErrorAction Stop).Source
+$arguments = @(
+    (Join-Path $repoRoot &quot;scripts/r2_preflight.py&quot;),
+    &quot;--env-file&quot;, (Join-Path $repoRoot $EnvFile),
+    &quot;--compose-file&quot;, (Join-Path $repoRoot &quot;deploy/compose/docker-compose.yml&quot;),
+    &quot;--project-name&quot;, $ProjectName,
+    &quot;--expected-branch&quot;, &quot;feature/webapi-r2-staging-readiness&quot;,
+    &quot;--output&quot;, (Join-Path $repoRoot &quot;output/r2-runtime/preflight.json&quot;)
+)
+if ($Init) {
+    $arguments += @(&quot;--init-env&quot;, (Join-Path $repoRoot $EnvFile))
+}
+if ($ValidateEnvOnly) {
+    $arguments += &quot;--validate-env-only&quot;
+}
+if ($AllowRunningProject) {
+    $arguments += &quot;--allow-running-project&quot;
+}
+&amp; $python @arguments
+exit $LASTEXITCODE
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 6：运行测试、生成本机 env 并执行预检</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m unittest discover -s tests/release -p &quot;test_r2_preflight.py&quot; -v
+pwsh -File scripts/r2-preflight.ps1 -Init
+pwsh -File scripts/r2-preflight.ps1 -ValidateEnvOnly
+</code></pre>
+<p>预期：测试 PASS；<code>deploy/compose/r2.env.local</code> 创建且被 Git 忽略；纯 env 预检 <code>ok=true</code>；输出中找不到任何生成的 secret。</p>
+<ul>
+<li>[ ] <strong>步骤 7：提交预检工具</strong></li>
+</ul>
+<p>先在 <code>.gitignore</code> 增加：</p>
+<pre><code class="language-gitignore">output/r2-runtime/
+output/r2-backups/
+</code></pre>
+<pre><code class="language-powershell">git add scripts/r2_preflight.py scripts/r2-preflight.ps1 tests/release/test_r2_preflight.py .gitignore
+git commit -m &quot;feat(运维): 增加 R2 安全预检入口&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 8：在 clean commit 上执行完整预检</strong></li>
+</ul>
+<p>运行：<code>pwsh -File scripts/r2-preflight.ps1</code></p>
+<p>预期：Git、Docker、端口、Ollama、目标模型和 Compose config 全部 <code>ok=true</code>。</p>
+<hr />
+<h3 id="4-runbook">任务 4：接入配置门禁并更新单机 Runbook</h3>
+<p><strong>文件：</strong>
+- 修改：<code>.github/workflows/ci.yml:90-117</code>
+- 修改：<code>docs/DEPLOYMENT_RUNBOOK.md:1-220</code>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先让 CI 合同断言失败</strong></li>
+</ul>
+<p>在 <code>R2ComposeContractTest</code> 类中增加：</p>
+<pre><code class="language-python">    def test_ci_runs_r2_release_contract(self) -&gt; None:
+        ci = (ROOT / &quot;.github/workflows/ci.yml&quot;).read_text(encoding=&quot;utf-8&quot;)
+        self.assertIn(&quot;test_r2_*.py&quot;, ci)
+        self.assertIn(&quot;docker compose&quot;, ci)
+        self.assertIn(&quot;deploy/compose/r2.env.example&quot;, ci)
+</code></pre>
+<p>运行：<code>python -m unittest discover -s tests/release -p "test_r2_*.py" -v</code></p>
+<p>预期：新增断言 FAIL，因为 CI 尚未执行 R2 门禁。</p>
+<ul>
+<li>[ ] <strong>步骤 2：在 config-governance job 加入门禁</strong></li>
+</ul>
+<pre><code class="language-yaml">- name: R2 compose contract
+  run: python -m unittest discover -s tests/release -p &quot;test_r2_*.py&quot; -v
+
+- name: R2 compose render
+  env:
+    POSTGRES_PASSWORD: config-only-postgres-strong-value
+    XAGENT_SECURITY__JWT_SECRET: config-only-jwt-secret-at-least-32-characters
+    GRAFANA_ADMIN_PASSWORD: config-only-grafana-strong-value
+  run: docker compose -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.example config --quiet
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：把 R2 单一路径写入 Runbook</strong></li>
+</ul>
+<p>新增明确命令：</p>
+<pre><code class="language-powershell">pwsh -File scripts/r2-preflight.ps1 -Init
+pwsh -File scripts/r2-preflight.ps1
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local up -d --build postgres redis qdrant api worker web
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local --profile mcp --profile observability up -d platform-mcp prometheus grafana
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local down
+</code></pre>
+<p>文档同时声明：不运行 <code>down -v</code>；根 Compose 非 R2 入口；本阶段不启用 <code>gateway/tracing/federation</code>；所有浏览器验收使用 <code>127.0.0.1:18080</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：建立 R2 任务板条目</strong></li>
+</ul>
+<p>加入 R2-A、R2-B、R2-C、R2-D 四行，初始状态分别为 <code>CLAIMED/PENDING/PENDING/PENDING</code>。脱敏后需要提交的截图放在 <code>output/playwright/</code>，不使用原始证据目录。</p>
+<ul>
+<li>[ ] <strong>步骤 5：验证并提交 Runbook/CI</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m unittest discover -s tests/release -p &quot;test_r2_*.py&quot; -v
+python -c &quot;import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))&quot;
+git diff --check
+</code></pre>
+<p>预期：合同 PASS、CI YAML 可解析、diff check 无输出。</p>
+<p>提交：</p>
+<pre><code class="language-powershell">git add .github/workflows/ci.yml docs/DEPLOYMENT_RUNBOOK.md docs/coordination/WEB_API_RELEASE_TASK_BOARD.md tests/release/test_r2_compose_contract.py
+git commit -m &quot;docs(部署): 固化 R2 运行与配置门禁&quot;
+</code></pre>
+<hr />
+<h3 id="5-fresh-volumes-ollama">任务 5：从 fresh volumes 启动核心栈并证明真实 Ollama</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>
+- 后续引用：<code>docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：冻结本次候选身份</strong></li>
+</ul>
+<p>运行并保存非 secret 输出：</p>
+<pre><code class="language-powershell">git status --short --branch
+git rev-parse HEAD
+docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'
+docker compose version
+ollama list
+</code></pre>
+<p>预期：工作树 clean；分支为 <code>feature/webapi-r2-staging-readiness</code>；<code>qwen3:4b</code> 存在。</p>
+<ul>
+<li>[ ] <strong>步骤 2：执行预检并检查隔离资源不存在</strong></li>
+</ul>
+<pre><code class="language-powershell">pwsh -File scripts/r2-preflight.ps1
+docker ps -a --filter name=xagent-r2
+docker volume ls --filter name=xagent-r2
+</code></pre>
+<p>预期：预检通过；没有旧 R2 容器或 volume。若存在，只能先调查来源；不得直接删除。</p>
+<ul>
+<li>[ ] <strong>步骤 3：构建 Web 和核心镜像</strong></li>
+</ul>
+<pre><code class="language-powershell">cd apps/web
+npm ci
+npm run build
+cd ../..
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local build api worker web
+</code></pre>
+<p>预期：三个镜像成功；构建日志不包含 secret。</p>
+<ul>
+<li>[ ] <strong>步骤 4：启动六个核心服务</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local up -d postgres redis qdrant api worker web
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps
+</code></pre>
+<p>预期：六个服务 running；有 healthcheck 的服务最终 healthy。</p>
+<ul>
+<li>[ ] <strong>步骤 5：核对 migration、深度健康和 worker</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api python -m alembic current
+Invoke-RestMethod http://127.0.0.1:18000/health
+Invoke-RestMethod http://127.0.0.1:18000/health/ready
+Invoke-RestMethod http://127.0.0.1:18000/health/deep
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T worker celery -A xagent.worker.celery_app inspect ping --timeout=5
+</code></pre>
+<p>预期：migration 为 <code>20260807_checkpoints</code> 或实施时新 head；deep health 的 DB/Redis/Qdrant 都是 healthy；worker 返回 pong。</p>
+<ul>
+<li>[ ] <strong>步骤 6：创建隔离账号并发送真实模型请求</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$randomBytes = New-Object byte[] 36
+[Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+$trialPassword = [Convert]::ToBase64String($randomBytes)
+$registerBody = @{
+  username = 'r2-reviewer'
+  password = $trialPassword
+  tenant_id = 'r2-trial'
+} | ConvertTo-Json
+$registration = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18000/api/v1/auth/register' -ContentType 'application/json' -Body $registerBody
+$headers = @{ Authorization = &quot;Bearer $($registration.access_token)&quot; }
+$runBody = @{ goal = '请只回复：R2-OLLAMA-OK' } | ConvertTo-Json
+$ollamaRun = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18000/api/v1/agents/run' -Headers $headers -ContentType 'application/json' -Body $runBody
+$env:E2E_USERNAME = 'r2-reviewer'
+$env:E2E_PASSWORD = $trialPassword
+</code></pre>
+<p>预期：HTTP 200、存在 <code>run_id</code> 和非空 final answer；API 日志包含 <code>ollama_warmup_succeeded</code> 或真实 Ollama route；不得出现 MockLLM 标识。</p>
+<ul>
+<li>[ ] <strong>步骤 7：把 R2-A 转 REVIEW 并提交运行事实</strong></li>
+</ul>
+<p>任务板只写镜像 ID、commit、migration、健康结果和 run ID，不写 token/密码。运行：<code>git diff --check</code> 后提交：</p>
+<pre><code class="language-powershell">git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;docs(证据): 记录 R2 核心栈启动&quot;
+</code></pre>
+<hr />
+<h3 id="6-r2-playwright">任务 6：增加并运行排除短剧的 R2 Playwright 验收</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/e2e/specs/webapi-r2-full-compose.spec.ts</code>
+- 创建：<code>tests/e2e/fixtures/r2-skill/SKILL.md</code>
+- 创建：<code>tests/e2e/fixtures/r2-skill/references/checklist.md</code>
+- 创建：<code>tests/e2e/fixtures/r2-skill/scripts/verify.py</code>
+- 创建：<code>tests/e2e/fixtures/r2-skill/assets/badge.txt</code>
+- 创建：<code>tests/e2e/fixtures/r2-workspace/README.md</code>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：创建只覆盖 Web/API 发布面的测试骨架</strong></li>
+</ul>
+<pre><code class="language-typescript">import { expect, test, type Page } from &quot;@playwright/test&quot;;
+
+const API_BASE = process.env.E2E_API_URL ?? &quot;http://127.0.0.1:18000&quot;;
+const USERNAME = process.env.E2E_USERNAME;
+const PASSWORD = process.env.E2E_PASSWORD;
+
+test.describe.configure({ mode: &quot;serial&quot; });
+
+async function login(page: Page) {
+  if (!USERNAME || !PASSWORD) throw new Error(&quot;R2 full-mode credentials are required&quot;);
+  await page.goto(&quot;/&quot;);
+  const response = await page.request.post(&quot;/api/v1/auth/login&quot;, {
+    data: { username: USERNAME, password: PASSWORD, tenant_id: &quot;r2-trial&quot; },
+  });
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  await page.evaluate((token) =&gt; localStorage.setItem(&quot;xagent_token&quot;, token), body.access_token);
+}
+
+test.beforeEach(async ({ page }) =&gt; login(page));
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：加入健康、真实对话、Run Console 和刷新恢复用例</strong></li>
+</ul>
+<pre><code class="language-typescript">test(&quot;deep health 覆盖 PostgreSQL Redis Qdrant&quot;, async ({ request }) =&gt; {
+  const response = await request.get(`${API_BASE}/health/deep`);
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  expect(body.status).toBe(&quot;healthy&quot;);
+  expect(body.checks.database.status).toBe(&quot;healthy&quot;);
+  expect(body.checks.redis.status).toBe(&quot;healthy&quot;);
+  expect(body.checks.qdrant.status).toBe(&quot;healthy&quot;);
+});
+
+test(&quot;真实 Ollama 对话进入 Run Console 并可刷新恢复&quot;, async ({ page }) =&gt; {
+  test.setTimeout(180_000);
+  await page.goto(&quot;/chat&quot;);
+  await page.getByPlaceholder(/描述一个任务/).fill(&quot;请只回复：R2-WEB-OLLAMA-OK&quot;);
+  await page.getByRole(&quot;button&quot;, { name: &quot;发送&quot; }).click();
+  const runLink = page.getByText(&quot;运行详情&quot;, { exact: true }).last();
+  await expect(runLink).toBeVisible({ timeout: 160_000 });
+  await runLink.click();
+  await expect(page.getByText(&quot;Run Console&quot;, { exact: true })).toBeVisible();
+  await expect(page.getByText(/checkpoint/i).first()).toBeVisible();
+  const runId = new URL(page.url()).pathname.split(&quot;/&quot;).at(-1);
+  const token = await page.evaluate(() =&gt; localStorage.getItem(&quot;xagent_token&quot;));
+  const checkpoints = await page.request.get(
+    `/api/v1/checkpoints?run_id=${encodeURIComponent(runId ?? &quot;&quot;)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  expect(checkpoints.ok()).toBeTruthy();
+  process.env.E2E_CHECKPOINT_ID = (await checkpoints.json()).checkpoints[0].checkpoint_id;
+  const runUrl = page.url();
+  await page.reload({ waitUntil: &quot;networkidle&quot; });
+  await expect(page).toHaveURL(runUrl);
+  await expect(page.getByText(&quot;Run Console&quot;, { exact: true })).toBeVisible();
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：加入调度器和技能包持久化用例</strong></li>
+</ul>
+<pre><code class="language-typescript">test(&quot;调度任务运行 暂停并刷新后保持&quot;, async ({ page }) =&gt; {
+  test.setTimeout(180_000);
+  await page.goto(&quot;/scheduler&quot;);
+  await page.getByPlaceholder(&quot;任务名称&quot;).fill(&quot;R2 restart probe&quot;);
+  await page.getByPlaceholder(&quot;Agent 目标&quot;).fill(&quot;请只回复 R2-SCHEDULER-OK&quot;);
+  await page.getByRole(&quot;button&quot;, { name: &quot;创建&quot; }).click();
+  await expect(page.getByText(&quot;调度任务已创建&quot;)).toBeVisible();
+  page.once(&quot;dialog&quot;, (dialog) =&gt; dialog.accept());
+  await page.getByRole(&quot;button&quot;, { name: &quot;立即运行&quot; }).click();
+  await expect(page.getByText(/attempt 1/)).toBeVisible({ timeout: 160_000 });
+  page.once(&quot;dialog&quot;, (dialog) =&gt; dialog.accept());
+  await page.getByRole(&quot;button&quot;, { name: &quot;暂停&quot; }).click();
+  await page.reload({ waitUntil: &quot;networkidle&quot; });
+  await expect(page.getByText(&quot;已暂停&quot;).first()).toBeVisible();
+});
+
+test(&quot;完整技能包导入后在 Web 可见&quot;, async ({ page }) =&gt; {
+  const archive = process.env.E2E_SKILL_PACKAGE;
+  if (!archive) throw new Error(&quot;E2E_SKILL_PACKAGE is required&quot;);
+  await page.goto(&quot;/settings?section=skills&quot;);
+  const imported = page.waitForResponse((response) =&gt;
+    response.url().includes(&quot;/api/v1/skill-packages/import&quot;) &amp;&amp; response.status() === 201,
+  );
+  await page.locator('input[type=&quot;file&quot;]').setInputFiles(archive);
+  const importedBody = await (await imported).json();
+  process.env.E2E_SKILL_PACKAGE_ID = importedBody.package.package_id;
+  await expect(page.getByText(&quot;R2 持久化验收技能&quot;)).toBeVisible();
+  await expect(page.getByText(&quot;完整技能包&quot;, { exact: true })).toBeVisible();
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：加入开发任务与租户边界用例</strong></li>
+</ul>
+<pre><code class="language-typescript">test(&quot;开发任务产物可审查和下载&quot;, async ({ page }) =&gt; {
+  const taskId = process.env.E2E_DEVELOPMENT_TASK_ID;
+  if (!taskId) throw new Error(&quot;E2E_DEVELOPMENT_TASK_ID is required&quot;);
+  await page.goto(&quot;/development-tasks&quot;);
+  await page.getByText(taskId, { exact: false }).first().click();
+  await expect(page.getByText(/awaiting_review|approved|applied/).first()).toBeVisible();
+  await expect(page.getByRole(&quot;link&quot;, { name: /下载|Patch/i })).toBeVisible();
+});
+
+test(&quot;第二租户不能读取第一租户资源&quot;, async ({ request }) =&gt; {
+  const packageId = process.env.E2E_SKILL_PACKAGE_ID;
+  const checkpointId = process.env.E2E_CHECKPOINT_ID;
+  const taskId = process.env.E2E_DEVELOPMENT_TASK_ID;
+  if (!packageId || !checkpointId || !taskId) throw new Error(&quot;R2 tenant-bound ids are required&quot;);
+  const username = `r2-isolation-${Date.now()}`;
+  const register = await request.post(`${API_BASE}/api/v1/auth/register`, {
+    data: { username, password: &quot;R2-isolation-password-2026&quot;, tenant_id: &quot;r2-other&quot; },
+  });
+  expect(register.ok()).toBeTruthy();
+  const token = (await register.json()).access_token;
+  const headers = { Authorization: `Bearer ${token}` };
+  for (const path of [
+    `/api/v1/skill-packages/${packageId}`,
+    `/api/v1/checkpoints/${checkpointId}`,
+    `/api/v1/development-tasks/${taskId}`,
+  ]) {
+    const response = await request.get(`${API_BASE}${path}`, { headers });
+    expect([403, 404]).toContain(response.status());
+  }
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：先做测试发现与旧环境失败检查</strong></li>
+</ul>
+<pre><code class="language-powershell">cd tests/e2e
+npm ci
+npx playwright test specs/webapi-r2-full-compose.spec.ts --list
+$env:E2E_BASE_URL='http://127.0.0.1:18080'
+$env:E2E_API_URL='http://127.0.0.1:18000'
+npx playwright test specs/webapi-r2-full-compose.spec.ts --project=chromium --reporter=list
+</code></pre>
+<p>预期：测试可被发现；若 fixture/预置数据尚未创建，对应测试明确失败，不得通过 skip 隐藏。</p>
+<ul>
+<li>[ ] <strong>步骤 6：准备只存在于 R2 volume 的验收 fixture</strong></li>
+</ul>
+<p>技能 fixture 内容固定为：</p>
+<pre><code class="language-markdown">---
+name: r2-persistence-probe
+description: R2 Full Compose 技能包持久化验收
+version: 1.0.0
+triggers:
+  - R2 持久化验收技能
+---
+
+# R2 持久化验收技能
+
+读取 references/checklist.md；scripts 和 assets 只验证保存，不执行。
+</code></pre>
+<p><code>references/checklist.md</code> 内容为 <code>R2 skill package reference preserved.</code>；<code>scripts/verify.py</code> 内容为 <code>print("R2 skill package script preserved")</code>；<code>assets/badge.txt</code> 内容为 <code>R2-SKILL-ASSET</code>。</p>
+<p><code>tests/e2e/fixtures/r2-workspace/README.md</code> 内容为 <code>R2 isolated workspace</code>。把它复制到 <code>/data/workspace</code>，初始化临时 Git 仓库并提交：</p>
+<pre><code class="language-powershell">$apiContainer = docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps -q api
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api mkdir -p /data/workspace
+docker cp tests/e2e/fixtures/r2-workspace/README.md &quot;${apiContainer}:/data/workspace/README.md&quot;
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api git -C /data/workspace init -b main
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api git -C /data/workspace config user.name 'R2 Trial'
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api git -C /data/workspace config user.email 'r2@xagent.local'
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api git -C /data/workspace add README.md
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local exec -T api git -C /data/workspace commit -m 'chore: seed R2 workspace'
+$parallelBody = @{
+  tasks = @(@{ goal = '在当前工作区创建 R2_AGENT_RESULT.md，内容必须是 R2-DEVELOPMENT-TASK-OK'; capabilities = @('file_write') })
+  coordinator_goal = '验证隔离开发任务结果'
+  use_worktrees = $true
+} | ConvertTo-Json -Depth 6
+$parallel = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18000/api/v1/agents/parallel-run' -Headers $headers -ContentType 'application/json' -Body $parallelBody
+$env:E2E_DEVELOPMENT_TASK_ID = $parallel.sub_results[0].development_task_id
+$skillArchive = Join-Path $env:TEMP 'xagent-r2-skill.zip'
+Compress-Archive -Path 'tests/e2e/fixtures/r2-skill/*' -DestinationPath $skillArchive
+$env:E2E_SKILL_PACKAGE = $skillArchive
+</code></pre>
+<p>预期：development task 状态为 <code>awaiting_review</code>，且任务路径位于 <code>/data/.xagent-worktrees</code>。不得把真实项目工作树当作 apply 目标。</p>
+<ul>
+<li>[ ] <strong>步骤 7：运行完整 R2 Playwright 并采集截图</strong></li>
+</ul>
+<p>使用本次随机账号变量运行 headed Chromium；保存 chat、Run Console、scheduler、skill、development task、reload 六张截图到 <code>output/playwright/r2-*.png</code>。同时注册 <code>page.on("console")</code> 和 <code>page.on("pageerror")</code>，最终断言无 error。</p>
+<p>预期：所有 R2 spec PASS；短剧路由和媒体 API没有被调用。</p>
+<ul>
+<li>[ ] <strong>步骤 8：提交 E2E 规格与脱敏截图</strong></li>
+</ul>
+<pre><code class="language-powershell">git add tests/e2e/specs/webapi-r2-full-compose.spec.ts tests/e2e/fixtures/r2-skill tests/e2e/fixtures/r2-workspace output/playwright/r2-*.png docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;test(Web): 覆盖 R2 Full Compose 试用主链&quot;
+</code></pre>
+<hr />
+<h3 id="7">任务 7：验证重启和非破坏性故障恢复</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：记录故障前业务锚点</strong></li>
+</ul>
+<p>保存 tenant、user、conversation ID、run ID、scheduler job ID、skill package ID、checkpoint ID、development task ID 和 patch SHA-256；不保存 token。</p>
+<ul>
+<li>[ ] <strong>步骤 2：重启 API 和 worker</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local restart api worker
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps
+</code></pre>
+<p>重新登录并读取全部锚点。预期：数据库状态和 <code>/data</code> 文件都可用，worker pong。</p>
+<ul>
+<li>[ ] <strong>步骤 3：暂停 worker 并观察任务状态</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$workerContainer = docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps -q worker
+docker pause $workerContainer
+$queued = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18000/api/v1/tasks' -Headers $headers -ContentType 'application/json' -Body (@{ goal = 'R2 worker pause probe' } | ConvertTo-Json)
+$pausedState = Invoke-RestMethod -Uri &quot;http://127.0.0.1:18000/api/v1/tasks/$($queued.task_id)&quot; -Headers $headers
+docker unpause $workerContainer
+</code></pre>
+<p>断言 <code>$pausedState.status</code> 不是 <code>succeeded</code>；恢复后轮询到 succeeded，并确认最终记录只有一个终态。</p>
+<ul>
+<li>[ ] <strong>步骤 4：暂停 Redis 并检查受控失败</strong></li>
+</ul>
+<pre><code class="language-powershell">$redisContainer = docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps -q redis
+docker pause $redisContainer
+$degradedHealth = Invoke-RestMethod 'http://127.0.0.1:18000/health/deep'
+docker unpause $redisContainer
+</code></pre>
+<p>预期：暂停时 Redis 为 degraded 且整体不是全成功；恢复后轮询 deep health 重回 healthy，scheduler 不产生重复终态记录。</p>
+<ul>
+<li>[ ] <strong>步骤 5：重启整个核心栈但保留 volumes</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local down
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local up -d postgres redis qdrant api worker web
+</code></pre>
+<p>重复读取全部锚点并打开浏览器。预期：账号、会话、run、job、skill package、checkpoint、patch 全部存在。</p>
+<ul>
+<li>[ ] <strong>步骤 6：检查错误和重复记录</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local logs --since 30m api worker redis | Select-String -Pattern 'Traceback|Unhandled|duplicate|MockLLM|password|JWT_SECRET'
+</code></pre>
+<p>每个命中必须分类为预期故障、已知非阻断或需要修复；无法解释的错误阻止 R2-C。</p>
+<ul>
+<li>[ ] <strong>步骤 7：提交故障恢复摘要</strong></li>
+</ul>
+<p>任务板记录故障窗口、预期响应、恢复时间和锚点复核结果；<code>git diff --check</code> 后提交：</p>
+<pre><code class="language-powershell">git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;docs(证据): 记录 R2 重启与故障恢复&quot;
+</code></pre>
+<hr />
+<h3 id="8-platform-mcp-profile">任务 8：启用 Platform MCP 和观测 profile</h3>
+<p><strong>文件：</strong>
+- 创建：<code>deploy/grafana/provisioning/datasources/prometheus.yml</code>
+- 创建：<code>deploy/grafana/provisioning/dashboards/xagent.yml</code>
+- 修改：<code>deploy/compose/docker-compose.yml</code>
+- 修改：<code>tests/release/test_r2_compose_contract.py</code>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先用合同证明 Grafana provisioning 缺失</strong></li>
+</ul>
+<p>在 <code>test_r2_compose_contract.py</code> 增加：</p>
+<pre><code class="language-python">    def test_grafana_is_provisioned_from_same_stack(self) -&gt; None:
+        datasource = ROOT / &quot;deploy/grafana/provisioning/datasources/prometheus.yml&quot;
+        dashboards = ROOT / &quot;deploy/grafana/provisioning/dashboards/xagent.yml&quot;
+        self.assertTrue(datasource.exists())
+        self.assertTrue(dashboards.exists())
+        self.assertIn(&quot;http://prometheus:9090&quot;, datasource.read_text(encoding=&quot;utf-8&quot;))
+        self.assertIn(&quot;uid: prometheus&quot;, datasource.read_text(encoding=&quot;utf-8&quot;))
+        self.assertIn(&quot;/etc/grafana/provisioning&quot;, COMPOSE)
+</code></pre>
+<p>运行合同并确认 FAIL，因为 provisioning 文件和挂载尚不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 2：创建 Grafana datasource/dashboard provisioning</strong></li>
+</ul>
+<p><code>datasources/prometheus.yml</code>：</p>
+<pre><code class="language-yaml">apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+</code></pre>
+<p><code>dashboards/xagent.yml</code>：</p>
+<pre><code class="language-yaml">apiVersion: 1
+providers:
+  - name: X-Agent
+    orgId: 1
+    folder: X-Agent
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards
+</code></pre>
+<p>Grafana 服务增加两个只读 provisioning mount；保留现有 dashboard JSON mount。</p>
+<ul>
+<li>[ ] <strong>步骤 3：重跑合同并启用 mcp 与 observability</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local --profile mcp --profile observability up -d platform-mcp prometheus grafana
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local --profile mcp --profile observability ps
+</code></pre>
+<p>预期：三项扩展服务 running；Grafana 密码来自本地 env。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证 Platform MCP 当前真实状态</strong></li>
+</ul>
+<p>使用 <code>XAGENT_PLATFORM_MCP_TOKEN</code> 调用 <code>http://127.0.0.1:18100/mcp</code>：初始化、列出工具、读取同 tenant 会话/run/审批/事件；用无 token 和第二 tenant token复测拒绝。</p>
+<p>预期：工具数与当前实现一致；同 tenant 读取成功；无凭证 401；跨租户不返回第一 tenant 数据。</p>
+<ul>
+<li>[ ] <strong>步骤 5：验证 Prometheus target 与指标</strong></li>
+</ul>
+<p>请求 <code>http://127.0.0.1:19090/api/v1/targets</code>，断言 <code>xagent</code> target 的 discovered URL 指向 <code>api:8000/metrics</code> 且 health=<code>up</code>。请求 API 指标，确认 HTTP、run 或 scheduler 指标有样本。</p>
+<ul>
+<li>[ ] <strong>步骤 6：验证 Grafana 数据源和面板</strong></li>
+</ul>
+<p>使用本地 Grafana 管理凭据调用 <code>/api/datasources</code> 和 <code>/api/search</code>；断言 Prometheus 数据源可查询，X-Agent dashboard 存在并能返回非空 panel 数据。</p>
+<ul>
+<li>[ ] <strong>步骤 7：仅在仍失败时做最小配置修复</strong></li>
+</ul>
+<p>如果 target 或 datasource 漂移，先增加能复现该错误的 <code>test_r2_compose_contract.py</code> 断言，再只改对应的 Prometheus/Grafana provision 文件。不得趁机加入 Langfuse、ContextForge 或 OpenFGA。</p>
+<ul>
+<li>[ ] <strong>步骤 8：提交观测/MCP 证据和 provisioning</strong></li>
+</ul>
+<pre><code class="language-powershell">git add deploy/grafana/provisioning/datasources/prometheus.yml deploy/grafana/provisioning/dashboards/xagent.yml deploy/compose/docker-compose.yml tests/release/test_r2_compose_contract.py docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;test(运维): 验证 R2 MCP 与观测链&quot;
+</code></pre>
+<hr />
+<h3 id="9-project">任务 9：备份并恢复到全新隔离 project</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>
+- 后续引用：<code>docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：创建仓库外备份目录和 manifest</strong></li>
+</ul>
+<p>使用 <code>$env:TEMP\xagent-r2-backup-&lt;UTC timestamp&gt;</code>，记录 commit、migration、镜像 ID、project name、volume name和业务锚点。manifest 只写 secret key 名称，不写值。</p>
+<ul>
+<li>[ ] <strong>步骤 2：暂停写入面并保持数据服务在线</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local stop web api worker
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local ps
+</code></pre>
+<p>预期：Web/API/worker stopped；PostgreSQL/Redis/Qdrant 仍 healthy。源数据 volume 不删除。</p>
+<ul>
+<li>[ ] <strong>步骤 3：创建 PostgreSQL 与 Qdrant 一致性备份</strong></li>
+</ul>
+<p>在 Postgres 容器内运行 <code>pg_dump -Fc</code> 后用 <code>docker cp</code> 复制。若 <code>xagent_memory</code> collection 尚不存在，先创建维度 1536 的验收 collection 并写入固定 marker point；调用 Qdrant snapshot API并下载 snapshot。分别计算 SHA-256 和字节数。</p>
+<ul>
+<li>[ ] <strong>步骤 4：备份 Redis 与 xagentdata volume</strong></li>
+</ul>
+<p>在 Redis 容器内运行 <code>redis-cli --rdb /tmp/r2.rdb</code> 并用 <code>docker cp</code> 复制该 RDB。使用只读 source mount 的 <code>alpine:3.20</code> 将 <code>xagent-r2_xagentdata</code> 归档到备份目录。不得停止或修改其他 project volume。</p>
+<ul>
+<li>[ ] <strong>步骤 5：恢复源实例并确认仍可用</strong></li>
+</ul>
+<p>重新启动源 Web/API/worker，核对 deep health 和全部业务锚点；源实例失败时停止恢复演练并先修复源实例。</p>
+<ul>
+<li>[ ] <strong>步骤 6：为恢复实例生成独立 env</strong></li>
+</ul>
+<p>复制本机 R2 env 到仓库外临时文件，仅修改：project=<code>xagent-r2-restore</code>，端口=<code>25432/26379/26333/26334/28000/28080/28100/29090/23002</code>。重新生成 JWT、PostgreSQL、Grafana secret；恢复实例不能复用源 secret。</p>
+<ul>
+<li>[ ] <strong>步骤 7：创建全新 volumes 并恢复文件数据</strong></li>
+</ul>
+<p>只在确认 <code>xagent-r2-restore_*</code> volumes 不存在后创建它们。把 RDB 复制为新 Redis volume 的 <code>/data/dump.rdb</code>，把 xagentdata archive 解压到新 volume，再启动 Postgres/Redis/Qdrant；使用 <code>pg_restore</code> 恢复 fresh PostgreSQL，使用 Qdrant snapshot upload 恢复 collection。</p>
+<ul>
+<li>[ ] <strong>步骤 8：启动恢复 API/worker/Web</strong></li>
+</ul>
+<pre><code class="language-powershell">docker compose -p xagent-r2-restore -f deploy/compose/docker-compose.yml --env-file $restoreEnv up -d api worker web
+docker compose -p xagent-r2-restore -f deploy/compose/docker-compose.yml --env-file $restoreEnv ps
+</code></pre>
+<p>预期：恢复实例独立 healthy，源实例仍在且未被修改。</p>
+<ul>
+<li>[ ] <strong>步骤 9：重复恢复验收</strong></li>
+</ul>
+<p>在 <code>http://127.0.0.1:28080</code> 重新登录，读取全部业务锚点；对 PostgreSQL 行数、Qdrant collection、skill package文件、patch SHA-256 做源/恢复实例对比。恢复实例再发起一次新的真实 Ollama run，证明不是只读快照。</p>
+<ul>
+<li>[ ] <strong>步骤 10：停止恢复实例但保留证据</strong></li>
+</ul>
+<p>执行：</p>
+<pre><code class="language-powershell">docker compose -p xagent-r2-restore -f deploy/compose/docker-compose.yml --env-file $restoreEnv down
+</code></pre>
+<p>命令不带 <code>-v</code>。在用户未要求清理前保留恢复 volumes；任务板写明恢复 project、端口、hash 和验证结果。</p>
+<ul>
+<li>[ ] <strong>步骤 11：提交恢复演练摘要</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;docs(证据): 完成 R2 备份恢复演练&quot;
+</code></pre>
+<hr />
+<h3 id="10-r2">任务 10：全量回归、证据审计与 R2 交付判定</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md</code>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：运行后端全量和发布静态门禁</strong></li>
+</ul>
+<p>在最终 API 镜像内运行 <code>pytest -q</code>；在宿主机运行关键 Ruff、完整静态基线、mypy/许可证/版本门禁。记录 passed/skipped/warnings 的精确数量和原因。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行 Web 全量门禁</strong></li>
+</ul>
+<pre><code class="language-powershell">cd apps/web
+npm test
+npm run typecheck
+npm run lint
+npm run lint:release
+npm run build
+npm run audit:release
+</code></pre>
+<p>预期：测试/typecheck/build/audit 通过；lint error 为 0；任何 warnings 必须与精确豁免一致。</p>
+<ul>
+<li>[ ] <strong>步骤 3：运行 R2 配置、E2E 和镜像复验</strong></li>
+</ul>
+<pre><code class="language-powershell">python -m unittest discover -s tests/release -p &quot;test_r2_*.py&quot; -v
+pwsh -File scripts/r2-preflight.ps1 -AllowRunningProject
+docker compose -p xagent-r2 -f deploy/compose/docker-compose.yml --env-file deploy/compose/r2.env.local config --quiet
+cd tests/e2e
+npx playwright test specs/webapi-r2-full-compose.spec.ts --project=chromium --reporter=list
+</code></pre>
+<p>运行中端口必须通过“已属于目标 project”映射校验；不得把占用直接忽略。</p>
+<ul>
+<li>[ ] <strong>步骤 4：审计日志、浏览器和 secret 泄漏</strong></li>
+</ul>
+<p>检查 API/worker/Web/MCP/Prometheus/Grafana 最近日志；浏览器 console/pageerror；<code>git grep</code> 与证据目录中不得出现本机随机密码、JWT、token。检查 <code>git status</code>、<code>git diff --check</code> 和未跟踪文件。</p>
+<ul>
+<li>[ ] <strong>步骤 5：撰写证据报告</strong></li>
+</ul>
+<p>报告必须分开列出：源码/测试、镜像/Compose、真实 Ollama、浏览器、重启、故障、MCP、观测、备份恢复、未验证/排除项。不能用 R1 历史结论替代 R2 新鲜结果；不能把“容器 running”写成 E2E 成功。</p>
+<ul>
+<li>[ ] <strong>步骤 6：把 R2-A 至 R2-D 转 DONE 或准确降级</strong></li>
+</ul>
+<p>只有 10 项完成标准全部满足才写 DONE。任一真实模型、浏览器、deep health、worker、恢复实例或租户边界失败，任务板和报告必须写 PARTIAL/BLOCKED 及具体缺口。</p>
+<ul>
+<li>[ ] <strong>步骤 7：提交最终证据</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/coordination/reports/WEB_API_R2_STAGING_TRIAL_EVIDENCE.md docs/coordination/WEB_API_RELEASE_TASK_BOARD.md output/playwright/r2-*.png
+git commit -m &quot;docs(证据): 完成 Web API R2 试运行审计&quot;
+git status --short --branch
+git log --oneline 0627747..HEAD
+</code></pre>
+<p>预期：工作树 clean；没有 push、tag 或生产部署。</p>
+<hr />
+<h2 id="_5">最终执行纪律</h2>
+<ul>
+<li>每个任务必须先形成失败证据，再做最小修复，再运行定向和相邻回归。</li>
+<li>当前 linked worktree 已是专用隔离环境，不创建嵌套 worktree。</li>
+<li>原始备份、token、密码、环境文件和完整运行日志不进入 Git。</li>
+<li>不使用 <code>docker compose down -v</code>，不删除来源不明的容器或 volume。</li>
+<li>不启用短剧、Tauri、E2B、付费 provider、HA、gateway、tracing 或 federation。</li>
+<li>任何需要 Docker Socket、生产凭据、远程部署或外部写入的动作都暂停并重新获取 Owner 授权。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

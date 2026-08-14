@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/roadmap-v2-capacity-verification-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Roadmap v2 C 容量与性能增强真实验证计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Roadmap v2 C \u5bb9\u91cf\u4e0e\u6027\u80fd\u589e\u5f3a\u771f\u5b9e\u9a8c\u8bc1\u8ba1\u5212";
+        var mkdocs_page_input_path = "coordination/reports/roadmap-v2-capacity-verification-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/roadmap-v2-capacity-verification-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Roadmap v2 C 容量与性能增强真实验证计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/roadmap-v2-capacity-verification-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="roadmap-v2-c">Roadmap v2 C 容量与性能增强真实验证计划</h1>
+<blockquote>
+<p>适用阶段：Roadmap v2</p>
+<p>用途：把 C 容量与性能增强包从“方向定义”推进到“可执行验证”，明确当前压测入口、瓶颈对象、容量结论与扩容建议的验证范围、方法与证据要求。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>本计划的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 的容量与性能增强路线提供第一份真实验证计划，使 C 包不再停留在方向层，而进入可验证状态。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 验证范围</h2>
+<p>本次验证只覆盖以下内容：</p>
+<ol>
+<li>当前是否已有真实可执行的压测入口；</li>
+<li>当前是否已经有正式列出的容量检查项；</li>
+<li>当前瓶颈对象是否已被明确识别；</li>
+<li>当前试点 / 灰度 / 企业级规模边界是否已可解释；</li>
+<li>当前哪些结论是“已验证”，哪些仍只是后续目标。</li>
+</ol>
+<p>本次验证<strong>不</strong>要求一次性完成：
+- 完整性能平台建设；
+- 所有容量结论的生产级签字；
+- 多地域 / 大规模容量实测；
+- 所有扩缩容策略自动化落地。</p>
+<hr />
+<h2 id="3">3. 验证环境</h2>
+<p>当前优先采用：
+- 仓库中已有性能 / 容量材料与真实命令入口的等价验证环境；
+- 用于确认压测入口、容量检查项、瓶颈对象和规模边界是否具备真实材料基础。</p>
+<p>环境前提：
+- 能读取 <code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> 的性能与容量条目；
+- 能读取 <code>OPERATIONS_MANUAL_V1.md</code> 中的 backlog / warmup / 依赖风险入口；
+- 能确认 <code>tests/load/locustfile.py</code> 是否存在并可被引用。</p>
+<hr />
+<h2 id="4">4. 验证项</h2>
+<h3 id="41">4.1 压测入口验证</h3>
+<p>检查：</p>
+<pre><code class="language-bash">cd apps/api
+locust -f tests/load/locustfile.py --host http://localhost:8000 --headless -u 50 -r 5 -t 60s
+</code></pre>
+<p>期望：
+- 至少有一条被正式文档引用的负载测试入口；
+- 不是口头设想，而是可执行入口。</p>
+<h3 id="42">4.2 正式容量检查项验证</h3>
+<p>验证：
+- <code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> 中是否已列出：
+  - 至少一轮负载测试
+  - 基础容量结论（如 10/50/100 并发建议）
+  - 关键瓶颈点
+  - 试点用户规模与限制条件</p>
+<p>期望：
+- 容量与性能不再是完全空白；
+- 已有正式检查项。</p>
+<h3 id="43">4.3 关键瓶颈对象验证</h3>
+<p>验证当前是否已明确列出：
+- API 请求吞吐
+- worker 任务吞吐
+- LLM provider 响应时间与失败率
+- Redis / Postgres / Qdrant 能力
+- worker backlog / warmup / timeout 风险</p>
+<p>期望：
+- 团队知道先看哪几个瓶颈；
+- 不再把容量问题当成黑盒。</p>
+<h3 id="44">4.4 规模边界验证</h3>
+<p>确认当前是否已明确区分：
+- 试点规模
+- 灰度规模
+- 企业级规模</p>
+<p>期望：
+- 不把“可试点”误说成“可无限扩展”；
+- 规模边界已形成书面表达。</p>
+<hr />
+<h2 id="5">5. 通过标准</h2>
+<p>C 容量与性能增强包的真实验证通过，至少需要满足：</p>
+<ol>
+<li>压测入口已真实存在并被正式引用；</li>
+<li>容量检查项已被正式列出；</li>
+<li>关键瓶颈对象已被明确；</li>
+<li>规模边界已有书面表达；</li>
+<li>可以明确区分“当前已有基础”与“后续仍需更深实测的部分”。</li>
+</ol>
+<p>这意味着：
+- C 包的“通过”不是所有容量结论都已经被完整实测；
+- 而是容量增强已经进入真实可执行验证阶段。</p>
+<hr />
+<h2 id="6">6. 证据要求</h2>
+<p>本计划要求输出的最小证据包括：</p>
+<ul>
+<li>当前压测入口说明</li>
+<li>容量检查项确认结果</li>
+<li>当前关键瓶颈对象清单</li>
+<li>试点 / 灰度 / 企业级规模边界确认结果</li>
+<li>最终判定：</li>
+<li>通过 / 不通过</li>
+<li>哪些已验证</li>
+<li>哪些仍是后续目标</li>
+</ul>
+<p>建议归档到：
+- <code>docs/coordination/reports/roadmap-v2-capacity-verification.md</code></p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>当前 <code>C 容量与性能增强包</code> 已完成方向定义；
+这份计划的作用是让它进入下一状态：</p>
+<blockquote>
+<p><strong>可执行验证</strong></p>
+</blockquote>
+<p>只有完成这一步，<code>C 容量与性能增强包</code> 才能从“方向定义”走向“验证完成”。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

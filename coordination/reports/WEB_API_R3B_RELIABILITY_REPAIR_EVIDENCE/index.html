@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API R3-B 可靠性缺陷修复证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API R3-B \u53ef\u9760\u6027\u7f3a\u9677\u4fee\u590d\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API R3-B 可靠性缺陷修复证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_R3B_RELIABILITY_REPAIR_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-r3-b">Web/API R3-B 可靠性缺陷修复证据</h1>
+<blockquote>
+<p>日期：2026-08-11</p>
+<p>分支：<code>feature/webapi-r2-staging-readiness</code></p>
+<p>最终候选：<code>dd32a36958d3f8fd4a0d296d56d221eca7b7b0ef</code></p>
+<p>结论：R3-B 修复与定向 Live 验证通过；R3-A 统计门仍为 PARTIAL，需新的完整 50 样本批次重算。</p>
+</blockquote>
+<h2 id="1">1. 修复范围</h2>
+<ul>
+<li><code>58e7620</code>：无工具 Chat 首答非空但 <code>finish_reason=length</code> 或 completion tokens 达到请求上限时，只允许一次 1024-token 恢复；恢复再次截断则 <code>model_incomplete_response_after_retry</code>，不发 final。</li>
+<li><code>dd32a36</code>：普通并行任务保持 180 秒；只有真实 worktree 且 capability 精确为 <code>[file_write]</code> 的严格任务使用 270 秒 Agent 执行预算，超时错误使用实际预算。</li>
+<li>未修改模型、provider、提示词、API schema、Web、Worker、短剧/媒体或桌面端。</li>
+</ul>
+<h2 id="2-tdd">2. TDD 与离线验证</h2>
+<ul>
+<li>初始红灯：4 个聚焦合同中 3 failed / 1 passed，分别命中截断前缀伪成功、二次截断伪成功和严格任务仍使用 180 秒；普通并行保持 180 秒已通过。</li>
+<li>修复后聚焦合同：6/6 通过，包括既有空响应 length 恢复和严格超时清理。</li>
+<li>提交后相关回归：191 项通过，覆盖 orchestration、parallel worktree、Runtime/SSE、Worker、provider、checkpoint、development task 与 automation。</li>
+<li>R2/R3 release contracts：77 passed，另含 87 subtests。</li>
+<li>Ruff <code>F821,F822,F823,B023,I001</code>、<code>git diff --check</code>、secret scan 通过；<code>apps/api/uv.lock</code> 不存在，工作树干净。</li>
+<li><code>loop.py</code> 完整 Ruff 仍有 129 条 HEAD 既存 legacy 告警，本任务没有新增或扩大清理。</li>
+</ul>
+<h2 id="3-api-only">3. API-only 部署门</h2>
+<ul>
+<li>仅执行 <code>docker compose ... build api</code> 与 <code>up -d --no-deps api</code>。</li>
+<li>API：<code>49aeb2a5f83c</code> → <code>3c9d78992d0f</code>；新镜像健康。</li>
+<li>Web <code>0c04e51d5054</code>、Worker <code>36371148e0f2</code>、Platform MCP <code>8d41785c2a5c</code>、Grafana <code>61a2dd886d6c</code>、Prometheus <code>e3cc8e1cf4db</code>、PostgreSQL <code>718b16067ca6</code>、Redis <code>d4c436c4f4db</code>、Qdrant <code>1b4098d037b2</code> 与受保护 <code>aicg-minio 07e3c2aef1a1</code>、<code>aicg-postgres 3af4cf4c653d</code> 均未替换。</li>
+<li>宿主/容器源码 SHA-256 一致：<code>loop.py=83cc15d4…972d3</code>，<code>parallel.py=8f01485f…b1011</code>。</li>
+<li>deep health 三依赖 healthy；Worker pong；API Ollama warmup <code>qwen3:4b/ollama</code> 成功；Web root 与 Web→API OIDC 代理均为 200。</li>
+</ul>
+<h2 id="4">4. 单次真实定向探针</h2>
+<p>探针 ID：<code>r3b-live-20260811T143737Z-4d3af0</code>。每种业务只提交一次，无补样或重试。</p>
+<h3 id="chat">Chat</h3>
+<ul>
+<li>run/task：<code>b186609c0b9c482c97d0ba04531b8e9b</code>；conversation：<code>c970aa6bece44c0fa1e33c40038a4f53</code>。</li>
+<li>HTTP 200，10.905 秒，<code>succeeded</code>，route=<code>chat_no_tools</code>，tool_mode=<code>none</code>。</li>
+<li>final 与唯一 marker 精确一致；false_success=false；tool calls=0。</li>
+<li>checkpoint <code>74d7ac53d8524a2981007f965ee1eba3</code>，step 1，status=<code>available</code>。</li>
+</ul>
+<h3 id="file_write">file_write</h3>
+<ul>
+<li>parent/sub run：<code>0ac298d021be46baa6fc12112dd332ef</code> / <code>0ac298d021be46baa6fc12112dd332ef_sub0</code>。</li>
+<li>development task：<code>10f70eb54bcb4b84841a6fb5ff211468</code>。</li>
+<li>HTTP 200，149.775 秒，sub run <code>succeeded</code>；worktree、result commit、diff、patch 四项产物全部通过。</li>
+<li>patch SHA-256：<code>c245ca3dfa3ea9b2e78a1557df284cbd715542e0eedbce6124ac7eca20ad396c</code>。</li>
+<li>验证后正常 reject；DB 状态 <code>rejected</code>，worktree、patch 与临时 branch 均不存在。</li>
+</ul>
+<h2 id="5">5. 日志与剩余边界</h2>
+<ul>
+<li>探针窗口 API/Worker MockLLM=0；API Traceback=0；短剧/媒体 forbidden 命中=0；<code>model_degraded=false</code>。</li>
+<li>本次真实 file_write 在 180 秒内完成，因此它验证的是新镜像和完整产物/清理链，并不单独证明 180–270 秒任务的成功率。</li>
+<li>R3-A 原批次仍保持 50/50 不可变失败证据；Chat 29/30 和 file_write 5/10 不因本次定向探针被改写。</li>
+<li>下一门是基于同一冻结设计执行一个全新的完整 50 样本批次，重新计算成功率、P95、假成功与 fail-closed；不得拼接旧批次或本次两条探针。</li>
+<li>未 push、tag、远程发布或生产部署。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

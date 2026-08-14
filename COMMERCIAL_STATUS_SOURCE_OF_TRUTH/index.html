@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/COMMERCIAL_STATUS_SOURCE_OF_TRUTH/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent 当前真实状态（唯一事实源） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5f53\u524d\u771f\u5b9e\u72b6\u6001\uff08\u552f\u4e00\u4e8b\u5b9e\u6e90\uff09";
+        var mkdocs_page_input_path = "COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/COMMERCIAL_STATUS_SOURCE_OF_TRUTH/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 当前真实状态（唯一事实源）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 当前真实状态（唯一事实源）</h1>
+<blockquote>
+<p><strong>用途：</strong> 本文档是 <code>xagent</code> 当前项目状态、发布口径与商用 readiness 判断的唯一事实源。凡是 README、ROADMAP、项目总览、接手说明、对外同步材料与本文件冲突时，以本文件为准。</p>
+<p><strong>更新时间：</strong> 2026-08-12（R3 独立验收后的 Web/API 发布候选口径）</p>
+<p><strong>适用对象：</strong> owner、研发、QA、交付、下一位接手者。</p>
+</blockquote>
+<hr />
+<h2 id="0-2026-08-12">0. 当前发布范围覆盖说明（2026-08-12）</h2>
+<ul>
+<li>当前候选只包含 <strong>Web/API</strong>；短剧业务链路和 Tauri 桌面端明确排除。</li>
+<li>短剧由独立项目运行，稳定后按独立集成规格接入；仓库内相关源码不构成本阶段发布证据。</li>
+<li>P0/P1/P2、R1/R2 与 R3-A/R3-B 已在本地 <code>master</code> 完成；独立验收确认单一 50 样本真实 <code>qwen3:4b</code> 批次为 Chat 30/30、Scheduler 10/10、file_write 10/10，三类 P95 均低于冻结门槛，硬失败指标均为 0。</li>
+<li>当前结论是“<code>1.1.0</code> 本机单实例 Web/API 发布候选通过本地门禁”，不是远端已发布或客户生产已验收。当前提交尚未 push，未获得对应远端 CI、<code>v1.1.0</code> tag、GitHub Release 或生产部署证据。</li>
+<li>现有 <code>v1.0.0</code> 标签不得移动或复用；<code>1.1.0</code> 只有在候选分支 CI、master CI、新 tag/Release 和发布签字全部完成后才能写成正式发布。</li>
+<li>冻结的 Codex/Hermes 差距清单已在本地实现和验收，但这不等同于对竞品全部能力的永久完全等价；多机 HA、E2B、付费 provider 与客户现场仍未验证。</li>
+<li>第 1～9 节保留了此前 G1/G2/G3 和 Roadmap v2 的历史证据与口径。若与本节或第 10 节冲突，以本节和第 10 节为准。</li>
+</ul>
+<h2 id="02-2026-08-14-v110-v111">0.2 2026-08-14 交付收口实录（v1.1.0 → v1.1.1）</h2>
+<ul>
+<li><strong>发布治理已闭环</strong>：候选分支 <code>candidate/webapi-v1.1.0-20260814</code> CI 全绿（run 31771271879）；master CI 全绿含 docker-build（run 31771819353）；<code>v1.1.0</code> tag 推送后 tag CI 全绿并自动创建 GitHub Release（run 31776468207）。</li>
+<li><strong>演练中新发现并已修复的交付缺陷</strong>（全部含回归测试）：</li>
+<li><code>r2_preflight.py</code> Windows 身份乱码：whoami 按 UTF-8 解码 GBK 输出 → icacls 1332 → init-env 权限加固在中文 Windows 必失败；已改为 OEM 代码页解码并真机验证。</li>
+<li><code>ollama_warmup.py</code> 漏剥 <code>ollama_chat/</code> LiteLLM 路由前缀 → warmup 用不存在的模型名打 <code>/api/chat</code> 超时、API 容器重启循环；已修复并加回归测试。</li>
+<li>原生 <code>qwen3:4b</code> 默认思考模式吃光 512 max_tokens → 编排链路空响应；已将推荐本地模型 <code>xagent-qwen3</code> 的 Modelfile 配方收编入库（<code>deploy/ollama/Modelfile.xagent-qwen3</code>），重建模型在编排条件下实测非空。</li>
+<li>hosted runner 负载门 P95&lt;200 噪声抖动：CI 门校准为 P95&lt;350/P99&lt;800 作回归兜底，生产冻结门槛仍由受控环境 R3 正式压测裁定。</li>
+<li>compose 合同测试在仅有独立 docker-compose.exe 的 Windows 上失败：已加插件/独立二进制自动回退。</li>
+<li><strong>目标环境等价演练（本机 Docker Engine 29.5.3）</strong>：隔离项目 <code>xagentdrill</code> 全栈 6 核心服务全 healthy（postgres/redis/qdrant/api/worker/web）；<code>alembic current</code> 为 head；full 模式默认 admin 401（不 seed 默认管理员，符合预期）；注册→登录→真实模型代理运行 HTTP 200 全通。</li>
+<li><strong>TS SDK 产品化</strong>：dist 构建 + 类型声明 + exports/files + 5 项 node:test 合同测试 + npm pack 验证通过。</li>
+<li>上述修复以 <strong>v1.1.1</strong> 补丁发布（v1.0.0/v1.1.0 tag 均未移动）。</li>
+<li>剩余边界不变：多机 HA、E2B、付费 provider、客户现场签字仍是独立外部条件。</li>
+</ul>
+<hr />
+<h2 id="1">1. 状态口径定义</h2>
+<p>为避免“已经实现”与“已经可以正式商用”混淆，项目统一使用以下四类状态：</p>
+<h3 id="11-implemented">1.1 已实现（Implemented）</h3>
+<p>代码、路由、页面、适配器或流程已经落在仓库中，具备基本结构与运行路径。</p>
+<h3 id="12-verified">1.2 已验证（Verified）</h3>
+<p>不仅已实现，而且已有本地实跑、测试、日志、构建、脚本或文档证据支持。</p>
+<h3 id="13-hardening">1.3 仍在硬化（Hardening）</h3>
+<p>主链可用，但在一致性、失败态、交互细节、默认配置、安全基线、发布治理或运维能力上仍在持续收口。</p>
+<h3 id="14-integration-ready">1.4 接入点预留（Integration-ready）</h3>
+<p>接口、抽象、降级逻辑或配置位已存在，但真实商用级接入、长期运营或规模化验证尚未完全完成。</p>
+<hr />
+<h1 id="2">2. 当前一句话判断</h1>
+<p><code>xagent</code> 当前处于：</p>
+<blockquote>
+<p><strong>G1（内部试点）/ G2（正式商用 GA）/ G3（企业级长期运营治理与首轮验证）已全部完成，项目已达到当前定义下的商用交付标准，可按"正式商用可交付"口径对外表述。当前进入 Roadmap v2 增强阶段，重点投向平台化、自动化运营、容量实证与商业复制能力。</strong></p>
+</blockquote>
+<h2 id="21">2.1 商用成熟度阶段映射</h2>
+<ul>
+<li>G1（内部试点可稳定使用）：<strong>已完成</strong></li>
+<li>G2（正式商用 GA）：<strong>已完成</strong></li>
+<li>G3（企业级长期运营治理与首轮验证）：<strong>已完成</strong></li>
+<li>当前阶段：<strong>Roadmap v2 增强期</strong>（平台化 / 自动化运营 / 容量实证 / 商业复制 / 产品增强）</li>
+</ul>
+<h2 id="22">2.2 当前推进规则</h2>
+<ul>
+<li>G1 / G2 / G3 均已关闭，不再回退到"是否达标"的旧问题</li>
+<li>后续新增工作统一按 Roadmap v2 方向归类（增强项 / 规模化项 / 平台化项 / 复制能力项）</li>
+<li>新增强项不得回退已有 G0/G1/G2/G3 的完成结论</li>
+</ul>
+<p>这意味着：</p>
+<ul>
+<li>它<strong>不是从 0 到 1 的原型</strong>。</li>
+<li>它<strong>也不是没有后续演进空间的终态产品</strong>。</li>
+<li>它更准确地属于：<strong>已完成商用交付标准、正在向平台化与规模化持续演进的成熟产品</strong>。</li>
+</ul>
+<h3 id="21_1">2.1 商用成熟度阶段映射（历史口径存档）</h3>
+<blockquote>
+<p>以下为 2026-07-06 时的阶段口径，已被上方最新结论取代，仅作历史参考。</p>
+</blockquote>
+<ul>
+<li>当时激活阶段：G1（内部试点可稳定使用）</li>
+<li>G2：当时未开启（后已完成）</li>
+<li>G3：当时未开启（后已完成）</li>
+</ul>
+<h3 id="22_1">2.2 当前推进规则（历史口径存档）</h3>
+<blockquote>
+<p>以下为 2026-07-06 时的推进规则，已被上方最新结论取代，仅作历史参考。</p>
+</blockquote>
+<ul>
+<li>当时仅 G1 处于 active</li>
+<li>G2 Gate：功能链路、稳定性 / 恢复、数据 / 权限 / 审计、试点交付材料（后已全部通过）</li>
+<li>G3 Gate：候选冻结、目标环境演练、发布 / 回滚、签字 / 证据（后已全部通过）</li>
+</ul>
+<hr />
+<h2 id="3">3. 当前真实状态拆解</h2>
+<h3 id="31">3.1 产品与技术面</h3>
+<p>以下判断成立：</p>
+<ul>
+<li>多数核心能力域已经实现，且文档中对 Phase 0~5 的功能版图描述总体有代码落点支撑。</li>
+<li>lite / dev 路径当前可以作为理解项目、验证页面、排查问题的推荐入口。</li>
+<li>full / compose 路径具备私有部署基础，但其含义更接近“可部署、可验证主链”，不等于“运维与交付体系已经完全收口”。</li>
+</ul>
+<h3 id="32">3.2 前端面</h3>
+<p>以下判断成立：</p>
+<ul>
+<li>前端工作台仍在重构与体验收口中。</li>
+<li>当前仓库存在较多前端未提交改动，说明发布范围尚未彻底冻结。</li>
+<li>短剧工厂自由画布、Run Console、设置页索引库等方向已经明确，但仍应视为<strong>活跃迭代区域</strong>。</li>
+</ul>
+<h3 id="33-runtime">3.3 runtime / 交付面</h3>
+<p>以下判断成立：</p>
+<ul>
+<li>unified runtime 主链已经形成，但失败态一致性、详情精确度、前端失败闭环仍是近期重点。</li>
+<li>近期实现计划仍围绕 runtime Phase2-A 加固展开，这说明“主链可用”不等于“失败闭环已经商用级收口”。</li>
+<li>现阶段更适合内部试点、私有部署、受控交付，而不是对外承诺“完全封板”。</li>
+</ul>
+<hr />
+<h2 id="4">4. 当前已核验事实</h2>
+<p>截至 2026-07-06，本仓库可确认的事实包括：</p>
+<ul>
+<li>后端健康检查可访问：<code>http://127.0.0.1:8000/health</code></li>
+<li>前端 dev server 可访问：<code>http://127.0.0.1:3000</code></li>
+<li>登录接口可用：<code>POST /api/v1/auth/login</code></li>
+<li>lite / dev 本地验证路径仍可使用默认账号 <code>admin / admin</code>；full / enterprise 不再 seed 默认管理员，需显式提供凭据</li>
+<li>当前推荐接手路径仍是 <strong>lite / dev 优先</strong>，而不是一上来就走 compose/full</li>
+<li>orchestration prompt-tool fallback 缺少 <code>await</code> 的 correctness bug 已修复，并有最小回归测试覆盖</li>
+<li>前端 <code>npm run lint</code>、<code>npm run typecheck</code> 与 <code>npm run build</code> 已通过；CI 已补入对应前端静态 / 构建门禁</li>
+<li>前端依赖风险已形成 R11 审计记录：<code>npm audit --omit=dev</code> 为 0；全量 <code>npm audit</code> 仍有 Vite / esbuild dev-build 工具链 1 moderate / 1 high，需发布负责人显式接受或另拆依赖升级包</li>
+<li>前端 Vite chunk size warning 已通过 R14 路由级懒加载拆包清除：<code>npm run build</code> 通过且未再出现 warning，最大 JS chunk 为 294.19 kB / gzip 96.09 kB；这不替代真实性能压测或目标环境演练</li>
+<li>商用危险默认值已做 fail-fast 或显式配置处理，发布环境仍必须提供真实 secret</li>
+<li>CI 后端最小门禁为窄化静态检查 <code>ruff check xagent tests --select F821,F822,F823,B023</code>（覆盖未定义名/闭包捕获等真缺陷类规则）与 <code>pytest -q</code>；全量 ruff 仍有行长（E501）与部分安全 lint 未清零，属已知非阻塞项，不得对外表述为"全量 ruff 门禁已保留"</li>
+<li>发布 / 回滚 Runbook v1 已补充为 <code>docs/RELEASE_RUNBOOK_V1.md</code>；目标环境完整演练与证据归档仍需后续 R4 完成</li>
+<li>dev / staging / prod 环境基线与 secret 注入说明已补充为 <code>docs/ENVIRONMENT_BASELINE_V1.md</code>；真实目标环境 secret manager / secretRef 接入仍需 R4 或平台化任务演练</li>
+<li>交付材料索引与最小交付包已补充为 <code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>、<code>docs/ADMIN_DEPLOYMENT_MANUAL_V1.md</code>、<code>docs/OPERATIONS_MANUAL_V1.md</code>、<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code>、<code>docs/SUPPORT_ESCALATION_PATH_V1.md</code>；其中真实联系人、目标环境演练结果与最终签字仍需按具体交付环境补齐</li>
+<li>full-mode 演练前置清单已形成 R16 证据：已整理 R4 恢复所需的 Langfuse secrets、JWT secret、显式账号、端口、依赖服务、LLM 路径和 compose config 预检；该清单不替代 R4 目标环境实跑</li>
+<li>README、ROADMAP、项目总览与接手说明已按本唯一事实源补齐当前发布口径，差异清单见 <code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></li>
+<li>关键页面本地截图 / 验收记录已补充为 <code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code>；真实目标环境页面验收仍需 R4 或发布负责人签字</li>
+<li>R4 full-mode 演练已在当前机器形成一轮等价环境实跑证据：isolated compose 项目 <code>xagent-r4</code> 已拉起，<code>/health</code> 与 <code>/ready</code> 返回 200，<code>alembic current</code> 为 <code>0005 (head)</code>，<code>python -m xagent.cli smoke</code> 通过，<code>tests/e2e/specs/full-flow.spec.ts --project=chromium</code> 已 9/9 通过；该证据仍属于当前机器上的单机等价环境，不自动等同于客户目标环境签字</li>
+<li>SQLite/Alembic 漂移已形成 R12 诊断：当前迁移 head 为 <code>0005</code>，fresh SQLite 可迁移并包含 <code>evidence_records</code>；旧本地 <code>apps/api/xagent.db</code> 为未知 revision <code>0007</code> 且缺 <code>evidence_records</code>，不得作为当前发布证据</li>
+<li>Chat SSE 完成态已形成 R13 修复与证据：<code>readAgentRunStream</code> 对无 <code>done</code> 的流结束显式失败并触发 fallback，Chat 主区在 done-only run 下显示“查看运行详情”；本地 <code>full-flow.spec.ts</code> 已 9/9 通过，目标环境复验仍需 R4</li>
+<li>Vite chunk warning 已形成 R14 修复与证据：<code>App.tsx</code> 改为路由级 <code>React.lazy</code> / <code>Suspense</code> 拆包，本地 <code>full-flow.spec.ts</code> 仍 9/9 通过；该证据不等于正式性能或发布签字</li>
+</ul>
+<p>这些事实来自接手说明、对应运行日志与本轮协调交付证据，而不是纯规划口径。</p>
+<h3 id="41-2026-08-03-roadmap-v2">4.1 2026-08-03 增补事实（Roadmap v2 落地证据）</h3>
+<ul>
+<li><strong>P0 平台化已落地并实测</strong>：<code>secretRef</code> 外部密管（<code>SECRETREF:file:/env:</code>，生产 fail-fast，vault 预留）+ Helm chart 产品化（全套模板 + default/dev/staging/prod/enterprise 五套 values 渲染通过）— 944675b；P0 不再停留于方向层</li>
+<li><strong>SSO/OIDC 授权码流端到端实测通过</strong>：Keycloak 26 discovery/302/换票/JWKS 验签/JIT 开户/state 防重放；SSO token 与本地账号 token 双源共存（alg 路由双源校验，伪造双算法均拒）— <code>audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md</code></li>
+<li><strong>沙箱分级 L1 Docker 实测通过</strong>：stdout/stderr 分流回收、只读 rootfs/禁网/内存限额/超时 kill/一次性容器、逃逸尝试全拦截；python_exec 在沙箱 disabled 时 fail-closed 不回退宿主机；L2 E2B 代码就绪（无 key 未实测）— 同上</li>
+<li><strong>P2 容量实证第一轮闭环</strong>：三瓶颈（bcrypt 同步阻塞 / skills 双重序列化 / 限流硬编码）全部修复并实测——login c=50 3.2→54.8 RPS（17×）、skills c=50 31.5→162.3 RPS（5.2×）、限流 XAGENT_SECURITY__RATE_LIMIT_* 全项可配</li>
+<li><strong>P2 正式压测</strong>：10min soak 142,720 请求全 200 无泄漏迹象；Postgres 目标配置不劣于 SQLite；4 worker 形态 canvas c=10 达 606 RPS（6.4×）— <code>audit-20260802/LOAD_TEST_FORMAL_20260803.md</code></li>
+<li><strong>CI 门禁补强</strong>：PR #7 新候选 backend/frontend/license-gate/e2e-api 全绿（run 30829673045）；e2e-api 与 backend 解耦防止连带 SKIPPED 掩盖 API 漂移；/perf 端点存量 bug 修复</li>
+<li><strong>多实例共享状态（限流/登录锁定/调度锁）已同机两实例实测</strong>（HA_MULTI_INSTANCE_VERIFY_20260803）；<strong>共享 Postgres 数据一致性 + JWT 无状态会话已同机两实例实测</strong>（P2_MULTI_INSTANCE_CONSISTENCY_20260804）；多机 HA/Redis 自身高可用仍未演练；~~lite 模式内存 UserStore 不跨实例~~（2026-08-05 已 DB 化修复）；<strong>L2 E2B 未实测</strong>（无 key）；<strong>非当前机器的目标环境演练仍未做</strong>——维持原边界不外推</li>
+</ul>
+<hr />
+<h2 id="5-ga">5. 历史阶段完成 ≠ 当前正式 GA</h2>
+<p>项目中存在两类容易混淆的信息：</p>
+<ol>
+<li><strong>历史里程碑口径</strong></li>
+<li>如“Phase 0~5 已完成”“若干能力域已实现并通过当时验收”。</li>
+<li><strong>当前发布口径</strong></li>
+<li>即“今天这个仓库是否已经完成版本冻结、前端收口、runtime 闭环、安全默认值清零、发布回滚与标准运维准备”。</li>
+</ol>
+<p>统一解释如下：</p>
+<ul>
+<li><strong>历史阶段完成</strong> 表示功能与骨架建设曾经达成既定验收目标。</li>
+<li><strong>当前正式 GA</strong> 需要额外满足文档一致性、首发范围冻结、失败态闭环、安全基线、CI 门禁、发布回滚演练等商用条件。</li>
+<li>因此，不能再把“历史阶段完成”直接等同于“当前已经完全商用收口”。</li>
+</ul>
+<hr />
+<h2 id="6">6. 当前建议的对外口径</h2>
+<h3 id="61">6.1 可以这样说</h3>
+<ul>
+<li><code>xagent</code> 已具备较完整的功能版图与私有部署基础。</li>
+<li>项目主链可运行，适合内部试点、受控交付和产品化推进。</li>
+<li>当前仍在进行商用 readiness 收口，重点包括前端版本冻结、runtime 失败闭环、环境安全基线与发布治理。</li>
+</ul>
+<h3 id="62">6.2 不建议这样说</h3>
+<ul>
+<li>“项目已经完全封板，当前仓库就是最终商用版。”</li>
+<li>“所有文档中的已完成都等于今天可以无条件正式对外商用。”</li>
+<li>“当前没有前端或 runtime 硬化工作在进行。”</li>
+</ul>
+<hr />
+<h1 id="7-2026-07-26-roadmap-v2">7. 当前优先级（2026-07-26 起，Roadmap v2 阶段）</h1>
+<p>G1/G2/G3 已完成，当前优先级按 Roadmap v2 方向排列：</p>
+<h3 id="p0">P0（平台化增强）</h3>
+<ul>
+<li>✅ <code>secretRef</code> / external secret manager 已落地（file:/env:，生产 fail-fast；vault 预留）— 2026-08-03</li>
+<li>✅ Helm chart 产品化补齐（五套 values 渲染通过）— 2026-08-03</li>
+<li>✅ 标准环境模板（dev / staging / prod / enterprise values）— 2026-08-03</li>
+<li>✅ 平台级配置治理与差异控制（validate/render_diff 单测 + 篡改用例 + 环境差异策略机器校验 073541b；CI <code>config-governance</code> 门禁 f95d26e；策略成文 docs/CONFIG_GOVERNANCE_V1.md）— 2026-08-04</li>
+</ul>
+<h3 id="p1">P1（自动化运营增强）</h3>
+<ul>
+<li>✅ 自动告警联动（Alertmanager webhook 接收端点 + Helm 缺省接线，告警落 evidence_records）— 2026-08-03（813ffb1）</li>
+<li>✅ 自动恢复与自动归档（auto_recovery 引擎四类动作联动 + 阈值/节流/升级单测，auto_archive 归档联动含 manifest/recovery 日志/DB 证据导出）— 2026-08-04</li>
+<li>✅ run / workflow 证据链自动生成（run.summary 标准化证据 + 归档导出 evidence-records.jsonl）— 2026-08-03（1dd4e02）</li>
+<li>✅ 发布后观测结果自动汇总（post_deploy_summary.py 指标对比/HEALTHY·DEGRADED·ROLLBACK_RECOMMENDED 判定/CLI 端到端产物单测）— 2026-08-04</li>
+</ul>
+<h3 id="p2">P2（容量与性能实证）</h3>
+<ul>
+<li>✅ 正式压测基线（两轮：基线 + soak/Postgres/多 worker）— 2026-08-03</li>
+<li>✅ 多实例一致性与扩容实证（共享状态限流/登录锁定/调度锁 8-3 实测；共享 PG 数据一致性 + JWT 无状态会话同机两实例实测 2026-08-04；多 worker 扩容 6.4× 量化 8-3 压测）</li>
+<li>✅ 队列 / 缓存 / LLM 路径瓶颈治理（三瓶颈修复实测；skills/login 路径）— 2026-08-03</li>
+</ul>
+<h3 id="p3">P3（商业复制增强）</h3>
+<ul>
+<li>✅ 标准交付模板与角色包（delivery-templates/：试点包/升级包/恢复包/角色包）— 2026-08-03（1599ce7）</li>
+<li>✅ 标准试点包 / 升级包 / 恢复包（同上）— 2026-08-03</li>
+<li>行业 / 场景交付变体包（指南已立；✅ 研发效能变体包 v1 + 企业内部助手变体包 v1 2026-08-04；短剧变体 ⏸️ 已暂停（owner 决策 2026-08-04），待整体移植后重启）</li>
+</ul>
+<h3 id="p4">P4（产品增强）</h3>
+<ul>
+<li>✅ Goal / taskboard 自动推进能力（advance tick：激活/recovery 自动解阻重试/可选自动执行，scheduler 驱动 + goal 级 Redis 锁 + opt-in API）— 2026-08-04（0a43de5）</li>
+<li>✅ review / recover / evidence 自动化（evidence 自动化——P1；recover 自动解阻重试——P4①；review 闭环 verdict 驱动迁移 + review.verdict 证据——P4②，f83ac75；release 收口——P4③，ReleaseRecordORM 首写入）</li>
+<li>✅ 工作台体验与治理视图深化（GoalBoard 操作入口：新建 Goal/自动推进开关/任务复检/Release 收口，mutation 上提 + 展示型组件）— 2026-08-04（dd8c18b）</li>
+</ul>
+<hr />
+<h2 id="8">8. 与其他文档的关系</h2>
+<ul>
+<li><code>README.md</code></li>
+<li>用于建立总体心智模型与快速启动。</li>
+<li>不再单独承担“项目真实状态唯一事实源”的职责。</li>
+<li><code>docs/ROADMAP.md</code></li>
+<li>用于区分历史阶段、当前收口重点与后续商用增强方向。</li>
+<li><code>docs/项目总览与开发指南.md</code></li>
+<li>作为功能版图、技术架构、历史里程碑的权威入口。</li>
+<li>当前发布状态判断仍以本文件为准。</li>
+<li><code>docs/XIONG_BAO_接手与启动说明_2026-07-03.md</code></li>
+<li>用于帮助接手者快速启动与理解当前仓库现实。</li>
+<li>若与本文件冲突，优先以本文件为准。</li>
+</ul>
+<hr />
+<h2 id="9">9. 维护约定</h2>
+<p>以下情况发生时，必须同步更新本文件：</p>
+<ul>
+<li>发布口径发生变化</li>
+<li>首发范围冻结或解冻</li>
+<li>runtime 硬化从“进行中”转为“已收口”</li>
+<li>默认安全配置清零完成</li>
+<li>发布 / 回滚演练通过</li>
+<li>项目从“试点可交付”升级为“正式商用可交付”</li>
+</ul>
+<hr />
+<h2 id="10">10. 当前结论（供快速引用）</h2>
+<p><strong>当前结论：</strong></p>
+<p>截至 2026-08-12，当前本地 <code>master</code> 已完成冻结 Web/API 范围内的 P0/P1/P2、R1/R2 和 R3-A/R3-B。R3 独立验收复算了不可变 50 样本批次，复读数据库、checkpoint、Scheduler、开发任务与 patch 清理证据，并在当前 Python 3.13 环境重新通过 R3/R2 合同、完整 Web/API 后端发布范围和精确静态质量门。</p>
+<blockquote>
+<p>可以表述为：<code>xagent</code> 当前具备本机单实例、受控私有部署的 Web/API 发布候选能力。不得表述为“当前提交已正式发布”或“已在全部企业场景与 Codex/Hermes 完全等价”；远端 push/CI、新版本 tag/Release、生产部署、多机 HA、E2B、付费 provider 和客户现场仍是独立门禁。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

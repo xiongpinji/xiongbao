@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/ENVIRONMENT_BASELINE_V1/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent Environment Baseline v1 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Environment Baseline v1";
+        var mkdocs_page_input_path = "ENVIRONMENT_BASELINE_V1.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/ENVIRONMENT_BASELINE_V1/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Environment Baseline v1</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/ENVIRONMENT_BASELINE_V1.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-environment-baseline-v1">X-Agent Environment Baseline v1</h1>
+<blockquote>
+<p>用途：说明 dev / staging / prod 的配置基线、secret 来源与危险默认值禁用策略。</p>
+<p>本文档是发布准备证据，不代表目标环境已完成演练。目标环境部署与演练证据仍由 R4 补齐。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 环境分层</h2>
+<table>
+<thead>
+<tr>
+<th>环境</th>
+<th>推荐模式</th>
+<th>主要用途</th>
+<th>是否可用默认账号</th>
+<th>是否可用弱 secret</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dev / local</td>
+<td><code>lite</code></td>
+<td>本地开发、页面调试、离线 smoke</td>
+<td>仅 lite 可用 <code>admin/admin</code></td>
+<td>仅 lite 内置 dev JWT</td>
+</tr>
+<tr>
+<td>staging</td>
+<td><code>full</code></td>
+<td>PR 合并前演练、客户试点前验收</td>
+<td>不可用默认账号</td>
+<td>不可用</td>
+</tr>
+<tr>
+<td>prod</td>
+<td><code>full</code> 或后续 <code>enterprise</code></td>
+<td>正式受控私有部署</td>
+<td>不可用默认账号</td>
+<td>不可用</td>
+</tr>
+</tbody>
+</table>
+<p>规则：</p>
+<ul>
+<li><code>lite</code> 只用于本地开发 / demo / 快速排障，不作为正式发布环境。</li>
+<li><code>full</code> 启用 Postgres、Redis、Qdrant、Langfuse / LiteLLM 等外部依赖，并要求显式 secret。</li>
+<li><code>enterprise</code> 当前是 K8s / HA 方向的接入点，仍需后续平台化验证。</li>
+</ul>
+<hr />
+<h2 id="2">2. 配置基线</h2>
+<table>
+<thead>
+<tr>
+<th>配置域</th>
+<th>dev / lite</th>
+<th>staging / full</th>
+<th>prod / full</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>XAGENT_MODE</code></td>
+<td><code>lite</code></td>
+<td><code>full</code></td>
+<td><code>full</code> 或经审批的 <code>enterprise</code></td>
+</tr>
+<tr>
+<td>DB</td>
+<td>默认 SQLite</td>
+<td>Postgres，独立数据库</td>
+<td>托管或受控 Postgres，备份策略已启用</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>进程内缓存可接受</td>
+<td>Redis 必须可用</td>
+<td>Redis 受控部署，不公网裸露</td>
+</tr>
+<tr>
+<td>Vector store</td>
+<td>Qdrant memory / local</td>
+<td>Qdrant 服务</td>
+<td>Qdrant 受控部署，需快照策略</td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>Ollama / mock / provider key</td>
+<td>至少一条真实 LLM 路径</td>
+<td>明确 provider、额度、限流和故障联系人</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>lite 可匿名 / 内置 admin</td>
+<td>必须显式用户源</td>
+<td>Keycloak / DB / 企业 IdP，默认账号禁用</td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>可指向本机端口</td>
+<td>只允许 staging 域名</td>
+<td>只允许生产域名，不允许 <code>*</code></td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>可关闭</td>
+<td>Langfuse / metrics 建议开启</td>
+<td>Langfuse / metrics / 日志采集必须有责任人</td>
+</tr>
+<tr>
+<td>Media providers</td>
+<td>可用 null provider</td>
+<td>如纳入试点需配置真实 provider</td>
+<td>如纳入交付需配置真实 provider 和额度</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-secret">3. Secret 清单</h2>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>用途</th>
+<th>dev / lite</th>
+<th>staging / prod 来源</th>
+<th>注入方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>XAGENT_SECURITY__JWT_SECRET</code></td>
+<td>HS256 JWT 签名</td>
+<td>lite 内置 dev secret</td>
+<td>Secret manager / <code>.env</code> / CI secret / K8s secret</td>
+<td>compose env；Helm <code>security.jwtSecret</code></td>
+</tr>
+<tr>
+<td><code>XAGENT_SECURITY__OIDC_JWKS_URL</code></td>
+<td>OIDC JWKS 验签</td>
+<td>可留空</td>
+<td>IdP / Keycloak 配置</td>
+<td>env / Helm values</td>
+</tr>
+<tr>
+<td><code>XAGENT_SECURITY__OIDC_ISSUER</code></td>
+<td>OIDC issuer 校验</td>
+<td>可留空</td>
+<td>IdP / Keycloak 配置</td>
+<td>env / Helm values</td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__PROXY_API_KEY</code></td>
+<td>LiteLLM proxy 访问</td>
+<td>可留空</td>
+<td>Secret manager / <code>.env</code> / CI secret / K8s secret</td>
+<td>env；Helm <code>llm.proxyApiKey</code> 或 <code>llm.existingProxyApiKeySecretRef</code></td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__OPENAI_API_KEY</code></td>
+<td>OpenAI 直连</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env / LiteLLM config</td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__DEEPSEEK_API_KEY</code></td>
+<td>DeepSeek 直连</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env / LiteLLM config</td>
+</tr>
+<tr>
+<td><code>XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY</code></td>
+<td>Langfuse public key</td>
+<td>可留空</td>
+<td>Secret manager / K8s secret / <code>.env</code> / CI secret</td>
+<td>env；Helm <code>observability.langfusePublicKey</code> 或 <code>observability.existingLangfuseSecretRef</code></td>
+</tr>
+<tr>
+<td><code>XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY</code></td>
+<td>Langfuse secret key</td>
+<td>可留空</td>
+<td>Secret manager / K8s secret / <code>.env</code> / CI secret</td>
+<td>env；Helm <code>observability.langfuseSecretKey</code> 或 <code>observability.existingLangfuseSecretRef</code></td>
+</tr>
+<tr>
+<td><code>LANGFUSE_NEXTAUTH_SECRET</code></td>
+<td>Langfuse auth secret</td>
+<td>不需要</td>
+<td>Secret manager / <code>.env</code> / CI secret</td>
+<td>compose env</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_SALT</code></td>
+<td>Langfuse salt</td>
+<td>不需要</td>
+<td>Secret manager / <code>.env</code> / CI secret</td>
+<td>compose env</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_INIT_USER_PASSWORD</code></td>
+<td>Langfuse 初始化用户密码</td>
+<td>不需要</td>
+<td>Secret manager / one-time bootstrap</td>
+<td>compose env</td>
+</tr>
+<tr>
+<td><code>POSTGRES_PASSWORD</code></td>
+<td>Postgres 服务密码</td>
+<td>compose 示例可本地使用</td>
+<td>Secret manager / DB 平台</td>
+<td>compose env / 托管 DB</td>
+</tr>
+<tr>
+<td><code>XAGENT_MEDIA__OPENAI_IMAGE_API_KEY</code></td>
+<td>图像 provider</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env</td>
+</tr>
+<tr>
+<td><code>XAGENT_MEDIA__KLING_API_KEY</code></td>
+<td>可灵 provider</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env</td>
+</tr>
+<tr>
+<td><code>XAGENT_MEDIA__JIMENG_API_KEY</code></td>
+<td>即梦 provider</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env</td>
+</tr>
+<tr>
+<td><code>XAGENT_MEDIA__GENERIC_VIDEO_API_KEY</code></td>
+<td>通用视频 provider</td>
+<td>可留空</td>
+<td>Secret manager / provider vault</td>
+<td>env</td>
+</tr>
+</tbody>
+</table>
+<p>约束：</p>
+<ul>
+<li>staging / prod secret 不得写入 Git。</li>
+<li><code>.env.example</code> 只作为变量清单，不作为 staging / prod 可直接复用文件。</li>
+<li>通过命令行传入 Helm value 会进入 shell history 的环境，正式部署应由 CI secret store 或平台 secret 管理注入。</li>
+</ul>
+<hr />
+<h2 id="4">4. 注入方式</h2>
+<h3 id="41-docker-compose">4.1 Docker Compose</h3>
+<ol>
+<li>从模板复制：</li>
+</ol>
+<pre><code class="language-powershell">cd deploy\compose
+Copy-Item .env.example .env
+</code></pre>
+<ol>
+<li>在 <code>.env</code> 中填入真实值：</li>
+</ol>
+<pre><code class="language-text">XAGENT_SECURITY__JWT_SECRET=&lt;32+ chars random&gt;
+LANGFUSE_NEXTAUTH_SECRET=&lt;random&gt;
+LANGFUSE_SALT=&lt;random&gt;
+LANGFUSE_INIT_USER_PASSWORD=&lt;strong password&gt;
+POSTGRES_PASSWORD=&lt;strong password&gt;
+XAGENT_CORS_ORIGINS=[&quot;https://staging.example.com&quot;]
+</code></pre>
+<ol>
+<li>校验：</li>
+</ol>
+<pre><code class="language-powershell">docker compose --env-file .env config --quiet
+</code></pre>
+<p>缺少 <code>XAGENT_SECURITY__JWT_SECRET</code>、<code>LANGFUSE_NEXTAUTH_SECRET</code>、<code>LANGFUSE_SALT</code> 或 <code>LANGFUSE_INIT_USER_PASSWORD</code> 时，compose 必须失败。</p>
+<h3 id="42-helm">4.2 Helm</h3>
+<p>当前 Helm v1 对 <code>security.jwtSecret</code> 使用 <code>required</code> fail-fast；同时已新增 <code>security.existingJwtSecretRef.name / key</code> 作为 Kubernetes Secret 引用入口。最小渲染：</p>
+<pre><code class="language-powershell">helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=&lt;32+ chars random&gt;
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret='' --set security.existingJwtSecretRef.name=&lt;secret-name&gt; --set security.existingJwtSecretRef.key=jwt-secret
+</code></pre>
+<p>生产建议：</p>
+<ul>
+<li>由 CI secret store 或平台 secret manager 注入 <code>security.jwtSecret</code>，或提供 <code>security.existingJwtSecretRef.*</code> 指向现有 Kubernetes Secret。</li>
+<li>DB / Redis / Qdrant URL 使用托管服务或平台内 Secret / ConfigMap 管理。</li>
+<li><code>external secret manager</code> 的完整自动接入仍属于后续平台化增强，不应误表述为当前已闭环。</li>
+</ul>
+<hr />
+<h2 id="5">5. 危险默认值禁用策略</h2>
+<h3 id="51">5.1 应用层</h3>
+<p><code>Settings.validate_for_production()</code> 在 <code>full</code> / <code>enterprise</code> 模式下拒绝：</p>
+<ul>
+<li><code>XAGENT_CORS_ORIGINS</code> 包含 <code>*</code>。</li>
+<li><code>XAGENT_SECURITY__JWT_SECRET</code> 为空、旧占位值或长度少于 32 字符。</li>
+<li><code>XAGENT_SECURITY__REQUIRE_AUTH=false</code>。</li>
+</ul>
+<p><code>get_user_store()</code> 仅在 <code>lite</code> 模式 seed <code>admin/admin</code>。<code>full</code> / <code>enterprise</code> 不再内置默认管理员。</p>
+<h3 id="52-compose">5.2 Compose</h3>
+<p>compose 对以下值使用 shell required 语义，缺失或空值时拒绝渲染 / 启动：</p>
+<ul>
+<li><code>XAGENT_SECURITY__JWT_SECRET</code></li>
+<li><code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li><code>LANGFUSE_SALT</code></li>
+<li><code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+</ul>
+<p><code>POSTGRES_PASSWORD=xagent</code> 仍保留为本地 compose 示例值；staging / prod 必须覆盖为强密码或使用托管数据库凭据。</p>
+<h3 id="53-helm">5.3 Helm</h3>
+<p>Helm chart 对 <code>security.jwtSecret</code> fail-fast。缺失时 <code>helm template</code> 失败；提供强 secret 后 API / worker 模板均注入 <code>XAGENT_SECURITY__JWT_SECRET</code>。</p>
+<hr />
+<h2 id="6">6. 发布前环境验收</h2>
+<p>发布或演练前至少记录：</p>
+<pre><code class="language-powershell"># app config
+python -c &quot;from xagent.infra.settings import get_settings; print(get_settings().validate_for_production())&quot;
+
+# compose
+docker compose --env-file .env config --quiet
+
+# helm
+helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=&lt;32+ chars random&gt;
+</code></pre>
+<p>运行中环境至少记录：</p>
+<pre><code class="language-powershell">curl.exe -f http://&lt;api-host&gt;/health
+curl.exe -f http://&lt;api-host&gt;/ready
+curl.exe -f http://&lt;web-host&gt;/
+</code></pre>
+<p>登录验收必须使用当前环境显式初始化的账号。full / prod 不接受 <code>admin/admin</code> 作为证据。</p>
+<hr />
+<h2 id="7">7. 剩余缺口</h2>
+<ul>
+<li>目标环境的真实 secret manager / K8s secretRef 接入仍需在 R4 或平台化任务中演练。</li>
+<li>远端 CI 全绿由 R1 继续闭环。</li>
+<li>关键页面截图 / 验收记录由 R9 补齐。</li>
+<li>本文档不证明 staging / prod 已部署，只证明环境基线和 secret 策略已经文档化。</li>
+</ul>
+<hr />
+<h2 id="8-secretref-roadmap-v2-p0">8. secretRef 引用语法（Roadmap v2 P0）</h2>
+<p>任何标记为 secret 的配置字段（见 <code>apps/api/xagent/infra/secrets.py::SECRET_FIELD_PATHS</code>，
+含 <code>security.jwt_secret</code>、<code>security.oidc_client_secret</code>、<code>db.url</code>、<code>cache.redis_url</code>、
+<code>llm.*_api_key</code>、<code>memory.qdrant_api_key</code>、<code>media.*_api_key</code>、
+<code>observability.langfuse_secret_key</code>、<code>sandbox.e2b_api_key</code>）支持在环境变量 / .env 值中
+使用引用语法，避免明文落盘：</p>
+<pre><code class="language-text">SECRETREF:file:/run/secrets/jwt_secret   # 从文件读取（自动 strip 首尾空白）
+SECRETREF:env:SHARED_JWT_SECRET          # 从另一环境变量读取
+SECRETREF:vault:&lt;path&gt;#&lt;key&gt;             # 预留扩展位（当前 fail-fast 提示未实现）
+</code></pre>
+<p>优先级与行为：</p>
+<ul>
+<li>不带 <code>SECRETREF:</code> 前缀的值<strong>原样透传</strong>，现有行为完全不变。</li>
+<li>解析发生在 <code>Settings</code> 加载后的 model validator 中，晚于 .env / 环境变量合并，
+  因此引用可以出现在 .env、系统环境变量或 k8s 注入的 env 中。</li>
+<li>full / enterprise 模式：解析失败（文件不存在、env 未设置、未知 scheme）
+  <strong>fail-fast</strong> 抛 <code>SecretRefError</code>，错误消息只含字段名与引用目标，不含 secret 值。</li>
+<li>lite 模式：解析失败降级为 warning 日志并置空，保证本地开发不中断。</li>
+</ul>
+<p>k8s 衔接（推荐路径）：</p>
+<ol>
+<li><strong>首选 <code>secretKeyRef</code> 注入</strong>：K8s Secret（或 ESO <code>ExternalSecret</code> 同步出的 Secret）
+   直接以 env 注入容器，应用侧无感知，无需 secretRef 语法。
+   Helm values 用 <code>security.existingJwtSecretRef.name/key</code> 等指向已有 Secret。</li>
+<li><strong>file 引用</strong>：Secret 以 volume 挂载（如 <code>/run/secrets/jwt_secret</code>）时，
+   设 <code>XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/jwt_secret</code>。</li>
+<li><strong>env 间接引用</strong>：多个组件共享同一密管变量时，
+   设 <code>XAGENT_SECURITY__JWT_SECRET=SECRETREF:env:SHARED_JWT_SECRET</code>。</li>
+</ol>
+<p>禁止事项：任何环境都不要把真实 secret 明文写入 <code>deploy/helm/values*.yaml</code> 或 git 仓库；
+<code>SECRETREF:</code> 值本身不是密文，可安全入库。</p>
+<hr />
+<h2 id="llm-2026-08-14-p1">附录：LLM 配置优先级（2026-08-14 P1 修复后明确）</h2>
+<p>生效优先级（高 → 低）：</p>
+<ol>
+<li><strong>运行时磁盘覆盖</strong>（设置页保存，持久化于 <code>apps/data/llm_config_overrides.json</code>，模块加载时强制应用）</li>
+<li>进程环境变量 <code>XAGENT_LLM__*</code></li>
+<li>仓库根 <code>.env</code></li>
+<li>代码默认值</li>
+</ol>
+<p>⚠️ 一旦设置页保存过 LLM 配置，<strong>env/.env 的同名修改不会生效</strong>。设置页在覆盖生效时会显示琥珀色警示条；<code>GET /api/v1/system/llm-config</code> 的 <code>override_active</code>/<code>override_fields</code> 字段可编程查验。无可用凭证的模型会被 <code>PUT /llm-config</code> 以 422 拦截，避免"连接已中断"类运行期失败。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

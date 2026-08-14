@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P1 开发任务闭环证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P1 \u5f00\u53d1\u4efb\u52a1\u95ed\u73af\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P1 开发任务闭环证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p1">Web/API P1 开发任务闭环证据</h1>
+<h2 id="_1">结论</h2>
+<ul>
+<li>审计日期：2026-08-07。</li>
+<li>分支：<code>feature/webapi-release-hardening</code>。</li>
+<li>审计范围：P1 可持久开发任务、Git worktree 生命周期、审查/应用 API 和 Web 控制台。</li>
+<li>排除范围：短剧、Tauri 桌面、远程 PR 托管、跨进程任务恢复。</li>
+<li>结论：P1 通过，Codex 类“隔离修改 → 审查 → 显式应用”的本地 Web/API 闭环已成立；总目标仍未完成，下一阶段为 Hermes 类持久调度、Skill Package 和会话恢复。</li>
+</ul>
+<h2 id="git">状态链与 Git 证据</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>持久仓储</td>
+<td>task/run/tenant/owner、Git 基线与分支、patch、测试、冲突和审查时间均落库；重开 session 后可查</td>
+</tr>
+<tr>
+<td>成功任务</td>
+<td>从固定 base commit 创建 worktree，产生 result commit 和完整 <code>--binary</code> patch，状态为 <code>awaiting_review</code></td>
+</tr>
+<tr>
+<td>Approve</td>
+<td>仅写 <code>approved</code> 及审查人/时间，不修改目标分支</td>
+</tr>
+<tr>
+<td>Apply</td>
+<td>要求已批准、目标分支匹配且主工作区干净；cherry-pick 成功后清理 worktree/分支</td>
+</tr>
+<tr>
+<td>Conflict</td>
+<td>收集冲突文件并自动 <code>cherry-pick --abort</code>，主工作区无未合并文件</td>
+</tr>
+<tr>
+<td>Reject / Expire</td>
+<td>清理 worktree 与临时分支，保留任务记录与 patch</td>
+</tr>
+<tr>
+<td>Failed / Timeout / Cancel</td>
+<td>写明确终态并清理临时 Git 资产；cancel 当前只保证同 API 进程</td>
+</tr>
+</tbody>
+</table>
+<p><code>test_development_task_lifecycle.py</code> 使用临时真实 Git 仓库执行 approve/apply、reject、conflict/abort、expire 与脏工作区拒绝，不是 fixture 文本模拟。</p>
+<h2 id="api">API、租户与审计</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>相关后端回归</td>
+<td>退出码 0，31/31 通过</td>
+</tr>
+<tr>
+<td>list/detail 租户隔离</td>
+<td>只返回当前 tenant；跨租户 detail 统一 404</td>
+</tr>
+<tr>
+<td>变更确认</td>
+<td>approve/reject/apply/cancel 缺 <code>confirm_task_id</code> 均 422，不匹配为 409</td>
+</tr>
+<tr>
+<td>RBAC</td>
+<td>读取使用 <code>agent:read</code>，approve 使用 <code>code_review:execute</code>，其余动作使用 <code>agent:execute</code></td>
+</tr>
+<tr>
+<td>路径脱敏</td>
+<td>list/detail/patch 响应不含 main workspace、worktree 或 patch 绝对路径</td>
+</tr>
+<tr>
+<td>审计</td>
+<td>变更动作写入既有 hash audit chain，记录 tenant、actor、task ID 和结果状态</td>
+</tr>
+<tr>
+<td>并行响应</td>
+<td>worktree 子任务返回 <code>development_task_id</code> 与 <code>development_task_status</code></td>
+</tr>
+</tbody>
+</table>
+<p>回归命令覆盖 <code>test_development_tasks.py</code>、<code>test_development_task_lifecycle.py</code>、<code>test_parallel_worktrees.py</code>、<code>test_development_tasks_api.py</code> 和 <code>test_code_review.py</code>。一次将该回归与全仓静态扫描并发时，双 worktree 用例曾因资源竞争返回 <code>partial</code>；同用例单跑 1/1、整组串行重跑 31/31 通过。</p>
+<h2 id="_2">迁移与静态质量</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全新 SQLite <code>alembic upgrade head</code></td>
+<td>退出码 0，head=<code>20260807_development_tasks</code></td>
+</tr>
+<tr>
+<td>表回读</td>
+<td><code>sqlite_master</code> 实际返回 <code>development_tasks</code></td>
+</tr>
+<tr>
+<td>关键 Ruff <code>F821,F822,F823,B023</code></td>
+<td>退出码 0，0 项</td>
+</tr>
+<tr>
+<td>静态基线</td>
+<td>Ruff <code>279 &lt;= 286</code>，mypy <code>73 &lt;= 74</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="web">Web 与真实浏览器</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm test</code></td>
+<td>退出码 0；自动发现 3 个测试文件，14/14 通过</td>
+</tr>
+<tr>
+<td>ESLint JSON 统计</td>
+<td>0 error / 100 warnings，未超 P0 基线</td>
+</tr>
+<tr>
+<td><code>npm run typecheck</code></td>
+<td>退出码 0</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>退出码 0，2374 modules transformed，产生独立 <code>DevelopmentTasksPage</code> chunk</td>
+</tr>
+<tr>
+<td>Playwright 真实浏览器</td>
+<td>隔离 lite API + Vite 实际启动；登录后侧栏可见“开发任务”，点击进入 <code>/development-tasks</code>，页面标题、选中态、刷新和空状态正确</td>
+</tr>
+</tbody>
+</table>
+<p>首次真实浏览器快照暴露了侧栏手写导航缺失；修复后重新快照已看到可点击入口和正确激活态。控制台端到端本轮只验证空状态；有数据动作由 Web 动作矩阵、API 端到端和真实 Git 生命周期测试分层覆盖。</p>
+<h2 id="p1">P1 实现提交</h2>
+<ul>
+<li><code>dc0735c</code>：增加持久开发任务模型与租户隔离仓储。</li>
+<li><code>4877e36</code>：保留可审查 worktree、result commit 和完整 patch。</li>
+<li><code>f6e4c74</code>：增加 approve/reject/apply/conflict/expire/cancel 状态机。</li>
+<li><code>e348964</code>：增加租户隔离审查 API、显式确认与审计。</li>
+<li><code>72245a0</code>：增加 Web 开发任务审查控制台。</li>
+<li><code>9946b91</code>：修复真实浏览器发现的侧栏入口缺失。</li>
+</ul>
+<h2 id="_3">已知剩余风险</h2>
+<ul>
+<li>运行中 cancel 依赖当前 API 进程内 asyncio task 注册表；服务重启后恢复属于 P2。</li>
+<li>完整 patch 由受权读接口一次返回；超大 patch 的分页/流式化仍是后续性能工作。</li>
+<li>本地 P1 不提供 GitHub/GitLab PR 托管，也不自动 merge/rebase 或解决冲突。</li>
+<li>同一 PowerShell 进程串行执行多个 npm 命令时，Node 24 曾在 Vite 已构建成功后触发一次 Windows libuv 断言；独立构建和后续串行 typecheck/build 均退出 0。</li>
+<li>Playwright 控制台仅有已存的 favicon 404 和 React Router v7 future-flag 警告，本轮未扩大范围修复。</li>
+<li>P0 的存量 Ruff/mypy/Web warning 基线仍存在，且远端 CI 尚未由该本地分支触发。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

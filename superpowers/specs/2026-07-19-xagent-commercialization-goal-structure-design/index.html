@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-07-19-xagent-commercialization-goal-structure-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 商用完整交付 Goal 结构设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5546\u7528\u5b8c\u6574\u4ea4\u4ed8 Goal \u7ed3\u6784\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-07-19-xagent-commercialization-goal-structure-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-07-19-xagent-commercialization-goal-structure-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 商用完整交付 Goal 结构设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-07-19-xagent-commercialization-goal-structure-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-goal">X-Agent 商用完整交付 Goal 结构设计</h1>
+<ul>
+<li>日期：2026-07-19</li>
+<li>主题：为 <code>xagent</code> 建立一个可长期推进、直到“完整交付”为止的项目级 Goal 长任务结构</li>
+<li>当前主方案：<strong>项目级母 Goal + 三阶段 Goal + 执行包</strong></li>
+<li>适用范围：<code>xagent</code> 商用成熟度推进（内部试点 → 正式商用 GA → 企业级长期运营）</li>
+</ul>
+<hr />
+<h2 id="1">1. 背景与问题定义</h2>
+<p>当前 <code>xagent</code> 已经不是原型，也不再适合用“临时任务列表 + 一次性收口”来管理长期交付。现有项目状态表明：</p>
+<ul>
+<li>项目具备内部试点 / 受控私有部署基础；</li>
+<li>Spine Phase 1 已经证明系统可以把 goal / taskboard / run / release 作为正式交付主链来组织；</li>
+<li>但项目距离“商用程度百分百”仍然有明确差距，这些差距横跨三个层次：</li>
+<li>内部试点可稳定使用；</li>
+<li>正式商用 GA；</li>
+<li>企业级长期运营。</li>
+</ul>
+<p>如果继续沿用“一个大任务板、所有事情混着推进”的方式，项目会出现三个问题：</p>
+<ol>
+<li><strong>阶段混叠</strong>：Phase 2 / Phase 3 的要求会提前压到当前执行里；</li>
+<li><strong>优先级漂移</strong>：执行层会不断跳到高阶能力，导致当前阶段收不了口；</li>
+<li><strong>汇报失真</strong>：owner 看到的是零碎任务，而不是项目现在处于哪一个商用阶段。</li>
+</ol>
+<p>因此，需要为这个项目建立一个<strong>项目级长任务 Goal 结构</strong>，让后续推进围绕阶段门而不是围绕零散任务展开。</p>
+<hr />
+<h2 id="2">2. 设计目标</h2>
+<p>本次设计目标是：</p>
+<blockquote>
+<p>为 <code>xagent</code> 定义一套可以持续推进到“完整交付”为止的 Goal 长任务结构，使项目级目标、阶段目标、执行包和具体任务之间有稳定关系，并保证只激活当前阶段，不让后续阶段提前失控展开。</p>
+</blockquote>
+<h3 id="21">2.1 总目标定义</h3>
+<p>项目总 Goal 固定为：</p>
+<ul>
+<li><strong>G0：xagent 商用完整交付</strong></li>
+</ul>
+<p>该 Goal 的终点定义为：</p>
+<blockquote>
+<p><strong>Phase 1、Phase 2、Phase 3 全部完成后，才允许关闭。</strong></p>
+</blockquote>
+<p>也就是说：
+- Phase 2 完成不关闭 G0；
+- 只有企业级长期运营能力也通过后，G0 才能结束。</p>
+<h3 id="22">2.2 设计原则</h3>
+<ol>
+<li><strong>母 Goal 永不被阶段性完成误关闭</strong>；</li>
+<li><strong>三阶段必须串行，不并行激活</strong>；</li>
+<li><strong>执行层永远只围绕当前阶段展开</strong>；</li>
+<li><strong>每一层都要能清楚汇报状态与阻塞</strong>；</li>
+<li><strong>Goal 结构优先于零散任务，先建治理骨架再细化执行。</strong></li>
+</ol>
+<hr />
+<h2 id="3-goal">3. Goal 层级结构</h2>
+<h3 id="31-goal">3.1 母 Goal</h3>
+<ul>
+<li><strong>G0：xagent 商用完整交付</strong></li>
+</ul>
+<p>职责：
+- 承载整个项目从准商用到完整交付的唯一总目标；
+- 不管理单个测试或修复；
+- 只关心当前项目处于哪个阶段、哪个阶段被阻塞、距离完整交付还差哪一层。</p>
+<h3 id="32-goal">3.2 阶段 Goal</h3>
+<p>G0 下面固定挂 3 个阶段 Goal：</p>
+<ul>
+<li><strong>G1：内部试点可稳定使用</strong></li>
+<li><strong>G2：正式商用 GA</strong></li>
+<li><strong>G3：企业级长期运营</strong></li>
+</ul>
+<p>职责：
+- 每个 Goal 只负责一个商用成熟度阶段；
+- 负责维护自己的验收门；
+- 负责决定当前阶段是否通过、是否阻塞、是否允许进入下阶段。</p>
+<h3 id="33">3.3 执行包层</h3>
+<p>每个阶段 Goal 下固定拆成 4 个执行包：</p>
+<h4 id="g1">G1（内部试点）</h4>
+<ul>
+<li><strong>G1-A1：功能链路包</strong></li>
+<li><strong>G1-A2：稳定性 / 恢复包</strong></li>
+<li><strong>G1-A3：数据 / 权限 / 审计包</strong></li>
+<li><strong>G1-A4：试点交付材料包</strong></li>
+</ul>
+<h4 id="g2-ga">G2（正式 GA）</h4>
+<ul>
+<li><strong>G2-B1：候选冻结包</strong></li>
+<li><strong>G2-B2：目标环境演练包</strong></li>
+<li><strong>G2-B3：发布 / 回滚包</strong></li>
+<li><strong>G2-B4：签字 / 证据包</strong></li>
+</ul>
+<h4 id="g3">G3（长期运营）</h4>
+<ul>
+<li><strong>G3-C1：HA / K8s 包</strong></li>
+<li><strong>G3-C2：可观测 / 告警包</strong></li>
+<li><strong>G3-C3：审计 / 保留策略包</strong></li>
+<li><strong>G3-C4：容量 / 扩展边界包</strong></li>
+</ul>
+<p>职责：
+- 执行包是当前阶段的最小治理单位；
+- 每个包下面再挂具体执行任务；
+- 阶段 Goal 不直接管理 30 个零散任务，而是通过执行包管理推进节奏。</p>
+<hr />
+<h2 id="4-goal">4. Goal 生命周期规则</h2>
+<h3 id="41-goal">4.1 母 Goal 关闭条件</h3>
+<p>G0 只有在下列条件同时成立时关闭：</p>
+<ul>
+<li>G1 = <code>done</code></li>
+<li>G2 = <code>done</code></li>
+<li>G3 = <code>done</code></li>
+</ul>
+<p>否则：
+- G0 始终保持 <code>active</code>
+- 如果某一阶段 Goal blocked，则 G0 标记为“受该阶段阻塞”</p>
+<h3 id="42-goal">4.2 阶段 Goal 开启条件</h3>
+<h4 id="g1_1">G1</h4>
+<ul>
+<li>默认立即开启</li>
+<li>因为当前项目首先要完成内部试点稳定使用</li>
+</ul>
+<h4 id="g2">G2</h4>
+<p>只有在 G1 的全部 Gate 通过后才允许开启：
+- 功能门通过
+- 稳定性门通过
+- 权限 / 可追溯门通过
+- 试点交付门通过</p>
+<h4 id="g3_1">G3</h4>
+<p>只有在 G2 的全部 Gate 通过后才允许开启：
+- 候选冻结门通过
+- 发布演练门通过
+- 交付治理门通过
+- 签发门通过</p>
+<h3 id="43">4.3 执行包激活规则</h3>
+<p>每个阶段下面建议最多维持：</p>
+<ul>
+<li><strong>1 个 active 执行包</strong></li>
+<li><strong>1~2 个 ready 执行包</strong></li>
+<li>其余保持 <code>pending</code></li>
+</ul>
+<p>这样做的目的是：
+- 避免“所有包同时开工”导致管理失焦；
+- 保证当前阶段始终有唯一主推进点；
+- 降低任务板膨胀速度。</p>
+<hr />
+<h2 id="5-blocked">5. Blocked 规则</h2>
+<h3 id="51-blocked">5.1 哪些层允许 blocked</h3>
+<ul>
+<li>执行包可以 <code>blocked</code></li>
+<li>阶段 Goal 可以 <code>blocked</code></li>
+<li>母 Goal 不直接 <code>blocked</code>，但可以标记为“受某阶段阻塞”</li>
+</ul>
+<h3 id="52-blocked">5.2 blocked 必填字段</h3>
+<p>任何 blocked 项都必须包含：</p>
+<ol>
+<li>阻塞原因</li>
+<li>需要谁决策</li>
+<li>恢复条件</li>
+<li>下次检查点</li>
+</ol>
+<h3 id="53-blocked">5.3 blocked 的目的</h3>
+<p>blocked 不是一句“卡住了”，而是：</p>
+<blockquote>
+<p><strong>让 owner 或主调度看到：卡在哪里、谁能解、解完后继续做什么。</strong></p>
+</blockquote>
+<hr />
+<h2 id="6">6. 三层任务板视图</h2>
+<h3 id="61-a-goal">6.1 视图 A：母 Goal 视图</h3>
+<p>适用对象：owner / 决策者</p>
+<p>只展示：
+- G0 当前状态
+- 当前激活阶段（G1/G2/G3）
+- 当前阶段完成度
+- 当前最大阻塞</p>
+<p>这个视图不应该展示几十个子任务。
+它的职责是回答：</p>
+<blockquote>
+<p><strong>项目现在处于哪个商用成熟度阶段？距离完整交付还差哪一层？</strong></p>
+</blockquote>
+<h3 id="62-b-goal">6.2 视图 B：阶段 Goal 视图</h3>
+<p>适用对象：主调度 / TL</p>
+<p>展示：
+- 当前阶段的 4 个执行包
+- 每个包的状态
+- 当前 active 包
+- 当前 blocked 包
+- 当前阶段的 Gate 通过情况</p>
+<p>这个视图的职责是回答：</p>
+<blockquote>
+<p><strong>当前阶段到底在推进哪一包？哪一包卡住了？</strong></p>
+</blockquote>
+<h3 id="63-c">6.3 视图 C：执行包视图</h3>
+<p>适用对象：执行者 / AI 代理 / 开发者</p>
+<p>展示：
+- ready
+- in_progress
+- review
+- blocked
+- done</p>
+<p>这里才挂真正的实现任务、测试任务、文档任务、验证任务。</p>
+<hr />
+<h2 id="7">7. 命名规范</h2>
+<p>为了让 Goal / 包 / 任务之间长期可追踪，命名固定如下：</p>
+<h3 id="71-goal">7.1 母 Goal</h3>
+<ul>
+<li><code>G0 xagent 商用完整交付</code></li>
+</ul>
+<h3 id="72-goal">7.2 阶段 Goal</h3>
+<ul>
+<li><code>G1 内部试点可稳定使用</code></li>
+<li><code>G2 正式商用 GA</code></li>
+<li><code>G3 企业级长期运营</code></li>
+</ul>
+<h3 id="73">7.3 执行包</h3>
+<ul>
+<li><code>G1-A1 功能链路包</code></li>
+<li><code>G1-A2 稳定性 / 恢复包</code></li>
+<li><code>G1-A3 数据 / 权限 / 审计包</code></li>
+<li><code>G1-A4 试点交付材料包</code></li>
+<li><code>G2-B1 候选冻结包</code></li>
+<li><code>G2-B2 目标环境演练包</code></li>
+<li><code>G2-B3 发布 / 回滚包</code></li>
+<li><code>G2-B4 签字 / 证据包</code></li>
+<li><code>G3-C1 HA / K8s 包</code></li>
+<li><code>G3-C2 可观测 / 告警包</code></li>
+<li><code>G3-C3 审计 / 保留策略包</code></li>
+<li><code>G3-C4 容量 / 扩展边界包</code></li>
+</ul>
+<p>命名目标：
+- 只看 ID 就知道它在哪一层；
+- 只看名字就知道它负责什么；
+- 后续汇报和任务板同步能长期一致。</p>
+<hr />
+<h2 id="8">8. 执行节奏与汇报规则</h2>
+<h3 id="81">8.1 汇报节奏</h3>
+<h4 id="goal">母 Goal</h4>
+<ul>
+<li>只在阶段切换或重大阻塞时更新</li>
+</ul>
+<h4 id="goal_1">阶段 Goal</h4>
+<ul>
+<li>每完成一个执行包更新一次</li>
+</ul>
+<h4 id="_1">执行包</h4>
+<ul>
+<li>按具体任务推进：测试、修复、文档、验证、提交</li>
+</ul>
+<h3 id="82">8.2 每轮必须输出的四件事</h3>
+<p>每轮推进都应固定输出：</p>
+<ol>
+<li>当前激活阶段</li>
+<li>当前 active 执行包</li>
+<li>当前 blocked 项</li>
+<li>下一步唯一优先动作</li>
+</ol>
+<p>这样项目汇报不再是“还差很多”，而是：</p>
+<blockquote>
+<p>现在处于 G1，当前 active 是 G1-A2，卡在 X，下一步先做 Y。</p>
+</blockquote>
+<hr />
+<h2 id="9">9. 当前推荐启动方式</h2>
+<p>当前不建议一开始就把三阶段全部细化成大量任务。推荐做法是：</p>
+<h3 id="goal_2">第一步：建立 Goal 结构</h3>
+<p>正式建立：
+- G0
+- G1
+- G2
+- G3</p>
+<h3 id="_2">第二步：只激活当前阶段</h3>
+<ul>
+<li>G1 = <code>active</code></li>
+<li>G2 = <code>pending</code></li>
+<li>G3 = <code>pending</code></li>
+</ul>
+<h3 id="g1_2">第三步：只展开 G1</h3>
+<ul>
+<li>G1-A1 = <code>ready</code></li>
+<li>G1-A2 = <code>ready</code></li>
+<li>G1-A3 = <code>pending</code></li>
+<li>G1-A4 = <code>pending</code></li>
+</ul>
+<h3 id="a1-a2">第四步：先推进 A1 / A2</h3>
+<p>执行顺序建议：
+1. G1-A1 功能链路包
+2. G1-A2 稳定性 / 恢复包
+3. G1-A3 数据 / 权限 / 审计包
+4. G1-A4 试点交付材料包</p>
+<p>原因：
+- 没有主链稳定，后面的治理没有意义；
+- 没有恢复能力，试点容易变成一次性演示；
+- 权限 / 审计应建立在主链和状态可见之上；
+- 材料包应该基于前 3 项的实际收口结果写，而不是先空写。</p>
+<hr />
+<h2 id="10">10. 当前结论</h2>
+<p>这套 Goal 长任务结构的核心价值在于：</p>
+<ul>
+<li>让 <code>xagent</code> 的“商用完整交付”不再依赖零散任务堆积，而是依赖三阶段串行推进；</li>
+<li>让 owner 看到的是“项目现在处于哪个商用阶段”，而不是几十个细碎任务；</li>
+<li>让执行层始终只围绕当前阶段工作，防止后续阶段能力提前失控膨胀。</li>
+</ul>
+<p>最终结论：</p>
+<blockquote>
+<p><strong>推荐采用“项目级母 Goal + 三阶段 Goal + 执行包”的结构来长期推进 <code>xagent</code> 的完整交付，并且当前只激活 G1（内部试点可稳定使用），再按 A1/A2/A3/A4 顺序推进。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

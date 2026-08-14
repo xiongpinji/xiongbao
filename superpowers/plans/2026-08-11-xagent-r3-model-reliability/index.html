@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-11-xagent-r3-model-reliability/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Web/API R3-A 真实模型可靠性基线实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Web/API R3-A \u771f\u5b9e\u6a21\u578b\u53ef\u9760\u6027\u57fa\u7ebf\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-11-xagent-r3-model-reliability.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-11-xagent-r3-model-reliability/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Web/API R3-A 真实模型可靠性基线实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-11-xagent-r3-model-reliability.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-webapi-r3-a">X-Agent Web/API R3-A 真实模型可靠性基线实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 为当前 Web/API 本地发布候选实现一个不可变、可审计的 50 样本真实 Ollama 基线工具，并用同一批次证明 Chat、Scheduler、file_write 的精确成功率、P95、假成功、fail-closed、清理和租户隔离。</p>
+<p><strong>架构：</strong> 宿主机 Python 工具通过现有 HTTP API 黑盒执行 30 次无工具 Chat、10 次手动 Scheduler 和 10 次隔离 file_write；每个业务入口只提交一次，所有详情读取和清理复用现有 API。工具以白名单字段写入本机 JSONL/JSON，按固定公式生成脱敏报告；生产 API、数据库 schema、模型路由和恢复策略保持不变。</p>
+<p><strong>技术栈：</strong> Python 3.13、<code>httpx</code> 0.28、<code>unittest</code>/<code>pytest</code>、FastAPI SSE、Docker Compose、Ollama <code>qwen3:4b</code>、PostgreSQL、Celery Scheduler、Git worktree。</p>
+<hr />
+<h2 id="_1">文件职责</h2>
+<h3 id="_2">创建</h3>
+<ul>
+<li><code>scripts/r3_model_reliability.py</code>：枚举、样本计划、结果类型、SSE/API 客户端、三类样本执行器、统计、预检、日志审计和证据写入。</li>
+<li><code>scripts/run_r3_model_reliability.py</code>：薄 CLI 入口，只解析非秘密参数并返回稳定退出码。</li>
+<li><code>tests/release/test_r3_model_reliability.py</code>：纯逻辑、fake HTTP、fake shell 和批次编排合同。</li>
+<li><code>docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md</code>：唯一正式批次生成并人工复核后的脱敏结论。</li>
+</ul>
+<h3 id="_3">修改</h3>
+<ul>
+<li><code>.gitignore</code>：忽略 <code>output/reliability/</code> 原始批次证据。</li>
+<li><code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>：实现开始后增加 R3-A；根据真实批次结果更新为 <code>REVIEW</code>、<code>PARTIAL</code> 或 <code>BLOCKED</code>。</li>
+</ul>
+<h3 id="_4">明确不修改</h3>
+<ul>
+<li><code>apps/api/xagent/**</code>、<code>apps/web/src/**</code>、数据库 migration、模型配置和 Compose 服务定义。</li>
+<li>短剧、媒体、画布、剪辑、Tauri、E2B、多机 HA、付费 provider 和生产发布入口。</li>
+<li>现有 R2 报告、六张验收截图和历史原始证据。</li>
+</ul>
+<hr />
+<h2 id="_5">固定实现合同</h2>
+<ul>
+<li>正式批次顺序固定为 <code>chat-001..030</code>、<code>scheduler-001..010</code>、<code>file-write-001..010</code>。</li>
+<li>Chat 和 Scheduler prompt 固定为 <code>请只回复：&lt;marker&gt;</code>；file_write prompt 固定要求唯一文件名、唯一正文和必须调用 <code>file_write</code>。</li>
+<li><code>httpx</code> 不配置 transport retry；同一 <code>sample_id + business endpoint</code> 第二次 POST 必须由客户端本地拒绝。</li>
+<li>Chat、Scheduler、file_write 的业务超时分别为 600、600、300 秒；SLO 仍按 120、180、240 秒判断，超阈值但自然完成的样本必须保留真实耗时。</li>
+<li>Scheduler 创建参数固定 <code>interval_seconds=86400</code>、<code>max_retries=0</code>，并在 <code>finally</code> 中禁用。</li>
+<li><code>finish_reason</code> 未由产品公开时固定写 <code>unknown</code>，不得从日志或 token 数推断。</li>
+<li>正式批次目录使用独占创建；已存在的 <code>batch_id</code> 不允许续写、覆盖或合并。</li>
+<li>退出码固定为：<code>0=passed</code>、<code>1=failed</code>、<code>2=preflight_failed/aborted</code>。</li>
+</ul>
+<hr />
+<h3 id="0-r3-a-ready">任务 0：计划获批后登记 R3-A Ready 状态</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：确认计划已获 Owner 接受</strong></li>
+</ul>
+<p>只接受明确的“按此计划执行”指令；计划文档落盘但尚未接受时，不修改任务板、不开始编码。</p>
+<ul>
+<li>[ ] <strong>步骤 2：在 Ready 增加唯一 R3-A 条目</strong></li>
+</ul>
+<pre><code class="language-markdown">- [R3-A] 真实 Ollama 可靠性基线 | 状态：READY | 设计与逐步 TDD 计划已通过；正式工具、离线门和 50 样本均未开始。
+</code></pre>
+<p>同时把 Board Meta 的当前阶段、设计源、R3 计划和最后更新时间改为当前 R3-A 事实；不得改写已完成的 R2 证据。</p>
+<ul>
+<li>[ ] <strong>步骤 3：验证并独立提交任务板状态</strong></li>
+</ul>
+<pre><code class="language-powershell">git diff --check
+git diff -- docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;docs(任务板): 登记 R3 可靠性基线&quot;
+</code></pre>
+<p>预期：只修改任务板；R3-A 为 READY，不是 CLAIMED/REVIEW/DONE。</p>
+<hr />
+<h3 id="1-slo">任务 1：建立固定样本计划、结果类型和 SLO 纯逻辑</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/release/test_r3_model_reliability.py</code>
+- 创建：<code>scripts/r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先写固定矩阵和 nearest-rank 的失败测试</strong></li>
+</ul>
+<p>在 <code>tests/release/test_r3_model_reliability.py</code> 创建：</p>
+<pre><code class="language-python">from __future__ import annotations
+
+import unittest
+from dataclasses import replace
+
+from scripts.r3_model_reliability import (
+    BatchStatus,
+    FailureCode,
+    LogsAudit,
+    SampleKind,
+    SampleResult,
+    build_sample_plan,
+    build_summary,
+    nearest_rank_percentile,
+)
+
+
+class R3PlanAndSummaryTests(unittest.TestCase):
+    def test_plan_is_fixed_order_and_has_unique_public_markers(self) -&gt; None:
+        plan = build_sample_plan(&quot;20260811T010203Z-ab12cd&quot;)
+        self.assertEqual(len(plan), 50)
+        self.assertEqual([item.kind for item in plan[:30]], [SampleKind.CHAT] * 30)
+        self.assertEqual([item.kind for item in plan[30:40]], [SampleKind.SCHEDULER] * 10)
+        self.assertEqual([item.kind for item in plan[40:]], [SampleKind.FILE_WRITE] * 10)
+        self.assertEqual(plan[0].sample_id, &quot;chat-001&quot;)
+        self.assertEqual(plan[30].sample_id, &quot;scheduler-001&quot;)
+        self.assertEqual(plan[40].sample_id, &quot;file-write-001&quot;)
+        self.assertEqual(len({item.marker for item in plan}), 50)
+        self.assertEqual(plan[0].marker, &quot;R3-CHAT-20260811T010203Z-ab12cd-001&quot;)
+        self.assertEqual(
+            plan[40].filename,
+            &quot;R3_RELIABILITY_20260811T010203Z_ab12cd_001.md&quot;,
+        )
+
+    def test_nearest_rank_percentile_uses_ceil_rank(self) -&gt; None:
+        values = [float(value) for value in range(1, 31)]
+        self.assertEqual(nearest_rank_percentile(values, 0.95), 29.0)
+        self.assertEqual(nearest_rank_percentile([3.0, 1.0, 2.0], 0.95), 3.0)
+        with self.assertRaises(ValueError):
+            nearest_rank_percentile([], 0.95)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试并确认正确红灯</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+</code></pre>
+<p>预期：收集失败，提示 <code>scripts.r3_model_reliability</code> 不存在；不是语法错误或测试发现器错误。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小枚举、计划和结果结构</strong></li>
+</ul>
+<p>在 <code>scripts/r3_model_reliability.py</code> 写入以下公共接口：</p>
+<pre><code class="language-python">from __future__ import annotations
+
+import math
+import re
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any, Sequence
+
+
+class SampleKind(StrEnum):
+    CHAT = &quot;chat&quot;
+    SCHEDULER = &quot;scheduler&quot;
+    FILE_WRITE = &quot;file_write&quot;
+
+
+class BatchStatus(StrEnum):
+    PASSED = &quot;passed&quot;
+    FAILED = &quot;failed&quot;
+    ABORTED = &quot;aborted&quot;
+
+
+class FailureCode(StrEnum):
+    HTTP_ERROR = &quot;http_error&quot;
+    TIMEOUT = &quot;timeout&quot;
+    MODEL_EMPTY_RESPONSE = &quot;model_empty_response&quot;
+    WRONG_FINAL = &quot;wrong_final&quot;
+    FALSE_SUCCESS = &quot;false_success&quot;
+    MISSING_PERSISTENCE = &quot;missing_persistence&quot;
+    MISSING_CHECKPOINT = &quot;missing_checkpoint&quot;
+    SCHEDULER_TERMINAL_ERROR = &quot;scheduler_terminal_error&quot;
+    MISSING_ARTIFACT = &quot;missing_artifact&quot;
+    PATCH_MISMATCH = &quot;patch_mismatch&quot;
+    CLEANUP_FAILED = &quot;cleanup_failed&quot;
+    MOCK_DETECTED = &quot;mock_detected&quot;
+    FORBIDDEN_ROUTE = &quot;forbidden_route&quot;
+    TENANT_ISOLATION_BREACH = &quot;tenant_isolation_breach&quot;
+    HARNESS_ERROR = &quot;harness_error&quot;
+
+
+@dataclass(frozen=True, slots=True)
+class SampleSpec:
+    batch_id: str
+    sample_id: str
+    kind: SampleKind
+    index: int
+    marker: str
+    filename: str = &quot;&quot;
+
+
+@dataclass(frozen=True, slots=True)
+class SampleResult:
+    batch_id: str
+    sample_id: str
+    kind: SampleKind
+    index: int
+    marker: str
+    started_at: str
+    finished_at: str
+    duration_seconds: float
+    http_status: int
+    terminal_status: str
+    success: bool
+    exact_match: bool
+    false_success: bool
+    fail_closed: bool | None
+    model: str = &quot;qwen3:4b&quot;
+    route: str = &quot;&quot;
+    tool_mode: str = &quot;&quot;
+    run_id: str = &quot;&quot;
+    task_id: str = &quot;&quot;
+    conversation_id: str = &quot;&quot;
+    checkpoint_id: str = &quot;&quot;
+    job_id: str = &quot;&quot;
+    development_task_id: str = &quot;&quot;
+    error_code: str = &quot;&quot;
+    error: str = &quot;&quot;
+    finish_reason: str = &quot;unknown&quot;
+    tool_call_count: int = 0
+    artifact_count: int = 0
+    patch_sha256: str = &quot;&quot;
+    cleanup_ok: bool = True
+    mock_detected: bool = False
+    forbidden_route_detected: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class LogsAudit:
+    mock_hits: int = 0
+    forbidden_route_hits: int = 0
+    traceback_hits: int = 0
+    qwen_route_hits: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class BatchSummary:
+    batch_id: str
+    status: BatchStatus
+    planned_samples: int
+    completed_samples: int
+    by_kind: dict[str, dict[str, Any]]
+    false_success_count: int
+    failed_sample_count: int
+    fail_closed: bool | str
+    isolation_ok: bool
+    logs_audit: LogsAudit
+    hard_failures: tuple[str, ...] = field(default_factory=tuple)
+    aborted_error: str = &quot;&quot;
+
+
+def build_sample_plan(batch_id: str) -&gt; tuple[SampleSpec, ...]:
+    safe_file_batch = batch_id.replace(&quot;-&quot;, &quot;_&quot;)
+    rows: list[SampleSpec] = []
+    for kind, count, label in (
+        (SampleKind.CHAT, 30, &quot;CHAT&quot;),
+        (SampleKind.SCHEDULER, 10, &quot;SCHEDULER&quot;),
+        (SampleKind.FILE_WRITE, 10, &quot;FILE-WRITE&quot;),
+    ):
+        for index in range(1, count + 1):
+            sample_id = f&quot;{kind.value.replace('_', '-')}-{index:03d}&quot;
+            filename = (
+                f&quot;R3_RELIABILITY_{safe_file_batch}_{index:03d}.md&quot;
+                if kind is SampleKind.FILE_WRITE
+                else &quot;&quot;
+            )
+            rows.append(
+                SampleSpec(
+                    batch_id=batch_id,
+                    sample_id=sample_id,
+                    kind=kind,
+                    index=index,
+                    marker=f&quot;R3-{label}-{batch_id}-{index:03d}&quot;,
+                    filename=filename,
+                )
+            )
+    return tuple(rows)
+
+
+def nearest_rank_percentile(values: Sequence[float], percentile: float) -&gt; float:
+    if not values:
+        raise ValueError(&quot;percentile requires at least one value&quot;)
+    if not 0 &lt; percentile &lt;= 1:
+        raise ValueError(&quot;percentile must be in (0, 1]&quot;)
+    ordered = sorted(float(value) for value in values)
+    rank = math.ceil(percentile * len(ordered))
+    return ordered[rank - 1]
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：补齐 SLO 汇总红灯</strong></li>
+</ul>
+<p>在同一测试类增加一个 <code>_result()</code> helper 和三组断言：</p>
+<pre><code class="language-python">    def _result(
+        self,
+        kind: SampleKind,
+        index: int,
+        *,
+        success: bool = True,
+        duration: float = 1.0,
+        false_success: bool = False,
+        fail_closed: bool | None = None,
+    ) -&gt; SampleResult:
+        batch_id = &quot;20260811T010203Z-ab12cd&quot;
+        spec = next(
+            item
+            for item in build_sample_plan(batch_id)
+            if item.kind is kind and item.index == index
+        )
+        return SampleResult(
+            batch_id=batch_id,
+            sample_id=spec.sample_id,
+            kind=kind,
+            index=index,
+            marker=spec.marker,
+            started_at=&quot;2026-08-11T01:02:03+00:00&quot;,
+            finished_at=&quot;2026-08-11T01:02:04+00:00&quot;,
+            duration_seconds=duration,
+            http_status=200,
+            terminal_status=&quot;succeeded&quot; if success else &quot;failed&quot;,
+            success=success,
+            exact_match=success,
+            false_success=false_success,
+            fail_closed=fail_closed,
+        )
+
+    def test_summary_passes_only_at_fixed_thresholds(self) -&gt; None:
+        results = [self._result(SampleKind.CHAT, index) for index in range(1, 31)]
+        results += [self._result(SampleKind.SCHEDULER, index) for index in range(1, 11)]
+        results += [self._result(SampleKind.FILE_WRITE, index) for index in range(1, 11)]
+        summary = build_summary(
+            &quot;20260811T010203Z-ab12cd&quot;,
+            results,
+            logs_audit=LogsAudit(qwen_route_hits=50),
+            isolation_ok=True,
+        )
+        self.assertEqual(summary.status, BatchStatus.PASSED)
+        self.assertEqual(summary.by_kind[&quot;chat&quot;][&quot;p95_seconds&quot;], 1.0)
+
+    def test_summary_fails_on_threshold_or_any_hard_failure(self) -&gt; None:
+        results = [self._result(SampleKind.CHAT, index) for index in range(1, 31)]
+        results += [self._result(SampleKind.SCHEDULER, index) for index in range(1, 11)]
+        results += [self._result(SampleKind.FILE_WRITE, index) for index in range(1, 11)]
+        results[0] = self._result(
+            SampleKind.CHAT,
+            1,
+            success=False,
+            fail_closed=False,
+        )
+        summary = build_summary(
+            &quot;20260811T010203Z-ab12cd&quot;,
+            results,
+            logs_audit=LogsAudit(mock_hits=1),
+            isolation_ok=False,
+        )
+        self.assertEqual(summary.status, BatchStatus.FAILED)
+        self.assertIn(&quot;fail_closed&quot;, summary.hard_failures)
+        self.assertIn(&quot;mock_detected&quot;, summary.hard_failures)
+        self.assertIn(&quot;tenant_isolation_breach&quot;, summary.hard_failures)
+
+    def test_incomplete_or_interrupted_batch_is_aborted(self) -&gt; None:
+        summary = build_summary(
+            &quot;20260811T010203Z-ab12cd&quot;,
+            [self._result(SampleKind.CHAT, 1)],
+            logs_audit=LogsAudit(),
+            isolation_ok=False,
+            aborted_error=&quot;KeyboardInterrupt&quot;,
+        )
+        self.assertEqual(summary.status, BatchStatus.ABORTED)
+        self.assertEqual(summary.completed_samples, 1)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：实现固定阈值汇总并转绿</strong></li>
+</ul>
+<p>在核心模块增加：</p>
+<pre><code class="language-python">SAMPLE_COUNTS = {
+    SampleKind.CHAT: 30,
+    SampleKind.SCHEDULER: 10,
+    SampleKind.FILE_WRITE: 10,
+}
+SUCCESS_THRESHOLDS = {
+    SampleKind.CHAT: 29,
+    SampleKind.SCHEDULER: 9,
+    SampleKind.FILE_WRITE: 9,
+}
+P95_THRESHOLDS = {
+    SampleKind.CHAT: 120.0,
+    SampleKind.SCHEDULER: 180.0,
+    SampleKind.FILE_WRITE: 240.0,
+}
+
+
+def build_summary(
+    batch_id: str,
+    results: Sequence[SampleResult],
+    *,
+    logs_audit: LogsAudit,
+    isolation_ok: bool,
+    aborted_error: str = &quot;&quot;,
+) -&gt; BatchSummary:
+    by_kind: dict[str, dict[str, Any]] = {}
+    for kind in SampleKind:
+        items = [item for item in results if item.kind is kind]
+        by_kind[kind.value] = {
+            &quot;planned&quot;: SAMPLE_COUNTS[kind],
+            &quot;completed&quot;: len(items),
+            &quot;succeeded&quot;: sum(item.success for item in items),
+            &quot;p95_seconds&quot;: nearest_rank_percentile(
+                [item.duration_seconds for item in items], 0.95
+            ) if items else None,
+            &quot;success_threshold&quot;: SUCCESS_THRESHOLDS[kind],
+            &quot;p95_threshold_seconds&quot;: P95_THRESHOLDS[kind],
+        }
+    failures = [item for item in results if not item.success]
+    fail_closed = (
+        &quot;not_applicable&quot;
+        if not failures
+        else all(item.fail_closed is True for item in failures)
+    )
+    hard: list[str] = []
+    if any(item.false_success for item in results):
+        hard.append(&quot;false_success&quot;)
+    if fail_closed is False:
+        hard.append(&quot;fail_closed&quot;)
+    if logs_audit.mock_hits or any(item.mock_detected for item in results):
+        hard.append(&quot;mock_detected&quot;)
+    if logs_audit.forbidden_route_hits or any(
+        item.forbidden_route_detected for item in results
+    ):
+        hard.append(&quot;forbidden_route&quot;)
+    if not isolation_ok:
+        hard.append(&quot;tenant_isolation_breach&quot;)
+    complete = len(results) == 50 and all(
+        by_kind[kind.value][&quot;completed&quot;] == SAMPLE_COUNTS[kind]
+        for kind in SampleKind
+    )
+    slo_ok = complete and all(
+        by_kind[kind.value][&quot;succeeded&quot;] &gt;= SUCCESS_THRESHOLDS[kind]
+        and by_kind[kind.value][&quot;p95_seconds&quot;] &lt;= P95_THRESHOLDS[kind]
+        for kind in SampleKind
+    )
+    status = (
+        BatchStatus.ABORTED
+        if aborted_error or not complete
+        else BatchStatus.PASSED
+        if slo_ok and not hard
+        else BatchStatus.FAILED
+    )
+    return BatchSummary(
+        batch_id=batch_id,
+        status=status,
+        planned_samples=50,
+        completed_samples=len(results),
+        by_kind=by_kind,
+        false_success_count=sum(item.false_success for item in results),
+        failed_sample_count=len(failures),
+        fail_closed=fail_closed,
+        isolation_ok=isolation_ok,
+        logs_audit=logs_audit,
+        hard_failures=tuple(hard),
+        aborted_error=aborted_error,
+    )
+</code></pre>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+</code></pre>
+<p>预期：本任务测试全部通过。</p>
+<ul>
+<li>[ ] <strong>步骤 6：独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;test(可靠性): 锁定 R3 样本与统计合同&quot;
+</code></pre>
+<hr />
+<h3 id="2">任务 2：建立白名单序列化、不可变目录和脱敏报告</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code>
+- 修改：<code>.gitignore</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写输出不可覆盖和秘密不落盘红灯</strong></li>
+</ul>
+<p>增加测试：</p>
+<pre><code class="language-python">import json
+import tempfile
+from pathlib import Path
+
+from scripts.r3_model_reliability import BatchRecorder, render_markdown_report
+
+
+class R3EvidenceWriterTests(unittest.TestCase):
+    def test_recorder_writes_only_public_fields_and_refuses_existing_batch(self) -&gt; None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            recorder = BatchRecorder(root, &quot;20260811T010203Z-ab12cd&quot;)
+            recorder.start()
+            result = R3PlanAndSummaryTests()._result(SampleKind.CHAT, 1)
+            result = replace(result, error=&quot;Bearer super-secret token=abc&quot;)
+            recorder.append(result)
+            recorder.finalize(
+                build_summary(
+                    result.batch_id,
+                    [result],
+                    logs_audit=LogsAudit(),
+                    isolation_ok=False,
+                    aborted_error=&quot;stopped&quot;,
+                ),
+                LogsAudit(),
+            )
+            text = (root / result.batch_id / &quot;samples.jsonl&quot;).read_text(&quot;utf-8&quot;)
+            self.assertNotIn(&quot;super-secret&quot;, text)
+            self.assertNotIn(&quot;reasoning&quot;, text.lower())
+            with self.assertRaises(FileExistsError):
+                BatchRecorder(root, result.batch_id).start()
+
+    def test_markdown_contains_metrics_but_not_raw_error_or_secret(self) -&gt; None:
+        summary = build_summary(
+            &quot;20260811T010203Z-ab12cd&quot;,
+            [],
+            logs_audit=LogsAudit(),
+            isolation_ok=False,
+            aborted_error=&quot;password=plain-secret&quot;,
+        )
+        report = render_markdown_report(summary)
+        self.assertIn(&quot;状态：`aborted`&quot;, report)
+        self.assertNotIn(&quot;plain-secret&quot;, report)
+</code></pre>
+<p>预期红灯：缺少 <code>to_public_dict</code>、<code>BatchRecorder</code> 和 <code>render_markdown_report</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 2：实现白名单输出和独占目录</strong></li>
+</ul>
+<p>只允许 <code>SampleResult</code> 已定义字段进入 JSON；任意错误文本先经过：</p>
+<pre><code class="language-python">_SECRET_PATTERNS = (
+    re.compile(r&quot;(?i)Bearer\s+[^\s]+&quot;),
+    re.compile(r&quot;(?i)(password|token|authorization)\s*[:=]\s*[^\s,;]+&quot;),
+)
+
+
+def sanitize_error(value: str) -&gt; str:
+    text = str(value or &quot;&quot;)[:1000]
+    for pattern in _SECRET_PATTERNS:
+        text = pattern.sub(&quot;[REDACTED]&quot;, text)
+    return text
+</code></pre>
+<p>给 <code>SampleResult</code> 增加 <code>to_public_dict()</code>，先 <code>asdict(self)</code>，把 <code>kind</code> 转成字符串并对 <code>error</code> 调用 <code>sanitize_error</code>。给 <code>LogsAudit</code>、<code>BatchSummary</code> 增加同样的公开字典方法；报告只读取汇总数字和错误码，不读取原始 provider body、reasoning、system prompt 或 Authorization。</p>
+<p><code>BatchRecorder</code> 必须满足：</p>
+<pre><code class="language-python">class BatchRecorder:
+    def __init__(self, root: Path, batch_id: str) -&gt; None:
+        self.directory = root / batch_id
+        self.samples_path = self.directory / &quot;samples.jsonl&quot;
+        self._started = False
+        self._finalized = False
+
+    def start(self) -&gt; None:
+        self.directory.mkdir(parents=True, exist_ok=False)
+        self.samples_path.touch(exist_ok=False)
+        self._started = True
+
+    def append(self, result: SampleResult) -&gt; None:
+        if not self._started or self._finalized:
+            raise RuntimeError(&quot;batch recorder is not writable&quot;)
+        with self.samples_path.open(&quot;a&quot;, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;) as handle:
+            handle.write(json.dumps(result.to_public_dict(), ensure_ascii=False) + &quot;\n&quot;)
+
+    def finalize(self, summary: BatchSummary, logs_audit: LogsAudit) -&gt; None:
+        if not self._started or self._finalized:
+            raise RuntimeError(&quot;batch recorder cannot be finalized&quot;)
+        (self.directory / &quot;summary.json&quot;).write_text(
+            json.dumps(summary.to_public_dict(), ensure_ascii=False, indent=2) + &quot;\n&quot;,
+            encoding=&quot;utf-8&quot;,
+        )
+        (self.directory / &quot;logs-audit.json&quot;).write_text(
+            json.dumps(logs_audit.to_public_dict(), ensure_ascii=False, indent=2) + &quot;\n&quot;,
+            encoding=&quot;utf-8&quot;,
+        )
+        self._finalized = True
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：忽略原始结果并验证绿灯</strong></li>
+</ul>
+<p>在 <code>.gitignore</code> 的 R2 output 后增加：</p>
+<pre><code class="language-gitignore">output/reliability/
+</code></pre>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+git check-ignore output/reliability/probe/samples.jsonl
+</code></pre>
+<p>预期：测试通过；<code>git check-ignore</code> 输出该 probe 路径。</p>
+<ul>
+<li>[ ] <strong>步骤 4：独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py .gitignore
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 写入脱敏批次证据&quot;
+</code></pre>
+<hr />
+<h3 id="3-httpsse-chat">任务 3：实现一次性 HTTP/SSE 客户端和 Chat 完整样本</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写 SSE 成功链和禁止重提红灯</strong></li>
+</ul>
+<p>用 <code>httpx.MockTransport</code> 建立固定响应：</p>
+<pre><code class="language-python">import httpx
+
+from scripts.r3_model_reliability import ProductApiClient, run_chat_sample
+
+
+class R3ChatTests(unittest.TestCase):
+    def test_chat_reads_sse_runtime_conversation_and_checkpoint_once(self) -&gt; None:
+        calls: list[tuple[str, str]] = []
+        run_id = &quot;a&quot; * 32
+        conversation_id = &quot;b&quot; * 32
+        marker = &quot;R3-CHAT-20260811T010203Z-ab12cd-001&quot;
+
+        def handler(request: httpx.Request) -&gt; httpx.Response:
+            calls.append((request.method, request.url.path))
+            if request.method == &quot;POST&quot; and request.url.path.endswith(&quot;/stream/agents/run&quot;):
+                body = (
+                    f&quot;event: started\ndata: {{\&quot;run_id\&quot;:\&quot;{run_id}\&quot;,&quot;
+                    f&quot;\&quot;conversation_id\&quot;:\&quot;{conversation_id}\&quot;,&quot;
+                    &quot;\&quot;route\&quot;:\&quot;chat_no_tools\&quot;}\n\n&quot;
+                    f&quot;event: final\ndata: {{\&quot;kind\&quot;:\&quot;final\&quot;,\&quot;content\&quot;:\&quot;{marker}\&quot;}}\n\n&quot;
+                    f&quot;event: done\ndata: {{\&quot;run_id\&quot;:\&quot;{run_id}\&quot;}}\n\n&quot;
+                    &quot;event: end\ndata: {}\n\n&quot;
+                )
+                return httpx.Response(200, text=body, headers={&quot;content-type&quot;: &quot;text/event-stream&quot;})
+            if request.url.path.endswith(f&quot;/runs/{run_id}&quot;):
+                return httpx.Response(200, json={&quot;task&quot;: {
+                    &quot;task_id&quot;: run_id,
+                    &quot;status&quot;: &quot;succeeded&quot;,
+                    &quot;input&quot;: {&quot;tool_mode&quot;: &quot;none&quot;, &quot;route&quot;: &quot;chat_no_tools&quot;},
+                    &quot;result&quot;: {&quot;final_answer&quot;: marker, &quot;events&quot;: []},
+                    &quot;error&quot;: &quot;&quot;,
+                }})
+            if request.url.path.endswith(&quot;/checkpoints&quot;):
+                return httpx.Response(200, json={&quot;total&quot;: 1, &quot;checkpoints&quot;: [{&quot;checkpoint_id&quot;: &quot;cp-1&quot;}]})
+            if request.url.path.endswith(f&quot;/conversations/{conversation_id}/messages&quot;):
+                return httpx.Response(200, json={&quot;messages&quot;: [
+                    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: f&quot;请只回复：{marker}&quot;},
+                    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: marker},
+                ]})
+            raise AssertionError(str(request.url))
+
+        spec = build_sample_plan(&quot;20260811T010203Z-ab12cd&quot;)[0]
+        api = ProductApiClient(
+            &quot;http://xagent.test/api/v1&quot;,
+            token=&quot;memory-only-token&quot;,
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        result = run_chat_sample(api, spec, model=&quot;qwen3:4b&quot;)
+        self.assertTrue(result.success)
+        self.assertTrue(result.exact_match)
+        self.assertEqual(result.checkpoint_id, &quot;cp-1&quot;)
+        self.assertEqual(result.tool_call_count, 0)
+        self.assertEqual(
+            calls.count((&quot;POST&quot;, &quot;/api/v1/stream/agents/run&quot;)),
+            1,
+        )
+        with self.assertRaises(RuntimeError):
+            run_chat_sample(api, spec, model=&quot;qwen3:4b&quot;)
+</code></pre>
+<p>预期红灯：缺少客户端和 Chat 执行器。</p>
+<ul>
+<li>[ ] <strong>步骤 2：实现最小 API 客户端和 SSE 解析</strong></li>
+</ul>
+<p>实现：</p>
+<pre><code class="language-python">FORBIDDEN_ROUTE_PATTERNS = (
+    &quot;/creative&quot;,
+    &quot;/canvas&quot;,
+    &quot;/editor&quot;,
+    &quot;/media/generate&quot;,
+    &quot;/media/tasks&quot;,
+    &quot;/produce&quot;,
+)
+
+
+class ProductApiClient:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        token: str = &quot;&quot;,
+        client: httpx.Client | None = None,
+    ) -&gt; None:
+        self.base_url = base_url.rstrip(&quot;/&quot;)
+        self.token = token
+        self.client = client or httpx.Client()
+        self.business_submissions: set[tuple[str, str]] = set()
+        self.forbidden_route_detected = False
+
+    def _headers(self) -&gt; dict[str, str]:
+        return {&quot;Authorization&quot;: f&quot;Bearer {self.token}&quot;} if self.token else {}
+
+    def request(self, method: str, path: str, **kwargs: Any) -&gt; httpx.Response:
+        if any(pattern in path for pattern in FORBIDDEN_ROUTE_PATTERNS):
+            self.forbidden_route_detected = True
+        return self.client.request(
+            method,
+            f&quot;{self.base_url}{path}&quot;,
+            headers={**self._headers(), **kwargs.pop(&quot;headers&quot;, {})},
+            **kwargs,
+        )
+
+    def claim_submission(self, sample_id: str, path: str) -&gt; None:
+        key = (sample_id, path)
+        if key in self.business_submissions:
+            raise RuntimeError(f&quot;duplicate business submission: {sample_id} {path}&quot;)
+        self.business_submissions.add(key)
+
+
+class HarnessError(RuntimeError):
+    &quot;&quot;&quot;测试工具合同、解析或本地执行错误；它会中止批次。&quot;&quot;&quot;
+</code></pre>
+<p><code>parse_sse(response)</code> 必须逐行读取 <code>event:</code> 和 <code>data:</code>，每个空行产出一个 <code>(event_name, json_payload)</code>；非法 JSON 抛 <code>HarnessError</code>，不把它误记为模型失败。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现 Chat 判定顺序</strong></li>
+</ul>
+<p><code>run_chat_sample</code> 固定执行：</p>
+<ol>
+<li><code>claim_submission(sample_id, "/stream/agents/run")</code>；</li>
+<li>POST <code>{"goal": "请只回复：&lt;marker&gt;", "tool_mode": "none", "capabilities": []}</code>；</li>
+<li>读取 started/run/conversation、final、done、error、tool_call、tool_result；</li>
+<li>GET <code>/runs/{run_id}</code>、<code>/checkpoints?run_id={run_id}</code>、<code>/stream/conversations/{conversation_id}/messages</code>；</li>
+<li>精确比较 SSE final、<code>task.result.final_answer</code> 和最后一条 assistant message；</li>
+<li><code>finish_reason</code> 只读取公开字段，否则 <code>unknown</code>。</li>
+</ol>
+<p>判定优先级固定为：HTTP 非 2xx → <code>http_error</code>；超时 → <code>timeout</code>；产品失败且 error 含 <code>model_empty_response_after_retry</code> → <code>model_empty_response</code>；成功但任一 final 不精确或出现工具事件 → <code>false_success</code>；成功但 run/conversation 缺失 → <code>missing_persistence</code>；成功但 checkpoint 缺失 → <code>missing_checkpoint</code>；全部满足才成功。失败时只有 <code>terminal_status != succeeded</code>、error 非空、无 done 且无 final 才记 <code>fail_closed=True</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：补失败链敏感性测试并转绿</strong></li>
+</ul>
+<p>增加两个 fake SSE 用例：</p>
+<ul>
+<li><code>error(model_empty_response_after_retry) → end</code> 且 DB task failed：结果 <code>success=False</code>、<code>error_code=model_empty_response</code>、<code>fail_closed=True</code>；</li>
+<li>SSE/DB 都 <code>succeeded</code> 但 final 为 <code>WRONG</code>：结果 <code>false_success=True</code>、<code>error_code=false_success</code>、批次硬失败。</li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q -k &quot;Chat or PlanAndSummary or EvidenceWriter&quot;
+</code></pre>
+<p>预期：全部通过；fake transport 中 Chat POST 精确一次。</p>
+<ul>
+<li>[ ] <strong>步骤 5：独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 验证真实 Chat 样本链&quot;
+</code></pre>
+<hr />
+<h3 id="4-scheduler-attempt-1">任务 4：实现 Scheduler attempt 1 与强制暂停</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写 create/run/poll/pause 红灯</strong></li>
+</ul>
+<p>fake transport 必须记录并断言：</p>
+<pre><code class="language-python">class R3SchedulerTests(unittest.TestCase):
+    def test_scheduler_runs_attempt_one_once_and_pauses_in_finally(self) -&gt; None:
+        # POST /scheduler/jobs -&gt; job_id
+        # POST /scheduler/jobs/{job_id}/run -&gt; attempt 1 pending
+        # GET  /scheduler/jobs/{job_id}/runs -&gt; attempt 1 succeeded
+        # PATCH /scheduler/jobs/{job_id}/toggle -&gt; enabled false
+        # 断言 create body: interval_seconds=86400, max_retries=0
+        # 断言 result 精确 marker、error 为空、agent_run_id 非空
+        # 断言 create/run-now 各一次，toggle 恰一次
+
+    def test_scheduler_failure_is_kept_and_job_is_still_paused(self) -&gt; None:
+        # runs 返回 failed/error；结果必须 scheduler_terminal_error、fail_closed=True
+        # 即使失败，toggle 仍恰一次；不得第二次 run-now
+</code></pre>
+<p>运行并确认因 <code>run_scheduler_sample</code> 缺失而红。</p>
+<ul>
+<li>[ ] <strong>步骤 2：实现 Scheduler 单样本</strong></li>
+</ul>
+<p><code>run_scheduler_sample(api, spec, model, sleep, monotonic)</code> 固定行为：</p>
+<pre><code class="language-python">create_payload = {
+    &quot;name&quot;: f&quot;R3 reliability {spec.batch_id} {spec.index:03d}&quot;,
+    &quot;goal&quot;: f&quot;请只回复：{spec.marker}&quot;,
+    &quot;role&quot;: None,
+    &quot;interval_seconds&quot;: 86_400,
+    &quot;max_retries&quot;: 0,
+    &quot;retry_backoff_seconds&quot;: 60,
+}
+</code></pre>
+<ul>
+<li>create 和 run-now 前分别调用 <code>claim_submission</code>；</li>
+<li>每 2 秒 GET runs，只读取 <code>attempt == 1</code>，终态集合固定为 <code>succeeded|failed|interrupted</code>；</li>
+<li>600 秒仍非终态记 <code>timeout</code>，但不发第二个 run-now；</li>
+<li><code>finally</code> 中 PATCH toggle <code>enabled=false</code>，并 GET jobs 确认持久化为 false；</li>
+<li>succeeded + result 不精确或 error 非空 → <code>false_success</code>；</li>
+<li>failed/interrupted + error 非空 → <code>scheduler_terminal_error</code> 且 <code>fail_closed=True</code>；</li>
+<li>暂停失败覆盖 <code>cleanup_ok=False</code>、<code>error_code=cleanup_failed</code>，即使答案正确也不算成功；</li>
+<li>
+<p><code>run_id</code> 使用 <code>agent_run_id</code>，<code>task_id</code> 使用 Scheduler run <code>run_id</code>，<code>job_id</code> 使用创建返回值。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 3：转绿并证明没有业务重试</strong></p>
+</li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q -k Scheduler
+</code></pre>
+<p>预期：成功和失败用例都通过；每个 sample 的 create、run-now、toggle 调用次数均精确为 1。</p>
+<ul>
+<li>[ ] <strong>步骤 4：独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 验证调度样本与暂停清理&quot;
+</code></pre>
+<hr />
+<h3 id="5-file_write-patch-reject">任务 5：实现 file_write 工件、patch 和 reject 清理</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写完整工件成功链红灯</strong></li>
+</ul>
+<p>fake API 返回 R2 已验证的真实结构：</p>
+<pre><code class="language-python">parallel_body = {
+    &quot;run_id&quot;: &quot;parent-run&quot;,
+    &quot;status&quot;: &quot;succeeded&quot;,
+    &quot;sub_results&quot;: [{
+        &quot;run_id&quot;: &quot;parent-run_sub0&quot;,
+        &quot;status&quot;: &quot;succeeded&quot;,
+        &quot;steps&quot;: 2,
+        &quot;error&quot;: &quot;&quot;,
+        &quot;isolated&quot;: True,
+        &quot;diff_stat&quot;: &quot; R3_RELIABILITY_x_001.md | 1 +&quot;,
+        &quot;diff&quot;: &quot;+R3-FILE-WRITE-x-001&quot;,
+        &quot;development_task_id&quot;: &quot;d&quot; * 32,
+        &quot;development_task_status&quot;: &quot;awaiting_review&quot;,
+    }],
+}
+</code></pre>
+<p>测试还要提供：</p>
+<ul>
+<li>GET detail：<code>awaiting_review</code>、非空 <code>result_commit</code>、目标文件位于 <code>diff_stat</code>；</li>
+<li>GET patch：同时包含文件名和 marker；</li>
+<li>fake shell：worktree 存在、commit 可解析、reject 后 worktree/branch 不存在；</li>
+<li>POST reject：body 精确 <code>{"confirm_task_id": task_id}</code>，返回 <code>rejected</code>。</li>
+</ul>
+<p>断言：parallel-run 和 reject 各一次；<code>patch_sha256</code> 等于本地计算；结果成功、artifact_count 至少 4。</p>
+<ul>
+<li>[ ] <strong>步骤 2：实现容器内只读工件检查器</strong></li>
+</ul>
+<p>定义 <code>ShellRunner = Callable[[Sequence[str]], CompletedProcess[str]]</code> 并注入测试。正式命令只允许：</p>
+<pre><code class="language-text">docker compose --env-file &lt;env&gt; -f &lt;compose&gt; -p &lt;project&gt; exec -T api \
+  test -d /data/.xagent-worktrees/&lt;task_id&gt;
+docker compose --env-file &lt;env&gt; -f &lt;compose&gt; -p &lt;project&gt; exec -T api \
+  git -C /data/.xagent-worktrees/&lt;task_id&gt; cat-file -e &lt;result_commit&gt;^{commit}
+docker compose --env-file &lt;env&gt; -f &lt;compose&gt; -p &lt;project&gt; exec -T api \
+  git -C /data/workspace branch --list agent/&lt;task_id&gt;
+</code></pre>
+<p><code>task_id</code> 必须先通过 <code>^[a-f0-9]{32}$</code>，<code>result_commit</code> 必须通过 <code>^[a-f0-9]{40}$</code>；不得把任意 API 文本插入 shell 字符串。命令使用参数数组，不使用 <code>shell=True</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现单次 parallel-run 和 finally reject</strong></li>
+</ul>
+<p>POST body 固定为：</p>
+<pre><code class="language-python">payload = {
+    &quot;tasks&quot;: [{
+        &quot;goal&quot;: (
+            f&quot;必须调用 file_write 工具在当前工作区创建 {spec.filename}，&quot;
+            f&quot;文件内容必须精确为 {spec.marker}（允许末尾换行），不得只用文字回答。&quot;
+        ),
+        &quot;capabilities&quot;: [&quot;file_write&quot;],
+    }],
+    &quot;coordinator_goal&quot;: f&quot;R3 可靠性样本 {spec.sample_id}&quot;,
+    &quot;use_worktrees&quot;: True,
+}
+</code></pre>
+<p>成功条件全部满足后才 <code>success=True</code>：sub succeeded、isolated、development status awaiting_review、detail result_commit、worktree、commit、diff、patch、文件名、marker 和 SHA-256。任一 succeeded 但工件缺失 → <code>false_success</code>；产品失败且 detail 为 failed/timeout/cancelled、error 非空且无可读 patch → 对应真实失败并 <code>fail_closed=True</code>。</p>
+<p>只要 development task 到达 awaiting_review，就在 <code>finally</code> POST <code>/development-tasks/{id}/reject</code>，随后 GET detail 确认 rejected，并用只读 shell 确认 worktree 和 <code>agent/{id}</code> 分支消失。patch 可以保留，因为当前 rejected 状态允许审计读取。</p>
+<ul>
+<li>[ ] <strong>步骤 4：补 patch mismatch 和 reject failure 红灯后转绿</strong></li>
+</ul>
+<p>分别让 fake patch 缺 marker、fake reject 返回 409，断言错误码为 <code>patch_mismatch</code>、<code>cleanup_failed</code>，两个样本都不能成功，也不能触发第二次 parallel-run。</p>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q -k FileWrite
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 验证 file_write 工件与清理&quot;
+</code></pre>
+<hr />
+<h3 id="6">任务 6：实现无副作用预检、模型事实和日志审计</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写预检红灯</strong></li>
+</ul>
+<p>测试用 fake shell 锁定以下失败均发生在 <code>BatchRecorder.start()</code> 前：</p>
+<ul>
+<li>Git 工作树非 clean；</li>
+<li><code>api/worker/web/postgres/redis/qdrant/platform-mcp/prometheus/grafana</code> 任一非 running/healthy；</li>
+<li><code>aicg-minio</code> 或 <code>aicg-postgres</code> 不存在、非 healthy，或运行前后 ID 变化；</li>
+<li>deep health 的 database/redis/qdrant 任一非 healthy；</li>
+<li>Worker pong 不是有效节点；</li>
+<li>API 或 Worker 的 effective model 不是 <code>ollama/qwen3:4b</code> 或配置模型不是 <code>qwen3:4b</code>；</li>
+<li>Celery active/reserved/scheduled 非空，避免与正式 50 样本争用。</li>
+</ul>
+<p>预期：<code>run_preflight</code> 不存在导致红灯。</p>
+<ul>
+<li>[ ] <strong>步骤 2：实现固定只读命令和 <code>PreflightSnapshot</code></strong></li>
+</ul>
+<p>预检命令参数必须由 CLI 的 compose/env/project 组成，禁止 <code>down</code>、<code>up</code>、<code>restart</code>、<code>rm</code>、<code>prune</code>、<code>pause</code> 和 <code>unpause</code>。模型读取使用容器内只读 Python：</p>
+<pre><code class="language-text">docker compose ... exec -T api python -c &quot;from xagent.adapters.llm import get_llm_client; print(get_llm_client().effective_model)&quot;
+docker compose ... exec -T worker python -c &quot;from xagent.adapters.llm import get_llm_client; print(get_llm_client().effective_model)&quot;
+</code></pre>
+<p>只接受 <code>ollama/qwen3:4b</code> 或工具调用路径可能返回的 <code>ollama_chat/qwen3:4b</code>，汇总公开模型统一记为 <code>qwen3:4b</code>；proxy URL、API key 或 secret 不进入输出。</p>
+<p><code>run_preflight</code> 在 API 注册之前完成 Git、Docker、health 和任务空闲检查；预检失败返回结构化 code 并退出 2，不创建 batch 目录、不注册用户、不调用模型。</p>
+<ul>
+<li>[ ] <strong>步骤 3：写日志计数红灯并实现</strong></li>
+</ul>
+<p><code>audit_logs(text)</code> 只返回计数：</p>
+<pre><code class="language-python">def audit_logs(text: str) -&gt; LogsAudit:
+    return LogsAudit(
+        mock_hits=text.count(&quot;MockLLM&quot;),
+        forbidden_route_hits=sum(text.count(item) for item in FORBIDDEN_ROUTE_PATTERNS),
+        traceback_hits=text.count(&quot;Traceback (most recent call last)&quot;),
+        qwen_route_hits=text.count(&quot;qwen3:4b&quot;),
+    )
+</code></pre>
+<p>正式工具使用 batch start UTC 调用 <code>docker compose logs --since &lt;utc&gt; api worker</code>；只写上述数字，不保存完整日志。<code>MockLLM &gt; 0</code> 或 forbidden route &gt; 0 是硬失败；Traceback 记录但不自动等同产品失败，必须与 sample/error 对照写入报告。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行预检/日志测试并独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q -k &quot;Preflight or Logs&quot;
+git add scripts/r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 增加批次预检与日志审计&quot;
+</code></pre>
+<hr />
+<h3 id="7-cli">任务 7：实现不可变批次、第二租户探针和 CLI 退出码</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/r3_model_reliability.py</code>
+- 创建：<code>scripts/run_r3_model_reliability.py</code>
+- 修改：<code>tests/release/test_r3_model_reliability.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写严格串行和不重试红灯</strong></li>
+</ul>
+<p>构造 fake executor，在第 3 个 sample 返回真实产品失败。断言：</p>
+<ul>
+<li>仍按固定顺序执行完 50 个 sample；</li>
+<li>每个 <code>sample_id</code> 只出现一次；</li>
+<li>失败样本保留在分母中，不补发第 51 个样本；</li>
+<li>Scheduler 和 file_write cleanup 已由各执行器完成；</li>
+<li>结果为 passed 或 failed，不能因产品失败误标 aborted。</li>
+</ul>
+<p>再让第 3 个 executor 抛 <code>KeyboardInterrupt</code>，断言只落 2 行 JSONL，summary 为 aborted，后续 executor 不执行，已有目录不能续跑。</p>
+<ul>
+<li>[ ] <strong>步骤 2：写第二租户隔离探针红灯</strong></li>
+</ul>
+<p>实现测试 fake API：第二 tenant token 对第一 tenant 的三个路径分别返回 404、403、404：</p>
+<pre><code class="language-text">GET /runs/&lt;first-chat-run-id&gt;
+GET /checkpoints/&lt;first-chat-checkpoint-id&gt;
+GET /development-tasks/&lt;first-file-write-task-id&gt;
+</code></pre>
+<p>断言 <code>isolation_ok=True</code>。任一路径返回 200 必须返回 <code>tenant_isolation_breach</code>，批次硬失败。缺少任一锚点时探针不允许跳过，返回 <code>harness_error</code> 并使批次失败。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现注册、批次 ID 和编排</strong></li>
+</ul>
+<p><code>generate_batch_id()</code> 固定格式：</p>
+<pre><code class="language-python">def generate_batch_id() -&gt; str:
+    timestamp = datetime.now(UTC).strftime(&quot;%Y%m%dT%H%M%SZ&quot;)
+    return f&quot;{timestamp}-{secrets.token_hex(3)}&quot;
+</code></pre>
+<p>预检通过后：</p>
+<ol>
+<li>在内存生成 44 字符随机密码；</li>
+<li>POST <code>/auth/register</code> 创建 <code>username=r3-reliability-&lt;batch&gt;</code>、<code>tenant_id=r3-reliability-&lt;batch&gt;</code>；</li>
+<li>token 只赋给 <code>ProductApiClient.token</code>，不写 logger/JSON/异常；</li>
+<li><code>BatchRecorder.start()</code> 后才开始 sample 1；</li>
+<li>顺序遍历固定 plan，执行器返回后立即 append/flush；</li>
+<li>50 个样本后注册第二 tenant 并运行隔离探针；</li>
+<li>收集 since-start 日志，构建 summary，写 summary/logs/report；</li>
+<li><code>finally</code> 再次读取服务和受保护容器 ID；身份漂移把批次标 failed，不能修改容器状态。</li>
+</ol>
+<p>只有 <code>KeyboardInterrupt</code>、<code>SystemExit</code>、解析器错误或未建模的工具异常进入 aborted；HTTP 错误、产品超时、模型空响应、错误终态和缺工件都生成普通失败 <code>SampleResult</code> 并继续剩余样本。</p>
+<ul>
+<li>[ ] <strong>步骤 4：实现薄 CLI 与固定退出码</strong></li>
+</ul>
+<p><code>scripts/run_r3_model_reliability.py</code> 只包含：</p>
+<pre><code class="language-python">from __future__ import annotations
+
+from r3_model_reliability import cli
+
+
+if __name__ == &quot;__main__&quot;:
+    raise SystemExit(cli())
+</code></pre>
+<p><code>cli()</code> 参数固定为：</p>
+<pre><code class="language-text">--api-base-url   默认 http://127.0.0.1:18000/api/v1
+--health-url     默认 http://127.0.0.1:18000/health/deep
+--compose-file   默认 deploy/compose/docker-compose.yml
+--env-file       默认 deploy/compose/r2.env.local
+--project-name   默认 xagent-r2
+--output-root    默认 output/reliability
+--report-path    默认 docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md
+--preflight-only 只执行无副作用预检，不创建 batch、用户或模型请求
+</code></pre>
+<p>CLI 不接受 password、token、Authorization、model override、sample count、retry count、并发数或 batch ID。测试分别 fake passed/failed/aborted/preflight，断言退出 0/1/2/2；另断言 <code>--preflight-only</code> 不调用注册、recorder 或任一样本执行器。stdout 只包含 batch_id、status 和公开文件路径。</p>
+<ul>
+<li>[ ] <strong>步骤 5：运行全 R3 合同并独立提交</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+git add scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --cached --check
+git commit -m &quot;feat(可靠性): 编排不可变 R3 基线批次&quot;
+</code></pre>
+<hr />
+<h3 id="8">任务 8：完成离线回归、静态审计和执行前冲突门</h3>
+<p><strong>文件：</strong>
+- 不新增产品文件；只修复由任务 1–7 自己引入的问题。</p>
+<ul>
+<li>[ ] <strong>步骤 1：运行 R3 与 R2 release contracts</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+&amp; apps/api/.venv/Scripts/python.exe -m unittest discover -s tests/release -p &quot;test_r2_*.py&quot; -v
+</code></pre>
+<p>预期：全部通过；若 R2 失败，先判断是否由 R3 文件或 <code>.gitignore</code> 引起，禁止修改无关产品实现来追绿。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行当前 Web/API 后端发布范围</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe scripts/run_webapi_release_tests.py
+</code></pre>
+<p>预期：通过既有显式排除边界；记录精确 passed/skipped/warnings，不用历史数字代替。</p>
+<ul>
+<li>[ ] <strong>步骤 3：运行静态与安全门</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/ruff.exe check scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+&amp; apps/api/.venv/Scripts/ruff.exe format --check scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --check
+rg -n &quot;Bearer |Authorization:|access_token|password=|BEGIN .*PRIVATE KEY|reasoning_content|system_prompt&quot; scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+Test-Path apps/api/uv.lock
+git status --short --branch
+</code></pre>
+<p>预期：Ruff、format、diff 通过；secret scan 只能命中测试中的公开占位并逐条解释；<code>apps/api/uv.lock</code> 为 false；除当前任务文件外无改动。</p>
+<ul>
+<li>[ ] <strong>步骤 4：执行同工作区冲突和运行任务只读检查</strong></li>
+</ul>
+<p>在正式 batch 前记录：</p>
+<ul>
+<li><code>git status</code> clean、无 <code>.git/index.lock</code> 和其他 Git lock；</li>
+<li>无其他进程在同 checkout 执行 build/test/write；</li>
+<li>Celery active/reserved/scheduled 均为空；</li>
+<li><code>/api/v1/development-tasks?status=running</code> 为空；</li>
+<li>当前核心/扩展/保护容器 ID、镜像、health；</li>
+<li>不执行 build、up、restart、down、pause、prune 或 volume 操作。</li>
+</ul>
+<p>若同 checkout 存在写任务或业务 run，停止并协调；不得用正式 50 样本与其竞争。</p>
+<ul>
+<li>[ ] <strong>步骤 5：把 R3-A 从 Ready 转为工具已就绪的 CLAIMED</strong></li>
+</ul>
+<p>仅当任务 1–8 全绿时，把任务 0 的条目从 <code>Ready</code> 移到 <code>In Progress</code> 并更新为：</p>
+<pre><code class="language-markdown">- [R3-A] 真实 Ollama 可靠性基线 | 状态：CLAIMED | 证据：固定 30/10/10 合同、不可变批次、脱敏输出、SLO 判定和现有 R2 回归已通过；正式 50 样本尚未开始。
+</code></pre>
+<p>提交：</p>
+<pre><code class="language-powershell">git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git diff --cached --check
+git commit -m &quot;docs(任务板): 标记 R3 基线工具就绪&quot;
+</code></pre>
+<hr />
+<h3 id="9-50">任务 9：运行唯一正式 50 样本不可变批次</h3>
+<p><strong>文件：</strong>
+- 生成但不提交：<code>output/reliability/&lt;batch_id&gt;/samples.jsonl</code>
+- 生成但不提交：<code>output/reliability/&lt;batch_id&gt;/summary.json</code>
+- 生成但不提交：<code>output/reliability/&lt;batch_id&gt;/logs-audit.json</code>
+- 生成并待审：<code>docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：运行工具自身 preflight-only 路径</strong></li>
+</ul>
+<p>调用任务 7 已由测试锁定的 <code>--preflight-only</code>；该模式只执行任务 6 的只读预检并退出，不生成 batch、不注册用户、不调用模型。</p>
+<p>运行：</p>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe scripts/run_r3_model_reliability.py --preflight-only
+</code></pre>
+<p>预期：exit 0，输出 <code>preflight=passed</code>；服务、模型、任务空闲、保护容器和 Git 全部通过。</p>
+<ul>
+<li>[ ] <strong>步骤 2：最后确认正式执行边界</strong></li>
+</ul>
+<p>记录当前 HEAD、branch、clean status、预检时间、核心/扩展/保护容器 ID。确认没有第二个 benchmark 进程：</p>
+<pre><code class="language-powershell">Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*run_r3_model_reliability.py*' } | Select-Object ProcessId,CommandLine
+</code></pre>
+<p>预期：正式启动前只有当前只读检查进程或没有匹配项。</p>
+<ul>
+<li>[ ] <strong>步骤 3：只运行一次正式批次</strong></li>
+</ul>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe scripts/run_r3_model_reliability.py
+</code></pre>
+<p>约束：</p>
+<ul>
+<li>不添加 <code>try-again</code>、不手工补跑单个 marker、不改样本数量；</li>
+<li>允许 GET 轮询、patch 下载和 cleanup；</li>
+<li>产品失败继续记录，harness crash/人工中止标 aborted 后立即停止；</li>
+<li>运行期间不改代码、不切模型、不重启服务、不并行压测；</li>
+<li>
+<p>commentary 最多报告可执行阶段进度，不把未完成结果称为通过。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 4：按批次终态停在正确门</strong></p>
+</li>
+<li>
+<p><code>passed</code>：继续任务 10，任务板可转 <code>REVIEW</code>；</p>
+</li>
+<li><code>failed</code>：不重跑，继续任务 10，任务板转 <code>PARTIAL</code> 并记录失败分布；</li>
+<li><code>aborted</code>：不续写、不拼接，任务板转 <code>BLOCKED</code>，保留原始目录；只有修复 harness 并重新得到 Owner 指令后才允许新批次。</li>
+</ul>
+<hr />
+<h3 id="10">任务 10：交叉审计原始结果、报告和任务板</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md</code>
+- 修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：机械核对 JSONL 与 summary 一致性</strong></li>
+</ul>
+<p>使用短只读 Python 命令核对：</p>
+<ul>
+<li>JSONL 恰有 50 行且 sample_id 唯一；aborted 时行数与 completed_samples 精确相等；</li>
+<li>30/10/10 数量、成功数、失败码分布和 P95 可由 JSONL 重算得到；</li>
+<li>summary 的 hard failures 与 raw flags 一致；</li>
+<li>logs-audit 的 MockLLM/forbidden 数与报告一致；</li>
+<li>每个 Scheduler job 都 <code>enabled=false</code>；</li>
+<li>每个 awaiting_review file_write 都已 reject，worktree/branch 已清；</li>
+<li>第二 tenant 三项读取均 403/404；</li>
+<li>
+<p>raw 文件 SHA-256 写入报告，但 raw 正文不提交。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 2：人工复核失败与假成功语义</strong></p>
+</li>
+</ul>
+<p>逐个非成功样本确认：</p>
+<ul>
+<li>产品状态、error、SSE done/final、DB task、Scheduler run 或 development task 是否一致；</li>
+<li><code>succeeded + wrong final/artifact</code> 必须是 false_success，不能降级为普通 wrong_final；</li>
+<li><code>model_empty_response_after_retry</code> 不能被写成“模型回答成功”；</li>
+<li><code>finish_reason=unknown</code> 保持 unknown；</li>
+<li>
+<p>cleanup failure 不被成功率掩盖。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 3：完成脱敏报告</strong></p>
+</li>
+</ul>
+<p>报告固定包含：</p>
+<ol>
+<li>HEAD、worktree、Compose project、本机/单实例边界；</li>
+<li>批次 ID、UTC 起止、模型、50 样本矩阵；</li>
+<li>三类成功率、P50/P95/max 和门槛；</li>
+<li>每种失败码数量、false success 和 fail-closed 覆盖；</li>
+<li>Scheduler pause、file_write reject、tenant isolation、MockLLM/forbidden 证据；</li>
+<li>raw 文件路径和 SHA-256；</li>
+<li>未验证的短剧、桌面、多机、付费 provider、远程发布；</li>
+<li>
+<p>最终结论只能是 <code>passed</code>、<code>failed</code> 或 <code>aborted</code>，不得升级为企业级全面完成。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 4：按真实结果更新任务板</strong></p>
+</li>
+<li>
+<p>passed：把 In Progress 中的 R3-A 状态从 <code>CLAIMED</code> 更新为 <code>REVIEW</code>；</p>
+</li>
+<li>failed：把状态从 <code>CLAIMED</code> 更新为 <code>PARTIAL</code>，列出不达标的成功率、P95 或硬失败；</li>
+<li>aborted：把状态从 <code>CLAIMED</code> 更新为 <code>BLOCKED</code>，列出中断样本和 harness 原因；</li>
+<li>
+<p>不写 <code>DONE</code>，独立复审与 Owner 决策仍未完成。</p>
+</li>
+<li>
+<p>[ ] <strong>步骤 5：最终验证并提交证据</strong></p>
+</li>
+</ol>
+<pre><code class="language-powershell">&amp; apps/api/.venv/Scripts/python.exe -m pytest tests/release/test_r3_model_reliability.py -q
+&amp; apps/api/.venv/Scripts/python.exe -m unittest discover -s tests/release -p &quot;test_r2_*.py&quot; -v
+&amp; apps/api/.venv/Scripts/ruff.exe check scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+&amp; apps/api/.venv/Scripts/ruff.exe format --check scripts/r3_model_reliability.py scripts/run_r3_model_reliability.py tests/release/test_r3_model_reliability.py
+git diff --check
+git check-ignore output/reliability/&lt;batch_id&gt;/samples.jsonl
+git status --short --branch
+</code></pre>
+<p>只暂存脱敏报告和任务板；原始 output 不得进入 index：</p>
+<pre><code class="language-powershell">git add docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git diff --cached --name-only
+git diff --cached --check
+git commit -m &quot;docs(证据): 记录 R3 模型可靠性基线&quot;
+git status --short --branch
+</code></pre>
+<p>预期：提交恰含报告和任务板；工作树 clean；未 push、未 tag、未发布。</p>
+<hr />
+<h2 id="_6">最终验收清单</h2>
+<ul>
+<li>[ ] 计划、工具、测试和报告均位于实际 worktree <code>D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\.worktrees\webapi-release-hardening</code>。</li>
+<li>[ ] 正式批次只有一个 <code>batch_id</code>，没有补样、拼接、替换或并发执行。</li>
+<li>[ ] Chat/Scheduler/file_write 数量严格为 30/10/10。</li>
+<li>[ ] 三类成功率、P95、假成功、fail-closed、MockLLM、forbidden 和 tenant isolation 均由 raw 重算。</li>
+<li>[ ] 每个 Scheduler 已暂停，每个成功 file_write 已 reject 并清理 worktree/branch。</li>
+<li>[ ] JSONL/summary/logs/report 不含密码、token、Authorization、reasoning 或 system prompt。</li>
+<li>[ ] R2 release contracts 和 Web/API backend release scope 新鲜通过。</li>
+<li>[ ] 未修改生产 API/schema/model route，未下载模型、未调用付费 provider。</li>
+<li>[ ] 未执行 Docker 重建、重启、down、volume 删除或其他项目容器操作。</li>
+<li>[ ] 任务板状态与真实 batch status 一致，未提前写 DONE。</li>
+<li>[ ] 最终提交不包含 <code>output/reliability/</code>，且未 push/tag/release。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

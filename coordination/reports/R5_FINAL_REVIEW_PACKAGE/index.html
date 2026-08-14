@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R5_FINAL_REVIEW_PACKAGE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R5 最终审查包（当前候选） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R5 \u6700\u7ec8\u5ba1\u67e5\u5305\uff08\u5f53\u524d\u5019\u9009\uff09";
+        var mkdocs_page_input_path = "coordination/reports/R5_FINAL_REVIEW_PACKAGE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R5_FINAL_REVIEW_PACKAGE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R5 最终审查包（当前候选）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r5">R5 最终审查包（当前候选）</h1>
+<blockquote>
+<p>日期：2026-07-08
+目标：把当前 <code>candidate/min-send-review-20260707-claude</code> 的发布审查输入收敛为一份 reviewer 可直接阅读的最终审查包。
+边界：本包用于<strong>审查与签发判断</strong>，不是自动宣布“正式商用 GA 已完成”。</p>
+</blockquote>
+<hr />
+<h2 id="0-2026-08-03v2">0. 候选刷新附录（2026-08-03，v2）</h2>
+<blockquote>
+<p>原签字候选 <code>c175201</code> 之后，分支又推进了 <strong>221 个提交</strong>（8/2 安全审计修复、沙箱/SSO 实测、平台化 P0/P2、性能瓶颈修复、CI 修复）。原签字口径不覆盖新候选，本节为刷新后的候选事实；<strong>新候选的签发仍需 owner 重新确认</strong>。</p>
+</blockquote>
+<h3 id="01">0.1 新候选</h3>
+<ul>
+<li>分支：<code>candidate/min-send-review-20260707-claude</code>（PR #7，不变）</li>
+<li>新候选 HEAD：<code>402302aca2ad7156ba5ddfb85ca69122c5512098</code></li>
+<li>远端 CI：GitHub Actions <code>CI</code> run <code>30829673045</code>，<strong>success</strong></li>
+<li>backend ✅ / frontend ✅ / license-gate ✅ / <strong>e2e-api ✅</strong>（本轮修复后首次转绿）</li>
+<li>docker-build / promptfoo-eval / load-test：skipped（路径触发规则，与原候选一致）</li>
+</ul>
+<h3 id="02-c175201-221">0.2 自原签字候选 c175201 以来的 221 提交摘要</h3>
+<ul>
+<li>8/2 审计修复 7 项全部核销（FIX_COMPLETION_REPORT_20260802）</li>
+<li>沙箱分级 L1 Docker 实测通过（stdout/stderr 分流、隔离/限额/超时/一次性容器）</li>
+<li>SSO/OIDC 授权码流端到端实测通过（Keycloak 26，alg 路由双源校验）</li>
+<li>平台化：secretRef 外部密管 + Helm chart（五套 values 渲染通过）+ 限流/调度 Redis 化</li>
+<li>P2 容量：压测基线 → bcrypt 线程池化（login c=50 3.2→54.8 RPS）→ skills 响应缓存（c=50 31.5→162.3 RPS）→ 10min soak 142,720 请求 0 错误无泄漏 → Postgres 基线 + 4 worker 扩展性实测（canvas c=10 6.4×）</li>
+<li>CI 修复：edge_tts 可选依赖测试优雅跳过；/perf 端点实装统计（存量 bug）；e2e 冒烟规格对齐当前 API（403 语义、模板路由漂移）</li>
+</ul>
+<h3 id="03-ci-reviewer">0.3 本轮 CI 修复明细（reviewer 关注点）</h3>
+<table>
+<thead>
+<tr>
+<th>失败</th>
+<th>根因</th>
+<th>修复</th>
+<th>性质</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>backend pytest ERROR ×4 + FAILED ×1</td>
+<td>edge-tts 为可选 extra，CI 不装；测试直接 import</td>
+<td><code>pytest.importorskip</code> 优雅跳过；缺包降级路径本有测试覆盖</td>
+<td>测试环境适配，非产品缺陷</td>
+</tr>
+<tr>
+<td>e2e-api /perf 断言失败</td>
+<td>/perf 自 6571d3f 起即为坏端点（TimingMiddleware 未注册、实例查找循环无效）</td>
+<td>注册 TimingMiddleware + 进程级实例自注册，/perf 实装汇总统计</td>
+<td><strong>真实存量 bug，已修</strong></td>
+</tr>
+<tr>
+<td>e2e-api 401 断言 ×2</td>
+<td>匿名空角色被授权守卫拦截返回 403（CI REQUIRE_AUTH=false）</td>
+<td>规格放宽为 401/403</td>
+<td>规格对齐设计语义</td>
+</tr>
+<tr>
+<td>e2e-api /templates 404</td>
+<td>模板路由漂移至 /api/v1/canvas/templates/list</td>
+<td>规格更新为当前路由与响应形状</td>
+<td>规格对齐</td>
+</tr>
+</tbody>
+</table>
+<h3 id="04-2026-08-03owner">0.4 新候选签发记录（2026-08-03，owner 已确认）</h3>
+<ul>
+<li>~~原 §7 owner 三项确认（目标环境 / 单人签字模式 / 交付边界）不自动延伸至新候选~~ → <strong>2026-08-03 owner 已明确将三项确认延伸至新候选，并确认签发</strong>。</li>
+<li>签发对象：分支 <code>candidate/min-send-review-20260707-claude</code>（PR #7），HEAD <code>2aae3a212a51f253bc3e3ef485fbf3fa916204b8</code>（代码有效候选 <code>cfb973d</code>，其后均为文档/协调类提交）。</li>
+<li>签发依据：</li>
+<li>远端 CI run <code>30834318982</code> success（backend / frontend / license-gate / e2e-api 全绿；docker-build / promptfoo-eval / load-test 按既有 push 触发规则不适用于 PR，与原签字候选口径一致）；</li>
+<li>自 c175201 起 221 提交的变更范围（含安全模型变更：SSO/OIDC、沙箱 fail-closed、限流配置化、bcrypt 异步化、skills 响应缓存）已经 §0.2/§0.3 摘要与下列证据包完整披露，owner 已知悉并接受；</li>
+<li>证据入口：<code>audit-20260802/DELIVERY_VERIFICATION_20260803.md</code>（v3）、<code>audit-20260802/LOAD_TEST_FORMAL_20260803.md</code>、<code>audit-20260802/SANDBOX_SSO_REVERIFY_20260803.md</code>、<code>docs/coordination/reports/REVIEW_ACCEPTANCE_PACKET_20260803.md</code>。</li>
+<li>签发边界（owner 确认不外推）：多机 HA 未演练（共享状态类已同机两实例实测，签发后补充证据 HA_MULTI_INSTANCE_VERIFY_20260803）；L2 E2B 云沙箱未实测（无 key）；非当前机器的目标环境演练未做；SaaS 级并发容量不承诺（仅单机/4 worker 基线）。</li>
+<li>R8/R14/R15/R16/R17/R18/R19 已于 2026-08-03 验收 DONE（见 §0.4 前文与验收材料包）。</li>
+</ul>
+<hr />
+<h3 id="05-delta-2026-08-04-owner">0.5 签发后 delta 披露与合并就绪附录（2026-08-04，待 owner 签发延伸）</h3>
+<p>§0.4 签发对象为 HEAD <code>2aae3a2</code>（代码有效候选 <code>cfb973d</code>）。此后分支继续推进至 <code>41b383f</code>，按本包自身纪律，<strong>原签发不自动覆盖新 HEAD</strong>，合并前需 owner 明确延伸。delta 完整披露如下：</p>
+<ul>
+<li>范围：<code>2aae3a2..41b383f</code> 共 22 提交（<code>2aae3a2</code> 已验证为当前 HEAD 祖先）。</li>
+<li>代码类提交（6 个，均有本地门禁 + 远端 CI 证据）：</li>
+<li><code>5e37959</code> style(ruff)：43 项安全自动修复（330→287），不改行为；</li>
+<li><code>813ffb1</code> feat(ops)：P1 告警联动（Alertmanager webhook 端点 + Helm 接线）；</li>
+<li><code>1dd4e02</code> feat(ops)：P1 run/workflow 证据链自动生成 + 归档接通；</li>
+<li><code>0a43de5</code> / <code>f83ac75</code> feat(spine)：P4 自动推进循环 + review 闭环 + release 收口；</li>
+<li><code>dd8c18b</code> feat(web)：P4 GoalBoard 治理视图操作入口；</li>
+<li><code>073541b</code> / <code>bb250c2</code> test：P0/P1 补证 43 项新测试（纯加法）；</li>
+<li><code>f95d26e</code> ci：新增 <code>config-governance</code> 门禁 job（纯加法）。</li>
+<li>文档/口径类提交（其余）：SOT 勾选、交付模板集、变体包、签发留档。</li>
+<li>远端 CI 覆盖：run <code>30842484189</code>（8/3，P1 告警联动节点）与 run <strong><code>30963854108</code>（8/4，最终 HEAD <code>41b383f</code>，backend/frontend/license-gate/config-governance/e2e-api 全绿</strong>；promptfoo-eval/load-test/docker-build 按既有规则不适用于 PR，与历次签发口径一致）。</li>
+<li>本地门禁：全量 pytest 628 通过 / 0 失败 / 8 跳过；前端 tsc 0 错误；eslint 0 错误；ruff 无新增（证据：<code>audit-20260802/P4_FINAL_VERIFY_20260804.md</code>、<code>P0_CONFIG_GOVERNANCE_CLOSEOUT_20260804.md</code>、<code>P1_OPS_AUTOMATION_VERIFY_20260804.md</code> 及各 pytest 日志）。</li>
+<li>同机两实例实测新增证据（8/4）：共享 Postgres 数据一致性 + JWT 无状态会话（<code>audit-20260802/P2_MULTI_INSTANCE_CONSISTENCY_20260804.md</code>）；新发现 lite 内存 UserStore 不跨实例，已入 KNOWN_ISSUES §2.4，不影响 full 模式交付口径。</li>
+<li>PR #7 当前状态：MERGEABLE / CLEAN，无冲突，无 review 记录。</li>
+<li><strong>签发边界维持 §0.4 不外推</strong>（多机 HA / E2B / 目标环境 / SaaS 级容量不承诺），另增：P3 短剧变体已暂停（owner 决策 2026-08-04）。</li>
+</ul>
+<blockquote>
+<p><strong>owner 决策记录（2026-08-04 晚）</strong>：owner 确认将 §0.4 三项确认与签发延伸至上述 delta 后的 HEAD，授权以 <strong>merge commit</strong> 方式合并 PR #7 至 <code>master</code>。签发边界不外推（同上）。</p>
+<p><strong>合并执行记录（2026-08-05 00:56 UTC）</strong>：合并前最终 CI run <code>30964570430</code>（HEAD <code>c198a3a</code>）全绿；PR #7 已以 merge commit <code>c2260cd285df4d8521878780edba8b818c64e066</code> 合入 <code>master</code>，状态 MERGED。候选分支保留（repo 未开 deleteBranchOnMerge）。</p>
+<p><strong>合并后 master push 门禁修复（2026-08-05）</strong>：master 首次 push 触发 push-only 两 job 首跑即败（run <code>30964877982</code>）——<code>load-test</code> k6 手动 gpg/apt 安装 keyserver 失效、<code>promptfoo-eval</code> 启动命令 <code>xagent serve --host/--port</code> 与 CLI 现状脱节（该子命令已无此二参）。修复（<code>f503442</code>）：k6 改用官方 <code>grafana/setup-k6-action@v1</code>、启动命令对齐 e2e-api 的 <code>uvicorn xagent.main:app</code>。复验 run <strong><code>30965333163</code> 全 job 绿</strong>（backend/frontend/license-gate/config-governance/e2e-api/promptfoo-eval/load-test 全 success；docker-build 按既有条件仅 <code>refs/heads/main</code> 触发，master 上恒 skipped——存量口径，未动）。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 当前审查对象</h2>
+<h3 id="_1">候选主线</h3>
+<ul>
+<li>分支：<code>candidate/min-send-review-20260707-claude</code></li>
+<li>当前分支 HEAD：<code>db29505fbce3f6bfe056d6e9073d82e6130e8988</code></li>
+<li>PR：<a href="https://github.com/xiongpinji/xiongbao/pull/7">#7</a></li>
+<li>当前远端 CI：GitHub Actions <code>CI</code> run <code>28919902142</code>，状态 <code>success</code></li>
+</ul>
+<h3 id="_2">重要现实边界</h3>
+<p>当前仓库<strong>本地工作树</strong>已继续完成一轮 R4/R5 收口，包含：</p>
+<ul>
+<li><code>deploy/compose/postgres-init.sh</code> 的 LF 修正</li>
+<li><code>deploy/compose/docker-compose.yml</code> 中 worker healthcheck 伪失败修正</li>
+<li><code>tests/e2e/specs/full-flow.spec.ts</code> 的 replay/resume 精确断言收紧</li>
+<li>本轮新增交付材料与 R4/R5 文档包</li>
+</ul>
+<p>因此现在可以明确：</p>
+<blockquote>
+<p><strong>远端 CI <code>28919902142</code> 已覆盖当前最终候选 commit <code>db29505fbce3f6bfe056d6e9073d82e6130e8988</code>，本地新增收口改动已经完成冻结、推送并获得新的远端全绿记录。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 本轮可直接成立的结论</h2>
+<h3 id="21">2.1 已成立</h3>
+<ul>
+<li>当前代码线已具备主链可运行能力；</li>
+<li>最小 CI 门禁已在候选分支上存在并已有成功记录；</li>
+<li>单机 / Docker Compose <code>full</code> 模式已在当前机器完成一轮等价环境实跑；</li>
+<li>交付材料已经成套，reviewer 可找到部署、运维、已知问题、试点边界、升级路径入口；</li>
+<li>当前适合判定为：</li>
+<li><strong>内部试点可交付</strong></li>
+<li><strong>受控私有部署可交付</strong></li>
+<li><strong>可进入最终 reviewer / owner 判断阶段</strong></li>
+</ul>
+<h3 id="22">2.2 当前不能自动成立</h3>
+<ul>
+<li>若目标环境不是当前机器，则客户目标环境演练已自动完成。</li>
+</ul>
+<hr />
+<h2 id="3">3. 验证矩阵</h2>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>结论</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>候选分支 / PR 存在</td>
+<td>通过</td>
+<td>PR #7；候选分支 <code>candidate/min-send-review-20260707-claude</code></td>
+</tr>
+<tr>
+<td>远端 CI（最终候选）</td>
+<td>通过</td>
+<td>GitHub Actions <code>28919902142</code> success，对应 commit <code>db29505fbce3f6bfe056d6e9073d82e6130e8988</code></td>
+</tr>
+<tr>
+<td>frontend build</td>
+<td>通过</td>
+<td><code>npm run build</code>；R20；R31</td>
+</tr>
+<tr>
+<td>backend lint/test</td>
+<td>通过</td>
+<td><code>ruff</code> / <code>pytest -q</code>；R20</td>
+</tr>
+<tr>
+<td>license gate</td>
+<td>通过</td>
+<td><code>scripts/license_check.py</code>；R20</td>
+</tr>
+<tr>
+<td>环境基线 / secret 文档</td>
+<td>已补齐</td>
+<td><code>ENVIRONMENT_BASELINE_V1.md</code>；R7</td>
+</tr>
+<tr>
+<td>发布 / 回滚 runbook</td>
+<td>已补齐</td>
+<td><code>RELEASE_RUNBOOK_V1.md</code>；R6</td>
+</tr>
+<tr>
+<td>关键页面视觉证据</td>
+<td>已补齐（本地）</td>
+<td><code>R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></td>
+</tr>
+<tr>
+<td>R4 full-mode 等价环境实跑</td>
+<td>通过（当前机器）</td>
+<td><code>delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑</code></td>
+</tr>
+<tr>
+<td><code>/health</code> / <code>/ready</code></td>
+<td>通过</td>
+<td>R31；<code>r4-evidence</code></td>
+</tr>
+<tr>
+<td><code>alembic current</code></td>
+<td>通过，<code>0005 (head)</code></td>
+<td>R31；<code>alembic-current.txt</code></td>
+</tr>
+<tr>
+<td><code>python -m xagent.cli smoke</code></td>
+<td>通过</td>
+<td>R31；<code>api-smoke.txt</code></td>
+</tr>
+<tr>
+<td><code>full-flow.spec.ts</code></td>
+<td>通过，9/9</td>
+<td>R31；<code>full-flow-fixed.txt</code></td>
+</tr>
+<tr>
+<td>管理员部署手册</td>
+<td>已补齐</td>
+<td><code>ADMIN_DEPLOYMENT_MANUAL_V1.md</code></td>
+</tr>
+<tr>
+<td>运维手册</td>
+<td>已补齐</td>
+<td><code>OPERATIONS_MANUAL_V1.md</code></td>
+</tr>
+<tr>
+<td>已知问题 / 试点边界</td>
+<td>已补齐</td>
+<td><code>KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></td>
+</tr>
+<tr>
+<td>联系人与升级路径</td>
+<td>已补齐（单人交付模式）</td>
+<td><code>SUPPORT_ESCALATION_PATH_V1.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-reviewer">4. reviewer 关注点</h2>
+<h3 id="41">4.1 这次真正被证明了什么</h3>
+<ul>
+<li>当前机器上的单机 <code>full</code> 模式等价环境可以真实拉起；</li>
+<li>health / ready / migration / smoke / 登录 / Run Console / full-flow 主链都已经有实跑证据；</li>
+<li>R4 不再停留在“文档存在”，而是已经有<strong>运行证据</strong>。</li>
+</ul>
+<h3 id="42">4.2 这次没有偷偷宣称什么</h3>
+<ul>
+<li>没有把 lite/dev 结果冒充 full-mode 结果；</li>
+<li>没有把客户目标环境与当前机器等同；</li>
+<li>没有把远端 CI 覆盖范围夸大到当前本地全部改动；</li>
+<li>没有把“试点可交付”直接说成“正式商用 GA 已完成”。</li>
+</ul>
+<h3 id="43">4.3 本轮最小修复点</h3>
+<p>本轮为了完成 R4 演练，补了两处最小范围问题：</p>
+<ol>
+<li><code>deploy/compose/postgres-init.sh</code></li>
+<li>修复工作区 CRLF 导致的 <code>/bin/bash^M</code></li>
+<li><code>deploy/compose/docker-compose.yml</code></li>
+<li>对 worker 禁用继承自 API 镜像的 <code>/health</code> 探针，消除 Celery 进程的伪失败</li>
+</ol>
+<p>另有一处测试收口：</p>
+<ol>
+<li><code>tests/e2e/specs/full-flow.spec.ts</code></li>
+<li>replay/resume 文本在 UI 上重复出现，原 strict selector 误报；已收紧断言到对应 card 语义范围</li>
+</ol>
+<hr />
+<h2 id="5">5. 剩余风险</h2>
+<h3 id="51">5.1 当前真正还剩的技术/流程风险</h3>
+<ol>
+<li><strong>若目标交付环境不是当前机器</strong></li>
+<li>
+<p>仍需在目标机器 / 客户现场复演一次。</p>
+</li>
+<li>
+<p><strong>正式商用签发仍需 owner 明确接受</strong></p>
+</li>
+<li>
+<p>尤其是是否将“当前机器的等价环境实跑”作为本次正式交付依据。</p>
+</li>
+<li>
+<p><strong>当前交付边界仍限定于单机 / Docker Compose <code>full</code> 模式</strong></p>
+</li>
+<li>不自动外推为 K8s / HA / 多机 / 客户现场异构环境已完成同等级验证。</li>
+</ol>
+<h3 id="52">5.2 当前已不再构成主链阻断的项</h3>
+<ul>
+<li>最终候选未冻结</li>
+<li>远端 CI 未覆盖最终候选</li>
+<li>full-mode stack 无法拉起</li>
+<li><code>/health</code> / <code>/ready</code> 不通过</li>
+<li>migration 不通过</li>
+<li>smoke 不通过</li>
+<li>full-flow 主链失败</li>
+</ul>
+<p>这些在当前机器上都已被证据证明通过。</p>
+<hr />
+<h2 id="6">6. 建议的发布判定</h2>
+<h3 id="a">建议 A：内部试点 / 受控私有部署</h3>
+<p><strong>建议判定：可以成立</strong></p>
+<p>理由：
+- 当前候选主链和当前机器等价环境证据已经足够。</p>
+<h3 id="b">建议 B：最终候选进入正式签字判断</h3>
+<p><strong>建议判定：可以成立</strong></p>
+<p>理由：
+- 本地收口改动已经冻结进最终候选；
+- 最终候选 commit <code>db29505fbce3f6bfe056d6e9073d82e6130e8988</code> 已获得新的远端 CI 全绿记录 <code>28919902142</code>；
+- 审查材料和 R4 证据都已齐备。</p>
+<h3 id="c">建议 C：正式商用可交付</h3>
+<p><strong>建议判定：成立</strong></p>
+<p>依据：
+1. 当前机器上的 full-mode 等价环境实跑已完成；
+2. 单人交付模式下，owner 已明确接受同一人覆盖 TL / QA / DevOps / Owner 角色；
+3. 最终候选 commit <code>c175201cdee1026d89be8d96b93c3f6bfa0f1739</code> 已获得新的远端 CI 全绿记录 <code>28921940625</code>；
+4. 当前交付边界已明确限定为单机 / Docker Compose <code>full</code> 模式。</p>
+<hr />
+<h2 id="7-reviewer-owner">7. reviewer / owner 最终检查单</h2>
+<p>本轮 owner 已明确给出：</p>
+<ol>
+<li>当前机器可作为本次正式交付的目标环境 / 可接受等价环境；</li>
+<li>单人交付模式下由同一 owner 覆盖 TL / QA / DevOps / Owner 角色；</li>
+<li>当前交付范围限定于单机 / Compose <code>full</code> 模式，不外推到 K8s / HA / 客户现场多机。</li>
+</ol>
+<p>因此当前下一步已不是继续判断是否可签，而是：</p>
+<blockquote>
+<p><strong>按已确认结论完成最终留档与后续环境收尾。</strong></p>
+</blockquote>
+<hr />
+<h2 id="8">8. 核心证据入口</h2>
+<ul>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/coordination/reports/delivery-report.md#r31-当前机器-r4-full-mode-等价环境实跑</code></li>
+<li><code>docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md</code></li>
+<li><code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></li>
+<li><code>docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md</code></li>
+<li><code>C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\compose-ps.txt</code></li>
+<li><code>C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\alembic-current.txt</code></li>
+<li><code>C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\api-smoke.txt</code></li>
+<li><code>C:\Users\canqu\.claude\projects\d--AI---------------xiong-bao\r4-evidence\full-flow-fixed.txt</code></li>
+</ul>
+<hr />
+<h2 id="9">9. 本包最终建议</h2>
+<blockquote>
+<p><strong>当前 <code>xagent</code> 已达到“当前机器单机 full-mode 正式交付签字条件已满足”的状态。</strong></p>
+<p><strong>若你接受当前机器作为目标/等价环境，并接受单人签字模式，则现在已经可以直接做最终签字；不再需要额外的技术补洞或 CI 对齐步骤。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

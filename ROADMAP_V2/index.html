@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/ROADMAP_V2/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent Roadmap v2（商用交付后的增强路线） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Roadmap v2\uff08\u5546\u7528\u4ea4\u4ed8\u540e\u7684\u589e\u5f3a\u8def\u7ebf\uff09";
+        var mkdocs_page_input_path = "ROADMAP_V2.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/ROADMAP_V2/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Roadmap v2（商用交付后的增强路线）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/ROADMAP_V2.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-roadmap-v2">X-Agent Roadmap v2（商用交付后的增强路线）</h1>
+<ul>
+<li>日期：2026-07-20</li>
+<li>主题：在当前商用交付标准已达成的前提下，定义下一轮增强与规模化方向</li>
+<li>适用范围：<code>xagent</code> 当前主仓、后续平台化、自动化运营、容量提升与商业复制能力建设</li>
+</ul>
+<hr />
+<h2 id="1">1. 当前基线</h2>
+<p>当前 <code>xagent</code> 已完成：</p>
+<ul>
+<li><code>G1</code> 内部试点可稳定使用</li>
+<li><code>G2</code> 正式商用 GA</li>
+<li><code>G3</code> 企业级长期运营治理与首轮验证</li>
+<li><code>G0 xagent 商用完整交付</code></li>
+</ul>
+<p>这意味着：</p>
+<blockquote>
+<p>后续工作不再是“是否达到商用交付标准”，而是“在已经达到商用交付标准的前提下，下一轮增强要优先投向哪里”。</p>
+</blockquote>
+<p>因此，Roadmap v2 的所有方向都应理解为：
+- <strong>增强项</strong>
+- <strong>规模化项</strong>
+- <strong>平台化项</strong>
+- <strong>复制能力项</strong></p>
+<p>而不是重新回到“项目是否可交付”的旧问题上。</p>
+<hr />
+<h2 id="2-roadmap-v2">2. Roadmap v2 的目标</h2>
+<p>Roadmap v2 的总目标是：</p>
+<blockquote>
+<p><strong>把已经完成商用交付的 <code>xagent</code>，继续推进为更易复制、更低运维成本、更强平台化、更可规模扩展的产品化系统。</strong></p>
+</blockquote>
+<h3 id="21">2.1 总体原则</h3>
+<ol>
+<li>不再重复把“商用达标”作为主目标；</li>
+<li>优先做可复制、可扩展、可平台化的方向；</li>
+<li>所有后续工作都应服务于更强交付效率与更低长期维护成本；</li>
+<li>新增强项不得回退已有 G0/G1/G2/G3 的完成结论；</li>
+<li>继续沿用 Goal / 执行包 / 验证闭环的推进方式。</li>
+</ol>
+<hr />
+<h2 id="3-a">3. 方向 A：平台化增强</h2>
+<h3 id="_1">目标</h3>
+<p>把当前可运行、可交付的系统，推进成更标准化的平台部署形态。</p>
+<h3 id="_2">当前缺口</h3>
+<ul>
+<li><code>secretRef</code> / external secret manager 仍主要停留在方向层；</li>
+<li>Helm chart 已有入口，但未完全产品化；</li>
+<li>多环境模板和平台级注入方式仍有手工依赖。</li>
+</ul>
+<h3 id="_3">下一步任务方向</h3>
+<ul>
+<li>完整 K8s / Helm 平台化补齐</li>
+<li><code>secretRef</code> / external secret manager 真正落地</li>
+<li>标准环境模板（dev / staging / prod / enterprise）</li>
+<li>平台级配置治理与差异控制</li>
+</ul>
+<h3 id="_4">预期结果</h3>
+<ul>
+<li>客户环境或平台团队可以更低成本接入；</li>
+<li>交付不再过度依赖单机/Compose 形态；</li>
+<li>secret 与配置注入从“文档说明”走向“平台能力”。</li>
+</ul>
+<hr />
+<h2 id="4-b">4. 方向 B：自动化运营增强</h2>
+<h3 id="_5">目标</h3>
+<p>降低人工值守、排障和材料归档的成本。</p>
+<h3 id="_6">当前缺口</h3>
+<ul>
+<li>观测、恢复、证据归档虽然已具备基础，但仍有较多人工判断；</li>
+<li>发布后故障定位和恢复步骤还依赖人工执行与记录；</li>
+<li>长任务状态、恢复动作和材料沉淀仍可继续自动化。</li>
+</ul>
+<h3 id="_7">下一步任务方向</h3>
+<ul>
+<li>自动告警联动</li>
+<li>自动恢复与自动归档</li>
+<li>更强的 run / workflow 证据链自动生成</li>
+<li>发布后观测结果自动汇总</li>
+</ul>
+<h3 id="_8">预期结果</h3>
+<ul>
+<li>运营从“靠人盯”走向“系统先发现、先收集、先归档”；</li>
+<li>降低试点到正式运营的人力负担；</li>
+<li>提升问题响应的一致性。</li>
+</ul>
+<hr />
+<h2 id="5-c">5. 方向 C：容量与性能增强</h2>
+<h3 id="_9">目标</h3>
+<p>从“知道边界”推进到“实证边界”。</p>
+<h3 id="_10">当前缺口</h3>
+<ul>
+<li>G3-C4 已冻结容量方向与基础验证入口；</li>
+<li>但完整压测结论、长期吞吐边界、多实例扩缩容实证仍未完成；</li>
+<li>瓶颈对象虽已明确，但缺更正式的数据支撑。</li>
+</ul>
+<h3 id="_11">下一步任务方向</h3>
+<ul>
+<li>正式压测基线</li>
+<li>多实例一致性与扩容实证</li>
+<li>队列 / 缓存 / LLM 路径瓶颈治理</li>
+<li>更清晰的容量建议与限制策略</li>
+</ul>
+<h3 id="_12">预期结果</h3>
+<ul>
+<li>团队能够给出更可信的规模与容量口径；</li>
+<li>扩容不再基于经验猜测；</li>
+<li>面向企业用户时，可提供更正式的容量边界说明。</li>
+</ul>
+<hr />
+<h2 id="6-d">6. 方向 D：商业复制增强</h2>
+<h3 id="_13">目标</h3>
+<p>让交付不仅可做成一次，还能低成本复制到不同客户 / 团队 / 场景。</p>
+<h3 id="_14">当前缺口</h3>
+<ul>
+<li>当前交付材料已经完整，但更多是“当前项目可交付”；</li>
+<li>还缺更标准化的模板、角色包、行业场景包；</li>
+<li>商用交付经验还没有沉淀成可复制资产。</li>
+</ul>
+<h3 id="_15">下一步任务方向</h3>
+<ul>
+<li>标准交付模板</li>
+<li>标准试点包 / 升级包 / 恢复包</li>
+<li>不同角色模板（管理员 / 运维 / Owner / 审核者）</li>
+<li>不同场景 / 行业的交付变体包</li>
+</ul>
+<h3 id="_16">预期结果</h3>
+<ul>
+<li>交付模式可以复制；</li>
+<li>新客户 / 新环境进入成本降低；</li>
+<li>团队从“逐单经验交付”走向“资产化交付”。</li>
+</ul>
+<hr />
+<h2 id="7-e">7. 方向 E：产品增强</h2>
+<h3 id="_17">目标</h3>
+<p>在不回退已达成商用标准的前提下，继续提升产品竞争力。</p>
+<h3 id="_18">当前缺口</h3>
+<ul>
+<li>当前 Goal / taskboard / release / recovery 主链已经建立；</li>
+<li>但还可以继续增强自动推进、体验、证据自动化与产品深度；</li>
+<li>后续增强应建立在稳定主链之上，而不是重新破坏交付基线。</li>
+</ul>
+<h3 id="_19">下一步任务方向</h3>
+<ul>
+<li>Goal / taskboard 自动推进能力增强</li>
+<li>review / recover / evidence 自动化增强</li>
+<li>更强的产品工作台体验</li>
+<li>更细粒度的执行和治理视图</li>
+</ul>
+<h3 id="_20">预期结果</h3>
+<ul>
+<li><code>xagent</code> 从“可交付”继续迈向“更强产品化能力”；</li>
+<li>提升与同类系统相比的产品差异化。</li>
+</ul>
+<hr />
+<h2 id="8">8. 推荐优先顺序</h2>
+<p>如果以投入产出比排序，我建议：</p>
+<ol>
+<li><strong>平台化增强（A）</strong></li>
+<li><strong>自动化运营增强（B）</strong></li>
+<li><strong>容量与性能增强（C）</strong></li>
+<li><strong>商业复制增强（D）</strong></li>
+<li><strong>产品增强（E）</strong></li>
+</ol>
+<h3 id="_21">原因</h3>
+<ul>
+<li>平台化和运营自动化最直接影响后续交付效率；</li>
+<li>容量与性能决定能否稳妥扩张；</li>
+<li>商业复制增强决定交付是否能规模化复用；</li>
+<li>产品增强应建立在前面三者已稳的前提下持续推进。</li>
+</ul>
+<hr />
+<h2 id="9">9. 当前结论</h2>
+<p>Roadmap v2 的定位已经明确：</p>
+<blockquote>
+<p><strong>它不是“补齐商用标准”，而是“在商用标准达成之后，继续把 <code>xagent</code> 推向更强的平台化、运营自动化、容量实证和商业复制能力”。</strong></p>
+</blockquote>
+<p>因此，后续任何新增工作都应默认按 Roadmap v2 的方向归类，而不再回退到 G0/G1/G2/G3 是否完成的争议中。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

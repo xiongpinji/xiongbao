@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-19-xagent-commercialization-ladder-execution-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 商用成熟度三阶段推进 实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5546\u7528\u6210\u719f\u5ea6\u4e09\u9636\u6bb5\u63a8\u8fdb \u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-19-xagent-commercialization-ladder-execution-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-19-xagent-commercialization-ladder-execution-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 商用成熟度三阶段推进 实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-19-xagent-commercialization-ladder-execution-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 商用成熟度三阶段推进 实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 将 <code>xagent</code> 从当前准商用 / 试点可交付状态，按 Phase 1 → Phase 2 → Phase 3 串行推进到正式商用与企业级长期运营。</p>
+<p><strong>架构：</strong> 采用三阶段串行推进。Phase 1 先补齐“内部试点可稳定使用”的功能链路、稳定性、权限/审计与试点交付材料；Phase 2 收口正式商用 GA 所需的版本冻结、目标环境演练、回滚、签字与发布材料；Phase 3 再做企业级长期运营所需的 HA、可观测、治理、容量与保留策略。每个阶段都必须单独通过自己的验收门后再进入下一阶段。</p>
+<p><strong>技术栈：</strong> Markdown、GitHub Actions、FastAPI、React/Vite、Docker Compose、Helm、pytest、Playwright、Locust、Prometheus/Grafana、Langfuse、Postgres、Redis、Qdrant</p>
+<hr />
+<h2 id="_1">文件结构与职责边界</h2>
+<h3 id="_2">新增文件</h3>
+<ul>
+<li><code>docs/superpowers/plans/2026-07-19-xagent-commercialization-ladder-execution-plan.md</code></li>
+<li>商用成熟度三阶段的执行顺序、任务清单、依赖关系、阶段门、验收命令。</li>
+<li><code>docs/coordination/reports/commercial-readiness-phase1-gap-analysis.md</code></li>
+<li>Phase 1 当前缺口清单：功能链路、稳定性/恢复、数据/权限/审计、试点交付材料。</li>
+<li><code>docs/coordination/reports/commercial-readiness-phase2-gate-checklist.md</code></li>
+<li>Phase 2 正式商用 GA 门禁清单：版本冻结、目标环境演练、发布/回滚、签字、证据。</li>
+<li><code>docs/coordination/reports/commercial-readiness-phase3-ops-checklist.md</code></li>
+<li>Phase 3 长期运营门禁清单：HA、可观测、审计保留、容量、恢复演练。</li>
+</ul>
+<h3 id="_3">修改文件</h3>
+<ul>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li>将“当前真状态”与三阶段推进的映射补充为可执行的阶段门。</li>
+<li><code>docs/ROADMAP.md</code></li>
+<li>明确 Phase 1/2/3 的前后关系，避免与历史阶段混淆。</li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li>把 Phase 2 的 GA 门禁与现有发布检查表对齐。</li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li>在 Phase 2 中需要补齐的发布/回滚/演练要求处增加引用。</li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li>在 Phase 1 与 Phase 2 的环境边界中补充试点/正式环境差异。</li>
+<li><code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+<li>将 Phase 1 / Phase 2 / Phase 3 的不支持范围显式写出来。</li>
+<li>可能涉及的产品代码（仅在 Phase 1 实现阶段发生）：</li>
+<li><code>apps/api/xagent/api/v1/spine.py</code></li>
+<li><code>apps/api/xagent/core/spine/service.py</code></li>
+<li><code>apps/api/xagent/core/spine/session.py</code></li>
+<li><code>apps/api/xagent/core/spine/release.py</code></li>
+<li><code>apps/api/tests/test_spine_release_flow.py</code></li>
+<li><code>apps/web/src/components/spine/GoalBoard.tsx</code></li>
+<li><code>apps/web/src/components/spine/ReleasePane.tsx</code></li>
+<li><code>apps/web/src/tests/goalBoard.test.tsx</code></li>
+</ul>
+<hr />
+<h2 id="phase-1">Phase 1：内部试点可稳定使用</h2>
+<h3 id="1-phase-1">任务 1：整理 Phase 1 缺口清单并冻结范围</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/commercial-readiness-phase1-gap-analysis.md</code>
+- 修改：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>
+- 修改：<code>docs/ROADMAP.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 Phase 1 缺口测试（文档级）</strong></li>
+</ul>
+<pre><code class="language-md"># Phase 1 Gap Analysis
+
+## 功能链路缺口
+- 登录 / 核心工作台 / task / run / workflow / 结果查看
+
+## 稳定性 / 恢复缺口
+- 失败态可见、可恢复、可重试、可解释
+
+## 数据 / 权限 / 审计缺口
+- 租户隔离、权限边界、可追溯记录
+
+## 试点交付缺口
+- 部署说明、已知问题、运维/排障最小手册
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行文档校验</strong></li>
+</ul>
+<p>运行：<code>git diff --check -- docs/coordination/reports/commercial-readiness-phase1-gap-analysis.md docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md docs/ROADMAP.md</code>
+预期：退出码 0</p>
+<ul>
+<li>[ ] <strong>步骤 3：提交文档收口</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/commercial-readiness-phase1-gap-analysis.md docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md docs/ROADMAP.md
+git commit -m &quot;docs(readiness): freeze phase1 gap analysis&quot;
+</code></pre>
+<h3 id="2">任务 2：补齐登录 / 核心工作台 / 日常主链的稳定性验收</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/tests/test_spine_api.py</code>
+- 修改：<code>apps/api/tests/test_spine_session_resume.py</code>
+- 修改：<code>apps/api/tests/test_spine_release_flow.py</code>
+- 修改：<code>apps/web/src/tests/goalBoard.test.tsx</code>
+- 视情况修改：<code>apps/web/src/components/spine/GoalBoard.tsx</code>
+- 视情况修改：<code>apps/web/src/components/spine/ReleasePane.tsx</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的 UI/接口回归测试</strong></li>
+</ul>
+<pre><code class="language-python">async def test_create_goal_requires_spine_execute_permission(client: AsyncClient) -&gt; None:
+    token = create_access_token(user_id=&quot;viewer-user&quot;, tenant_id=&quot;tenant-1&quot;, roles=[&quot;viewer&quot;])
+
+    response = await client.post(
+        &quot;/api/v1/spine/goals&quot;,
+        json={
+            &quot;title&quot;: &quot;Phase 1&quot;,
+            &quot;description&quot;: &quot;Daily usage path&quot;,
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 403
+</code></pre>
+<pre><code class="language-tsx">it(&quot;renders release pane separately from core task columns&quot;, () =&gt; {
+  render(
+    &lt;GoalBoard
+      snapshot={{
+        goal: { title: &quot;Phase 1&quot;, phase: &quot;release&quot;, status: &quot;active&quot; },
+        columns: {
+          ready: [{ task_id: &quot;t-1&quot;, title: &quot;Build taskboard&quot; }],
+          release_ready: [{ task_id: &quot;t-2&quot;, title: &quot;Cut candidate&quot; }],
+          deploying: [{ task_id: &quot;t-3&quot;, title: &quot;Deploy candidate&quot; }],
+          recovery: [{ task_id: &quot;t-4&quot;, title: &quot;Rollback&quot; }],
+        },
+        next_action: { kind: &quot;recovery&quot;, task_id: &quot;t-4&quot;, reason: &quot;verify failed&quot; },
+      }}
+    /&gt;,
+  );
+
+  expect(screen.getByText(&quot;Release / Recovery&quot;)).toBeInTheDocument();
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：
+- <code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_api.py -k create_goal_requires_spine_execute_permission -v</code>
+- <code>cd apps/web &amp;&amp; npm test -- goalBoard.test.tsx</code></p>
+<p>预期：至少一条新测试失败，确认覆盖到了 Phase 1 缺口。</p>
+<ul>
+<li>[ ] <strong>步骤 3：最小实现修复</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/api/v1/spine.py
+principal: Principal = Depends(require_permission(&quot;spine&quot;, &quot;execute&quot;))
+</code></pre>
+<pre><code class="language-tsx">// apps/web/src/components/spine/GoalBoard.tsx
+const RELEASE_COLUMNS = [&quot;release_ready&quot;, &quot;deploying&quot;, &quot;verifying&quot;, &quot;delivered&quot;, &quot;recovery&quot;] as const;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：运行测试验证通过</strong></li>
+</ul>
+<p>运行：
+- <code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_api.py tests/test_spine_session_resume.py tests/test_spine_release_flow.py -q</code>
+- <code>cd apps/web &amp;&amp; npm test -- goalBoard.test.tsx</code></p>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交 Phase 1 日常使用补齐</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/tests/test_spine_api.py apps/api/tests/test_spine_session_resume.py apps/api/tests/test_spine_release_flow.py apps/api/xagent/api/v1/spine.py apps/web/src/components/spine/GoalBoard.tsx apps/web/src/components/spine/ReleasePane.tsx apps/web/src/tests/goalBoard.test.tsx
+git commit -m &quot;feat(readiness): stabilize phase1 daily-use path&quot;
+</code></pre>
+<h3 id="3-phase-1">任务 3：补齐 Phase 1 的稳定性 / 恢复 / 追责门</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/tests/test_worker.py</code>
+- 修改：<code>apps/api/xagent/api/v1/tasks.py</code>
+- 修改：<code>apps/api/xagent/api/v1/workflows.py</code>
+- 修改：<code>apps/api/xagent/core/runtime/service.py</code>
+- 修改：<code>apps/api/xagent/core/spine/service.py</code>
+- 相关测试：<code>apps/api/tests/test_worker.py</code>、<code>apps/api/tests/test_runtime_runs.py</code>、<code>apps/api/tests/test_spine_service.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的恢复/可追责测试</strong></li>
+</ul>
+<pre><code class="language-python">async def test_task_failure_updates_board_to_recovery(client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(&quot;xagent.api.v1.tasks.run_agent&quot;, AsyncMock(side_effect=RuntimeError(&quot;task exploded&quot;)))
+    ...
+    assert terminal[&quot;status&quot;] == &quot;failed&quot;
+    await _assert_board_task_state(..., expected_status=&quot;recovery&quot;, ...)
+</code></pre>
+<pre><code class="language-python">def test_summarize_goal_board_rebuilds_from_tasks_when_columns_are_empty() -&gt; None:
+    snapshot = {
+        &quot;goal&quot;: {&quot;phase&quot;: &quot;execution&quot;, &quot;status&quot;: &quot;active&quot;},
+        &quot;columns&quot;: {},
+        &quot;tasks&quot;: [
+            {&quot;task_id&quot;: &quot;t-1&quot;, &quot;title&quot;: &quot;Blocked task&quot;, &quot;status&quot;: &quot;blocked&quot;, &quot;blocker_reason&quot;: &quot;need rollback&quot;},
+            {&quot;task_id&quot;: &quot;t-2&quot;, &quot;title&quot;: &quot;Ready task&quot;, &quot;status&quot;: &quot;ready&quot;, &quot;run_id&quot;: &quot;&quot;},
+        ],
+    }
+
+    summary = summarize_goal_board(snapshot)
+    assert summary[&quot;next_action&quot;] == {&quot;kind&quot;: &quot;recovery&quot;, &quot;task_id&quot;: &quot;t-1&quot;, &quot;reason&quot;: &quot;need rollback&quot;}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：
+- <code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_worker.py tests/test_runtime_runs.py tests/test_spine_service.py -q</code></p>
+<p>预期：至少一项失败（确认恢复链路测试已锁定问题）。</p>
+<ul>
+<li>[ ] <strong>步骤 3：最小实现修复</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/service.py
+if not _columns_have_tasks(columns):
+    if &quot;tasks&quot; in snapshot:
+        columns, unknown_status_tasks = _group_tasks_into_columns(snapshot.get(&quot;tasks&quot;) or [])
+</code></pre>
+<pre><code class="language-python"># apps/api/xagent/api/v1/tasks.py / workflows.py / runtime/service.py
+# 保持 update_task_status_by_run_id / load_spine_linkage_by_run_id 路径稳定，错误时明确落 recovery。
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：运行测试验证通过</strong></li>
+</ul>
+<p>运行：
+- <code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_worker.py tests/test_runtime_runs.py tests/test_spine_service.py -q</code></p>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交 Phase 1 稳定性修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/tests/test_worker.py apps/api/tests/test_runtime_runs.py apps/api/tests/test_spine_service.py apps/api/xagent/api/v1/tasks.py apps/api/xagent/api/v1/workflows.py apps/api/xagent/core/runtime/service.py apps/api/xagent/core/spine/service.py
+git commit -m &quot;fix(readiness): harden phase1 recovery path&quot;
+</code></pre>
+<h3 id="4-phase-1">任务 4：补齐 Phase 1 试点交付材料</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 修改：<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code>
+- 修改：<code>docs/RELEASE_RUNBOOK_V1.md</code>
+- 修改：<code>docs/ENVIRONMENT_BASELINE_V1.md</code>
+- 修改：<code>docs/OPERATIONS_MANUAL_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写试点交付材料回归检查</strong></li>
+</ul>
+<pre><code class="language-md">## Delivery Materials Check
+- admin deployment manual exists
+- operations manual exists
+- release runbook exists
+- known issues / pilot boundaries exist
+- support escalation path exists
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行文档校验</strong></li>
+</ul>
+<p>运行：<code>git diff --check -- docs/DELIVERY_MATERIALS_INDEX_V1.md docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md docs/RELEASE_RUNBOOK_V1.md docs/ENVIRONMENT_BASELINE_V1.md docs/OPERATIONS_MANUAL_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 3：提交试点交付材料补齐</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/DELIVERY_MATERIALS_INDEX_V1.md docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md docs/RELEASE_RUNBOOK_V1.md docs/ENVIRONMENT_BASELINE_V1.md docs/OPERATIONS_MANUAL_V1.md
+git commit -m &quot;docs(readiness): complete phase1 pilot delivery materials&quot;
+</code></pre>
+<hr />
+<h2 id="phase-2-ga">Phase 2：正式商用 GA</h2>
+<h3 id="5">任务 5：冻结正式商用候选与发布证据入口</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>
+- 修改：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>
+- 修改：<code>docs/coordination/reports/auto-delivery-phase1-report.md</code>
+- 修改：<code>docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md</code>
+- 相关发布材料：<code>docs/RELEASE_RUNBOOK_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写发布冻结回归检查</strong></li>
+</ul>
+<pre><code class="language-md">## Freeze Checks
+- version tagged
+- release scope frozen
+- remote CI green on candidate
+- target environment evidence exists
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行文档 / CI 检查</strong></li>
+</ul>
+<p>运行：
+- <code>git diff --check -- docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md docs/coordination/reports/auto-delivery-phase1-report.md docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md</code>
+- <code>gh pr checks &lt;candidate-pr&gt;</code></p>
+<p>预期：格式无误，CI 全绿，候选范围固定。</p>
+<ul>
+<li>[ ] <strong>步骤 3：最小实现（若存在发布口径差异）</strong></li>
+</ul>
+<pre><code class="language-md"># 在 COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md 中追加一节：
+## 11. 正式商用 GA 冻结条件
+- version frozen
+- target env rehearsal done
+- rollback proven
+- signoff available
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：提交发布证据收口</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md docs/coordination/reports/auto-delivery-phase1-report.md docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md
+git commit -m &quot;docs(readiness): define ga freeze evidence&quot;
+</code></pre>
+<h3 id="6-ga">任务 6：正式商用 GA 的目标环境演练与回滚闭环</h3>
+<p><strong>文件：</strong>
+- 修改：<code>docs/RELEASE_RUNBOOK_V1.md</code>
+- 修改：<code>docs/ENVIRONMENT_BASELINE_V1.md</code>
+- 修改：<code>.github/workflows/ci.yml</code>
+- 测试：<code>tests/e2e/specs/full-flow.spec.ts</code>、<code>apps/api/tests/test_runtime_runs.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写目标环境演练失败测试/清单</strong></li>
+</ul>
+<pre><code class="language-md">## Rehearsal Checklist
+- migrate head
+- health/readiness
+- login
+- task submission
+- workflow approval
+- rollback
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行演练命令</strong></li>
+</ul>
+<p>运行：
+- <code>docker compose --env-file .env config --quiet</code>
+- <code>docker compose up -d --build</code>
+- <code>curl -f http://localhost:8000/health</code>
+- <code>curl -f http://localhost:8000/ready</code></p>
+<p>预期：全部成功，失败则停止。</p>
+<ul>
+<li>[ ] <strong>步骤 3：将演练结果写入 runbook</strong></li>
+</ul>
+<pre><code class="language-md">### Rehearsal Evidence
+- environment
+- timestamp
+- logs
+- screenshots
+- rollback result
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：提交演练闭环</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/RELEASE_RUNBOOK_V1.md docs/ENVIRONMENT_BASELINE_V1.md .github/workflows/ci.yml
+git commit -m &quot;docs(readiness): close ga rehearsal loop&quot;
+</code></pre>
+<hr />
+<h2 id="phase-3">Phase 3：企业级长期运营</h2>
+<h3 id="7">任务 7：补齐可观测、告警与容量边界</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/OPERATIONS_SLO_V1.md</code>
+- 修改：<code>docs/OPERATIONS_MANUAL_V1.md</code>
+- 修改：<code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>
+- 测试：<code>tests/load/locustfile.py</code>（若新增）</p>
+<ul>
+<li>[ ] <strong>步骤 1：写出 SLO / 告警基线测试</strong></li>
+</ul>
+<pre><code class="language-md">## SLO
+- P95 latency
+- error rate
+- queue backlog
+- readiness flaps
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行观测验证</strong></li>
+</ul>
+<p>运行：
+- <code>python tests/security/scan.py --host http://localhost:8000</code>
+- <code>locust -f tests/load/locustfile.py --host http://localhost:8000 --headless -u 50 -r 5 -t 60s</code></p>
+<p>预期：数据可收集，告警阈值可定义，瓶颈可识别。</p>
+<ul>
+<li>[ ] <strong>步骤 3：将结果写入运维手册</strong></li>
+</ul>
+<pre><code class="language-md">## Production SLO
+- alert thresholds
+- oncall owner
+- rollback contact
+- capacity limits
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：提交企业化治理材料</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/OPERATIONS_SLO_V1.md docs/OPERATIONS_MANUAL_V1.md docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md
+git commit -m &quot;docs(readiness): add ops and capacity gates&quot;
+</code></pre>
+<h3 id="8-ha-k8s">任务 8：补齐 HA / K8s / 长期运营验证</h3>
+<p><strong>文件：</strong>
+- 修改：<code>deploy/helm/values.yaml</code>
+- 修改：<code>deploy/helm/templates/*</code>
+- 修改：<code>deploy/compose/docker-compose.yml</code>
+- 相关验证：<code>README.md</code>、<code>docs/ENVIRONMENT_BASELINE_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的多实例 / secretRef 验证清单</strong></li>
+</ul>
+<pre><code class="language-md">## HA / K8s Checklist
+- multiple replicas
+- secretRef or equivalent
+- rolling update
+- service readiness
+- no singleton assumption
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：在等价环境中验证</strong></li>
+</ul>
+<p>运行：
+- <code>helm template ...</code>
+- <code>kubectl apply --dry-run=client ...</code></p>
+<p>预期：模板可渲染，secret 不再依赖本地临时值。</p>
+<ul>
+<li>[ ] <strong>步骤 3：提交企业级长期运营收口</strong></li>
+</ul>
+<pre><code class="language-bash">git add deploy/helm/values.yaml deploy/helm/templates docs/ENVIRONMENT_BASELINE_V1.md README.md
+git commit -m &quot;feat(ops): validate long-term enterprise readiness&quot;
+</code></pre>
+<hr />
+<h2 id="_4">验收与最终判定</h2>
+<h3 id="_5">任务顺序要求</h3>
+<ul>
+<li>Phase 1 必须先完成并验收；</li>
+<li>Phase 2 只能在 Phase 1 通过后开始；</li>
+<li>Phase 3 只能在 Phase 2 通过后开始。</li>
+</ul>
+<h3 id="_6">每阶段结束的判定</h3>
+<ul>
+<li><strong>Phase 1 完成</strong>：内部试点可稳定使用，日常主链、恢复、权限 / 审计、试点交付材料齐备；</li>
+<li><strong>Phase 2 完成</strong>：可正式商用 GA，候选冻结、目标环境演练、签字与发布治理闭环；</li>
+<li><strong>Phase 3 完成</strong>：企业级长期运营能力（HA、可观测、治理、容量）具备并验证通过。</li>
+</ul>
+<hr />
+<h2 id="_7">规格覆盖度自检</h2>
+<ul>
+<li>Phase 1 的功能链路、稳定性 / 恢复、数据 / 权限 / 审计、试点交付材料均有独立任务。</li>
+<li>Phase 2 的候选冻结、发布 / 回滚、目标环境演练、签字与文档闭环均有独立任务。</li>
+<li>Phase 3 的 HA / K8s、可观测、审计保留、容量 / 扩展边界均有独立任务。</li>
+<li>所有任务均按 2-5 分钟小步骤拆分，具备失败测试、实现、验证、提交的顺序。</li>
+</ul>
+<hr />
+<h2 id="_8">当前结论</h2>
+<p>这份计划将“商用程度百分百”拆解为可执行的三阶段路径；后续推进时应始终以当前阶段的验收门为准，避免把 Phase 3 的治理能力前置到 Phase 1/2。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

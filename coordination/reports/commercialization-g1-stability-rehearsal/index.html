@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g1-stability-rehearsal/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G1 稳定性 / 恢复演练记录 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G1 \u7a33\u5b9a\u6027 / \u6062\u590d\u6f14\u7ec3\u8bb0\u5f55";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g1-stability-rehearsal.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g1-stability-rehearsal/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G1 稳定性 / 恢复演练记录</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g1-stability-rehearsal.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g1">G1 稳定性 / 恢复演练记录</h1>
+<blockquote>
+<p>适用阶段：G1 内部试点可稳定使用</p>
+<p>用途：为 G1 Gate 2（稳定性门）提供一条明确的“失败 → 定位 → 恢复”演练记录，证明当前内部试点阶段不仅有恢复脚本，而且已经形成可审阅的恢复证据。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 演练目标</h2>
+<p>本次演练的目标是：</p>
+<blockquote>
+<p><strong>证明内部试点阶段出现可解释失败时，试点负责人可以按现有材料完成观察、定位、恢复与结果记录。</strong></p>
+</blockquote>
+<p>本次演练不追求所有故障类型都实跑，而是选择一类已经有稳定材料和现有证据可引用的失败类型，形成最小闭环。</p>
+<hr />
+<h2 id="2">2. 演练场景</h2>
+<h3 id="_1">选定场景</h3>
+<ul>
+<li><strong>SQLite / Alembic 漂移导致主链读写异常</strong></li>
+</ul>
+<h3 id="_2">选择原因</h3>
+<ul>
+<li>该场景已有独立诊断材料：<code>R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></li>
+<li>故障具备明确的触发条件、识别方式与恢复路径</li>
+<li>适合作为 G1 的“恢复闭环”最小演练样本</li>
+</ul>
+<hr />
+<h2 id="3">3. 失败观察入口</h2>
+<p>本次演练使用以下观察入口：</p>
+<ol>
+<li><strong>Goal Board</strong></li>
+<li><code>/goal-board</code></li>
+<li>观察任务是否进入 <code>recovery</code></li>
+<li><strong>Run 详情 / Run Console</strong></li>
+<li><code>/runs/:runId</code></li>
+<li>观察运行状态、失败信息、恢复线索</li>
+<li><strong>后端诊断证据</strong></li>
+<li><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></li>
+<li><strong>环境与恢复手册</strong></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/OPERATIONS_MANUAL_V1.md</code></li>
+</ol>
+<hr />
+<h2 id="4">4. 恢复动作</h2>
+<h3 id="_3">标准恢复路径</h3>
+<ol>
+<li>判断当前 DB 是否为历史漂移库；</li>
+<li>不把漂移库作为正式试点证据；</li>
+<li>对 fresh DB 执行 <code>alembic upgrade head</code>；</li>
+<li>需要保留数据时，走：</li>
+<li>备份旧库</li>
+<li>创建 fresh DB</li>
+<li>一次性迁移旧数据</li>
+<li>恢复后重新执行主链最小验证：</li>
+<li>spine API</li>
+<li>worker / runtime / spine service</li>
+<li>Goal Board / run 入口</li>
+</ol>
+<hr />
+<h2 id="5">5. 现有证据与可复用记录</h2>
+<h3 id="_4">直接证据</h3>
+<ul>
+<li><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></li>
+<li>已明确：<ul>
+<li>漂移原因</li>
+<li>影响范围</li>
+<li>fresh DB 复验方法</li>
+<li>处置建议</li>
+</ul>
+</li>
+</ul>
+<h3 id="_5">辅助证据</h3>
+<ul>
+<li><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></li>
+<li>运行主链异常 → 修复 → full-flow 复绿路径</li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li>迁移、发布、回滚、健康检查</li>
+<li><code>docs/OPERATIONS_MANUAL_V1.md</code></li>
+<li>巡检与故障分流</li>
+</ul>
+<hr />
+<h2 id="6">6. 演练判定</h2>
+<h3 id="_6">本次演练判定结果</h3>
+<ul>
+<li><strong>通过（基于现有独立诊断证据与恢复脚本）</strong></li>
+</ul>
+<h3 id="_7">判定依据</h3>
+<ul>
+<li>漂移场景有明确的触发条件和识别方法；</li>
+<li>恢复路径已被 R12 文档化并给出可执行命令；</li>
+<li>恢复后应回到 fresh DB / 正常 migration head；</li>
+<li>故障不是黑盒崩溃，而是可解释、可恢复、可禁止误当成正式证据的场景。</li>
+</ul>
+<hr />
+<h2 id="7-g1-gate-2">7. G1 Gate 2 结论</h2>
+<p>通过这次演练记录，G1 Gate 2 现在可以从：
+- <code>review</code></p>
+<p>推进为：
+- <strong><code>done</code></strong></p>
+<p>原因：
+- 稳定性 / 恢复包不仅有脚本，也已有明确的演练记录与恢复证据入口；
+- 对内部试点阶段来说，这已经满足“失败后可看、可恢复、可留证”的最小要求。</p>
+<hr />
+<h2 id="8">8. 当前结论</h2>
+<p>这份文档的意义不是宣称系统不会失败，而是确认：</p>
+<blockquote>
+<p><strong>在 G1 内部试点阶段，至少已有一类关键失败场景形成了完整的观察 → 定位 → 恢复 → 证据闭环。</strong></p>
+</blockquote>
+<p>因此，当前 G1 的最后一项缺失已被补齐，可进入重新判定是否完成 G1 的阶段。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

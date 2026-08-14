@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R14_VITE_CHUNK_SPLIT/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R14 Vite Chunk Warning Root Cause And Split Evidence - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R14 Vite Chunk Warning Root Cause And Split Evidence";
+        var mkdocs_page_input_path = "coordination/reports/R14_VITE_CHUNK_SPLIT.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R14_VITE_CHUNK_SPLIT/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R14 Vite Chunk Warning Root Cause And Split Evidence</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R14_VITE_CHUNK_SPLIT.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r14-vite-chunk-warning-root-cause-and-split-evidence">R14 Vite Chunk Warning Root Cause And Split Evidence</h1>
+<blockquote>
+<p>日期：2026-07-06
+Owner：Codex
+范围：<code>apps/web</code> Vite bundle warning 根因定位与最小拆包处理</p>
+</blockquote>
+<h2 id="1">1. 结论</h2>
+<p>R14 已通过路由级 <code>React.lazy</code> / <code>Suspense</code> 拆包清除 Vite <code>Some chunks are larger than 500 kB</code> warning。</p>
+<p>本次没有提高 Vite <code>chunkSizeWarningLimit</code>，没有升级 Vite major，也没有改变业务路由语义。修复后 <code>npm run build</code> 退出码为 0，最大 JS chunk 为 <code>assets/index-C1uREjI3.js</code> 294.19 kB / gzip 96.09 kB，低于 500 kB warning 阈值。</p>
+<h2 id="2">2. 根因</h2>
+<p>R11 / R13 记录的旧构建状态显示，<code>npm run build</code> 可通过，但主 JS bundle 约 606 kB，并触发 Vite chunk size warning。</p>
+<p>R14 复查 sourcemap 后确认主要来源不是单一业务 bug，而是 <code>App.tsx</code> 同步 import 了所有页面，导致以下内容被提前打入首屏主包：</p>
+<ul>
+<li>React Flow / canvas 相关依赖与 <code>CreativeStudioPage</code></li>
+<li>settings / run console / editor / memory / open-source 等非首屏页面</li>
+<li>route 页面级业务组件与其依赖树</li>
+</ul>
+<p>因此最小有效处理是页面路由级懒加载，而不是调高阈值掩盖 warning。</p>
+<h2 id="3">3. 变更</h2>
+<ul>
+<li><code>apps/web/src/App.tsx</code></li>
+<li>将非登录页面改为 <code>lazy(() =&gt; import(...))</code>。</li>
+<li>用 <code>Suspense</code> 包裹登录后路由和 <code>/creative/canvas</code> 独立入口。</li>
+<li>增加轻量 <code>PageFallback</code>，只作为页面 chunk 加载态。</li>
+</ul>
+<h2 id="4-build">4. Build 证据</h2>
+<p>命令：</p>
+<pre><code class="language-powershell">npm run build
+</code></pre>
+<p>结果：</p>
+<ul>
+<li>退出码：0</li>
+<li>Vite chunk warning：未出现</li>
+<li>关键产物：</li>
+<li><code>assets/index-C1uREjI3.js</code>：294.19 kB / gzip 96.09 kB</li>
+<li><code>assets/style-DNRkz53j.js</code>：146.49 kB / gzip 47.93 kB</li>
+<li><code>assets/CreativeStudioPage-LD-5IVNL.js</code>：77.45 kB / gzip 22.51 kB</li>
+<li><code>assets/RunPage-Bm5HHSPO.js</code>：21.71 kB / gzip 6.12 kB</li>
+<li><code>assets/SettingsPage-CQ2PuY2Z.js</code>：20.61 kB / gzip 6.33 kB</li>
+<li><code>assets/ChatPage-DUZDy3ms.js</code>：7.55 kB / gzip 3.43 kB</li>
+</ul>
+<p><code>dist/assets</code> 复查的最大 JS 文件：</p>
+<pre><code class="language-text">index-C1uREjI3.js                288.94 KB
+style-DNRkz53j.js                143.06 KB
+CreativeStudioPage-LD-5IVNL.js    79.46 KB
+RunPage-Bm5HHSPO.js               22.42 KB
+SettingsPage-CQ2PuY2Z.js          21.62 KB
+</code></pre>
+<h2 id="5">5. 验证</h2>
+<p>命令：</p>
+<pre><code class="language-powershell">npm run lint
+npm run typecheck
+node --test tests/chatStream.test.mjs
+npm run build
+$env:E2E_BASE_URL = 'http://127.0.0.1:3100'
+$env:E2E_USERNAME = 'admin'
+$env:E2E_PASSWORD = 'admin'
+npx playwright test specs/full-flow.spec.ts --project=chromium
+</code></pre>
+<p>结果：</p>
+<ul>
+<li><code>npm run lint</code>：退出码 0。</li>
+<li><code>npm run typecheck</code>：退出码 0。</li>
+<li><code>node --test tests/chatStream.test.mjs</code>：3 passed。</li>
+<li><code>npm run build</code>：退出码 0，未出现 Vite chunk warning。</li>
+<li><code>full-flow.spec.ts --project=chromium</code>：9 passed。</li>
+</ul>
+<p>E2E 环境：</p>
+<ul>
+<li>API：<code>http://127.0.0.1:8000</code></li>
+<li>Web：<code>http://127.0.0.1:3100</code></li>
+<li>DB：<code>apps/api/r14-full-flow.db</code></li>
+</ul>
+<h2 id="6">6. 边界</h2>
+<p>本包只处理 Vite chunk warning 的根因定位与最小拆包。</p>
+<p>本包不处理：</p>
+<ul>
+<li>Vite / esbuild dev-build 工具链全量 <code>npm audit</code> 风险清零。</li>
+<li>性能压测、真实首屏指标、CDN 缓存策略或生产监控。</li>
+<li>R4 目标环境演练。</li>
+<li>R5 PR 审查包组装。</li>
+</ul>
+<h2 id="7-reviewer">7. Reviewer 关注点</h2>
+<ul>
+<li>确认本次是路由级拆包，不是调高 Vite warning 阈值。</li>
+<li>确认 <code>/creative/canvas</code> 独立入口仍被 <code>Suspense</code> 覆盖，未破坏 full-flow。</li>
+<li>确认 build warning 清零不被误写成正式发布或性能签字。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

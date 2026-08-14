@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R22_CANDIDATE_INCLUSION_LIST/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R22 Candidate Inclusion List - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R22 Candidate Inclusion List";
+        var mkdocs_page_input_path = "coordination/reports/R22_CANDIDATE_INCLUSION_LIST.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R22_CANDIDATE_INCLUSION_LIST/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R22 Candidate Inclusion List</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R22_CANDIDATE_INCLUSION_LIST.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r22-candidate-inclusion-list">R22 Candidate Inclusion List</h1>
+<blockquote>
+<p>日期：2026-07-07
+Owner：Claude Code
+范围：基于当前工作树状态，为下一版候选提供可执行的“纳入 / 排除 / 待拍板”清单。
+用途：用于冻结候选范围，不等于已经冻结候选。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 使用方式</h2>
+<p>冻结候选时，按以下顺序使用本清单：</p>
+<ol>
+<li>先处理 <strong>Include</strong>：这些默认应进入候选。</li>
+<li>再确认 <strong>Exclude</strong>：这些默认不应进入候选。</li>
+<li>最后由负责人拍板 <strong>Needs decision</strong>：这些文件不是垃圾，但是否进入候选会影响 CI、部署姿态、审查范围或交付材料边界。</li>
+</ol>
+<hr />
+<h2 id="2-include">2. Include（建议直接纳入候选）</h2>
+<h2 id="21">2.1 后端源码与测试</h2>
+<h3 id="api-runtime-infra-auth">API / runtime / infra / auth 源码</h3>
+<ul>
+<li><code>apps/api/xagent/api/v1/agents.py</code></li>
+<li><code>apps/api/xagent/api/v1/canvas.py</code></li>
+<li><code>apps/api/xagent/api/v1/creative_studio.py</code></li>
+<li><code>apps/api/xagent/api/v1/workflows.py</code></li>
+<li><code>apps/api/xagent/core/orchestration/loop.py</code></li>
+<li><code>apps/api/xagent/core/runtime/service.py</code></li>
+<li><code>apps/api/xagent/enterprise/auth/users.py</code></li>
+<li><code>apps/api/xagent/infra/repos/workflow.py</code></li>
+<li><code>apps/api/xagent/infra/settings.py</code></li>
+</ul>
+<p><strong>理由：</strong> 当前运行时、creative/workflow 主链、full-mode 安全/配置边界、统一 runtime 详情读取都在这些文件内，属于下一版候选的真实产品代码。</p>
+<h3 id="_1">后端测试</h3>
+<ul>
+<li><code>apps/api/tests/test_creative_studio.py</code></li>
+<li><code>apps/api/tests/test_orchestration.py</code></li>
+<li><code>apps/api/tests/test_runtime_runs.py</code></li>
+<li><code>apps/api/tests/test_settings.py</code></li>
+<li><code>apps/api/tests/test_workflow.py</code></li>
+</ul>
+<p><strong>理由：</strong> 这些测试与当前源码主链配套，且已用于本轮本地最终验证；其中 creative/workflow 的 <code>delivery.failure</code> 契约已经同步复绿。</p>
+<hr />
+<h2 id="22">2.2 前端源码、静态资源与测试</h2>
+<h3 id="_2">前端主源码</h3>
+<ul>
+<li><code>apps/web/src/App.tsx</code></li>
+<li><code>apps/web/src/index.css</code></li>
+<li><code>apps/web/src/api/runtime.ts</code></li>
+<li><code>apps/web/src/api/chatStream.ts</code></li>
+<li><code>apps/web/src/components/layout/AppShell.tsx</code></li>
+<li><code>apps/web/src/components/layout/CollapsedRail.tsx</code></li>
+<li><code>apps/web/src/components/layout/TopBar.tsx</code></li>
+<li><code>apps/web/src/components/layout/WorkspaceSidebar.tsx</code></li>
+<li><code>apps/web/src/components/layout/ShellContextPanel.tsx</code></li>
+<li><code>apps/web/src/components/runs/RunConsole.tsx</code></li>
+<li><code>apps/web/src/components/runs/RunValidationPanel.tsx</code></li>
+<li><code>apps/web/src/components/settings/GeneralSettings.tsx</code></li>
+<li><code>apps/web/src/components/settings/SettingsLayout.tsx</code></li>
+<li><code>apps/web/src/components/chat/ConversationalCommand.tsx</code></li>
+<li><code>apps/web/src/components/effects/AmbientAurora.tsx</code></li>
+<li><code>apps/web/src/pages/AgentsPage.tsx</code></li>
+<li><code>apps/web/src/pages/ChatPage.tsx</code></li>
+<li><code>apps/web/src/pages/CreativeStudioPage.tsx</code></li>
+<li><code>apps/web/src/pages/EditorPage.tsx</code></li>
+<li><code>apps/web/src/pages/LoginPage.tsx</code></li>
+<li><code>apps/web/src/pages/MemoryPage.tsx</code></li>
+<li><code>apps/web/src/pages/OpenSourcePage.tsx</code></li>
+<li><code>apps/web/src/pages/ProfessionalModePage.tsx</code></li>
+<li><code>apps/web/src/pages/RunPage.tsx</code></li>
+<li><code>apps/web/src/pages/WorkflowsPage.tsx</code></li>
+<li><code>apps/web/src/shell/shellRoutes.ts</code></li>
+<li><code>apps/web/src/shell/useShellStore.tsx</code></li>
+<li><code>apps/web/src/shell/workspaceStorage.ts</code></li>
+</ul>
+<p><strong>理由：</strong> 这些都是当前 Web 工作台的真实应用代码，不是 demo、草稿或构建产物。</p>
+<h3 id="_3">前端静态资源</h3>
+<ul>
+<li><code>apps/web/public/assets/xiongbao-logo.png</code></li>
+<li><code>apps/web/public/assets/xiongbao-mascot.png</code></li>
+</ul>
+<p><strong>理由：</strong> 两张图片被源码直接引用，属于真实运行所需资产，而不是截图或临时图片。</p>
+<h3 id="_4">前端测试</h3>
+<ul>
+<li><code>apps/web/tests/runConsoleViews.test.mjs</code></li>
+<li><code>apps/web/tests/runtimeApi.test.mjs</code></li>
+<li><code>apps/web/tests/workspaceCatalog.test.mjs</code></li>
+<li><code>apps/web/tests/chatStream.test.mjs</code></li>
+</ul>
+<p><strong>理由：</strong> 当前新增/修改源码已有对应测试支撑，应与源码一起冻结。</p>
+<hr />
+<h2 id="23-e2e">2.3 E2E 测试</h2>
+<ul>
+<li><code>tests/e2e/specs/creative-smoke.spec.ts</code></li>
+<li><code>tests/e2e/specs/full-flow.spec.ts</code></li>
+</ul>
+<p><strong>理由：</strong> 这两组是当前关键链路 E2E 的主验证文件，也是 release/readiness 口径反复引用的运行态证据来源。</p>
+<hr />
+<h2 id="24">2.4 部署与运行配置（默认纳入）</h2>
+<ul>
+<li><code>.github/workflows/ci.yml</code></li>
+<li><code>deploy/compose/.env.example</code></li>
+<li><code>deploy/compose/docker-compose.yml</code></li>
+<li><code>deploy/helm/templates/worker-web.yaml</code></li>
+</ul>
+<p><strong>理由：</strong> 这些文件已直接影响下一版候选的 CI / compose / worker 启动路径，应与当前代码状态一起纳入，避免“代码候选”和“验证/部署定义”脱节。</p>
+<blockquote>
+<p>注：<code>ci.yml</code> 也在“Needs decision”里补充说明，因为它虽然建议纳入，但会影响远端 CI 执行面，负责人仍应明确确认。</p>
+</blockquote>
+<hr />
+<h2 id="25">2.5 核心发布文档（建议纳入候选文档集）</h2>
+<ul>
+<li><code>README.md</code></li>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></li>
+<li><code>docs/ROADMAP.md</code></li>
+<li><code>docs/DEPLOYMENT_RUNBOOK.md</code></li>
+<li><code>docs/INTEGRATION_GUIDE.md</code></li>
+<li><code>docs/项目总览与开发指南.md</code></li>
+<li><code>docs/XIONG_BAO_接手与启动说明_2026-07-03.md</code></li>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+<li><code>docs/coordination/reports/delivery-report.md</code></li>
+<li><code>docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md</code></li>
+<li><code>docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md</code></li>
+<li><code>docs/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST.md</code></li>
+</ul>
+<p><strong>理由：</strong> 这些文件承载当前唯一事实源、发布门禁、运行手册、候选新鲜度、最终收尾结论与闭环路径，是形成“可送审候选”的最小文档集合。</p>
+<hr />
+<h2 id="3-exclude">3. Exclude（建议明确排除）</h2>
+<h2 id="31">3.1 日志文件</h2>
+<h3 id="api">API 日志</h3>
+<ul>
+<li><code>apps/api/api-8000.err.log</code></li>
+<li><code>apps/api/api-8000.log</code></li>
+<li><code>apps/api/r3-api-8000.err.log</code></li>
+<li><code>apps/api/r3-api-8000.log</code></li>
+</ul>
+<h3 id="web">Web 日志</h3>
+<ul>
+<li><code>apps/web/frontend-3000-20260702-201604.err.log</code></li>
+<li><code>apps/web/frontend-3000-20260702-201604.log</code></li>
+<li><code>apps/web/frontend-3000-20260703-123118.err.log</code></li>
+<li><code>apps/web/frontend-3000-20260703-123118.log</code></li>
+<li><code>apps/web/r3-web-3100.err.log</code></li>
+<li><code>apps/web/r3-web-3100.log</code></li>
+</ul>
+<p><strong>理由：</strong> 这些是本地运行输出，不属于源码、测试、配置或正式文档。</p>
+<hr />
+<h2 id="32">3.2 运行期快照与一次性审计材料</h2>
+<ul>
+<li><code>apps/api/r3-canvas-snapshot.json</code></li>
+<li><code>apps/web/08_diff_fix/codex-ui-1to1-audit-20260705.md</code></li>
+</ul>
+<p><strong>理由：</strong> 前者是运行期状态快照，后者是一次性 UI 审计记录，都不应作为下一版候选组成部分。</p>
+<hr />
+<h2 id="33">3.3 过程性 / 中间态文档</h2>
+<h3 id="frontend_">FRONTEND_ 系列</h3>
+<ul>
+<li><code>docs/FRONTEND_未提交改动收口清单_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_演示态标识方案_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_演示态标识逐文件改动清单_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_页面验收执行版_2026-07-03.md</code></li>
+</ul>
+<h3 id="superpowersplans">superpowers/plans</h3>
+<ul>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-03-frontend-preview-boundaries.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-05-commercial-readiness-execution-plan.md</code></li>
+</ul>
+<h3 id="coordination">coordination 协议文档</h3>
+<ul>
+<li><code>docs/coordination/EXECUTION_LIVE_OUTPUT_PROTOCOL.md</code></li>
+<li><code>docs/coordination/README.md</code></li>
+<li><code>docs/coordination/TASK_PACKAGE_PROTOCOL.md</code></li>
+</ul>
+<p><strong>理由：</strong> 这些文件属于过程性执行材料、阶段性策划或多代理协作协议，不是下一版候选的稳定交付文档。</p>
+<hr />
+<h2 id="4-needs-decision">4. Needs decision（需要负责人拍板）</h2>
+<h2 id="41-ci">4.1 CI / 部署姿态相关</h2>
+<h3 id="githubworkflowsciyml"><code>.github/workflows/ci.yml</code></h3>
+<ul>
+<li>默认建议：<strong>纳入</strong></li>
+<li>需要拍板原因：会直接改变远端 CI 结构与执行成本；若下一版候选要绑定新的远端 CI，这个文件最好一起冻结。</li>
+</ul>
+<h3 id="helm">Helm 主模板</h3>
+<ul>
+<li><code>deploy/helm/templates/deployment.yaml</code></li>
+<li>
+<p><code>deploy/helm/values.yaml</code></p>
+</li>
+<li>
+<p>默认建议：<strong>待拍板</strong></p>
+</li>
+<li>原因：它们是真部署配置，但当前是否达到“应作为正式候选部署定义”的程度，需要结合实际 Helm 目标决定。</li>
+</ul>
+<h3 id="keycloak-realm">Keycloak realm</h3>
+<ul>
+<li>
+<p><code>deploy/keycloak/xagent-realm.json</code></p>
+</li>
+<li>
+<p>默认建议：<strong>待拍板</strong></p>
+</li>
+<li>原因：这是合法配置，但带明显环境假设；要确认是否将其作为下一版候选身份配置一起冻结。</li>
+</ul>
+<hr />
+<h2 id="42">4.2 审查输入 / 证据型文档</h2>
+<h3 id="coordination_1">关键 coordination 报告</h3>
+<ul>
+<li><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></li>
+<li><code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li><code>docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md</code></li>
+<li><code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></li>
+</ul>
+<h3 id="r9">R9 截图证据目录</h3>
+<ul>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/01-login.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/02-chat-workbench.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/03-workflow.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/04-run-console.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/05-settings-index.png</code></li>
+</ul>
+<h3 id="e2e">视觉证据 E2E</h3>
+<ul>
+<li>
+<p><code>tests/e2e/specs/r9-visual-evidence.spec.ts</code></p>
+</li>
+<li>
+<p>默认建议：<strong>待拍板</strong></p>
+</li>
+<li>原因：</li>
+<li>如果下一版候选希望包含完整内部 release dossier / reviewer evidence pack，这些应纳入；</li>
+<li>如果只冻结“最小可送审代码候选”，这些可以不作为主候选一部分，只通过 <code>delivery-report.md</code> 做索引引用。</li>
+</ul>
+<hr />
+<h2 id="5">5. 建议的冻结方案</h2>
+<h2 id="51-a">5.1 方案 A：最小可送审候选（推荐）</h2>
+<p>纳入：
+- 所有真实源码 / 测试 / 静态资源
+- 关键 CI 与 compose 配置
+- 核心 release/readiness 文档
+- R18 / R20 / R21 / TASK_BOARD / delivery-report</p>
+<p>排除：
+- 日志
+- snapshot
+- 一次性审计笔记
+- FRONTEND_* 过程文档
+- superpowers/plans
+- coordination 协议文档</p>
+<p>待拍板：
+- CI 是否与候选一起冻结
+- Helm / Keycloak 是否进入本次候选
+- R16/R17/R19/R9 是否进入完整内部送审档案</p>
+<h2 id="52-b-release-dossier">5.2 方案 B：完整内部 release dossier</h2>
+<p>在方案 A 基础上，再纳入：
+- R16
+- R17
+- R19
+- R9 视觉证据与截图
+- <code>tests/e2e/specs/r9-visual-evidence.spec.ts</code></p>
+<p>适用场景：
+- 需要把“代码候选 + 审查输入 + 验收证据”一次性打包给内部 reviewer / 发布负责人。</p>
+<hr />
+<h2 id="6">6. 最小执行建议</h2>
+<p>如果马上开始冻结候选，建议按这个顺序：</p>
+<ol>
+<li>先把 <strong>Exclude</strong> 全部排掉；</li>
+<li>再按 <strong>方案 A</strong> 形成最小候选；</li>
+<li>对 <strong>Needs decision</strong> 逐项拍板；</li>
+<li>拍板完成后，固定 branch / commit，生成真正 frozen candidate；</li>
+<li>以该候选重新绑定远端 CI，再进入 R4 / R5。</li>
+</ol>
+<hr />
+<h2 id="7">7. 一句话结论</h2>
+<blockquote>
+<p>当前工作树已经可以整理出“最小可送审候选”，但在真正冻结前，仍需先排除日志/快照/过程材料，并对 CI、Helm/Keycloak、以及证据型文档是否随候选打包做一次明确拍板。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

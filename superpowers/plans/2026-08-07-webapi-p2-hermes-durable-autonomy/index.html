@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P2 Hermes 持久自治闭环实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P2 Hermes \u6301\u4e45\u81ea\u6cbb\u95ed\u73af\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P2 Hermes 持久自治闭环实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-07-webapi-p2-hermes-durable-autonomy.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p2-hermes">Web/API P2 Hermes 持久自治闭环实现计划</h1>
+<h2 id="_1">目标与边界</h2>
+<p>以 SQLAlchemy/Alembic 为持久事实源，依次补齐 durable scheduler、完整 Skill Package、会话/checkpoint 恢复和 Platform MCP 读接口。只实现 Web/API，不包含短剧、Tauri 桌面、多机 HA 现场演练或远程 PR 托管。</p>
+<p>成功标准：</p>
+<ol>
+<li>scheduler 在重启后从数据库恢复 job/run，过期 running lease 可回收，失败按指数退避最多 3 次。</li>
+<li>Skill Package 保留完整 SKILL.md 与 references/scripts/assets，ZIP 导入拒绝穿越、符号链接和超限内容。</li>
+<li>checkpoint 按 tenant/conversation/run/step 入库；resume 创建新 run 并保留 parent，rollback 只通过受控 Git commit/patch。</li>
+<li>MCP 读取 conversation/run/approval/scheduler/skill package 复用同一 Principal、RBAC、tenant 过滤和审计链。</li>
+<li>Web 能查看调度历史与 checkpoint 时间线，且所有状态变更显式确认。</li>
+</ol>
+<h2 id="p2-adurable-scheduler">P2-A：Durable Scheduler</h2>
+<p><strong>任务 1：数据模型、迁移与仓储</strong></p>
+<ul>
+<li>创建 <code>scheduled_jobs</code> 与 <code>scheduled_job_runs</code>，包含 tenant/owner、schedule、lease、attempt/retry、run/error/notification 和完整时间字段。</li>
+<li>先写失败测试：持久、tenant 隔离、到期 claim 只能成功一次、最多补最近一次。</li>
+<li>全新 SQLite upgrade 和 PostgreSQL 可移植 SQLAlchemy 语义均通过。</li>
+</ul>
+<p><strong>任务 2：调度循环、租约与重试恢复</strong></p>
+<ul>
+<li>用 DB job 替代 JSON 事实源；Redis lease 保留为多实例第二道防线。</li>
+<li>原子创建/claim Job Run，结构化写入 queued/running/succeeded/failed/retry_wait/interrupted。</li>
+<li>启动回收过期 lease；指数退避且最多 3 次；missed run 只补最近一次。</li>
+<li>通知失败只写 notification_error，不改任务终态。</li>
+</ul>
+<p><strong>任务 3：租户隔离 API 与审计</strong></p>
+<ul>
+<li>list/get/create/pause/delete/manual retry/run history 全部显式 tenant 过滤。</li>
+<li>变更操作必须确认 job/run ID，跨租户统一 404，写 audit chain。</li>
+<li>保留旧 API 路径，但收紧错误码和返回结构。</li>
+</ul>
+<p><strong>任务 4：Web 调度中心</strong></p>
+<ul>
+<li>增加 <code>/scheduler</code>、主导航、job 列表、run 历史、失败/重试信息。</li>
+<li>pause/delete/retry 二次确认，页面错误不吞掉。</li>
+<li>Web 单测、typecheck、lint/build 和 Playwright 真实页面。</li>
+</ul>
+<h2 id="p2-b-skill-package">P2-B：完整 Skill Package</h2>
+<ul>
+<li>数据库记录 package tenant/owner/name/version/hash/manifest/root/imported_at。</li>
+<li>受控包根保留原始 SKILL.md 和 references/scripts/assets；运行匹配器引用完整正文。</li>
+<li>ZIP/目录导入上限：文件数、单文件、总解压大小；拒绝绝对路径、<code>..</code>、符号链接和重复路径。</li>
+<li>API/Web 展示 manifest/hash/来源，脚本不因导入而自动执行。</li>
+</ul>
+<h2 id="p2-csession-checkpoint-rollback">P2-C：Session / Checkpoint / Rollback</h2>
+<ul>
+<li>checkpoint 数据库模型绑定 tenant/conversation/run/step，消息和变更文件作脱敏后 JSON 存储。</li>
+<li>list/get/resume API；resume 产生新 run 和 parent_checkpoint_id，不覆盖原历史。</li>
+<li>rollback 只接受已验证的 Git patch/result commit，脏工作区或路径逃逸必须拒绝。</li>
+<li>Web 在对话/Run Console 展示时间线、恢复来源和 rollback 结果。</li>
+</ul>
+<h2 id="p2-dplatform-mcp">P2-D：Platform MCP</h2>
+<ul>
+<li>新增 conversation list/get/message、run get/cancel/events、approval list/resolve、scheduler job/run read、skill package read。</li>
+<li>MCP tool handler 必须从已认证 Principal 调用现有 domain service，禁止直接跨 tenant 读全局 store。</li>
+<li>契约测试覆盖同租户与跨租户，变更动作写审计链。</li>
+</ul>
+<h2 id="_2">阶段审计</h2>
+<ul>
+<li>每个数据包都必须 fresh migration、失败先行测试、相关回归和关键 Ruff。</li>
+<li>每个 Web 包都必须默认测试自动发现、lint 不反弹、typecheck/build 和 Playwright。</li>
+<li>P2 收口时全量 Ruff/mypy 必须归零，或将仍存的每个问题形成带理由、owner 和失效日期的最小豁免，不得仅保留总数基线。</li>
+<li>P2-D 后创建统一证据报告，再进入 R1 Release gate 实跑。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c1-ha-k8s-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G3-C1 HA / K8s 包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G3-C1 HA / K8s \u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g3-c1-ha-k8s-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c1-ha-k8s-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G3-C1 HA / K8s 包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g3-c1-ha-k8s-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g3-c1-ha-k8s">G3-C1 HA / K8s 包</h1>
+<blockquote>
+<p>适用阶段：G3 企业级长期运营</p>
+<p>用途：把 <code>xagent</code> 从“单机 / Compose 可发布”推进到“可面向企业长期运行的 HA / K8s 方向”时，先固定目标、边界、验证口径和最小通过标准，再决定后续实现深度。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G3-C1 的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 建立企业级长期运营的 HA / K8s 路线起点，确保后续多实例、平台化和 secret 管理演进有统一方向。</strong></p>
+</blockquote>
+<p>这一步不要求立即完成完整 K8s 平台化，但必须明确：</p>
+<ul>
+<li>多实例验证要验证什么；</li>
+<li>K8s / secretRef / external secret manager 的目标形态是什么；</li>
+<li>哪些一致性问题必须在扩展前先识别；</li>
+<li>什么才算“企业级长期运营阶段已真正开始”。</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前基础</h2>
+<p>当前已具备的基础包括：</p>
+<ul>
+<li>单机 / Docker Compose <code>full</code> 模式的发布、回滚、演练口径已形成；</li>
+<li>环境基线与 secret 基线已经文档化；</li>
+<li><code>Helm values</code> 已存在最小 chart 入口；</li>
+<li>正式商用 GA 的候选冻结、目标环境演练、发布 / 回滚、签字 / 证据包已形成；</li>
+<li>当前 <code>full</code> 模式中 API / worker / web / Postgres / Redis / Qdrant / LiteLLM / Langfuse 等依赖关系已明确。</li>
+</ul>
+<p>当前可直接作为 G3-C1 输入的材料：</p>
+<ul>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>deploy/helm/values.yaml</code></li>
+<li><code>deploy/compose/docker-compose.yml</code></li>
+<li><code>docs/coordination/reports/commercialization-goal-board.md</code></li>
+</ul>
+<hr />
+<h2 id="3">3. 当前缺口</h2>
+<h3 id="31">3.1 多实例验证缺口</h3>
+<p>当前仍未证明：
+- API 多副本是否可以稳定工作；
+- worker 多副本是否会带来重复消费 / 幂等问题；
+- Goal / Task / Run / Workflow 在多副本下是否还能保持可追溯一致性。</p>
+<h3 id="32-k8s">3.2 K8s 平台化缺口</h3>
+<p>当前仍未证明：
+- Helm chart 是否已经能表达正式长期运行所需的 secret 管理方式；
+- 是否支持 <code>secretRef</code> / external secret manager 方向；
+- 是否已经具备集群级变更窗口的最小治理边界。</p>
+<h3 id="33">3.3 一致性与状态缺口</h3>
+<p>当前仍未证明：
+- task / workflow / run 状态链在多副本下的幂等性；
+- cache / queue / DB / vector store 的一致性前提是否被满足；
+- 回滚后多实例状态是否能收敛。</p>
+<hr />
+<h2 id="4">4. 本包要回答的四个问题</h2>
+<p>G3-C1 的核心不是“立刻上线 K8s”，而是先回答：</p>
+<ol>
+<li><strong>是否以 K8s 作为主平台方向？</strong></li>
+<li><strong>secret 注入从 env 过渡到 secretRef / external secret manager 的目标形态是什么？</strong></li>
+<li><strong>多实例下哪些组件必须先证明幂等 / 一致性？</strong></li>
+<li><strong>企业级长期运营阶段的最小 HA 通过标准是什么？</strong></li>
+</ol>
+<hr />
+<h2 id="5">5. 最小验证口径</h2>
+<h3 id="51-helm-k8s">5.1 Helm / K8s 渲染验证</h3>
+<p>至少验证：</p>
+<pre><code class="language-powershell">helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=&lt;32+ chars random&gt;
+</code></pre>
+<p>目标：
+- chart 能渲染；
+- <code>jwtSecret</code> 仍 fail-fast；
+- 不把危险默认值带入平台化方向。</p>
+<h3 id="52">5.2 多实例结构检查</h3>
+<p>最少应明确：
+- API 可以设 <code>replicaCount &gt; 1</code>
+- worker 可以设 <code>replicas &gt; 1</code>
+- autoscaling 已有最小入口
+- 但这些并不等于“HA 已验证通过”</p>
+<h3 id="53-secret">5.3 secret 管理方向检查</h3>
+<p>必须明确：
+- 当前是 env / values 注入
+- 后续目标是 secretRef / external secret manager
+- 在完成平台化任务前，不得把“已支持 secretRef”写成已完成事实</p>
+<hr />
+<h2 id="6">6. 最小通过标准</h2>
+<p>G3-C1 要通过，至少需要满足：</p>
+<ol>
+<li>HA / K8s 方向已经被正式确认为企业级长期运营的首个执行包；</li>
+<li>Helm / K8s / secretRef / external secret manager 的目标方向已明确；</li>
+<li>多实例前必须验证的一致性边界已被列出；</li>
+<li>团队已经知道后续不是“随便开副本”，而是要按一致性验证和 secret 管理升级路径推进。</li>
+</ol>
+<p>这意味着：
+- G3-C1 的“通过”不是平台化已经完成；
+- 而是平台化的目标、边界、验证口径已经冻结。</p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>G3-C1 的作用不是马上把项目变成 K8s 平台，而是：</p>
+<blockquote>
+<p><strong>把企业级长期运营阶段的 HA / K8s / secret 管理 / 多实例一致性方向正式冻结下来，作为 G3 的第一个执行包。</strong></p>
+</blockquote>
+<p>完成 G3-C1 后，下一步最自然的包是：
+- <code>G3-C2 可观测 / 告警包</code></p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

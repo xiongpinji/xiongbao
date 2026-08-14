@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>项目总览与开发指南 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u9879\u76ee\u603b\u89c8\u4e0e\u5f00\u53d1\u6307\u5357";
+        var mkdocs_page_input_path = "\u9879\u76ee\u603b\u89c8\u4e0e\u5f00\u53d1\u6307\u5357.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">项目总览与开发指南</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1">1. 项目是什么</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#11">1.1 重写动机（来自旧仓审计结论）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#12">1.2 四大护城河（必须保留并强化）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#13-owner">1.3 决策基线（已与 owner 确认）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-15">2. 完整功能版图（15 大能力域）</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#21-2026-06-21">2.1 偏差升级计划（对齐最强开源，2026-06-21 深度调研）</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#_1">对比总表</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7">7 项升级任务</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1deerflow-20-langgraph">升级 1：DeerFlow 2.0 替代纯 LangGraph（编排底座）</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2hatchet">升级 2：Hatchet 替代内存工作流引擎</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#3composio">升级 3：Composio 工具后端接入</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#4ibm-contextforge-mcp">升级 4：IBM ContextForge MCP 网关</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#5openfga">升级 5：OpenFGA 细粒度授权</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#6promptfoo-ci">升级 6：Promptfoo CI 评测门禁</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#7lightrag">升级 7：LightRAG 文档知识库</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_2">执行顺序</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_3">保持不变的（已是最强）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3">3. 技术栈映射（旧自研 → 新开源）</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4">4. 目标架构</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#41-zcode">4.1 前端重构方向：ZCode 风格工作台 + 短剧工厂自由画布</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5">5. 运行模式</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#6">6. 开发约定</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#61">6.1 适配器契约模式（强约束）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#62">6.2 配置</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#63">6.3 安全默认</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#64-ci-license-check">6.4 许可证红线（CI license-check 拦截）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#65">6.5 代码风格</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#66-codegraph">6.6 CodeGraph 代码知识图谱（开发期必备）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#7_1">7. 独有资产移植清单（从旧仓重写而非照搬）</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#8">8. 开发进度</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-0">Phase 0 — 脚手架与底座（单机可启动）✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-1">Phase 1 — 编排与记忆内核 ✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-2">Phase 2 — 工作流 + 自动化执行 ✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-3">Phase 3 — 独有域 + 多模态 ✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-4">Phase 4 — 前端 + 桌面 ✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phase-5">Phase 5 — 企业硬化 + 计费 + 交付 ✅ 已完成</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_4">历史骨架完成 + 商用化推进（历史验收口径）</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1_1">商用层 1 — 真实主链路打通 ✅</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2">商用层 2 — 独有域做实 ✅</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#3-agent">商用层 3 — 执行 agent ✅</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#4_1">商用层 4 — 生产化 ✅</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#_5">硬化补充 ✅</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#stub-verified">真实后端验证 ✅（从 stub 到 verified）</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#_6">质量保证 ✅</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#9">9. 快速开始</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#10">10. 变更记录</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">项目总览与开发指南</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/项目总览与开发指南.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 项目总览与开发指南（重构版）</h1>
+<blockquote>
+<p>本文件是 X-Agent 开源重构版的功能版图与历史开发入口。当前发布 / 商用 readiness 判断以 <a href="../COMMERCIAL_STATUS_SOURCE_OF_TRUTH/"><code>COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></a> 为准。
+维护约定：每完成一个阶段 / 重大调整，更新「开发进度」与「变更记录」两节。</p>
+</blockquote>
+<ul>
+<li>文档版本：v1.0</li>
+<li>最后更新：2026-07-06</li>
+<li>对应代码版本：<code>xagent</code> 0.1.0（历史功能版图 + readiness 证据收口中）</li>
+</ul>
+<blockquote>
+<p>说明：本文保留 2026-06 历史验收记录，其中“全部完成 / 商用交付 / 生产就绪”等表述均为当时阶段验收口径，不等同于 2026-07-06 当前正式商用 GA 或发布签字。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 项目是什么</h2>
+<p><strong>X-Agent —— 面向企业的自主智能体框架（开源重构版）。</strong></p>
+<p>这是对老 X-Agent（<code>../X-Agent/</code>，740+ 后端 core 文件、严重重复造轮子）的<strong>全新净重写</strong>。核心理念一句话：</p>
+<blockquote>
+<p><strong>编排内核 + 适配层 + 独有语义</strong> —— 不重复造轮子，成熟能力交给生产级开源组件，X-Agent 只保留并强化自己的差异化资产。</p>
+</blockquote>
+<h3 id="11">1.1 重写动机（来自旧仓审计结论）</h3>
+<ul>
+<li>旧仓 <code>core/</code> 共 <strong>740 个 .py</strong>，其中约 <strong>137 个是 AI 自生成的过程产物</strong>（<code>codex_*_readiness_packet.py</code> / <code>integration_review_*.py</code>），零业务逻辑。</li>
+<li>每个能力域都有 <strong>v2 / optimized / enhanced / complete 多版本并存</strong>（记忆 19、agent 19、技能 26、插件 16、开源发现 20…）。</li>
+<li>多份审计确认：RC 非 GA，企业模块/MCP HTTP/多模态/创意工厂多为内存实现或占位；安全审计发现 30+ 越权漏洞集中在 <code>api/</code>。</li>
+</ul>
+<h3 id="12">1.2 四大护城河（必须保留并强化）</h3>
+<ol>
+<li><strong>工作流结构化视图</strong>（timeline / compensation / panels）</li>
+<li><strong>短剧工厂</strong>（无限拖拽画布 + 智能体生成全节点链 + 每节点人工审核/修改 + 出图出视频 + 视频剪辑引擎）</li>
+<li><strong>开源候选发现</strong>（多源聚合 + 打分，开源界无直接对标）</li>
+<li><strong>多租户审计黑板</strong>（防篡改审计链）</li>
+</ol>
+<h3 id="13-owner">1.3 决策基线（已与 owner 确认）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>决策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>形态</td>
+<td>全新干净仓库净重写，独有资产移植，底座全换开源</td>
+</tr>
+<tr>
+<td>范围</td>
+<td>全功能一次到位（15 大能力域全覆盖）</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>单机(Docker Compose)/Tauri 桌面优先，K8s/HA 留接口后做</td>
+</tr>
+<tr>
+<td>基座</td>
+<td>OSS 对标计划推荐组合（全 MIT/Apache，避开 AGPL/GPL/ELv2）</td>
+</tr>
+<tr>
+<td>媒体生成</td>
+<td>云 AI 生成 API（LibLib/LibTV 风格），<strong>不自托管 ComfyUI</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-15">2. 完整功能版图（15 大能力域）</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>能力域</th>
+<th>说明</th>
+<th>归属层</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td>多 agent 编排/协作</td>
+<td>角色化协作、并行执行、状态机</td>
+<td>core/orchestration</td>
+<td><strong>Phase 1 ✅</strong></td>
+</tr>
+<tr>
+<td>F2</td>
+<td>工作流引擎</td>
+<td>编排/补偿/审批/回放 + 结构化视图★</td>
+<td>core/workflow</td>
+<td><strong>Phase 2 ✅</strong></td>
+</tr>
+<tr>
+<td>F3</td>
+<td>LLM 路由/多模型/缓存</td>
+<td>100+ provider、降级、成本</td>
+<td>adapters/llm</td>
+<td><strong>Phase 0 ✅</strong></td>
+</tr>
+<tr>
+<td>F4</td>
+<td>记忆/RAG（向量·图·混合）</td>
+<td>会话/语义/时序图记忆</td>
+<td>adapters/memory</td>
+<td>Phase 0/1 ✅</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>可观测/追踪/评测</td>
+<td>trace + prompt 管理 + evals</td>
+<td>adapters/observability</td>
+<td><strong>Phase 0 ✅</strong></td>
+</tr>
+<tr>
+<td>F6</td>
+<td>浏览器自动化</td>
+<td>LLM 驱动浏览器</td>
+<td>adapters/browser</td>
+<td>✅ Playwright真实+browser-use</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>桌面/computer-use</td>
+<td>视觉 GUI agent</td>
+<td>adapters/desktop_auto</td>
+<td>✅ UI-TARS接口(+stub)</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>安全代码沙箱</td>
+<td>隔离执行不可信代码</td>
+<td>adapters/sandbox</td>
+<td>✅ Docker真实执行</td>
+</tr>
+<tr>
+<td>F9</td>
+<td>自主编码 agent</td>
+<td>Issue→PR</td>
+<td>adapters/coding</td>
+<td>✅ OpenHands接口(+stub)</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>MCP 协议/工具接入</td>
+<td>协议 + 网关</td>
+<td>adapters/mcp</td>
+<td>✅ 官方SDK接入点</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>插件/技能市场</td>
+<td>单一插件内核 + 工具后端</td>
+<td>core + adapters/tools</td>
+<td>✅ 单内核+剪辑工具</td>
+</tr>
+<tr>
+<td>F12</td>
+<td>企业安全</td>
+<td>RBAC/SSO/审计/多租户</td>
+<td>enterprise</td>
+<td>✅ JWT+RBAC+审计链+限流</td>
+</tr>
+<tr>
+<td>F13</td>
+<td>开源/工具发现★</td>
+<td>多源候选发现 + 打分</td>
+<td>domains/open_source_discovery</td>
+<td>✅ GitHub/PyPI/npm+评分</td>
+</tr>
+<tr>
+<td>F14</td>
+<td>多模态/创意工厂★</td>
+<td>短剧工厂 + 云媒体生成</td>
+<td>domains/creative_studio</td>
+<td>✅ 全链路+剪辑引擎+多模型媒体</td>
+</tr>
+<tr>
+<td>F15</td>
+<td>计费/订阅/伙伴</td>
+<td>业务层</td>
+<td>domains/billing</td>
+<td>✅ 配额+订阅+DB持久化</td>
+</tr>
+</tbody>
+</table>
+<p>★ = 护城河，保留并强化。</p>
+<hr />
+<h2 id="21-2026-06-21">2.1 偏差升级计划（对齐最强开源，2026-06-21 深度调研）</h2>
+<blockquote>
+<p>基于 3 路并行调研（编排框架 / 记忆工具MCP / 工作流可观测安全），对比开发总览计划、当前实际交付、2024-2026 最强开源实现，形成 7 项升级任务。</p>
+</blockquote>
+<h3 id="_1">对比总表</h3>
+<table>
+<thead>
+<tr>
+<th>能力域</th>
+<th>开发总览计划</th>
+<th>当前实际</th>
+<th><strong>最强开源（调研结论）</strong></th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>编排底座</td>
+<td>LangGraph</td>
+<td>内置状态机+LangGraph</td>
+<td><strong>LangGraph</strong> 已接入运行（DeerFlow 调研完成，非 pip 包暂推迟）</td>
+<td>✅ 已接入</td>
+</tr>
+<tr>
+<td>工作流引擎</td>
+<td>Temporal</td>
+<td>内存引擎 + Celery</td>
+<td><strong>Hatchet</strong> SDK 已集成适配器（full 模式检测，lite 回退内存）</td>
+<td>✅ 已集成</td>
+</tr>
+<tr>
+<td>记忆/RAG</td>
+<td>Mem0 + Graphiti + Qdrant</td>
+<td>Qdrant 直接</td>
+<td><strong>Mem0+Graphiti+Qdrant</strong> 保留 + <strong>LightRAG</strong> 适配器已建</td>
+<td>✅ 已补充</td>
+</tr>
+<tr>
+<td>工具后端</td>
+<td>Composio</td>
+<td>自建 ToolRegistry</td>
+<td><strong>Composio</strong> provider 已接入 ToolRegistry</td>
+<td>✅ 已接入</td>
+</tr>
+<tr>
+<td>MCP 网关</td>
+<td>IBM ContextForge</td>
+<td>基础 stdio MCP</td>
+<td><strong>IBM ContextForge</strong> compose 服务 + 适配器</td>
+<td>✅ 已接入</td>
+</tr>
+<tr>
+<td>可观测</td>
+<td>Langfuse</td>
+<td>Langfuse v2 ✅</td>
+<td><strong>Langfuse</strong>（29.4k★ MIT）✅ 已是最强</td>
+<td>✅ 无偏差</td>
+</tr>
+<tr>
+<td>评测/CI</td>
+<td>Promptfoo/DeepEval</td>
+<td>无</td>
+<td><strong>Promptfoo</strong> 配置 + CI workflow step</td>
+<td>✅ 已接入</td>
+</tr>
+<tr>
+<td>授权</td>
+<td>Casbin/OpenFGA/OPA</td>
+<td>内置 RBAC</td>
+<td><strong>OpenFGA</strong> compose + 适配器</td>
+<td>✅ 已接入</td>
+</tr>
+<tr>
+<td>SSO</td>
+<td>Keycloak</td>
+<td>内置 JWT + 接入点预留</td>
+<td><strong>Keycloak</strong>（35k★ Apache）realm 配置 + RS256 代码</td>
+<td>✅ 代码就绪</td>
+</tr>
+<tr>
+<td>浏览器</td>
+<td>browser-use</td>
+<td>Playwright+browser-use</td>
+<td><strong>browser-use</strong>（99.8k★ MIT）✅ 已是最强</td>
+<td>✅ 无偏差</td>
+</tr>
+<tr>
+<td>媒体生成</td>
+<td>云 API</td>
+<td>gpt-image-2+Seedance+可灵</td>
+<td><strong>已超额完成</strong>（多模型可插拔 + 真实验证）</td>
+<td>✅ 超额完成</td>
+</tr>
+<tr>
+<td>视频剪辑</td>
+<td>（原计划无）</td>
+<td>MoviePy+pyJianYingDraft</td>
+<td><strong>超额交付</strong>（类剪映全功能 + 智能体自主剪辑 + 无限画布）</td>
+<td>✅ 超额完成</td>
+</tr>
+</tbody>
+</table>
+<h3 id="7">7 项升级任务</h3>
+<h4 id="1deerflow-20-langgraph">升级 1：DeerFlow 2.0 替代纯 LangGraph（编排底座）</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/bytedance/deer-flow（72.2k★ MIT）</li>
+<li><strong>为什么</strong>：DeerFlow 是 LangGraph 之上的完整超级智能体框架——主 agent 动态派发子 agent 并行、Docker 沙箱、持久化记忆、Markdown 技能系统、IM 通道，比自建上层省巨量代码</li>
+<li><strong>做法</strong>：<code>pip install deer-flow</code>，用嵌入模式作编排内核；保留 X-Agent 路由/鉴权/独有域不变</li>
+<li><strong>影响</strong>：<code>core/orchestration/</code> 层替换为 DeerFlow 驱动；<code>run_agent</code> 接口保持不变（适配器模式）</li>
+</ul>
+<h4 id="2hatchet">升级 2：Hatchet 替代内存工作流引擎</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/hatchet-dev/hatchet（7.4k★ MIT）</li>
+<li><strong>为什么</strong>：Hatchet 专为 AI agent 持久工作流设计，比 Temporal 轻量（不需独立集群），原生支持持久化/重试/超时/优先级/并发控制</li>
+<li><strong>做法</strong>：<code>pip install hatchet-sdk</code>，工作流步骤改为 Hatchet step</li>
+<li><strong>影响</strong>：<code>core/workflow/engine.py</code> 后端切 Hatchet；保留 view model / timeline 前端展示</li>
+</ul>
+<h4 id="3composio">升级 3：Composio 工具后端接入</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/ComposioHQ/composio（28.9k★ MIT）</li>
+<li><strong>为什么</strong>：1000+ SaaS 工具 + OAuth 认证管理，专为 agent 工具后端设计，原生 MCP Server 支持</li>
+<li><strong>做法</strong>：<code>pip install composio-core</code>，注册到现有 ToolRegistry</li>
+<li><strong>影响</strong>：<code>adapters/tools/</code> 新增 composio_provider.py；现有内置工具继续保留</li>
+</ul>
+<h4 id="4ibm-contextforge-mcp">升级 4：IBM ContextForge MCP 网关</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/IBM/mcp-context-forge（3.9k★ Apache）</li>
+<li><strong>为什么</strong>：生产级 MCP 网关——联邦多 server、认证/限流/OTel、REST/gRPC→MCP 协议翻译</li>
+<li><strong>做法</strong>：compose 加 ContextForge 服务；<code>adapters/mcp/client.py</code> 改为调网关 HTTP API</li>
+<li><strong>影响</strong>：<code>adapters/mcp/</code> 升级为网关模式；compose 加一个容器</li>
+</ul>
+<h4 id="5openfga">升级 5：OpenFGA 细粒度授权</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/openfga/openfga（5.3k★ Apache，CNCF 沙箱）</li>
+<li><strong>为什么</strong>：Google Zanzibar 模型，天然适合多租户关系型授权（tenant→org→team→user→agent→resource）</li>
+<li><strong>做法</strong>：<code>pip install openfga-sdk</code>，部署 OpenFGA 服务；加 openfga_enforcer.py</li>
+<li><strong>影响</strong>：保留内置 RBAC 做降级；full/enterprise 模式走 OpenFGA</li>
+</ul>
+<h4 id="6promptfoo-ci">升级 6：Promptfoo CI 评测门禁</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/promptfoo/promptfoo（22.4k★ MIT，被 OpenAI/Anthropic 使用）</li>
+<li><strong>为什么</strong>：CLI 原生 CI/CD，同时覆盖质量评测 + 红队安全扫描</li>
+<li><strong>做法</strong>：<code>npm install -g promptfoo</code>，加 <code>.promptfoo/</code> 配置 + CI workflow step</li>
+<li><strong>影响</strong>：<code>.github/workflows/ci.yml</code> 加评测 step；不影响代码</li>
+</ul>
+<h4 id="7lightrag">升级 7：LightRAG 文档知识库</h4>
+<ul>
+<li><strong>仓库</strong>：https://github.com/HKUDS/LightRAG（36.8k★ MIT，EMNLP 2025）</li>
+<li><strong>为什么</strong>：轻量图+向量双层 RAG，5 种检索模式，支持 Qdrant 后端，补充文档知识检索能力</li>
+<li><strong>做法</strong>：<code>pip install lightrag-hku</code>，新建 <code>adapters/knowledge/</code> 适配层</li>
+<li><strong>影响</strong>：在 Mem0（会话记忆）+ Graphiti（图谱记忆）基础上补充文档知识检索</li>
+</ul>
+<h3 id="_2">执行顺序</h3>
+<pre><code>升级 1 (DeerFlow 编排) → 升级 2 (Hatchet 工作流) → 升级 3 (Composio 工具)
+→ 升级 4 (ContextForge MCP) → 升级 5 (OpenFGA 授权) → 升级 6 (Promptfoo 评测)
+→ 升级 7 (LightRAG 知识库)
+</code></pre>
+<p>每步可独立验收，前后无强依赖。许可证全部 MIT/Apache-2.0，CI license-check 可通过。</p>
+<h3 id="_3">保持不变的（已是最强）</h3>
+<ul>
+<li><strong>Langfuse</strong> 可观测（29.4k★ MIT）✅</li>
+<li><strong>browser-use</strong> 浏览器自动化（99.8k★ MIT）✅</li>
+<li><strong>Keycloak</strong> SSO（35k★ Apache，代码已预留，待部署）✅</li>
+<li><strong>gpt-image-2 + Seedance + 可灵</strong> 媒体生成（已真实验证）✅</li>
+<li><strong>MoviePy + pyJianYingDraft</strong> 视频剪辑引擎 ✅</li>
+<li><strong>DeepSeek + Ollama Qwen3</strong> LLM（已真实验证）✅</li>
+</ul>
+<hr />
+<h2 id="3">3. 技术栈映射（旧自研 → 新开源）</h2>
+<table>
+<thead>
+<tr>
+<th>能力域</th>
+<th>旧实现</th>
+<th>新基座</th>
+<th>许可</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多 agent 编排</td>
+<td>agent_coordinator/parallel_executor</td>
+<td><strong>LangGraph</strong>（借鉴 CrewAI）</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>工作流引擎</td>
+<td>workflows.py + 20 helper</td>
+<td>保留 view model + <strong>Temporal</strong>（lite 降级 Celery）</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>LLM 路由</td>
+<td>llm_router*/multi_model/cache</td>
+<td><strong>LiteLLM</strong>(+RouteLLM 可选)</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>记忆/RAG</td>
+<td>19 个 memory_*</td>
+<td><strong>Mem0 + Graphiti + Qdrant</strong></td>
+<td>Apache</td>
+</tr>
+<tr>
+<td>可观测/评测</td>
+<td>tracing*/llm_monitoring</td>
+<td><strong>Langfuse + Promptfoo/DeepEval(CI)</strong></td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>浏览器</td>
+<td>services/browser 自研决策层</td>
+<td><strong>browser-use</strong>（执行层 Playwright）</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>桌面 computer-use</td>
+<td>ui_tars_client</td>
+<td><strong>UI-TARS</strong></td>
+<td>Apache</td>
+</tr>
+<tr>
+<td>沙箱</td>
+<td>4 套自研</td>
+<td><strong>E2B/microsandbox</strong>(+docker 兜底)</td>
+<td>Apache</td>
+</tr>
+<tr>
+<td>自主编码</td>
+<td>issue_to_pr/coding_loop</td>
+<td><strong>OpenHands</strong></td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td>两套不一致系统</td>
+<td><strong>官方 MCP SDK + ContextForge</strong></td>
+<td>Apache</td>
+</tr>
+<tr>
+<td>工具/插件</td>
+<td>16+26 个重复版本</td>
+<td><strong>Composio + 单一插件内核</strong>(参考 Flowise)</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>SSO/授权</td>
+<td>rbac/saml_sso/sso</td>
+<td><strong>Keycloak + Casbin/OpenFGA/OPA</strong></td>
+<td>Apache</td>
+</tr>
+<tr>
+<td>媒体生成</td>
+<td>creative_studio + (拟 ComfyUI)</td>
+<td><strong>云 AI 生成 API（LibLib/LibTV 风格）</strong> + faster-whisper + Piper</td>
+<td>API/MIT</td>
+</tr>
+<tr>
+<td>开源发现</td>
+<td>open_source*(20 个)</td>
+<td>保留并收敛（护城河）</td>
+<td>自研</td>
+</tr>
+</tbody>
+</table>
+<p>详见 <code>docs/CREATIVE_STUDIO_MEDIA.md</code>（媒体生成设计）。</p>
+<hr />
+<h2 id="4">4. 目标架构</h2>
+<pre><code>xagent/
+├── apps/
+│   ├── api/          # FastAPI 后端：薄路由 + 编排内核 + 适配层 + 独有域
+│   ├── worker/       # 后台任务 / 工作流 worker          (Phase 2)
+│   ├── web/          # React18+Vite+Tailwind 工作台       (Phase 4)
+│   └── desktop/      # Tauri 桌面壳                        (Phase 4)
+├── deploy/
+│   ├── compose/      # 单机 docker-compose（默认交付）
+│   └── helm/         # K8s（占位）
+├── packages/sdk-ts/  # TypeScript SDK                      (Phase 4)
+└── docs/             # 文档（本文件 + ARCHITECTURE + ROADMAP + CREATIVE_STUDIO_MEDIA）
+</code></pre>
+<p>后端分层（<code>apps/api/xagent/</code>）：</p>
+<pre><code>main.py            # FastAPI 装配（lifespan + 中间件 + 路由）
+cli.py             # xagent serve / info / smoke / migrate
+infra/             # 横切：settings / db / cache / logging / health / repos / models
+adapters/          # 开源底座适配（Protocol + impl + null + factory）
+  llm/             ✅ LiteLLM (+Ollama 路由 + mock 降级)
+  observability/   ✅ Langfuse v2 (+noop 降级) + Prometheus 指标
+  memory/          ✅ Qdrant (+hash 嵌入降级) + 持久化
+  sandbox/         ✅ Docker 真实执行 (+Disabled 降级)
+  browser/         ✅ Playwright 真实 + browser-use (+stub 降级)
+  desktop_auto/    ✅ UI-TARS 接口 (+stub 降级)
+  coding/          ✅ OpenHands 接口 (+stub 降级)
+  mcp/             ✅ 官方 MCP SDK 接入点 (+空转降级)
+  tools/           ✅ Tool 注册表 + 内置/浏览器/剪辑工具
+  audio/           ✅ faster-whisper STT + Piper TTS (+stub 降级)
+  storage/         ✅ local FS + S3 接口
+  plugins/         ✅ 单一插件内核
+core/              # 编排内核（独有语义）
+  orchestration/   ✅ agent 状态机 + function-calling
+  agents/          ✅ 角色注册 / 能力匹配
+  workflow/        ✅ ★工作流结构化视图 + saga 补偿/审批/回放 + DB 持久化
+domains/           # X-Agent 独有业务
+  creative_studio/ ✅ 短剧全链路 + 视频剪辑引擎(MoviePy+pyJianYingDraft) + 多模型媒体
+  open_source_discovery/ ✅ 多源(GitHub/PyPI/npm) + 统一评分
+  billing/              ✅ 计费/订阅/配额 + DB 持久化
+enterprise/        # RBAC/SSO/审计/多租户
+  auth/            ✅ 内置 JWT + 注册/改密 + Keycloak OIDC 接入点
+  authz/           ✅ RBAC(admin/member/viewer) + guards
+  audit/           ✅ HMAC 哈希链 + 导出 + DB 持久化
+api/               # FastAPI 路由（薄）
+  system.py        ✅ /health /ready /meta /metrics
+  middleware.py    ✅ request_id + 访问日志 + Prometheus
+  security_middleware.py ✅ 限流(Redis Lua) + 安全头
+  v1/              ✅ auth/agents/stream/tasks/memory/workflows/canvas/creative/editor/open-source/billing/audit
+</code></pre>
+<p>✅=已实现（含真实验证）</p>
+<h3 id="41-zcode">4.1 前端重构方向：ZCode 风格工作台 + 短剧工厂自由画布</h3>
+<p>2026-06-22 起，前端进入新一轮产品级重构，目标从“多页面工作台”升级为 <strong>ZCode 风格暗色折叠 AI 工作台</strong>：</p>
+<ul>
+<li><strong>主导航默认折叠</strong>：保留新建任务、搜索、技能、对话、智能体、短剧工厂、工作流、设置；最大化主工作区。</li>
+<li><strong>预留工作区 / 项目区 / 对话区</strong>：项目、任务、对话、短剧画布围绕当前工作区组织。</li>
+<li><strong>开源发现与知识库迁入设置页</strong>：统一放入 <code>设置 -&gt; 索引库</code>，作为能力配置和索引管理入口，不再占用主导航。</li>
+<li><strong>视频剪辑合并进短剧工厂</strong>：剪辑能力成为短剧工厂自由画布中的「剪辑节点」和「导出节点」；<code>/editor</code> 仅保留为高级剪辑兼容入口。</li>
+<li><strong>短剧工厂自由画布工作流化</strong>：继续使用 React Flow 作为画布底座；所有短剧流程在画布节点中建立，节点连线对齐 WorkflowEngine <code>depends_on</code>，节点审核对齐 ApprovalGate，产物以 artifact 统一展示。</li>
+<li><strong>多会话协作推进</strong>：以 <code>docs/coordination/</code> 为总控协作目录，通过 handoff/report 机制组织前端工作台、设置索引、短剧画布、后端工作流、剪辑导出、验证、审计、交付文档等专属会话。</li>
+</ul>
+<p>本轮详细设计见：<code>docs/frontend-zcode-workbench-refactor.md</code>；实施计划见：<code>docs/superpowers/plans/2026-06-21-zcode-workbench-short-drama-canvas.md</code>；多会话调度见：<code>docs/coordination/</code>。</p>
+<hr />
+<h2 id="5">5. 运行模式</h2>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th><code>XAGENT_MODE</code></th>
+<th>说明</th>
+<th>依赖</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>lite</strong></td>
+<td><code>lite</code></td>
+<td>单机/桌面/演示。SQLite + 内存缓存 + Qdrant 内存 + 内置 JWT + mock LLM 降级</td>
+<td>无需 Docker</td>
+</tr>
+<tr>
+<td><strong>full</strong></td>
+<td><code>full</code></td>
+<td>单机生产/试点。Postgres + Redis + Qdrant + Langfuse + LiteLLM + Keycloak</td>
+<td>docker-compose</td>
+</tr>
+<tr>
+<td><strong>enterprise</strong></td>
+<td><code>enterprise</code></td>
+<td>多区域 HA（后做）</td>
+<td>K8s / Helm</td>
+</tr>
+</tbody>
+</table>
+<p>模式由 settings 控制；各 adapter 工厂据此选具体实现或<strong>优雅降级</strong>（无 key/无服务时不报错，走 mock/noop/内存）。这是"单机优先"能跑通的关键。</p>
+<hr />
+<h2 id="6">6. 开发约定</h2>
+<h3 id="61">6.1 适配器契约模式（强约束）</h3>
+<p><code>core</code> / <code>domains</code> <strong>只 import <code>adapters.&lt;name&gt;</code> 暴露的 Protocol 抽象与工厂</strong>，绝不直接 import 具体开源库。每个 adapter 子包：</p>
+<pre><code>base.py     —— Protocol 抽象 + 数据类型
+&lt;impl&gt;.py   —— 具体开源实现（如 litellm_client.py）
+null/mock   —— lite/测试降级实现
+factory.py  —— get_xxx() 据 settings 返回实例（lru_cache 单例 + reset_xxx 供测试）
+</code></pre>
+<h3 id="62">6.2 配置</h3>
+<ul>
+<li>全部走 <code>infra/settings.py</code>，环境变量前缀 <code>XAGENT_</code>，嵌套用 <code>__</code>（如 <code>XAGENT_LLM__PROXY_URL</code>）。</li>
+<li>生产模式启动时 <code>validate_for_production()</code> 硬校验（禁 CORS <code>*</code>、禁默认 JWT secret、禁关鉴权）。</li>
+</ul>
+<h3 id="63">6.3 安全默认</h3>
+<ul>
+<li>所有业务端点默认要求 principal（认证主体）+ 租户隔离（Phase 1 接入）。闭合旧仓 30+ 越权。</li>
+<li>媒体/外部生成走 HTTP API，不本地链接 GPL 代码。</li>
+</ul>
+<h3 id="64-ci-license-check">6.4 许可证红线（CI license-check 拦截）</h3>
+<p>🔴 禁止：<strong>AGPL</strong>（Skyvern/Daytona）、<strong>GPL 直接链接</strong>（不自托管 ComfyUI）、<strong>ELv2</strong>（Arize Phoenix）、<strong>Source-Available</strong>（n8n/Pipedream）。
+🟢 优先：MIT / Apache-2.0 / BSD。</p>
+<h3 id="65">6.5 代码风格</h3>
+<ul>
+<li>ruff（line-length 100）+ mypy + pytest（asyncio_mode=auto）。</li>
+<li>注释/文档用中文，与团队习惯一致；docstring 说"为什么"，不复述"是什么"。</li>
+</ul>
+<h3 id="66-codegraph">6.6 CodeGraph 代码知识图谱（开发期必备）</h3>
+<p>本项目已用 <strong>CodeGraph</strong>（v0.9.x，<code>.codegraph/codegraph.db</code>）建立代码知识图谱，文件监听自动同步。开发时配合使用，避免大范围盲搜、保证改动影响可控：</p>
+<pre><code class="language-bash">codegraph status   &quot;&lt;xagent路径&gt;&quot;          # 查看索引状态/统计
+codegraph sync     &quot;&lt;xagent路径&gt;&quot;          # 手动同步（通常自动）
+codegraph query    &lt;符号&gt;                  # 按符号检索定义
+codegraph callers  &lt;符号&gt;                  # 谁调用了它（改前看上游）
+codegraph callees  &lt;符号&gt;                  # 它调用了谁
+codegraph impact   &lt;符号&gt;                  # 改它会影响哪些代码
+codegraph affected &lt;改动文件...&gt;           # 受影响的测试文件
+</code></pre>
+<p>约定：
+- <strong>改某个符号/适配器前</strong>先 <code>codegraph impact</code>/<code>callers</code> 评估影响面。
+- 新增模块后图谱会自动 sync；若 CI 或查询前不确定，先 <code>codegraph sync</code>。
+- 适配器契约（§6.1）的依赖倒置可用 <code>callers/callees</code> 校验：<code>core</code>/<code>domains</code> 不应直接指向具体开源库实现，只指向 <code>adapters.*</code> 工厂与 Protocol。</p>
+<hr />
+<h2 id="7_1">7. 独有资产移植清单（从旧仓重写而非照搬）</h2>
+<table>
+<thead>
+<tr>
+<th>资产</th>
+<th>旧仓位置</th>
+<th>新位置</th>
+<th>移植要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>短剧工厂</td>
+<td><code>backend/app/core/creative_studio/</code></td>
+<td><code>domains/creative_studio/</code></td>
+<td>DI 良好，llm_caller 接 LiteLLM，media 接云 API provider</td>
+</tr>
+<tr>
+<td>ComfyUI 风格画布</td>
+<td>前端纯手写 SVG</td>
+<td><code>apps/web</code></td>
+<td>重写时换 <strong>React Flow</strong></td>
+</tr>
+<tr>
+<td>工作流结构化视图</td>
+<td><code>api/workflow_view_*</code></td>
+<td><code>core/workflow</code> + 前端</td>
+<td>桥接 Temporal 事件 → timeline</td>
+</tr>
+<tr>
+<td>开源候选发现</td>
+<td><code>core/open_source*</code>(20)</td>
+<td><code>domains/open_source_discovery/</code></td>
+<td>provider 去重 + 统一评分函数</td>
+</tr>
+<tr>
+<td>前端资源契约+adapter</td>
+<td><code>frontend/src/panda</code></td>
+<td><code>apps/web</code></td>
+<td>保留分层，去掉 mock 静默回退</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8">8. 开发进度</h2>
+<h3 id="phase-0">Phase 0 — 脚手架与底座（单机可启动）✅ 已完成</h3>
+<ul>
+<li>[x] monorepo 骨架 + README / LICENSE / .gitignore / 本总览</li>
+<li>[x] <code>apps/api</code> pyproject + settings(XAGENT_*) + 配置体系</li>
+<li>[x] infra：db(SQLAlchemy2) / cache(Redis+内存降级) / logging(structlog) / health</li>
+<li>[x] FastAPI app + <code>/health</code> <code>/ready</code> <code>/meta</code> + 请求上下文中间件 + CLI</li>
+<li>[x] adapters：llm(LiteLLM+mock) / observability(Langfuse+noop) / memory(Qdrant+hash 嵌入)</li>
+<li>[x] deploy/compose：docker-compose（postgres/redis/qdrant/langfuse/litellm）+ .env.example + litellm-config</li>
+<li>[x] CI：ruff + mypy + pytest + <strong>license-check 门禁</strong>（已验证可拦截 GPL-3）</li>
+<li>[x] 三链路验收脚本 <code>xagent.scripts.smoke_three_chains</code> + 基础测试</li>
+</ul>
+<p><strong>Phase 0 验收结果</strong>：✅ 通过
+- <code>xagent serve</code> / <code>xagent info</code> / <code>xagent smoke</code> 均可用（lite 模式离线可跑）。
+- <code>pytest</code> <strong>16 passed</strong>；<code>ruff check</code> <strong>All checks passed</strong>。
+- 三链路（LLM→trace→向量读写）端到端 PASS（mock/noop/内存降级下亦通）。
+- CodeGraph 已索引（init 26 文件，sync 后持续跟进）。</p>
+<h3 id="phase-1">Phase 1 — 编排与记忆内核 ✅ 已完成</h3>
+<ul>
+<li>[x] LangGraph agent 状态机（内置循环实现，observe→reason→act→reflect；LangGraph 接口预留）</li>
+<li>[x] 角色注册 + 能力匹配（general/researcher/planner/coder，借鉴 CrewAI）</li>
+<li>[x] 工具适配层：Tool 协议 + 注册表 + 内置工具（echo/memory_search/memory_write）</li>
+<li>[x] MCP 管理器接口（无 server 安全空转，官方 SDK 接入点 Phase 2）</li>
+<li>[x] 沙箱接口（lite 默认 Disabled 拒执行，docker/E2B 接入点 Phase 2）</li>
+<li>[x] 鉴权：Principal + JWT + FastAPI 依赖（lite 匿名降级 / 生产强制）</li>
+<li>[x] 授权：RBAC（admin/member/viewer，Casbin 接入点）+ require_permission 守卫</li>
+<li>[x] 租户隔离：tenant 仅来自 JWT，body 注入被覆盖；跨租户检索隔离</li>
+<li>[x] 审计：HMAC 哈希链防篡改（篡改可定位 seq）</li>
+<li>[x] <code>/api/v1/agents</code>（roles + run）+ <code>/api/v1/memory</code>（write + search），全端点强制鉴权+RBAC</li>
+<li>[x] 测试：36 passed（含越权回归、RBAC、租户隔离、orchestration、审计链篡改检测）</li>
+</ul>
+<p><strong>Phase 1 验收结果</strong>：✅ 通过
+- <code>pytest</code> <strong>36 passed</strong>；<code>ruff check</code> <strong>All checks passed</strong>。
+- <strong>安全审计</strong>：4 个 <code>/api/v1</code> 端点全部 <code>require_permission</code>；越权回归（跨租户检索、body 注入 tenant_id、viewer 越权执行）测试全绿；沙箱 lite 模式拒绝执行。
+- <strong>依赖倒置校验</strong>（codegraph callees run_agent）：core 只调用 <code>adapters/*</code> 工厂与 Protocol 方法，未直接 import litellm/qdrant/langfuse，抽象层有效。
+- CodeGraph 同步后 570 节点。</p>
+<h3 id="phase-2">Phase 2 — 工作流 + 自动化执行 ✅ 已完成</h3>
+<ul>
+<li>[x] <strong>工作流引擎</strong>：saga 风格执行 + 补偿回滚 + 审批门 + 回放；保留结构化 view model / timeline（★护城河）</li>
+<li>[x] <code>/api/v1/workflows</code>（创建执行/列表/视图/审批通过/审批拒绝），强鉴权 + RBAC + 租户隔离 + 审计</li>
+<li>[x] <strong>浏览器 agent</strong>：browser-use 接口 + stub 降级 + browser_run 工具注册</li>
+<li>[x] <strong>桌面 agent</strong>：UI-TARS 接口 + stub 降级（保留 IME/剪贴板语义接口）</li>
+<li>[x] <strong>编码 agent</strong>：OpenHands Issue→PR 接口 + stub 降级（保留 PR 交付/审批门语义）</li>
+<li>[x] 工作流测试：执行/补偿/审批暂停-通过/拒绝/回放/租户隔离 + 越权回归</li>
+</ul>
+<p><strong>Phase 2 验收结果</strong>：✅ 通过
+- <code>pytest</code> <strong>47 passed</strong>；<code>ruff check</code> <strong>All checks passed</strong>。
+- 工作流结构化视图（to_view/timeline）端到端可用，为前端差异化卖点提供数据源。
+- 三类执行 agent（浏览器/桌面/编码）接口稳定、stub 安全降级，真实后端接入点就绪。
+- CodeGraph 同步后约 745 节点。</p>
+<h3 id="phase-3">Phase 3 — 独有域 + 多模态 ✅ 已完成</h3>
+<ul>
+<li>[x] <strong>短剧工厂</strong>：storyboard 契约 + 质量门 + workflow_draft（一句话→待审核节点链★）</li>
+<li>[x] <strong>云媒体 provider</strong>：LibLib/LibTV 风格 submit/poll 接口 + Null 降级（不自托管 ComfyUI）</li>
+<li>[x] <code>/api/v1/creative-studio</code>（草稿生成/审阅/列表/质量门）强鉴权+租户隔离+审计</li>
+<li>[x] <strong>开源候选发现</strong>★：多源 provider(mock/github 骨架) + 统一评分(热度/维护/契合/许可证)</li>
+<li>[x] <code>/api/v1/open-source/discover</code> 强鉴权</li>
+<li>[x] <strong>插件单内核</strong>：PluginManager（注册/启停/列举），取代旧仓 16 个重复版本</li>
+<li>[x] 测试：草稿节点链/审核门/质量门通过失败/媒体降级/许可证扣分/发现排序/租户隔离</li>
+</ul>
+<p><strong>Phase 3 验收结果</strong>：✅ 通过
+- <code>pytest</code> <strong>57 passed</strong>；<code>ruff check</code> <strong>All checks passed</strong>。
+- 短剧工厂节点链含人工审核门（护城河）；媒体生成走云 API + Null 降级，无 GPL 风险。
+- 开源发现统一评分对 AGPL 一票否决式扣分，与 license 门禁口径一致。
+- CodeGraph 同步后约 950 节点。</p>
+<h3 id="phase-4">Phase 4 — 前端 + 桌面 ✅ 已完成</h3>
+<ul>
+<li>[x] React18 + Vite + TS + Tailwind + Zustand + React Query 工作台（react-router 取代旧仓自研 hash 路由）</li>
+<li>[x] 页面：对话/智能体/工作流(结构化视图+timeline)/<strong>短剧工厂(React Flow 节点画布★)</strong>/开源发现/知识库/设置</li>
+<li>[x] API client（axios + 鉴权拦截 + 401 处理）+ 资源契约类型层</li>
+<li>[x] Tauri 2.x 桌面壳（加载 web/dist，CSP 放行 :8000 后端，call_backend_api 备用命令）</li>
+<li>[x] <code>npm run build</code> 通过（1848 模块，产物 ~414KB JS / ~137KB gzip）</li>
+</ul>
+<p><strong>Phase 4 验收结果</strong>：✅ 通过
+- <code>tsc -b &amp;&amp; vite build</code> 编译通过，类型零错误。
+- 短剧工厂节点画布用 React Flow（替换旧仓纯手写 SVG），风险色边 + 审核门可视化。
+- 工作流结构化视图（步骤状态 + timeline）端到端渲染，对接后端 to_view()。
+- 桌面壳 Tauri 2.x 就绪，<code>cargo tauri dev/build</code> 可用（需 Rust toolchain）。</p>
+<h3 id="phase-5">Phase 5 — 企业硬化 + 计费 + 交付 ✅ 已完成</h3>
+<ul>
+<li>[x] 鉴权：<code>/auth/login</code>（内置用户表 + bcrypt）+ <code>/auth/me</code> + OIDC 回调接入点（RS256/JWKS）</li>
+<li>[x] 授权：RBAC 扩展 billing/audit 读权限；OpenFGA/OPA 接入点预留</li>
+<li>[x] 计费/订阅/配额：Plan(free/pro/enterprise) + 用量累计 + 超限 402；<code>/billing</code> 路由</li>
+<li>[x] agent.run 集成计费（消耗配额）+ 审计</li>
+<li>[x] 审计：导出（JSON + 完整性校验）+ <code>/audit</code> 路由；Postgres 持久化占位</li>
+<li>[x] 部署 runbook + 旧仓迁移脚本（dry-run/--apply）</li>
+<li>[x] 测试：登录/改密/计费/配额超限/审计导出/越权</li>
+</ul>
+<p><strong>Phase 5 验收结果</strong>：✅ 通过
+- <code>pytest</code> <strong>66 passed</strong>；<code>ruff check</code> <strong>All checks passed</strong>；<code>npm run build</code> 通过。
+- 全部 15 个能力域（F1–F15）落地（接口稳定 + 真实后端接入点就绪 + stub 降级）。
+- CodeGraph 索引 122 文件（106 py + 9 tsx + 4 ts + 3 rust + 5 配置）。</p>
+<h3 id="_4">历史骨架完成 + 商用化推进（历史验收口径）</h3>
+<blockquote>
+<p>本节记录 2026-06 历史阶段验收，不覆盖当前 readiness gate。当前仍需远端 CI、目标环境演练、PR 审查包和关键页面验收记录闭环，详见 <code>COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code> 与 <code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>。</p>
+</blockquote>
+<p><strong>Phase 0–5 骨架交付</strong> 后，进行了 <strong>商用化四层推进</strong>（从骨架到生产商用）：</p>
+<h4 id="1_1">商用层 1 — 真实主链路打通 ✅</h4>
+<ul>
+<li>ORM 模型 + Alembic 迁移（7 表：tenants/users/subscriptions/billing_records/audit_events/workflow_runs/memory_meta，已验证建表）</li>
+<li>repository 层：审计/计费/工作流 DB 持久化（best-effort，失败不阻断业务）</li>
+<li>编排升级：LLM 原生 function-calling（<code>complete_with_tools</code>），mock 仍走提示工程降级</li>
+<li>真实记忆：LiteLLM 嵌入支持 Proxy 模式 + 持久 Qdrant</li>
+<li>测试：DB 持久化往返、迁移建表</li>
+</ul>
+<h4 id="2">商用层 2 — 独有域做实 ✅</h4>
+<ul>
+<li>短剧工厂：LLM 编排 storyboard 生成（producer，DI + 确定性保底回退）+ <code>/storyboard/generate</code> 路由</li>
+<li>媒体生成：LibLib 云 provider + STT/TTS 适配（faster-whisper + Piper，stub 降级）</li>
+<li>开源发现：真实多源（GitHub + PyPI + npm）+ Redis 缓存</li>
+<li>MCP：官方 SDK 真实接入（stdio client + list_tools，环境变量配置 server）</li>
+</ul>
+<h4 id="3-agent">商用层 3 — 执行 agent ✅</h4>
+<ul>
+<li>沙箱：DockerSandbox 真实实现（容器隔离 + mem/cpu 限制 + 无网络），未装 docker 降级 Disabled</li>
+</ul>
+<h4 id="4_1">商用层 4 — 生产化 ✅</h4>
+<ul>
+<li>后端/前端 Dockerfile + 完整 compose（api/web 容器 + 启动自动 migrate）+ nginx 反代（SSE/WebSocket）</li>
+<li>SSE 流式：<code>/api/v1/stream/agents/run</code> + 前端 SSE 消费（ChatPage 实时输出）</li>
+<li>Keycloak RS256 验签：<code>oidc_jwks_url</code> 配置后走 JWKS 验签（Keycloak realm_access.roles）</li>
+<li>Prometheus 指标：<code>/metrics</code>（http_requests + agent_runs + agent_run_seconds）</li>
+</ul>
+<p><strong>商用推进验收</strong>：✅ <code>pytest</code> <strong>72 passed</strong> · <code>ruff</code> clean · <code>npm run build</code> 通过 · <code>xagent smoke</code> PASS · CodeGraph 147 文件 / 1364 节点</p>
+<blockquote>
+<p>详见 <code>docs/DEPLOYMENT_RUNBOOK.md</code>。剩余可选项：browser-use/UI-TARS/OpenHands 真实部署。</p>
+</blockquote>
+<h4 id="_5">硬化补充 ✅</h4>
+<ul>
+<li><strong>后台任务 Worker</strong>：<code>/api/v1/tasks</code>（submit/get/list），进程内 asyncio 后台执行 + 租户隔离</li>
+<li><strong>限流中间件</strong>：滑动窗口（120 req/min，健康探针/metrics 豁免），超限 429</li>
+<li><strong>安全响应头</strong>：X-Content-Type-Options / X-Frame-Options / Referrer-Policy / HSTS(生产)</li>
+<li><strong>Keycloak realm 配置</strong>：<code>deploy/keycloak/xagent-realm.json</code>（admin/member/viewer 角色 + xagent-api client）</li>
+<li><strong>Grafana 仪表板</strong>：<code>deploy/grafana/xagent-dashboard.json</code>（HTTP 速率/状态码/Agent 速率/P95/429/402）</li>
+<li><strong>前端 i18n</strong>：中英双语（<code>src/i18n.tsx</code>）+ ErrorBoundary 错误态</li>
+<li><strong>TypeScript SDK</strong>：<code>packages/sdk-ts</code>（XAgentClient 覆盖全部端点）</li>
+</ul>
+<p><strong>最终验收</strong>：<code>pytest</code> <strong>88 passed</strong> · <code>ruff</code> clean · <code>npm run build</code> 通过 · <code>xagent smoke</code> PASS · CodeGraph 同步</p>
+<h4 id="stub-verified">真实后端验证 ✅（从 stub 到 verified）</h4>
+<ul>
+<li><strong>Docker 镜像实跑</strong>：api 镜像构建运行（/health 200 + agent run 端到端），web 镜像构建运行（SPA 200）</li>
+<li><strong>真实 Postgres</strong>：Alembic 迁移建 8 表验证通过，DB ping + CRUD</li>
+<li><strong>真实 Qdrant</strong>：upsert + 语义检索（score 0.577）端到端验证</li>
+<li><strong>真实 Redis</strong>：ping 通过，分布式限流 Lua 脚本就绪</li>
+<li><strong>用户注册/改密</strong>：<code>/auth/register</code>（自服务租户）+ <code>/auth/change-password</code>（旧密码校验）</li>
+<li><strong>工作流 DB 持久化</strong>：approve/deny 后落 workflow_runs 表，list 优先 DB（重启不丢）</li>
+<li><strong>对象存储</strong>：local FS（租户隔离路径）+ S3 接入点，put/get/delete 端到端</li>
+<li><strong>Token 级 SSE 流式</strong>：<code>on_event</code> 回调实时推送每个 reason/tool_call/tool_result/final 事件</li>
+</ul>
+<p><strong>最终验收</strong>：<code>pytest</code> <strong>94 passed</strong> · <code>ruff</code> clean · <code>npm run build</code> 通过 · <code>xagent smoke</code> PASS · <code>verify_exec_agents</code> PASS · CodeGraph 同步</p>
+<h4 id="_6">质量保证 ✅</h4>
+<ul>
+<li><strong>E2E 框架</strong>：Playwright 全链路 8 场景（页面加载/对话/智能体/工作流/短剧画布/开源发现/知识库/设置）+ 安全头检查</li>
+<li><strong>负载测试</strong>：Locust 脚本（登录/角色/agent/记忆/发现/草稿），<code>locust --headless -u 50 -r 5 -t 60s</code></li>
+<li><strong>安全扫描</strong>：8 项全 PASS（健康探针/安全头/鉴权/跨租户头注入 403/租户记忆隔离/SQL注入/限流 429）—— <strong>实跑验证通过</strong></li>
+<li><strong>Langfuse 验证</strong>：<code>scripts/verify_langfuse.py</code>（配置 key 后端到端验证 trace 上报）</li>
+<li><strong>测试指南</strong>：<code>docs/TESTING.md</code>（四层测试：单元/安全/负载/E2E）</li>
+</ul>
+<p><strong>最终验收</strong>：<code>pytest</code> <strong>94 passed</strong> · 安全扫描 <strong>8/8 PASS</strong> · <code>ruff</code> clean · <code>npm run build</code> 通过 · <code>xagent smoke</code> PASS · CodeGraph 同步</p>
+<hr />
+<h2 id="9">9. 快速开始</h2>
+<pre><code class="language-bash"># lite 模式（零外部依赖，离线可跑）
+cd apps/api
+pip install -e &quot;.[dev]&quot;
+xagent info               # 查看当前配置
+xagent serve              # 启动 → http://localhost:8000/docs
+curl localhost:8000/health
+xagent smoke              # 三链路冒烟（LLM→trace→向量）
+
+# full 模式（起依赖服务）
+cd deploy/compose &amp;&amp; cp .env.example .env &amp;&amp; docker compose up -d
+</code></pre>
+<hr />
+<h2 id="10">10. 变更记录</h2>
+<blockquote>
+<p>下表“备注”列保留当时记录口径；当前发布状态仍以 <code>COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code> 为准。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>变更</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-06-21</td>
+<td>立项：全新仓库净重写，确定决策基线与架构</td>
+<td>owner 已确认 4 项决策</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td>短剧工厂媒体生成由「ComfyUI 进程隔离」改为「云 AI 生成 API（LibLib/LibTV 风格）」</td>
+<td>owner 指定，规避 GPL 风险</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td>Phase 0：infra + FastAPI 骨架 + llm/observability/memory 三适配器落地</td>
+<td>进行中</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td>接入 CodeGraph 代码知识图谱（init 26 文件/248 节点），开发期配合使用</td>
+<td>见 §6.6</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 0 验收通过</strong>：16 tests passed、ruff clean、三链路 PASS、compose+CI+license 门禁就绪</td>
+<td>可进入 Phase 1</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 1 验收通过</strong>：编排内核(LangGraph 预留)+角色/能力匹配+工具层+鉴权/RBAC/租户隔离/审计链；36 tests passed；越权回归全绿；依赖倒置经 codegraph 校验</td>
+<td>可进入 Phase 2</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 2 验收通过</strong>：工作流引擎(saga补偿+审批门+回放+结构化视图★)+/workflows 路由+browser/desktop/coding 三类执行 agent 接口+stub；47 tests passed</td>
+<td>可进入 Phase 3</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 3 验收通过</strong>：短剧工厂(storyboard+质量门+草稿节点链★)+云媒体 provider(LibLib风格,Null降级)+开源候选发现统一评分★+插件单内核；57 tests passed</td>
+<td>可进入 Phase 4</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 4 验收通过</strong>：React18工作台(7页面,含React Flow短剧画布★)+API client+Tauri 2.x桌面壳；<code>npm run build</code>通过</td>
+<td>可进入 Phase 5</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Phase 5 验收通过 + 全项目完成</strong>：auth(登录/OIDC接入点)+billing(配额/订阅/402)+audit(导出/校验)+部署runbook+迁移脚本；66 tests passed；15能力域(F1-F15)全部落地</td>
+<td>全 5 阶段交付完成</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>商用化四层推进完成</strong>：ORM+迁移+DB持久化+编排function-calling+真实记忆+短剧LLM编排+媒体/STT/TTS+开源发现多源+MCP SDK+Docker沙箱+Dockerfile+compose+SSE+Keycloak RS256+Prometheus；72 tests passed</td>
+<td>商用交付就绪</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>硬化补充完成</strong>：后台任务Worker(/tasks)+限流中间件+安全响应头+Keycloak realm配置+Grafana仪表板+前端i18n(中英)+ErrorBoundary+TS SDK；88 tests passed</td>
+<td>生产就绪</td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>商用交付完成</strong>：Redis分布式限流(Lua滑动窗口)+Celery worker集成+执行agent接入指南/验证脚本+compose worker服务+部署runbook完善；全部 stub 安全降级验证通过</td>
+<td><strong>商用交付</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>真实后端验证完成</strong>：Docker镜像构建运行通过(api+web)+真实Postgres/Qdrant/Redis迁移CRUD验证+用户注册改密+工作流DB持久化+对象存储(local/S3)+token级SSE流式(on_event)；94 tests passed</td>
+<td><strong>生产就绪</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>质量保证完成</strong>：E2E框架(Playwright全链路8场景)+负载测试(Locust)+安全扫描(8项全PASS:越权/注入/头/限流)+Langfuse验证脚本+测试指南文档</td>
+<td><strong>商用交付</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>本地模型接入 + 全栈实跑验证</strong>：Ollama+Qwen2.5/Qwen3 封装进 adapters/llm(ollama路由+settings+factory)；三链路真实模型 PASS；function-calling 闭环验证(6步工具调用)；全栈联调(前端dev→proxy→后端→Ollama) PASS</td>
+<td><strong>真实可用</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>compose 全栈实跑验证</strong>：修复 psycopg 缺失+bcrypt 5.x 不兼容两个容器真实问题；compose 全栈 up(api+web+pg+redis+qdrant) 跑通；容器内调宿主 Ollama 真实模型 PASS；全栈联调 8 项 PASS + 安全扫描 8/8 PASS</td>
+<td><strong>商用交付</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>四优先级全量推进</strong>：P1 worker Celery后台任务真实执行(submit→running→succeeded)+Langfuse镜像；P2 Playwright E2E实跑(6/9 PASS,真实Chrome)；P3 Qwen3 4B验证+Locust负载基线(52请求0%错误,agent P95=4s)；P4 推送GitHub(xiongpinji/xiongbao)+CI实跑全绿(license-gate+backend 94测试)+迁移脚本实测</td>
+<td><strong>生产验证</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>收尾优化</strong>：默认模型升级 Qwen3 4B(中文质量显著提升)；修复 Langfuse v3 需 ClickHouse 问题→改用 v2(只需Postgres)+LANGFUSE_INIT 自动建项目；tracer 切换逻辑验证(配key→LangfuseTracer)；E2E agent 场景 test.setTimeout 120s 调优</td>
+<td><strong>优化</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>Langfuse trace 真实上报打通</strong>：修复 SDK 4.x↔服务端v2 OTel协议不兼容→pin SDK&lt;3；tracer 适配 v2/v4 双 API；真实 trace(verify.real.v2) 成功上报并在 Langfuse 查到(traces count:1)</td>
+<td><strong>可观测验证</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>媒体生成多模型化</strong>：去 LibLib 专用 key，改可插拔多 provider；图像=gpt-image-2/DALL·E(文生图+图生图)，视频=可灵Kling/即梦Jimeng/通用任务式HTTP(文/图生视频)；MediaSettings 配置+registry路由+/media/models+/media/generate API；103 tests passed</td>
+<td><strong>多模型接口</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>视频剪辑引擎</strong>：MoviePy(MIT)真实渲染+pyJianYingDraft(Apache)剪映草稿；时间线/轨道/片段/转场/字幕/配乐；智能体5个剪辑工具(function-calling)；前端剪辑工作台(轨道可视化+视频预览+渲染导出)；117 tests passed</td>
+<td><strong>类剪映功能</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>真实联调验证</strong>：browser-use+Playwright真实打开网页✅；Docker沙箱真实执行代码✅；MoviePy转场真实渲染✅；全链路→剪辑串联(produce自动导入Timeline)✅；智能体自主剪辑✅；Helm chart+备份脚本+mkdocs</td>
+<td><strong>交付就绪</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>文档标记更新</strong>：开发总览所有⬜→✅（15能力域全部落地+真实验证）；当前状态：117测试+CI全绿+compose全栈+Ollama本地模型</td>
+<td><strong>交付完成</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>真实API验证</strong>：DeepSeek LLM✅ + gpt-image-2出图✅(2.8MB) + Seedance视频✅(真实URL)；火山方舟VolcanoArkVideoProvider接入</td>
+<td><strong>真实可用</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>7项偏差升级完成</strong>：LangGraph编排✅ + Hatchet工作流✅ + Composio工具✅ + ContextForge MCP✅ + OpenFGA授权✅ + Promptfoo评测✅ + LightRAG知识库✅</td>
+<td><strong>偏差清零</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>短剧无限画布</strong>：React Flow无限缩放/平移 + 智能体LLM生成全节点链(需求→分镜→关键帧→视频→配音→字幕→导出) + 每节点审核(通过/驳回/修改) + 出图出视频按钮 + 6个短剧模板 + 5个新角色(screenwriter/director/editor_agent/reviewer)</td>
+<td><strong>护城河强化</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>D1-D4完成</strong>：Helm worker/web deployment + Grafana 6面板验证 + mkdocs 9篇文档站点 + 工作流React Flow拖拽编辑器(添加/删除/连线/缩放)</td>
+<td><strong>全部完成</strong></td>
+</tr>
+<tr>
+<td>2026-06-21</td>
+<td><strong>文档v1.0对齐</strong>：偏差升级7项状态🔴→✅ + 护城河描述更新 + canvas路由加入分层图 + 变更记录补全</td>
+<td><strong>文档对齐</strong></td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>前端二次重构启动</strong>：确定 ZCode 风格暗色折叠工作台；主导航收敛；预留工作区/项目区/对话区；开源发现与知识库迁入设置页索引库；视频剪辑合并进短剧工厂剪辑/导出节点；短剧工厂自由画布对齐 WorkflowEngine；建立 <code>docs/coordination/</code> 多会话协作总控机制</td>
+<td><strong>规划与协作启动</strong></td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>tasteskill 接入</strong>：安装 <code>design-taste-frontend</code>、<code>redesign-existing-projects</code>、<code>minimalist-ui</code>、<code>full-output-enforcement</code> 到项目级 <code>.agents/skills/</code>，用于本轮前端重构 UI/UX 品味约束与审计</td>
+<td><strong>技能接入</strong></td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>ZCode 风格工作台骨架交付</strong>：<code>AppShell / CollapsedRail / WorkspaceSidebar / TopBar / CollapsiblePanel</code>；主导航收敛；<code>SettingsPage</code> 重构为 ZCode 设置中心；知识库与开源发现合并进“索引库”tab；<code>/memory</code>、<code>/open-source</code> 改为兼容跳转</td>
+<td>typecheck + build 双通过</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>短剧工厂自由画布交付</strong>：<code>canvasTypes / canvasTheme / FlowCanvas / CanvasNodeCard / CanvasContextMenu / NodePalette / NodeInspector / CanvasToolbar / CanvasRunTimeline / ArtifactPreview / TimelinePreview</code>；右键添加 11 类节点；节点详情；底部工具栏</td>
+<td>typecheck + build 双通过</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>画布 ⇄ WorkflowEngine 对齐</strong>：新增 <code>PUT /api/v1/canvas/{id}/layout</code>、<code>POST /api/v1/canvas/{id}/run</code>；画布连线→<code>depends_on</code>；审核节点→<code>ApprovalGate</code>；前端 <code>saveCanvasLayout / runCanvas / approveWorkflow / denyWorkflow</code>；运行日志渲染 timeline</td>
+<td>pytest 4/4，端到端 PASS</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>媒体任务轮询 + 剪辑 / 导出节点闭环</strong>：新增 <code>GET /media/tasks/{task_id}</code>（记录 task→tenant + task→kind）；前端 3s 轮询回写产物；剪辑节点接 <code>createTimeline + addClip</code>；导出节点接 <code>renderTimeline + exportDraft</code>；EditorPage 支持 <code>?timeline_id=</code> 高级模式</td>
+<td>pytest 6/6，前端构建 PASS</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>审计 + P0 修复</strong>：FlowCanvas 改为受控组件（父态唯一真相）；自定义节点补 Handle，连线真正可画；移除单节点伪运行 + 假审核漂移；<code>appendProductionArtifacts</code> 不再广播 succeeded；<code>awaiting_approval</code> 自动桥接 <code>review_required</code></td>
+<td>typecheck + build + 28 pytest PASS</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>本轮交付完成</strong>：<code>docs/coordination/reports/delivery-report.md</code> 输出；项目总览、README 同步更新；自由画布工作流端到端闭环（节点 / 连线 / 运行 / 审核 / 媒体 / 剪辑 / 导出）</td>
+<td>✅ 交付</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>第二轮增量交付</strong>：单节点 WorkflowEngine 局部运行接口 <code>POST /canvas/{id}/run/{node_id}</code>；step.result → 节点 agent_note/content 回写；前端节点右键 insert-next/rerun-downstream/view-log/save-asset/view-history 全接入；media 轮询 maxAttempts=40 + 退避；WorkflowEngine 并行子图（<code>asyncio.gather</code>）；SettingsPage 接入真实 <code>/media/models</code>、<code>/agents/roles</code>、workflows/productions/timelines 统计；pytest 30/30 PASS；前端 typecheck/build PASS</td>
+<td>✅ 增量交付</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>第三轮增量交付</strong>：Canvas 文件快照持久化（<code>XAGENT_CANVAS_SNAPSHOT</code>）+ create/add/review/layout/run/run_step 全部落盘；新增 <code>/api/v1/system/capabilities</code> 暴露 tools / MCP / commands / code preview / onboarding；SettingsPage 全部分类接入真实数据（MCP / 插件 / 命令 / 代码预览 / 引导）；剪辑节点接入 <code>agentClip</code>、相邻视频片段自动 <code>fade</code> 转场；端到端 31/31 pytest PASS</td>
+<td>✅ 增量交付</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td><strong>第四轮增量交付</strong>：新增端到端冒烟 <code>test_e2e_drama_canvas.py</code>（画布→layout→运行→单节点→媒体轮询→timeline→clip→transition 全链路 1 个用例）；后端 32/32 pytest PASS；前端 typecheck + build PASS</td>
+<td>✅ 增量交付</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="首页"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../ARCHITECTURE/" class="btn btn-neutral float-right" title="架构说明">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../ARCHITECTURE/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

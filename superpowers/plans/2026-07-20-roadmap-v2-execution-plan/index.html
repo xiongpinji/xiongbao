@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-20-roadmap-v2-execution-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Roadmap v2 实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Roadmap v2 \u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-20-roadmap-v2-execution-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Roadmap v2 实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-roadmap-v2">X-Agent Roadmap v2 实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 将 <code>ROADMAP_V2.md</code> 中的五个增强方向拆成可执行的下一轮工作路线，明确优先顺序、验证方法与交付物。</p>
+<p><strong>架构：</strong> 本计划不再讨论“是否达到商用交付标准”，而是在当前交付标准已达成的前提下，按平台化增强 → 自动化运营增强 → 容量与性能增强 → 商业复制增强 → 产品增强的顺序推进。每个方向都先冻结目标、再确认验证口径、最后形成可复制材料或实现结果。</p>
+<p><strong>技术栈：</strong> Markdown、GitHub Actions、FastAPI、React/Vite、Docker Compose、Helm、pytest、Playwright、Locust、Prometheus/Grafana、Langfuse、Postgres、Redis、Qdrant、K8s</p>
+<hr />
+<h2 id="_1">文件结构与职责边界</h2>
+<h3 id="_2">新增文件</h3>
+<ul>
+<li><code>docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md</code></li>
+<li>Roadmap v2 的总执行计划、优先顺序与阶段门。</li>
+<li><code>docs/coordination/reports/roadmap-v2-platformization-package.md</code></li>
+<li>平台化增强方向的执行包说明。</li>
+<li><code>docs/coordination/reports/roadmap-v2-ops-automation-package.md</code></li>
+<li>自动化运营增强方向的执行包说明。</li>
+<li><code>docs/coordination/reports/roadmap-v2-capacity-package.md</code></li>
+<li>容量与性能增强方向的执行包说明。</li>
+<li><code>docs/coordination/reports/roadmap-v2-delivery-replication-package.md</code></li>
+<li>商业复制增强方向的执行包说明。</li>
+<li><code>docs/coordination/reports/roadmap-v2-product-enhancement-package.md</code></li>
+<li>产品增强方向的执行包说明。</li>
+</ul>
+<h3 id="_3">修改文件</h3>
+<ul>
+<li><code>docs/ROADMAP_V2.md</code></li>
+<li>若后续需要，把已执行项 / 已冻结项回填进文档。</li>
+<li><code>docs/coordination/reports/commercialization-goal-board.md</code></li>
+<li>在 G0 关闭后新增 Roadmap v2 入口，作为下一轮增强路线入口。</li>
+<li><code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></li>
+<li>追加 Roadmap v2 执行包入口，便于后续统一检索。</li>
+</ul>
+<hr />
+<h3 id="1-roadmap-v2">任务 1：建立 Roadmap v2 总执行板</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md</code>
+- 修改：<code>docs/coordination/reports/commercialization-goal-board.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出 Roadmap v2 总执行骨架</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 Execution Board
+
+## A 平台化增强
+- status: ready
+
+## B 自动化运营增强
+- status: pending
+
+## C 容量与性能增强
+- status: pending
+
+## D 商业复制增强
+- status: pending
+
+## E 产品增强
+- status: pending
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md docs/coordination/reports/commercialization-goal-board.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 3：将 Roadmap v2 入口挂回 Goal Board</strong></li>
+</ul>
+<pre><code class="language-md">## Next Track
+- 当前主线已完成：G0 xagent 商用完整交付
+- 当前进入：Roadmap v2
+- 当前 active 方向：A 平台化增强
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md docs/coordination/reports/commercialization-goal-board.md
+git commit -m &quot;docs(roadmap): add roadmap v2 execution board&quot;
+</code></pre>
+<hr />
+<h3 id="2-a">任务 2：冻结 A 平台化增强包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/roadmap-v2-platformization-package.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>deploy/helm/values.yaml</code>
+- 引用：<code>docs/ENVIRONMENT_BASELINE_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出平台化增强包模板</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 A 平台化增强包
+
+## 目标
+- secretRef / external secret manager
+- Helm/K8s 平台化补齐
+- 标准环境模板
+- 平台级配置治理
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：补入验证方向与输出物</strong></li>
+</ul>
+<pre><code class="language-md">## 输出物
+- 平台化路线
+- K8s/Helm 增强入口
+- secret 注入目标形态
+- 环境模板定义
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/coordination/reports/roadmap-v2-platformization-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/roadmap-v2-platformization-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md
+git commit -m &quot;docs(roadmap): define platformization package&quot;
+</code></pre>
+<hr />
+<h3 id="3-b">任务 3：冻结 B 自动化运营增强包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/roadmap-v2-ops-automation-package.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>docs/OPERATIONS_MANUAL_V1.md</code>
+- 引用：<code>docs/RELEASE_RUNBOOK_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出自动化运营增强包模板</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 B 自动化运营增强包
+
+## 目标
+- 自动告警联动
+- 自动恢复
+- 自动证据归档
+- 自动运行态汇总
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：补入最小验证方向</strong></li>
+</ul>
+<pre><code class="language-md">## 验证方向
+- 哪些动作仍依赖人工
+- 哪些环节适合自动化
+- 自动化后预期减少什么人工成本
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/coordination/reports/roadmap-v2-ops-automation-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/roadmap-v2-ops-automation-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md
+git commit -m &quot;docs(roadmap): define ops automation package&quot;
+</code></pre>
+<hr />
+<h3 id="4-c">任务 4：冻结 C 容量与性能增强包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/roadmap-v2-capacity-package.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>
+- 引用：<code>docs/coordination/reports/commercialization-g3-c4-capacity-verification.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出容量增强包模板</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 C 容量与性能增强包
+
+## 目标
+- 正式压测基线
+- 多实例一致性实证
+- 队列 / 缓存 / LLM 路径瓶颈治理
+- 容量建议与限制策略
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：补入验证出口</strong></li>
+</ul>
+<pre><code class="language-md">## 输出物
+- 压测结论
+- 瓶颈清单
+- 扩容建议
+- 用户规模建议
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/coordination/reports/roadmap-v2-capacity-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/roadmap-v2-capacity-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md
+git commit -m &quot;docs(roadmap): define capacity package&quot;
+</code></pre>
+<hr />
+<h3 id="5-d">任务 5：冻结 D 商业复制增强包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/roadmap-v2-delivery-replication-package.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>docs/ADMIN_DEPLOYMENT_MANUAL_V1.md</code>
+- 引用：<code>docs/OPERATIONS_MANUAL_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出商业复制增强包模板</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 D 商业复制增强包
+
+## 目标
+- 标准交付模板
+- 标准试点包 / 升级包 / 恢复包
+- 角色模板
+- 不同行业场景交付变体
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：补入可复制输出物</strong></li>
+</ul>
+<pre><code class="language-md">## 输出物
+- 标准模板列表
+- 角色模板清单
+- 场景化变体列表
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/coordination/reports/roadmap-v2-delivery-replication-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/roadmap-v2-delivery-replication-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md
+git commit -m &quot;docs(roadmap): define delivery replication package&quot;
+</code></pre>
+<hr />
+<h3 id="6-e">任务 6：冻结 E 产品增强包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/roadmap-v2-product-enhancement-package.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>
+- 引用：<code>docs/coordination/reports/commercialization-goal-board.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：写出产品增强包模板</strong></li>
+</ul>
+<pre><code class="language-md"># Roadmap v2 E 产品增强包
+
+## 目标
+- Goal / taskboard 自动推进增强
+- review / recover / evidence 自动化增强
+- 更强工作台体验
+- 更细粒度执行与治理视图
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：补入增强输出物</strong></li>
+</ul>
+<pre><code class="language-md">## 输出物
+- 增强方向清单
+- 优先级说明
+- 不破坏现有交付基线的约束
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：
+<code>git diff --check -- docs/coordination/reports/roadmap-v2-product-enhancement-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<p>预期：退出码 0。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/roadmap-v2-product-enhancement-package.md docs/DELIVERY_MATERIALS_INDEX_V1.md
+git commit -m &quot;docs(roadmap): define product enhancement package&quot;
+</code></pre>
+<hr />
+<h2 id="_4">自检</h2>
+<h3 id="_5">规格覆盖度</h3>
+<ul>
+<li>平台化增强（A）有独立任务。</li>
+<li>自动化运营增强（B）有独立任务。</li>
+<li>容量与性能增强（C）有独立任务。</li>
+<li>商业复制增强（D）有独立任务。</li>
+<li>产品增强（E）有独立任务。</li>
+<li>所有方向都从“目标 → 输出物 → 校验 → 提交”拆分为可执行步骤。</li>
+</ul>
+<h3 id="_6">占位符扫描</h3>
+<ul>
+<li>无 TODO / TBD / 待定。</li>
+<li>无“类似任务”类复用占位。</li>
+<li>每个任务都包含具体文件路径和具体命令。</li>
+</ul>
+<h3 id="_7">类型一致性</h3>
+<ul>
+<li>方向名称统一为 A/B/C/D/E。</li>
+<li>所有增强方向都归于 <code>ROADMAP_V2.md</code>。</li>
+<li>所有包文档统一放在 <code>docs/coordination/reports/</code>。</li>
+</ul>
+<hr />
+<h2 id="_8">执行交接</h2>
+<p>计划已完成并保存到 <code>docs/superpowers/plans/2026-07-20-roadmap-v2-execution-plan.md</code>。两种执行方式：</p>
+<p><strong>1. 子代理驱动（推荐）</strong> - 每个任务调度一个新的子代理，任务间进行审查，快速迭代</p>
+<p><strong>2. 内联执行</strong> - 在当前会话中使用 executing-plans 执行任务，批量执行并设有检查点</p>
+<p>选哪种方式？</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

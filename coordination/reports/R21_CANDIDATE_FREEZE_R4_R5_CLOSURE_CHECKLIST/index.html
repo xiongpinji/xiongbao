@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R21 Candidate Freeze + R4/R5 Closure Checklist - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R21 Candidate Freeze + R4/R5 Closure Checklist";
+        var mkdocs_page_input_path = "coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R21 Candidate Freeze + R4/R5 Closure Checklist</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r21-candidate-freeze-r4r5-closure-checklist">R21 Candidate Freeze + R4/R5 Closure Checklist</h1>
+<blockquote>
+<p>日期：2026-07-07
+Owner：Claude Code
+范围：把“候选冻结 + R4 演练 + R5 审查包”收敛为一份可直接执行的闭环清单，不替代实际演练与 reviewer 验收。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目的</h2>
+<p>当前仓库已经完成本地质量基线验证：</p>
+<ul>
+<li>前端 <code>lint/typecheck/build</code> 通过</li>
+<li>后端 <code>ruff/pytest</code> 通过</li>
+<li>Python 许可证门禁通过</li>
+</ul>
+<p>但正式进入可送审 / 可发布候选前，仍存在三道未闭环的门：</p>
+<ol>
+<li><strong>候选未冻结</strong></li>
+<li><strong>R4 目标环境 / full-mode 演练未完成</strong></li>
+<li><strong>R5 PR 审查包无法签发</strong></li>
+</ol>
+<p>R21 的目标是把这三道门拆成：</p>
+<ul>
+<li>当前事实</li>
+<li>前置依赖</li>
+<li>执行动作</li>
+<li>验收产物</li>
+<li>未完成时不得越界宣称的边界</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前事实快照</h2>
+<h3 id="21">2.1 候选状态</h3>
+<p>当前本地工作树：</p>
+<ul>
+<li><code>HEAD</code>: <code>a98cea09506243ca2b585029c2c5b677f172845c</code></li>
+<li>分支状态：<code>master...origin/master [ahead 1, behind 2]</code></li>
+<li>本地存在大量 tracked / untracked 改动</li>
+</ul>
+<p>结论：</p>
+<blockquote>
+<p><strong>当前本地工作树不是已冻结候选。</strong></p>
+</blockquote>
+<p>PR #6 / <code>d59faa3</code> 的远端 CI 仍有效，但<strong>只对该候选有效</strong>，不能覆盖当前本地工作树。</p>
+<p>来源：</p>
+<ul>
+<li><code>docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md</code></li>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+</ul>
+<h3 id="22-r4">2.2 R4 状态</h3>
+<p>当前 R4 仍 BLOCKED，原因已明确：</p>
+<ul>
+<li>缺 <code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li>缺 <code>LANGFUSE_SALT</code></li>
+<li>缺 <code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+<li>缺 full-mode 显式账号</li>
+<li>compose 依赖端口未监听</li>
+<li>尚未绑定一条 full-mode LLM 路径</li>
+</ul>
+<p>结论：</p>
+<blockquote>
+<p><strong>当前只有 lite/dev 级证明，不能等同于 full-mode / staging 演练完成。</strong></p>
+</blockquote>
+<p>来源：</p>
+<ul>
+<li><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></li>
+<li><code>docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md</code></li>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+</ul>
+<h3 id="23-r5">2.3 R5 状态</h3>
+<p>R5 当前 BLOCKED，依赖：</p>
+<ul>
+<li><code>R4</code> 完成至少一次目标环境或 staging 等价演练并归档</li>
+<li><code>R8</code> 对外口径终检通过验收</li>
+<li>候选与远端 CI 的对应关系清晰</li>
+</ul>
+<p>结论：</p>
+<blockquote>
+<p><strong>现在可以准备 R5 的输入源数据，但不能把 R5 当作已可签发的 reviewer 包。</strong></p>
+</blockquote>
+<p>来源：</p>
+<ul>
+<li><code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+</ul>
+<hr />
+<h2 id="3">3. 闭环总览</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>当前状态</th>
+<th>阻塞点</th>
+<th>解除条件</th>
+<th>输出物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>候选冻结</td>
+<td>未完成</td>
+<td>当前工作树未冻结；PR #6 CI 不覆盖当前 HEAD</td>
+<td>固定 branch/commit/范围并取得对应远端 CI</td>
+<td>frozen candidate record</td>
+</tr>
+<tr>
+<td>R4 演练</td>
+<td>BLOCKED</td>
+<td>secret、账号、端口、依赖、LLM 路径未补齐</td>
+<td>full-mode / staging 等价环境实际拉起并归档证据</td>
+<td>rehearsal evidence bundle</td>
+</tr>
+<tr>
+<td>R5 审查包</td>
+<td>BLOCKED</td>
+<td>缺 R4 证据、R8 reviewer 结论、候选绑定</td>
+<td>完成候选冻结 + R4 + 关键 REVIEW 验收</td>
+<td>reviewer-ready PR package</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4">4. 第一门：候选冻结清单</h2>
+<h3 id="41">4.1 必须先确认的事</h3>
+<ul>
+<li>本次交付到底包含哪些 tracked 改动？</li>
+<li>哪些 untracked 文件属于交付内容，哪些只是日志 / 临时产物？</li>
+<li>本次交付是否要把 <code>docs/coordination/</code>、frontend 变更、deploy 变更、E2E 变更一起纳入？</li>
+</ul>
+<h3 id="42">4.2 执行动作</h3>
+<ol>
+<li>选定候选范围</li>
+<li>明确“纳入交付”的目录/文件清单</li>
+<li>
+<p>明确“不纳入交付”的日志、快照、临时产物</p>
+</li>
+<li>
+<p>固定候选</p>
+</li>
+<li>创建或选择唯一候选分支</li>
+<li>固定唯一候选 commit</li>
+<li>
+<p>记录候选 branch / commit / 负责人 / 时间戳</p>
+</li>
+<li>
+<p>绑定远端 CI</p>
+</li>
+<li>push 候选分支</li>
+<li>获取新的远端 CI run</li>
+<li>确认 backend / frontend / license-gate / 其他所需门禁覆盖该候选</li>
+</ol>
+<h3 id="43">4.3 验收产物</h3>
+<p>至少要有：</p>
+<ul>
+<li>候选 branch 名</li>
+<li>候选 commit sha</li>
+<li>远端 CI run URL / run id</li>
+<li>当前候选包含范围说明</li>
+<li>“哪些本地改动未进入候选”的说明</li>
+</ul>
+<h3 id="44">4.4 未完成前禁止宣称</h3>
+<p>在候选冻结完成前，不得宣称：</p>
+<ul>
+<li>当前工作树就是最终发布候选</li>
+<li>当前远端 CI 已覆盖本地全部收尾内容</li>
+<li>R5 已具备正式 reviewer 输入</li>
+</ul>
+<hr />
+<h2 id="5-r4">5. 第二门：R4 演练闭环清单</h2>
+<h3 id="51">5.1 前置输入</h3>
+<p>R4 恢复执行前，至少补齐：</p>
+<ul>
+<li><code>XAGENT_SECURITY__JWT_SECRET</code></li>
+<li><code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li><code>LANGFUSE_SALT</code></li>
+<li><code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+<li>full-mode 显式账号来源</li>
+<li>至少一条 LLM 路径（Ollama / LiteLLM / provider）</li>
+<li>compose 依赖端口与服务准备状态</li>
+</ul>
+<h3 id="52">5.2 执行动作</h3>
+<p>按 R16/R19/U2 组合路径执行：</p>
+<ol>
+<li>生成 <code>.env.rehearsal</code></li>
+<li><code>docker compose --env-file .env.rehearsal config --quiet</code></li>
+<li>对当前候选重新生成 <code>apps/web/dist</code></li>
+<li>拉起依赖服务</li>
+<li>拉起 <code>api/worker/web</code></li>
+<li>记录启动日志</li>
+<li>跑 <code>/health</code>、<code>/ready</code>、web root smoke</li>
+<li>用 full-mode 显式账号跑 <code>creative-smoke</code></li>
+<li>如需更强证据，再跑 <code>full-flow</code></li>
+</ol>
+<h3 id="53">5.3 必要归档证据</h3>
+<ul>
+<li>compose config 输出</li>
+<li>compose ps 输出</li>
+<li>api / worker / web 日志</li>
+<li><code>/health</code> 与 <code>/ready</code> 输出</li>
+<li>full-mode 登录证据</li>
+<li>Playwright 结果</li>
+<li>若有 DB 迁移：Alembic 输出与备份路径</li>
+</ul>
+<h3 id="54-r4">5.4 R4 完成定义</h3>
+<p>满足以下条件才能说 R4 完成：</p>
+<ul>
+<li>目标环境或 staging 等价环境<strong>实际启动成功</strong></li>
+<li>full-mode 显式账号登录成功</li>
+<li>至少一组关键 smoke/E2E 成功</li>
+<li>证据已归档且可被 reviewer 找到</li>
+</ul>
+<h3 id="55">5.5 未完成前禁止宣称</h3>
+<ul>
+<li>已完成 full-mode 演练</li>
+<li>已完成 staging 等价验收</li>
+<li>本地 lite/dev 页面证据可直接替代 R4</li>
+</ul>
+<hr />
+<h2 id="6-r5">6. 第三门：R5 审查包闭环清单</h2>
+<h3 id="61-r5">6.1 R5 的最小输入</h3>
+<p>R5 应至少包含：</p>
+<ul>
+<li>候选 branch / commit / 远端 CI 对应关系</li>
+<li>风险摘要</li>
+<li>本地验证矩阵</li>
+<li>R4 演练证据入口</li>
+<li>R8 / R14 / R15 / R16 / R17 / R18 / R19 等相关证据入口</li>
+<li>reviewer 关注点</li>
+<li>明确剩余风险与不在本次发布范围的事项</li>
+</ul>
+<h3 id="62-review-gate">6.2 需要先确认的 REVIEW gate</h3>
+<p>R5 组装前，至少要检查这些状态：</p>
+<ul>
+<li>R8：对外口径一致性终检</li>
+<li>R14：Vite chunk 拆包证据</li>
+<li>R15：证据一致性同步</li>
+<li>R16：full-mode 演练前置清单</li>
+<li>R17：PR 证据矩阵源数据</li>
+<li>R18：候选新鲜度审计</li>
+<li>R19：无密交接模板</li>
+</ul>
+<p>注意：</p>
+<blockquote>
+<p>这些包即便已有证据，只要仍是 REVIEW，就不能自动等价为 DONE。</p>
+</blockquote>
+<h3 id="63-r5">6.3 R5 完成定义</h3>
+<p>只有在以下条件满足时，R5 才能从 BLOCKED 转为可签发：</p>
+<ul>
+<li>已冻结真正候选</li>
+<li>该候选已有对应远端 CI 绿证据</li>
+<li>R4 已完成至少一次目标环境 / staging 等价演练并归档</li>
+<li>R8 与关键 REVIEW 包已由 reviewer / 总调度确认</li>
+<li>PR 审查包正文、验证矩阵、风险摘要、证据链接齐全</li>
+</ul>
+<h3 id="64">6.4 未完成前禁止宣称</h3>
+<ul>
+<li>R5 已可直接送审</li>
+<li>PR 包已具备正式发布签字条件</li>
+<li>所有 readiness gate 都已关闭</li>
+</ul>
+<hr />
+<h2 id="7">7. 建议执行顺序</h2>
+<h3 id="a">路径 A：最稳妥</h3>
+<ol>
+<li>冻结候选</li>
+<li>推送并取得新远端 CI</li>
+<li>补齐 R4 secret / 账号 / LLM / 依赖</li>
+<li>完成 R4 演练并归档</li>
+<li>验收关键 REVIEW 包</li>
+<li>组装 R5</li>
+</ol>
+<h3 id="b">路径 B：并行准备</h3>
+<p>可并行进行：</p>
+<ul>
+<li>候选范围梳理</li>
+<li><code>.env.rehearsal</code> 输入收集</li>
+<li>R5 结构框架预写</li>
+<li>REVIEW 包预验收清单整理</li>
+</ul>
+<p>但真正签发顺序不能跳过：</p>
+<blockquote>
+<p>候选冻结 → R4 实跑 → R5 签发</p>
+</blockquote>
+<hr />
+<h2 id="8">8. 当前最小行动建议</h2>
+<p>如果现在继续推进，我建议按这个最小行动集执行：</p>
+<ol>
+<li><strong>先冻结候选范围</strong></li>
+<li>
+<p>否则所有后续证据都无法稳定绑定到同一版本。</p>
+</li>
+<li>
+<p><strong>让环境/发布负责人填写 R19 并提供 R4 输入</strong></p>
+</li>
+<li>
+<p>这是恢复 R4 的最短路径。</p>
+</li>
+<li>
+<p><strong>基于冻结候选重跑远端 CI</strong></p>
+</li>
+<li>
+<p>否则无法给 R5 建立可信 CI 对应关系。</p>
+</li>
+<li>
+<p><strong>完成 R4 演练后再组装 R5</strong></p>
+</li>
+<li>这样 PR 审查包才不会天然带着“关键证据缺失”的硬伤。</li>
+</ol>
+<hr />
+<h2 id="9">9. 一句话总结</h2>
+<blockquote>
+<p>当前本地质量基线已经通过，但离“可送审 / 可发布候选”仍差三步：<strong>冻结候选、完成 R4、签发 R5</strong>；R21 的作用就是把这三步从口径收敛成可执行清单。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

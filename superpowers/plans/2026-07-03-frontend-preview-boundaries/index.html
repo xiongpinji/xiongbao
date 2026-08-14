@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-03-frontend-preview-boundaries/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>前端演示态标识补齐实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u524d\u7aef\u6f14\u793a\u6001\u6807\u8bc6\u8865\u9f50\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-03-frontend-preview-boundaries.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-03-frontend-preview-boundaries/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">前端演示态标识补齐实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-03-frontend-preview-boundaries.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="_1">前端演示态标识补齐实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 为当前前端工作区中容易误导为“真实智能执行”的页面补齐“预览 / 辅助 / 本地分析”标识，降低用户误解，同时不影响现有主执行入口。</p>
+<p><strong>架构：</strong> 本次只做前端文案与轻提示层收口，不改后端协议、不新增真实执行能力。改动集中在页面与组件的 header / helper 区域，以及现有 <code>ConversationalCommand</code> 附近；通过轻提示、小标签和 fallback 文案澄清“真实执行入口”和“本地回显 / 导航辅助入口”的边界。测试沿用现有 <code>apps/web/tests/*.mjs</code> 的源码断言模式，给受影响页面补静态源码级校验。</p>
+<p><strong>技术栈：</strong> React 18、TypeScript、Vite、node:test、assert/strict</p>
+<hr />
+<h2 id="_2">文件结构与职责边界</h2>
+<h3 id="_3">核心修改文件</h3>
+<ul>
+<li><code>apps/web/src/pages/AgentsPage.tsx</code></li>
+<li>为角色页补“预览角色 / 本地演示数据 / 调度建议非真实执行”提示。</li>
+<li><code>apps/web/src/pages/MemoryPage.tsx</code></li>
+<li>为记忆检索页补“辅助模式 / 不直接返回真实检索结果”提示。</li>
+<li><code>apps/web/src/pages/OpenSourcePage.tsx</code></li>
+<li>为开源比选页补“预览态 / 不直接返回实时仓库结果”提示。</li>
+<li><code>apps/web/src/components/settings/SettingsLayout.tsx</code></li>
+<li>为“配置助手”补“仅生成检查清单，不直接改配置”提示。</li>
+<li><code>apps/web/src/components/layout/ShellContextPanel.tsx</code></li>
+<li>为“上下文助手”补“只做总结 / 建议 / 跳转，不直接执行后台任务”提示。</li>
+<li><code>apps/web/src/components/runs/RunConsole.tsx</code></li>
+<li>为“运行分析助手”补“基于已加载运行详情做本地分析”提示。</li>
+<li><code>apps/web/src/pages/WorkflowsPage.tsx</code></li>
+<li>为“工作流编排助手”补“当前优先生成页面内步骤草案，执行仍以按钮为准”提示。</li>
+<li><code>apps/web/src/pages/CreativeStudioPage.tsx</code></li>
+<li>为创作草案 / 生产执行边界补提示。</li>
+</ul>
+<h3 id="_4">测试文件</h3>
+<ul>
+<li><code>apps/web/tests/workspaceCatalog.test.mjs</code></li>
+<li>新增，统一校验演示态 / 辅助态文案是否已写入关键页面源码。</li>
+<li><code>apps/web/tests/runConsoleViews.test.mjs</code></li>
+<li>补 <code>RunConsole</code> 的本地分析说明断言。</li>
+</ul>
+<hr />
+<h2 id="1">任务 1：为演示 / 辅助页面补齐静态提示文案</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/web/src/pages/AgentsPage.tsx</code>
+- 修改：<code>apps/web/src/pages/MemoryPage.tsx</code>
+- 修改：<code>apps/web/src/pages/OpenSourcePage.tsx</code>
+- 修改：<code>apps/web/src/components/settings/SettingsLayout.tsx</code>
+- 修改：<code>apps/web/src/components/layout/ShellContextPanel.tsx</code>
+- 测试：<code>apps/web/tests/workspaceCatalog.test.mjs</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先编写失败的源码断言测试</strong></li>
+</ul>
+<pre><code class="language-js">import test from &quot;node:test&quot;;
+import assert from &quot;node:assert/strict&quot;;
+import { readFile } from &quot;node:fs/promises&quot;;
+
+async function read(relativePath) {
+  return readFile(new URL(relativePath, import.meta.url), &quot;utf8&quot;);
+}
+
+test(&quot;workspace pages expose preview and helper disclaimers&quot;, async () =&gt; {
+  const [agentsSource, memorySource, openSourceSource, settingsSource, contextPanelSource] = await Promise.all([
+    read(&quot;../src/pages/AgentsPage.tsx&quot;),
+    read(&quot;../src/pages/MemoryPage.tsx&quot;),
+    read(&quot;../src/pages/OpenSourcePage.tsx&quot;),
+    read(&quot;../src/components/settings/SettingsLayout.tsx&quot;),
+    read(&quot;../src/components/layout/ShellContextPanel.tsx&quot;),
+  ]);
+
+  assert.match(agentsSource, /预览态：当前“角色调度”优先生成任务拆解建议/);
+  assert.match(agentsSource, /仅用于 UI 预览，不代表真实可调度角色集合/);
+  assert.match(memorySource, /辅助模式：当前入口主要用于整理检索意图与跳转索引配置/);
+  assert.match(openSourceSource, /预览态：当前入口优先整理开源比选目标与接入策略/);
+  assert.match(settingsSource, /辅助模式：配置助手当前只生成检查清单与调整建议/);
+  assert.match(contextPanelSource, /辅助模式：当前为上下文助手，优先提供总结、建议与跳转/);
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试，确认当前缺少这些文案而失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; exec -- node --test tests/workspaceCatalog.test.mjs
+</code></pre>
+<p>预期：FAIL，至少报出某个页面源码中缺少 <code>预览态</code> / <code>辅助模式</code> 文案。</p>
+<ul>
+<li>[ ] <strong>步骤 3：在 AgentsPage 中补角色预览与 fallback 明示</strong></li>
+</ul>
+<p>在 <code>AgentsPage.tsx</code> 的角色描述区与 <code>ConversationalCommand</code> 之间插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  当前页用于浏览和预览智能体角色。角色说明与调度建议可用于工作流设计，但真实执行能力仍以后端返回的可用角色与工具链为准。
+&lt;/div&gt;
+&lt;div className=&quot;mb-5 rounded-2xl border border-[#d6ad62]/18 bg-[#d6ad62]/[0.06] px-4 py-3 text-xs leading-6 text-[#f2d99c]&quot;&gt;
+  预览态：当前“角色调度”优先生成任务拆解建议，不直接触发真实智能体执行。
+&lt;/div&gt;
+</code></pre>
+<p>并将 fallback 提示文案改为：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-200&quot;&gt;
+  后端角色接口暂不可用，当前展示的是本地演示角色，仅用于 UI 预览，不代表真实可调度角色集合。
+&lt;/div&gt;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：在 MemoryPage 中补检索辅助说明</strong></li>
+</ul>
+<p>在 <code>header</code> 之后、<code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  辅助模式：当前入口主要用于整理检索意图与跳转索引配置，不直接展示真实知识库命中结果。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage=&quot;你可以先描述检索或沉淀目标。我会优先整理检索意图、隔离边界和下一步入口；真实知识库结果仍需进入索引库或后端检索链路查看。&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：在 OpenSourcePage 中补比选预览说明</strong></li>
+</ul>
+<p>在 <code>header</code> 之后、<code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  预览态：当前入口优先整理开源比选目标与接入策略，不直接返回实时仓库搜索结果。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage=&quot;告诉我你要补齐的能力，我会先整理比选目标、许可证关注点和接入策略。真实候选仓库列表仍需进入开源发现链路进一步检索。&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 6：在 SettingsLayout 中补配置助手非写入说明</strong></li>
+</ul>
+<p>在 <code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  辅助模式：配置助手当前只生成检查清单与调整建议，不会直接修改本地或远端配置。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage={`你可以直接告诉我想怎么配置「${active.label}」。我会把自然语言整理成检查清单与调整建议，但不会直接写入配置。`}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 7：在 ShellContextPanel 中补上下文助手边界说明</strong></li>
+</ul>
+<p>在 <code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mb-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-xs leading-6 text-neutral-500&quot;&gt;
+  辅助模式：当前为上下文助手，优先提供总结、建议与跳转，不直接执行后台任务。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage=&quot;我会根据当前页面上下文给出总结、建议与下一步入口，必要时再引导你进入真实执行页面。&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 8：运行测试，确认静态提示文案已补齐</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; exec -- node --test tests/workspaceCatalog.test.mjs
+</code></pre>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 9：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git -C &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent&quot; add apps/web/src/pages/AgentsPage.tsx apps/web/src/pages/MemoryPage.tsx apps/web/src/pages/OpenSourcePage.tsx apps/web/src/components/settings/SettingsLayout.tsx apps/web/src/components/layout/ShellContextPanel.tsx apps/web/tests/workspaceCatalog.test.mjs
+git -C &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent&quot; commit -m &quot;feat: clarify preview boundaries for helper workspace pages&quot;
+</code></pre>
+<hr />
+<h2 id="2">任务 2：为运行台与流程页补执行边界提示</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/web/src/components/runs/RunConsole.tsx</code>
+- 修改：<code>apps/web/src/pages/WorkflowsPage.tsx</code>
+- 修改：<code>apps/web/src/pages/CreativeStudioPage.tsx</code>
+- 修改：<code>apps/web/tests/runConsoleViews.test.mjs</code>
+- 测试：<code>apps/web/tests/workspaceCatalog.test.mjs</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：补失败的源码断言测试</strong></li>
+</ul>
+<p>在 <code>workspaceCatalog.test.mjs</code> 追加：</p>
+<pre><code class="language-js">test(&quot;run, workflow, and creative surfaces explain execution boundaries&quot;, async () =&gt; {
+  const [runConsoleSource, workflowSource, creativeSource] = await Promise.all([
+    read(&quot;../src/components/runs/RunConsole.tsx&quot;),
+    read(&quot;../src/pages/WorkflowsPage.tsx&quot;),
+    read(&quot;../src/pages/CreativeStudioPage.tsx&quot;),
+  ]);
+
+  assert.match(runConsoleSource, /当前分析助手优先基于已加载的运行详情做本地总结/);
+  assert.match(workflowSource, /预览态：这里会先生成页面内步骤草案/);
+  assert.match(creativeSource, /当前输入会优先生成创作草案与页面节点意图/);
+});
+</code></pre>
+<p>并在 <code>runConsoleViews.test.mjs</code> 的 <code>run console exposes validation risk and recovery panel contracts</code> 断言后追加：</p>
+<pre><code class="language-js">assert.match(consoleSource, /当前分析助手优先基于已加载的运行详情做本地总结/);
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试，确认当前缺少这些说明而失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; exec -- node --test tests/workspaceCatalog.test.mjs tests/runConsoleViews.test.mjs
+</code></pre>
+<p>预期：FAIL，报出至少一个缺少的说明文案。</p>
+<ul>
+<li>[ ] <strong>步骤 3：在 RunConsole 中补本地分析说明</strong></li>
+</ul>
+<p>在 <code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  说明：当前分析助手优先基于已加载的运行详情做本地总结，帮助你快速查看 Timeline、Evidence 和 Artifacts。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage=&quot;我会基于当前已加载的运行详情回答，并按时间线、证据和产物帮你快速定位信息。&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：在 WorkflowsPage 中补草案与执行边界说明</strong></li>
+</ul>
+<p>在 <code>ConversationalCommand</code> 之前插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mb-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  预览态：这里会先生成页面内步骤草案；正式执行仍以“创建并执行”按钮触发的后端工作流为准。
+&lt;/div&gt;
+</code></pre>
+<p>并将 <code>initialAssistantMessage</code> 改为：</p>
+<pre><code class="language-tsx">initialAssistantMessage=&quot;你说一句目标，我会先把它写成页面内步骤草案并同步到画布；确认后再通过执行按钮提交后端工作流。&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：在 CreativeStudioPage 中补草案与正式生产说明</strong></li>
+</ul>
+<p>在 brief / 对话入口区域附近插入：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mb-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-neutral-400&quot;&gt;
+  说明：当前输入会优先生成创作草案与页面节点意图；正式生产链路仍以明确的执行按钮和后端返回结果为准。
+&lt;/div&gt;
+</code></pre>
+<p>如果该页已有执行按钮区，再在按钮区附近补一条短提示：</p>
+<pre><code class="language-tsx">&lt;div className=&quot;mt-3 text-xs leading-5 text-neutral-500&quot;&gt;
+  “创建画布”用于生成草案；“执行 / 生产”才会进入真实后端链路。
+&lt;/div&gt;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 6：运行测试，确认边界说明已补齐</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; exec -- node --test tests/workspaceCatalog.test.mjs tests/runConsoleViews.test.mjs
+</code></pre>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 7：运行前端类型检查与构建</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; run typecheck
+npm --prefix &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\web&quot; run build
+</code></pre>
+<p>预期：
+- <code>typecheck</code> PASS
+- <code>build</code> PASS
+- 若仍有 chunk size warning，记录为非阻断项，不当场扩 scope 处理</p>
+<ul>
+<li>[ ] <strong>步骤 8：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git -C &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent&quot; add apps/web/src/components/runs/RunConsole.tsx apps/web/src/pages/WorkflowsPage.tsx apps/web/src/pages/CreativeStudioPage.tsx apps/web/tests/workspaceCatalog.test.mjs apps/web/tests/runConsoleViews.test.mjs
+git -C &quot;D:\AI编程库\项目库\进行中的项目\xiong bao\xagent&quot; commit -m &quot;feat: clarify preview boundaries for runtime and workflow helpers&quot;
+</code></pre>
+<hr />
+<h2 id="_5">自检</h2>
+<h3 id="_6">规格覆盖度</h3>
+<ul>
+<li>Agents / Memory / Open Source / Settings / ShellContextPanel 的演示态标识：任务 1 覆盖</li>
+<li>RunConsole / Workflows / Creative 的边界说明：任务 2 覆盖</li>
+<li>文案边界收口后的类型检查与构建验证：任务 2 步骤 7 覆盖</li>
+</ul>
+<h3 id="_7">占位符扫描</h3>
+<ul>
+<li>无 TODO / 待定 / 后续实现 占位</li>
+<li>每个步骤均给出精确文件、代码片段、测试命令与预期结果</li>
+</ul>
+<h3 id="_8">类型一致性</h3>
+<ul>
+<li>所有新增提示均为现有 JSX 文案层插入，不引入新类型</li>
+<li>新增测试沿用现有 <code>read()</code> + <code>assert.match()</code> 的源码断言模式</li>
+<li><code>workspaceCatalog.test.mjs</code> 为新增测试文件，职责仅验证演示态 / 辅助态说明是否写入关键页面源码</li>
+</ul>
+<hr />
+<p>计划已完成并保存到 <code>docs/superpowers/plans/2026-07-03-frontend-preview-boundaries.md</code>。两种执行方式：</p>
+<p><strong>1. 子代理驱动（推荐）</strong> - 每个任务调度一个新的子代理，任务间进行审查，快速迭代</p>
+<p><strong>2. 内联执行</strong> - 在当前会话中使用 executing-plans 执行任务，批量执行并设有检查点</p>
+<p><strong>选哪种方式？</strong></p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API R3 独立验收报告 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API R3 \u72ec\u7acb\u9a8c\u6536\u62a5\u544a";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API R3 独立验收报告</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-r3">Web/API R3 独立验收报告</h1>
+<blockquote>
+<p>日期：2026-08-12</p>
+<p>验收基线：本地 <code>master</code> / <code>d67d760d863071f6855806b6bcb6018c9f96cc9e</code></p>
+<p>结论：R3-A 与 R3-B 满足冻结规格和本地完成标准，可从 <code>REVIEW</code> 转为 <code>DONE</code>；远端 push、CI、tag、Release 与生产部署未执行。</p>
+</blockquote>
+<h2 id="1">1. 验收范围</h2>
+<ul>
+<li>规格：<code>2026-08-11-xagent-r3-model-reliability-design.md</code>、R3-B 修复规格与实现计划。</li>
+<li>实现：Chat 截断终态、严格 file_write 超时、不可变批次工具及其合同测试。</li>
+<li>原始证据：<code>output/reliability/20260811T230626Z-f9a73d/</code> 的 JSONL、汇总和日志审计。</li>
+<li>当前现场：<code>xagent-r2</code> 九服务、PostgreSQL 锚点、Scheduler、checkpoint、development task、patch 与清理状态。</li>
+<li>排除：短剧、媒体、Tauri、多机 HA、E2B、付费 provider、客户环境和远端发布。</li>
+</ul>
+<h2 id="2">2. 原始批次独立复算</h2>
+<ul>
+<li>三个原始文件 SHA-256 与基线报告逐字一致：</li>
+<li><code>samples.jsonl</code>：<code>82a8062407c495f851fd03e33955884bd77f5f1fe72c071c254b4b85a248a750</code></li>
+<li><code>summary.json</code>：<code>0077cfff45367f0d70fd3eac7ef53abcb8c069c4e8d8de2829da69b5ee3effd2</code></li>
+<li><code>logs-audit.json</code>：<code>cc716f3f6391be294082e9b2a10673574ca63ca7f38d01c660e43e15a138b223</code></li>
+<li>JSONL 恰有 50 行和 50 个唯一 sample ID，顺序为 Chat 30、Scheduler 10、file_write 10。</li>
+<li>独立 nearest-rank 复算结果：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th style="text-align: right;">精确成功</th>
+<th style="text-align: right;">P50 秒</th>
+<th style="text-align: right;">P95 秒</th>
+<th style="text-align: right;">Max 秒</th>
+<th style="text-align: right;">冻结门槛</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chat</td>
+<td style="text-align: right;">30/30</td>
+<td style="text-align: right;">6.060</td>
+<td style="text-align: right;">8.152</td>
+<td style="text-align: right;">11.754</td>
+<td style="text-align: right;">29/30，P95 ≤ 120</td>
+</tr>
+<tr>
+<td>Scheduler</td>
+<td style="text-align: right;">10/10</td>
+<td style="text-align: right;">36.285</td>
+<td style="text-align: right;">38.346</td>
+<td style="text-align: right;">38.346</td>
+<td style="text-align: right;">9/10，P95 ≤ 180</td>
+</tr>
+<tr>
+<td>file_write</td>
+<td style="text-align: right;">10/10</td>
+<td style="text-align: right;">127.127</td>
+<td style="text-align: right;">177.452</td>
+<td style="text-align: right;">177.452</td>
+<td style="text-align: right;">9/10，P95 ≤ 240</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>false_success</code>、MockLLM、forbidden route、cleanup failure 均为 0；批次无失败样本，fail-closed 为 <code>not_applicable</code>，符合冻结规则。</li>
+<li>脱敏字段扫描未发现 password、Authorization、reasoning、system prompt 或 private key；原始目录由 <code>.gitignore</code> 排除。</li>
+</ul>
+<h2 id="3">3. 持久化与清理复读</h2>
+<ul>
+<li><code>agent_tasks</code>：30 条 R3 Chat，30 条 <code>succeeded</code>。</li>
+<li><code>conversation_messages</code>：91 条含批次 marker 的消息；Chat assistant 精确 marker 全部存在。</li>
+<li><code>checkpoints</code>：51 条相关记录，全部 <code>available</code>。</li>
+<li><code>scheduled_jobs</code>：10 条，全部 <code>enabled=false</code>；<code>scheduled_job_runs</code> 为 10 条 attempt 0 管理记录和 10 条 attempt 1 精确成功记录。</li>
+<li><code>development_tasks</code>：10 条，全部 <code>rejected</code>，无 pending/running/awaiting_review。</li>
+<li>10 份 patch 的当前 SHA-256 与 JSONL 逐一一致；10 个 worktree 和 <code>agent/&lt;task_id&gt;</code> 分支均不存在。</li>
+</ul>
+<p>file_write 样本的原始 <code>tool_call_count</code> 为 0，因为 parallel API 没有向批次工具暴露内部事件计数；成功门由产品代码的 required-first-tool 事件闸和 worktree/commit/diff/patch 四项真实产物共同证明。该字段不作为 file_write SLO 成功条件，后续观测改造应将不可见值改为显式 <code>unknown</code>，避免把未暴露误读为未调用。</p>
+<h2 id="4">4. 当前代码与质量门</h2>
+<ul>
+<li><code>pytest tests/release/test_r3_model_reliability.py -q</code>：<code>37 passed, 10 subtests passed</code>。</li>
+<li><code>unittest discover -s tests/release -p "test_r2_*.py" -v</code>：<code>40/40</code>。</li>
+<li><code>python scripts/run_webapi_release_tests.py</code>：退出码 0；10 项为明示 Docker/Windows 符号链接环境跳过，唯一告警来自故意使用短 HMAC key 的 OIDC 安全测试。</li>
+<li><code>scripts/check_static_quality.py</code> 首次正确红灯：四组精确指纹与旧基线不一致。审计确认 Ruff 当前 225 条发现全部 blame 到基线提交 <code>22ef391</code> 或更早，四组数量未增加；偏差来自后续插入造成的行号移动，mypy 排除项则从 4 降为 0。更新精确指纹后同一命令退出 0。</li>
+<li>R3 工具统一 Ruff 门首次发现 3 个 import 排序问题和 1 个 <code>Sequence</code> 导入位置问题，format check 也要求规范化 3 个文件；按工具输出做纯机械最小修复后，Ruff check 与 format check 均退出 0，R3 合同重新通过。</li>
+<li>R3/R3-B 差异审查未发现会导致错误成功、突破租户边界、扩大超时或污染普通并行任务的阻断项。</li>
+</ul>
+<h2 id="5">5. 运行现场</h2>
+<ul>
+<li><code>xagent-r2</code> 九服务均 running；带 healthcheck 的核心服务为 healthy。</li>
+<li>deep health 返回 200 且 PostgreSQL、Redis、Qdrant 均 healthy；Web、Prometheus、Grafana 返回 200；Platform MCP 无 token 返回 401。</li>
+<li>受保护的 <code>aicg-minio</code> 与 <code>aicg-postgres</code> 容器 ID 保持不变且 healthy。</li>
+<li>当前 Git 只有 <code>master</code> 工作树；旧 feature worktree 与分支已移除。未执行 push、tag、远端发布或生产动作。</li>
+</ul>
+<h2 id="6">6. 规格与竞品差距结论</h2>
+<ul>
+<li>R3-A：单一不可变 50 样本、成功率/P95、假成功、隔离、日志、清理和原始证据一致性全部满足冻结规格。</li>
+<li>R3-B：Chat 截断恢复与二次失败终态、严格 file_write 270 秒预算、普通并行 180 秒边界均有测试和真实批次证据。</li>
+<li>在 2026-08-07 冻结的 Codex/Hermes 差距清单内，worktree 审查闭环、durable scheduler、完整 Skill Package、checkpoint/recovery 与 Platform MCP 已完成本地验收。</li>
+<li>这不是对竞品当前全部能力的动态市场复核，也不证明多机、云沙箱、付费模型或客户生产环境等价。</li>
+</ul>
+<h2 id="7">7. 验收决定与下一门</h2>
+<p>R3-A、R3-B 转为 <code>DONE</code>。当前本地 <code>master</code> 可作为下一次 Web/API 发布候选的输入，但正式发布仍必须获得 Owner 对以下动作的单独授权：</p>
+<ol>
+<li>push 当前 <code>master</code>；</li>
+<li>在远端对同一提交运行完整 CI；</li>
+<li>选择不可复用 <code>v1.0.0</code> 的新版本号并生成 tag/Release；</li>
+<li>按目标环境执行发布、回滚和签字。</li>
+</ol>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

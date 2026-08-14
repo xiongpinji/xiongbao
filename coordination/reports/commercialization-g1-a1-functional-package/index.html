@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g1-a1-functional-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G1-A1 功能链路包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G1-A1 \u529f\u80fd\u94fe\u8def\u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g1-a1-functional-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g1-a1-functional-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G1-A1 功能链路包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g1-a1-functional-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g1-a1">G1-A1 功能链路包</h1>
+<blockquote>
+<p>适用阶段：G1 内部试点可稳定使用</p>
+<p>用途：冻结一条内部试点阶段的标准日常使用路径，让试点负责人、运维、接手者可以按同一条主链完成登录、进入工作台、查看 Goal Board、提交任务/工作流、查看运行结果与回放。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G1-A1 的目标是：</p>
+<blockquote>
+<p><strong>把当前 <code>xagent</code> 的内部试点高频主链冻结成一条可重复、可交接、可验证的功能路径。</strong></p>
+</blockquote>
+<p>这条功能链路不追求覆盖所有能力，而是确保：</p>
+<ul>
+<li>关键入口明确；</li>
+<li>关键路径一致；</li>
+<li>结果查看和回放可用；</li>
+<li>现有证据与最小验证命令可直接复用。</li>
+</ul>
+<hr />
+<h2 id="2">2. 标准日常使用路径</h2>
+<h3 id="21">2.1 登录</h3>
+<p>用户首先进入登录页，并使用当前试点环境允许的有效凭据完成登录。</p>
+<p>目标：
+- 成功获得可访问工作台的会话状态；
+- 失败时可以明确区分“账号/凭据错误”和“环境未就绪”。</p>
+<h3 id="22">2.2 进入工作台入口</h3>
+<p>登录后，标准工作台入口按以下顺序理解：</p>
+<ol>
+<li><code>/chat</code></li>
+<li><code>/goal-board</code></li>
+<li><code>/runs/:runId</code></li>
+<li><code>/settings</code></li>
+</ol>
+<p>含义：
+- <code>/chat</code>：统一任务输入与主对话入口；
+- <code>/goal-board</code>：当前交付目标、执行包和发布/恢复状态入口；
+- <code>/runs/:runId</code>：运行详情、结果查看与回放入口；
+- <code>/settings</code>：配置、索引、技能与环境说明入口。</p>
+<h3 id="23-goal-board-task-workflow">2.3 Goal Board / task / workflow 入口</h3>
+<p>内部试点中的标准任务推进路径应按以下顺序理解：</p>
+<ol>
+<li>在 <code>/chat</code> 或工作流入口发起任务；</li>
+<li>在 <code>/goal-board</code> 观察当前目标、执行包和发布/恢复状态；</li>
+<li>通过 run id 进入 <code>/runs/:runId</code> 查看运行详情；</li>
+<li>必要时再回到 <code>/settings</code> 或材料包查看环境 / 边界 / 支持信息。</li>
+</ol>
+<h3 id="24">2.4 结果查看 / 回放</h3>
+<p>结果查看与回放的最小入口是：</p>
+<ul>
+<li><code>/runs/:runId</code></li>
+</ul>
+<p>试点负责人应能在这个入口完成：
+- 查看运行最终状态；
+- 查看主要输出；
+- 查看失败信息（若存在）；
+- 回查运行关联上下文。</p>
+<hr />
+<h2 id="3">3. 固定入口路径</h2>
+<p>当前冻结的功能链路入口如下：</p>
+<ul>
+<li><code>/chat</code></li>
+<li><code>/goal-board</code></li>
+<li><code>/runs/:runId</code></li>
+<li><code>/settings</code></li>
+</ul>
+<p>补充说明：
+- 这些入口是 G1-A1 固定主链，不要求覆盖所有历史遗留页面；
+- 任何不在上述链路中的页面，不视为当前内部试点主链的必验入口。</p>
+<hr />
+<h2 id="4">4. 现有证据入口</h2>
+<p>当前可直接复用的主链证据包括：</p>
+<ul>
+<li><code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></li>
+<li>关键页面视觉证据入口</li>
+<li><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></li>
+<li>Chat / SSE / full-flow 主链证据</li>
+<li><code>docs/coordination/reports/auto-delivery-phase1-report.md</code></li>
+<li>Phase 1 验收报告模板入口</li>
+</ul>
+<p>这些证据的作用是：
+- 支持内部试点负责人快速判断主链是否存在明显退化；
+- 为后续 G1-A2 稳定性 / 恢复包提供基础输入；
+- 作为“当前主链曾被验证”的最小引用入口。</p>
+<hr />
+<h2 id="5">5. 最小验证命令</h2>
+<p>当前冻结的最小验证命令如下：</p>
+<h3 id="_1">前端主链</h3>
+<pre><code class="language-bash">cd apps/web
+npm test -- goalBoard.test.tsx
+</code></pre>
+<p>预期：
+- Goal Board 渲染通过；
+- Release / Recovery 侧栏逻辑通过；
+- 非 release <code>next_action</code> 不误显示到 release pane。</p>
+<h3 id="spine">后端 Spine / 运行主链</h3>
+<pre><code class="language-bash">cd apps/api
+.venv\Scripts\python.exe -m pytest tests/test_spine_api.py tests/test_spine_session_resume.py tests/test_spine_release_flow.py -q
+</code></pre>
+<p>预期：
+- Goal Board API、session 决策、release flow 相关测试通过。</p>
+<h3 id="worker">运行时 / worker 主链</h3>
+<pre><code class="language-bash">cd apps/api
+.venv\Scripts\python.exe -m pytest tests/test_worker.py tests/test_runtime_runs.py tests/test_spine_service.py -q
+</code></pre>
+<p>预期：
+- worker、runtime、spine service 主链测试通过。</p>
+<hr />
+<h2 id="6">6. 完成定义</h2>
+<p>G1-A1 只有在以下条件同时成立时，才算完成：</p>
+<ul>
+<li>登录、工作台入口、Goal Board、Run 详情入口的路径定义明确；</li>
+<li>试点负责人可以按固定路径理解日常使用流程；</li>
+<li>Goal Board / run 主链的关键自动化验证可直接复用；</li>
+<li>关键视觉/交互/运行证据有明确入口；</li>
+<li>不需要开发者口头解释，接手者也能理解“内部试点的标准日常路径”。</li>
+</ul>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>G1-A1 不是新增产品能力，而是：</p>
+<blockquote>
+<p><strong>把已经存在的关键工作台、Goal Board、Run 详情与主链验证入口冻结成一条标准内部试点功能路径。</strong></p>
+</blockquote>
+<p>后续若要继续推进 Phase 1，应在此基础上进入：
+- <code>G1-A2 稳定性 / 恢复包</code>
+- <code>G1-A3 数据 / 权限 / 审计包</code>
+- <code>G1-A4 试点交付材料包</code></p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

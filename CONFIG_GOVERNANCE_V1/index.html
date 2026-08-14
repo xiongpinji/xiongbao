@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/CONFIG_GOVERNANCE_V1/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>平台级配置治理与差异控制 v1 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u5e73\u53f0\u7ea7\u914d\u7f6e\u6cbb\u7406\u4e0e\u5dee\u5f02\u63a7\u5236 v1";
+        var mkdocs_page_input_path = "CONFIG_GOVERNANCE_V1.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/CONFIG_GOVERNANCE_V1/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">平台级配置治理与差异控制 v1</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/CONFIG_GOVERNANCE_V1.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="v1">平台级配置治理与差异控制 v1</h1>
+<blockquote>
+<p>Roadmap v2 · P0（平台化增强）收口文档 — 2026-08-04</p>
+<p>本文定义 X-Agent Helm 多环境配置的治理模型、分级校验口径与环境差异策略，
+并说明对应的机器校验入口（脚本 + 单测 + CI 门禁）。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 环境分层模型</h2>
+<p>配置采用 <strong>base + overlay</strong> 两层模型：</p>
+<pre><code class="language-text">deploy/helm/values.yaml                          # base：全环境共享默认值
+deploy/helm/environments/values-dev.yaml         # overlay：仅声明与 base 的差异
+deploy/helm/environments/values-staging.yaml
+deploy/helm/environments/values-prod.yaml
+deploy/helm/environments/values-enterprise.yaml
+</code></pre>
+<p>合并语义：深合并（dict 递归合并，标量/列表 overlay 覆盖 base），与
+<code>helm -f values.yaml -f environments/values-&lt;env&gt;.yaml</code> 行为一致。
+<code>scripts/validate_helm_values.py</code> 与 <code>scripts/render_env_diff.py</code> 内部使用
+相同的合并逻辑，校验对象即"生效值"而非 overlay 文本。</p>
+<p>原则：</p>
+<ul>
+<li>overlay 只写差异，不复制 base 内容；</li>
+<li>任何真实 secret 一律不进 values 文件（生产走 ESO 或 <code>existingSecretRef</code>，
+  见 <code>docs/ENVIRONMENT_BASELINE_V1.md</code> 第 8 章）。</li>
+</ul>
+<hr />
+<h2 id="2-validate_helm_valuespy">2. 分级校验口径（validate_helm_values.py）</h2>
+<pre><code class="language-bash">python scripts/validate_helm_values.py --env &lt;dev|staging|prod|enterprise&gt;
+</code></pre>
+<p>按环境分级强制（CRITICAL = 门禁失败，WARNING = 仅提醒）：</p>
+<table>
+<thead>
+<tr>
+<th>规则</th>
+<th>dev</th>
+<th>staging</th>
+<th>prod / enterprise</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>必须启用 ESO（<code>secrets.eso.enabled</code>）或提供 <code>existingJwtSecretRef</code></td>
+<td>–</td>
+<td>WARNING</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>禁止明文 <code>security.jwtSecret</code></td>
+<td>–</td>
+<td>WARNING（弱默认值时）</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>禁止 <code>config.debug=true</code></td>
+<td>–</td>
+<td>–</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>必须 <code>networkPolicy.enabled=true</code></td>
+<td>–</td>
+<td>–</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>必须 <code>pdb.enabled=true</code></td>
+<td>–</td>
+<td>–</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>必须 <code>alerting.enabled=true</code></td>
+<td>–</td>
+<td>WARNING</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>禁止通配 CORS（<code>*</code>）</td>
+<td>–</td>
+<td>–</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>禁止关闭认证（<code>security.requireAuth=false</code>）</td>
+<td>–</td>
+<td>–</td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td>建议 <code>replicaCount &gt;= 3</code></td>
+<td>–</td>
+<td>–</td>
+<td>WARNING</td>
+</tr>
+</tbody>
+</table>
+<p>退出码：存在 CRITICAL 时为 1，否则为 0（可直接做 CI 门禁）。</p>
+<hr />
+<h2 id="3">3. 环境差异策略（差异控制）</h2>
+<p>差异控制回答两个问题：<strong>哪些键在环境间必须不同</strong>（防止把 dev 配置带进生产），
+<strong>哪些键必须一致</strong>（平台统一基线，防止漂移）。策略已固化为
+<code>apps/api/tests/test_config_governance.py</code> 中的机器校验，与本文清单一一对应。</p>
+<h3 id="31-required_diff_keys-dev-prodenterprise">3.1 REQUIRED_DIFF_KEYS — dev 与 prod/enterprise 必须全部不同</h3>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config.debug</code></td>
+<td>生产禁止 debug</td>
+</tr>
+<tr>
+<td><code>config.corsOrigins</code></td>
+<td>各环境前端域名必须显式区分</td>
+</tr>
+<tr>
+<td><code>secrets.eso.enabled</code></td>
+<td>生产强制 ESO，dev 关闭</td>
+</tr>
+<tr>
+<td><code>networkPolicy.enabled</code></td>
+<td>生产强制网络隔离</td>
+</tr>
+<tr>
+<td><code>pdb.enabled</code></td>
+<td>生产强制可用性保障</td>
+</tr>
+<tr>
+<td><code>alerting.enabled</code></td>
+<td>生产强制告警</td>
+</tr>
+<tr>
+<td><code>replicaCount</code></td>
+<td>容量分级（dev=1 / prod=3 / enterprise=5）</td>
+</tr>
+</tbody>
+</table>
+<p>另要求：任意两个环境在以上键上不得全同（防止 overlay 退化为 base 的复制）。</p>
+<h3 id="32-required_same_keys">3.2 REQUIRED_SAME_KEYS — 四环境必须一致</h3>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>security.requireAuth</code></td>
+<td>认证是全环境统一基线，任何环境不得关闭</td>
+</tr>
+<tr>
+<td><code>serviceAccount.automountServiceAccountToken</code></td>
+<td>统一最小权限基线</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33">3.3 临时差异排查工具</h3>
+<pre><code class="language-bash">python scripts/render_env_diff.py --from dev --to prod            # markdown 表格
+python scripts/render_env_diff.py --from staging --to prod --format json
+</code></pre>
+<p>输出为 base+overlay 合并后的全量生效值 diff，用于评审"这次改动到底改变了哪些
+环境的哪些键"。</p>
+<hr />
+<h2 id="4">4. 日常工作流</h2>
+<ol>
+<li>修改 <code>deploy/helm/values.yaml</code> 或某环境 overlay；</li>
+<li>本地跑门禁三件套：</li>
+</ol>
+<p><code>bash
+   for env in dev staging prod enterprise; do
+     python scripts/validate_helm_values.py --env "$env"
+   done
+   helm template xagent ./deploy/helm -f deploy/helm/environments/values-&lt;env&gt;.yaml
+   python scripts/render_env_diff.py --from dev --to &lt;env&gt;</code></p>
+<ol>
+<li>评审关注点：diff 中是否出现 §3.1 之外的意外差异、§3.2 基线键是否被动到；</li>
+<li>CI <code>config-governance</code> job 兜底（四环境校验 + 五套渲染 + diff smoke）。</li>
+</ol>
+<hr />
+<h2 id="5">5. 机器校验入口汇总</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>入口</th>
+<th>拦截内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单测</td>
+<td><code>apps/api/tests/test_config_governance.py</code></td>
+<td>脚本回归 + 篡改用例 + §3 差异策略</td>
+</tr>
+<tr>
+<td>CI</td>
+<td><code>.github/workflows/ci.yml</code> job <code>config-governance</code></td>
+<td>四环境 validate + helm template 五套渲染 + diff smoke</td>
+</tr>
+<tr>
+<td>本地</td>
+<td><code>scripts/validate_helm_values.py</code> / <code>scripts/render_env_diff.py</code></td>
+<td>提交前自检</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6">6. 边界说明</h2>
+<ul>
+<li>本治理覆盖 <strong>Helm values 层</strong>；应用运行时 <code>SECRETREF:file:/env:</code> 语法治理见
+  <code>docs/ENVIRONMENT_BASELINE_V1.md</code>；</li>
+<li>客户现场 K8s 集群级变更窗口治理、企业级多实例演练仍为后续项
+  （见 <code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code> §2.4）。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

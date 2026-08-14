@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_R1_RELEASE_AUDIT_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API R1 发布审计证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API R1 \u53d1\u5e03\u5ba1\u8ba1\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_R1_RELEASE_AUDIT_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_R1_RELEASE_AUDIT_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API R1 发布审计证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_R1_RELEASE_AUDIT_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-r1">Web/API R1 发布审计证据</h1>
+<h2 id="_1">结论</h2>
+<p><code>feature/webapi-release-hardening</code> 已达到本阶段定义的 Web/API 本地发布候选标准。Codex 对标的开发任务闭环，以及 Hermes 对标的持久调度、完整 Skill Package、会话恢复与 checkpoint 闭环，均已通过源码、自动化测试、发布镜像和真实浏览器验证。</p>
+<p>本结论不代表已经推送、打 tag 或部署生产；短剧、Tauri 桌面端、多机 HA、E2B 和客户现场演练继续排除。</p>
+<h2 id="_2">候选修复</h2>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>91255ab</code></td>
+<td>修复侧栏会话首次挂载被清空，以及完整刷新无法从持久状态恢复的问题；新增 3 项生命周期测试。</td>
+</tr>
+<tr>
+<td><code>b2afce7</code></td>
+<td>API 发布镜像加入 Git，使开发任务提交、回滚和并行 worktree 在容器中可运行。</td>
+</tr>
+<tr>
+<td><code>1107307</code></td>
+<td>Webhook 注册/删除改为等待 SQLite 持久化完成后才返回，消除成功响应与落库之间的竞态。</td>
+</tr>
+<tr>
+<td><code>e10878b</code></td>
+<td>修复 1037px 视口下长 run ID 与统计卡重叠；新增响应式布局合同测试。</td>
+</tr>
+<tr>
+<td><code>6c9ccc9</code></td>
+<td>复用现有品牌资产修复 favicon 与 Web Manifest 图标 404。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">自动化与发布物验证</h2>
+<table>
+<thead>
+<tr>
+<th>门禁</th>
+<th>新鲜结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最终 API 镜像全量测试</td>
+<td><code>720 passed / 15 skipped</code>，退出码 0；跳过项为 6 个可选 TTS/媒体依赖测试和 9 个需显式启用的实机 Docker sandbox 集成测试。</td>
+</tr>
+<tr>
+<td>Web 默认测试</td>
+<td><code>25/25</code> 通过。</td>
+</tr>
+<tr>
+<td>Web 类型与构建</td>
+<td><code>tsc -b --noEmit</code>、<code>tsc -b &amp;&amp; vite build</code> 通过；Vite <code>8.2.1</code>，2366 modules transformed。</td>
+</tr>
+<tr>
+<td>Web 精确 lint 门禁</td>
+<td>React compiler 89 项、effect dependencies 10 项；精确文件/规则/行列指纹通过，owner=<code>web-platform</code>，到期日 <code>2026-09-30</code>。</td>
+</tr>
+<tr>
+<td>API 精确静态门禁</td>
+<td>E501 189、exception fallback 17、controlled subprocess 15、async blocking 6；精确指纹通过，均有 owner、理由和 <code>2026-09-30</code> 到期日。</td>
+</tr>
+<tr>
+<td>mypy</td>
+<td>Web/API 范围 0；仅排除的短剧模块保留 4 项精确指纹，到期日 <code>2026-12-31</code>。</td>
+</tr>
+<tr>
+<td>生产依赖</td>
+<td><code>npm run audit:release</code> 通过。仅接受 React Router RSC 公告 <code>GHSA-qwww-vcr4-c8h2</code>；源码无 RSC/SSR surface，发布镜像为纯 Nginx static dist，owner=<code>web-platform</code>，到期日 <code>2026-09-30</code>。</td>
+</tr>
+<tr>
+<td>许可证与版本</td>
+<td><code>scripts/license_check.py</code> 通过；API、Web、README 版本均为 <code>1.0.0</code>。</td>
+</tr>
+<tr>
+<td>最终 API 镜像</td>
+<td><code>xagent-api:webapi-r1</code> 构建成功；fresh SQLite 迁移至 <code>20260807_checkpoints</code>，<code>/health</code> 返回 <code>status=ok, version=1.0.0</code>，镜像内 Git <code>2.47.3</code>。</td>
+</tr>
+<tr>
+<td>开发任务镜像回归</td>
+<td>checkpoint rollback、development task lifecycle、evidence archive、parallel worktrees 共 <code>17/17</code> 通过。</td>
+</tr>
+</tbody>
+</table>
+<p>最终全量测试仅保留两条非失败警告：Python 3.13 将移除 <code>crypt</code> 的第三方依赖弃用提示；OIDC 伪造测试刻意使用短 HMAC key 触发的安全提示。此前出现的 <code>aiosqlite</code> 未处理线程异常已通过 Webhook 耐久性修复消除。</p>
+<h2 id="webapi">真实 Web/API 同链验证</h2>
+<p>使用独立 Docker 网络、fresh SQLite、最终 API 镜像、Nginx Web 镜像和 headed Playwright 完成：</p>
+<ol>
+<li>lite 测试账号登录并进入聊天主页。</li>
+<li>创建 run <code>6a5184950bd8498297788ef4b159432d</code>，运行成功；运行台显示 3 项证据、replay pointer、空 validation risks 和 checkpoint 时间线。</li>
+<li>创建 durable scheduler job <code>c00520101ce9</code>，暂停后完整刷新仍显示“已暂停”。</li>
+<li>创建 Skill“R1 发布审计复核”，刷新后 v1、trigger、instructions 和 manifest 均保留。</li>
+<li>从运行页点击最近会话可恢复消息；完整浏览器刷新后仍恢复同一会话及 checkpoint，最终控制台 <code>0 errors / 0 warnings</code>。</li>
+<li>Web Nginx <code>/api</code> 反向代理到 API 成功，client error 接收接口返回 <code>received=true</code>。</li>
+<li>最终 Web 镜像创建 run <code>5fbd2e85535543daa292f377cd659245</code>，在 1037×767 视口验证长 run ID 与统计卡无重叠；登录页 favicon 404 已消失，最终控制台 <code>0 errors / 0 warnings</code>。</li>
+</ol>
+<p>浏览器证据：</p>
+<ul>
+<li><a href="../../../output/playwright/r1-chat-home.png">聊天主页</a></li>
+<li><a href="../../../output/playwright/r1-development-tasks.png">开发任务</a></li>
+<li><a href="../../../output/playwright/r1-scheduler-paused.png">调度暂停并持久化</a></li>
+<li><a href="../../../output/playwright/r1-skill-persisted.png">Skill 持久化</a></li>
+<li><a href="../../../output/playwright/r1-chat-run.png">聊天运行</a></li>
+<li><a href="../../../output/playwright/r1-run-console-final-1037.png">运行台 1037px 最终视觉复验</a></li>
+<li><a href="../../../output/playwright/r1-session-click-restored.png">侧栏点击恢复会话</a></li>
+<li><a href="../../../output/playwright/r1-session-reload-restored.png">完整刷新恢复会话</a></li>
+</ul>
+<h2 id="_4">竞品差距收敛</h2>
+<table>
+<thead>
+<tr>
+<th>对标面</th>
+<th>本阶段状态</th>
+<th>证据边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Codex：隔离开发任务、Git 产物、review/apply/conflict/rollback</td>
+<td>已收敛</td>
+<td>持久任务模型、显式确认、worktree/branch/commit/full patch、容器 Git 与生命周期测试。</td>
+</tr>
+<tr>
+<td>Codex：运行证据、审批与 MCP 操作面</td>
+<td>已收敛</td>
+<td>15 个租户受控 MCP 工具、run/evidence/checkpoint 浏览器链。</td>
+</tr>
+<tr>
+<td>Hermes：持久调度、暂停/恢复、重试</td>
+<td>已收敛</td>
+<td>数据库 job/run、租约、恢复和刷新后状态保持。</td>
+</tr>
+<tr>
+<td>Hermes：完整技能包</td>
+<td>已收敛</td>
+<td>SKILL.md、references、scripts、assets、manifest/hash、运行时正文与租户门禁。</td>
+</tr>
+<tr>
+<td>Hermes：会话/运行恢复</td>
+<td>已收敛</td>
+<td>数据库 checkpoint、父子 run、点击和完整刷新恢复。</td>
+</tr>
+</tbody>
+</table>
+<p>仍未纳入本阶段发布结论的差距：桌面原生体验、多机高可用、E2B 托管 sandbox、客户现场部署演练、短剧业务以及真实付费模型供应商验收。它们不是本轮 Web/API 候选的隐含已完成功能。</p>
+<h2 id="_5">发布边界</h2>
+<ul>
+<li>当前可作为 Web/API <code>v1.0.0</code> 发布候选进入人工发布审批。</li>
+<li>未创建或移动 tag，未 push，未部署生产，未写入外部或付费服务。</li>
+<li>正式发布前仍应按部署环境注入非默认管理员凭据和 production secrets；lite <code>admin/admin</code> 仅用于本地浏览器验收。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

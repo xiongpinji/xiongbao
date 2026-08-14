@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R12 SQLite/Alembic 漂移诊断与复验指南 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R12 SQLite/Alembic \u6f02\u79fb\u8bca\u65ad\u4e0e\u590d\u9a8c\u6307\u5357";
+        var mkdocs_page_input_path = "coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R12 SQLite/Alembic 漂移诊断与复验指南</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r12-sqlitealembic">R12 SQLite/Alembic 漂移诊断与复验指南</h1>
+<ul>
+<li>任务包：R12 SQLite/Alembic 漂移诊断与复验指南</li>
+<li>交付人：Codex</li>
+<li>日期：2026-07-06</li>
+<li>工作树：<code>D:\AI编程库\项目库\进行中的项目\xiong bao\xagent</code></li>
+<li>范围：本地 SQLite / Alembic revision 漂移诊断、影响范围、稳定复验办法与处置建议；不修改迁移脚本，不迁移用户历史数据。</li>
+</ul>
+<h2 id="_1">结论</h2>
+<ul>
+<li>当前仓库 Alembic 迁移图只有 <code>0001 -&gt; 0005</code>，<code>0005</code> 是 head。</li>
+<li>fresh SQLite DB 可以稳定执行 <code>alembic upgrade head</code>，并生成 <code>evidence_records</code>。</li>
+<li>R3 使用的 fresh <code>r3-e2e.db</code> 当前 <code>alembic_version=0005</code>，且存在 <code>evidence_records</code>。</li>
+<li>现有本地默认库 <code>apps/api/xagent.db</code> 当前 <code>alembic_version=0007</code>，但当前仓库没有 revision <code>0007</code>；该库缺少 <code>evidence_records</code>。</li>
+<li>因此，漂移复现条件是“历史本地 SQLite 文件保留了当前迁移图已不存在的 <code>0007</code> revision 指针”，不是 fresh migration 或当前迁移脚本本身失败。</li>
+</ul>
+<h2 id="_2">证据</h2>
+<h3 id="_3">迁移图</h3>
+<p>命令：</p>
+<pre><code class="language-powershell">$env:XAGENT_DB__URL='sqlite+aiosqlite:///./r12-fresh.db'
+.\.venv\Scripts\python.exe -X utf8 -m alembic heads
+.\.venv\Scripts\python.exe -X utf8 -m alembic history --verbose
+</code></pre>
+<p>结果：</p>
+<ul>
+<li><code>alembic heads</code>：<code>0005 (head)</code></li>
+<li><code>alembic history --verbose</code>：仅 <code>0001 initial schema</code> 与 <code>0005 unified run spine</code></li>
+</ul>
+<h3 id="fresh-sqlite">fresh SQLite</h3>
+<p>命令：</p>
+<pre><code class="language-powershell">Remove-Item .\r12-fresh.db -Force -ErrorAction SilentlyContinue
+$env:XAGENT_DB__URL='sqlite+aiosqlite:///./r12-fresh.db'
+.\.venv\Scripts\python.exe -X utf8 -m alembic current
+.\.venv\Scripts\python.exe -X utf8 -m alembic upgrade head
+.\.venv\Scripts\python.exe -X utf8 -m alembic current
+</code></pre>
+<p>结果：</p>
+<ul>
+<li>迁移执行 <code>base -&gt; 0001 -&gt; 0005</code></li>
+<li><code>alembic_version=0005</code></li>
+<li>表包含 <code>agent_tasks</code>、<code>artifacts</code>、<code>evidence_records</code>、<code>workflow_runs</code> 等运行主链表</li>
+</ul>
+<h3 id="_4">现有本地默认库</h3>
+<p>检查对象：<code>apps/api/xagent.db</code></p>
+<p>结果：</p>
+<ul>
+<li><code>alembic_version=0007</code></li>
+<li>表包含 <code>agent_tasks</code>、<code>artifacts</code>、<code>canvases</code>、<code>creative_productions</code>、<code>creative_timelines</code>、<code>media_tasks</code> 等历史表</li>
+<li>缺少 <code>evidence_records</code></li>
+<li>执行 <code>alembic current</code> 或 <code>alembic upgrade head</code> 均失败：<code>Can't locate revision identified by '0007'</code></li>
+</ul>
+<h3 id="_5">伪造漂移库复现</h3>
+<p>命令：创建仅含 <code>alembic_version=0007</code> 的临时 <code>r12-drift-0007.db</code> 后执行：</p>
+<pre><code class="language-powershell">$env:XAGENT_DB__URL='sqlite+aiosqlite:///./r12-drift-0007.db'
+.\.venv\Scripts\python.exe -X utf8 -m alembic current
+.\.venv\Scripts\python.exe -X utf8 -m alembic upgrade head
+</code></pre>
+<p>结果：</p>
+<ul>
+<li>两条命令均失败：<code>Can't locate revision identified by '0007'</code></li>
+</ul>
+<h2 id="_6">影响范围</h2>
+<p>受影响：</p>
+<ul>
+<li>复用历史 <code>apps/api/xagent.db</code> 或其他 <code>alembic_version=0007</code> 的本地 SQLite 文件。</li>
+<li>依赖 <code>evidence_records</code> 的 Run Console / runtime evidence 读取路径；在缺表库上会出现 <code>no such table: evidence_records</code> 类 warning。</li>
+<li>使用 <code>xagent migrate</code> 或 <code>python -m alembic upgrade head</code> 针对该旧库执行迁移时，会因为未知 revision <code>0007</code> 失败。</li>
+</ul>
+<p>不受影响：</p>
+<ul>
+<li>fresh SQLite DB。</li>
+<li>R3/R10 使用的 fresh 临时库路径。</li>
+<li>当前迁移脚本 <code>0001 -&gt; 0005</code> 自身。</li>
+<li>未复用旧 SQLite 文件的目标环境。</li>
+</ul>
+<h2 id="_7">稳定复验办法</h2>
+<h3 id="db">判断当前 DB 是否漂移</h3>
+<pre><code class="language-powershell">cd apps/api
+@'
+import sqlite3
+from pathlib import Path
+db = Path(&quot;xagent.db&quot;)
+with sqlite3.connect(db) as conn:
+    tables = [row[0] for row in conn.execute(&quot;select name from sqlite_master where type='table'&quot;)]
+    version = list(conn.execute(&quot;select version_num from alembic_version&quot;)) if &quot;alembic_version&quot; in tables else []
+    print(&quot;version=&quot;, version)
+    print(&quot;has_evidence_records=&quot;, &quot;evidence_records&quot; in tables)
+'@ | .\.venv\Scripts\python.exe -X utf8 -
+</code></pre>
+<p>漂移判断：</p>
+<ul>
+<li><code>version=[('0007',)]</code> 且当前仓库 <code>alembic heads</code> 为 <code>0005</code>。</li>
+<li>或 <code>alembic current</code> 报 <code>Can't locate revision identified by '0007'</code>。</li>
+</ul>
+<h3 id="fresh-db">fresh DB 复验</h3>
+<pre><code class="language-powershell">cd apps/api
+Remove-Item .\verify-fresh.db -Force -ErrorAction SilentlyContinue
+$env:XAGENT_DB__URL='sqlite+aiosqlite:///./verify-fresh.db'
+.\.venv\Scripts\python.exe -X utf8 -m alembic upgrade head
+.\.venv\Scripts\python.exe -X utf8 -m alembic current
+</code></pre>
+<p>期望：</p>
+<ul>
+<li><code>upgrade head</code> 退出码 0。</li>
+<li><code>current</code> 输出 <code>0005 (head)</code>。</li>
+<li>SQLite 表包含 <code>evidence_records</code>。</li>
+</ul>
+<h2 id="_8">处置建议</h2>
+<h3 id="dev">本地 dev / 无需保留数据</h3>
+<p>推荐处理：</p>
+<ol>
+<li>停止 API / worker。</li>
+<li>备份或删除旧 <code>apps/api/xagent.db</code>。</li>
+<li>设置新的 <code>XAGENT_DB__URL</code>，或让应用重新创建 fresh SQLite。</li>
+<li>执行 <code>alembic upgrade head</code> 或 <code>xagent migrate</code>。</li>
+</ol>
+<p>这是最稳妥路径，因为旧库 revision 指针与当前迁移图不一致。</p>
+<h3 id="_9">需要保留历史数据</h3>
+<p>不要直接 <code>stamp head</code> 掩盖漂移。应先：</p>
+<ol>
+<li>备份旧库。</li>
+<li>导出需要保留的业务表。</li>
+<li>用当前迁移图创建 fresh DB。</li>
+<li>编写一次性数据迁移脚本，将旧数据导入 fresh DB。</li>
+<li>跑 Run Console / creative smoke / evidence 读取路径验证。</li>
+</ol>
+<h3 id="_10">目标环境</h3>
+<ul>
+<li>发布演练不得复用带未知 revision 的历史 SQLite 文件。</li>
+<li>若目标环境 <code>alembic current</code> 不是当前仓库 head，应先停机备份并形成人工迁移方案。</li>
+<li>对 Postgres / staging / prod，应以 <code>alembic current</code>、<code>alembic heads</code> 和一次 <code>upgrade head</code> 结果作为 R4 环境演练证据。</li>
+</ul>
+<h2 id="_11">是否需要正式修复</h2>
+<ul>
+<li>不需要为了 fresh DB 修改当前 <code>0001 -&gt; 0005</code> 迁移脚本。</li>
+<li>需要在发布 / 运维层面明确：旧本地 SQLite <code>0007</code> 属于历史漂移库，不应作为当前发布证据。</li>
+<li>若必须兼容旧库，应另拆“历史 SQLite 数据升级 / 合并迁移”任务，明确旧 <code>0007</code> 对应的表结构来源和数据保留范围。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

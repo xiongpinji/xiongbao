@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-audit-and-codex-hermes-comparison/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 商用审计与 Codex / Hermes Agent 对比报告 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5546\u7528\u5ba1\u8ba1\u4e0e Codex / Hermes Agent \u5bf9\u6bd4\u62a5\u544a";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-audit-and-codex-hermes-comparison.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-audit-and-codex-hermes-comparison/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 商用审计与 Codex / Hermes Agent 对比报告</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-audit-and-codex-hermes-comparison.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-codex-hermes-agent">X-Agent 商用审计与 Codex / Hermes Agent 对比报告</h1>
+<ul>
+<li>日期：2026-07-20</li>
+<li>目标：在“商用完整交付”推进完成后，对 <code>xagent</code> 做一轮最深度的交付审计，并结合对 Codex / Hermes Agent 的公开资料研究，给出结构化对比与最终口径建议。</li>
+</ul>
+<hr />
+<h2 id="_1">一、执行摘要</h2>
+<h3 id="_2">最终结论</h3>
+<p>当前 <code>xagent</code> 可以成立的最稳妥结论是：</p>
+<blockquote>
+<p><strong><code>xagent</code> 已具备当前机器、单机 Docker Compose <code>full</code> 模式、受控私有部署边界下的受控商用交付能力。</strong></p>
+</blockquote>
+<p>但如果将其直接表述为：</p>
+<blockquote>
+<p><strong>更广义、可复制、可企业扩展、可长期运营 fully closed 的正式商用已闭环</strong></p>
+</blockquote>
+<p>则风险偏高。</p>
+<h3 id="_3">为什么</h3>
+<p>原因不在于项目“没有交付能力”，相反，项目已经形成：
+- 商用交付材料包；
+- Goal / Taskboard / Run / Release / Recover 主链；
+- 发布 / 回滚 / 演练 / 签字包；
+- 企业级长期运营的治理骨架与首轮验证材料。</p>
+<p>真正的问题在于：
+1. 仓库中仍存在<strong>口径冲突</strong>；
+2. CI / 测试 / 证据对“更广义企业商用闭环”的证明仍不足；
+3. 一些关键长期运营能力目前更像<strong>首轮验证</strong>，而不是完成级实证。</p>
+<hr />
+<h2 id="xagent">二、对 <code>xagent</code> 的最深度审计结论</h2>
+<h3 id="21">2.1 已成立的能力</h3>
+<h4 id="a">A. 最小受控交付包已成立</h4>
+<p>当前仓库已经具备：
+- 管理员部署手册
+- 运维手册
+- 发布 / 回滚 runbook
+- 环境基线
+- 已知问题 / 试点边界
+- 联系人与故障升级路径
+- Goal Board 与阶段执行包</p>
+<p>这说明 <code>xagent</code> 已经不再是“有功能但不能交付”的状态，而是已经具备了一套可交接的交付骨架。</p>
+<h4 id="b">B. 基础质量门禁与关键主链验证已成立</h4>
+<p>当前仓库已经有：
+- backend <code>ruff</code> / <code>pytest</code>
+- frontend <code>lint</code> / <code>typecheck</code> / <code>build</code>
+- <code>promptfoo-eval</code>
+- 关键 E2E / 视觉证据</p>
+<p>这证明核心主链和基础门禁不是空话。</p>
+<h4 id="c">C. 危险默认值治理已成立</h4>
+<ul>
+<li>JWT / CORS / 默认管理员路径已经有 fail-fast / 边界说明</li>
+<li><code>lite</code> 与 <code>full</code> 的职责差异已经明确</li>
+</ul>
+<p>这说明项目已经意识到“本地开发模式”和“交付模式”的安全差别。</p>
+<hr />
+<h3 id="22">2.2 高风险点</h3>
+<h4 id="a_1">A. 官方口径冲突</h4>
+<p>仓库中仍然存在两类叙事：
+- “已达到商用交付标准”
+- “仍是准商用 / 仍需继续收口”</p>
+<p>这会直接削弱结论可信度。</p>
+<h4 id="b-ci">B. CI 证明范围仍偏窄</h4>
+<p>当前 <code>.github/workflows/ci.yml</code> 实际主要覆盖：
+- backend <code>ruff</code>
+- backend <code>pytest</code>
+- frontend <code>lint</code> / <code>typecheck</code> / <code>build</code>
+- <code>license-gate</code>
+- <code>promptfoo-eval</code></p>
+<p>但它没有覆盖：
+- desktop build/tests
+- Helm / K8s 部署验证
+- 真正的 Playwright 发布级 gate
+- security scan
+- load test</p>
+<p>因此，“正式商用 fully closed”的证明范围仍然偏窄。</p>
+<h4 id="c-lite-mode-local-memory">C. 测试仍明显偏 lite-mode / local-memory</h4>
+<p><code>apps/api/tests/conftest.py</code> 会强制：
+- <code>XAGENT_MODE=lite</code>
+- 清空 <code>XAGENT_*</code>
+- 使用进程内状态</p>
+<p>这意味着大量自动化验证证明的是：
+- lite / local / in-memory 行为
+而不是：
+- full-mode / Redis / Postgres / Qdrant / Keycloak / customer-env 行为</p>
+<h4 id="d-full-mode">D. Full-mode / 目标环境证据仍偏局部</h4>
+<p>最强证据仍然偏向：
+- current-machine
+- single-node
+- Compose <code>full</code>
+- 单人交付模式</p>
+<p>这比纯本地开发强很多，但仍不能自然外推成：
+- 广义企业扩展交付
+- 多环境可复制
+- 多角色值守体系已完成</p>
+<h4 id="e">E. 长期运营实证不足</h4>
+<p>虽然 G3 的四个方向都已建立治理骨架并做了首轮验证，但从“长期真实运营 fully closed”的角度看，仍不足以无保留宣称：
+- 多实例一致性已实证
+- secretRef / external secret manager 已落地
+- SLO / RTO / RPO 已正式签字
+- 容量与性能结论已形成正式企业级基线</p>
+<hr />
+<h3 id="23">2.3 审计后的总判断</h3>
+<h4 id="_4">可以成立的结论</h4>
+<ul>
+<li><code>xagent</code> 已具备受控私有部署边界下的商用交付能力；</li>
+<li>关键交付材料、主链、发布回滚、阶段 Goal 结构已建立；</li>
+<li>适合内部试点、受控交付和当前边界下的正式交付使用。</li>
+</ul>
+<h4 id="_5">不建议直接使用的结论</h4>
+<ul>
+<li>“已具备完全广义的企业商用闭环”</li>
+<li>“已完成可复制企业扩展能力”</li>
+<li>“长期运营能力已经实证闭环”</li>
+</ul>
+<hr />
+<h2 id="codex">三、Codex 画像（基于公开资料）</h2>
+<h3 id="31">3.1 核心特征</h3>
+<p>Codex 更像：
+- <strong>开发代理产品族</strong>
+- 本地 CLI / IDE + 云端隔离任务
+- PR / review / code task 是第一类对象</p>
+<h3 id="32">3.2 强项</h3>
+<ul>
+<li>GitHub / PR 导向强</li>
+<li>本地与云端双执行平面明确</li>
+<li>审批、sandbox、permission profile 产品化程度高</li>
+<li>thread/turn runtime 已有较清晰的宿主控制协议</li>
+</ul>
+<h3 id="33">3.3 边界</h3>
+<ul>
+<li>release orchestration 不像 PR 能力那么原生</li>
+<li>长期运行 / durability / cron / background control 的公开细节不如 Hermes 厚</li>
+<li>更偏“开发执行器”，而不是通用运营代理平台</li>
+</ul>
+<hr />
+<h2 id="hermes-agent">四、Hermes Agent 画像（基于公开资料）</h2>
+<h3 id="41">4.1 核心特征</h3>
+<p>Hermes 更像：
+- <strong>长期运行的通用自主代理平台</strong>
+- session / background / cron / checkpoint / rollback / messaging / control plane 是核心
+- 多执行后端 abstraction 明确（local / docker / ssh / daytona / serverless 等）</p>
+<h3 id="42">4.2 强项</h3>
+<ul>
+<li>durability 文档成熟度很高</li>
+<li>background / cron / notification / resume / redelivery 明确</li>
+<li>checkpoint / rollback 是正式产品能力</li>
+<li>治理与安全（approvals / deny / env filtering / gateway safety）公开度高</li>
+</ul>
+<h3 id="43">4.3 边界</h3>
+<ul>
+<li>PR / GitHub 虽然很强，但更多靠可编排能力而不是默认产品叙事</li>
+<li>体系广而深，学习成本和运维复杂度高</li>
+</ul>
+<hr />
+<h2 id="xagent-vs-codex-vs-hermes">五、<code>xagent</code> vs Codex vs Hermes 对比</h2>
+<h2 id="51">5.1 产品定位</h2>
+<ul>
+<li><strong>Codex</strong>：开发执行器 / PR-first / cloud task coding agent</li>
+<li><strong>Hermes</strong>：长期运行通用代理平台</li>
+<li><strong>xagent</strong>：面向交付闭环的产品化代理系统</li>
+</ul>
+<h2 id="52">5.2 执行平面</h2>
+<ul>
+<li><strong>Codex</strong>：本地 + 云端双执行平面</li>
+<li><strong>Hermes</strong>：多后端执行平面 abstraction</li>
+<li><strong>xagent</strong>：当前主力仍偏单机 / Compose，平台化方向已建立但产品化程度不足</li>
+</ul>
+<h2 id="53">5.3 任务系统</h2>
+<ul>
+<li><strong>Codex</strong>：thread / turn + goal-oriented delegated tasks</li>
+<li><strong>Hermes</strong>：session + background + cron + steer / interrupt + rollback</li>
+<li><strong>xagent</strong>：Goal / Taskboard / Run / Release 主链已建立，但长期异步/多控制面 runtime 还不如 Hermes 成熟</li>
+</ul>
+<h2 id="54">5.4 交付系统能力</h2>
+<ul>
+<li><strong>Codex</strong>：PR 是强一等对象</li>
+<li><strong>Hermes</strong>：PR / release 更多靠工作流编排能力实现</li>
+<li><strong>xagent</strong>：交付主链意识很强，Goal → Release → Recover 更像交付系统，但 GitHub/PR 原生产品化不如 Codex</li>
+</ul>
+<h2 id="55-durability">5.5 durability / 长期运行</h2>
+<ul>
+<li><strong>Codex</strong>：有 persisted thread / cloud background work 信号，但公开细节不厚</li>
+<li><strong>Hermes</strong>：durability / replay / cron / remote control 非常成熟</li>
+<li><strong>xagent</strong>：长期运营治理包已建立，但 runtime 层的真正 durability / scheduling 仍未产品化到 Hermes 水平</li>
+</ul>
+<h2 id="56">5.6 治理与安全</h2>
+<ul>
+<li><strong>Codex</strong>：approval + sandbox + permission profile</li>
+<li><strong>Hermes</strong>：approval + file/env/container/session/gateway 多层治理</li>
+<li><strong>xagent</strong>：当前更多依赖材料、边界文档和阶段 gate，运行时治理产品感仍偏弱</li>
+</ul>
+<hr />
+<h2 id="xagent_1">六、对 <code>xagent</code> 的最公允定位</h2>
+<p>当前最适合的正式表述应是：</p>
+<blockquote>
+<p><strong><code>xagent</code> 已具备当前机器、单机 Docker Compose <code>full</code> 模式、受控私有部署边界下的商用交付能力；并已建立完整的 Goal 驱动交付体系与后续长期运营增强路线。</strong></p>
+</blockquote>
+<h3 id="_6">为什么这样最稳妥</h3>
+<ul>
+<li>既承认已经做成的交付闭环；</li>
+<li>又不把局部证据外推为过宽结论；</li>
+<li>保留后续平台化、长期运行、复制交付增强空间；</li>
+<li>避免与仓库中仍存在的保守材料形成更大冲突。</li>
+</ul>
+<hr />
+<h2 id="_7">七、建议动作</h2>
+<h3 id="71-fully-closed">7.1 如果要继续把“商用 fully closed”做实</h3>
+<p>建议优先补：
+1. 统一唯一事实源与所有官方口径
+2. 把 Playwright / security scan / load test / Helm 验证进入正式 CI / gate
+3. 为 G3 的四个方向补第二轮更强实证（而不仅是首轮）
+4. 将长期运行 runtime（background / scheduling / durability）向 Hermes 风格推进
+5. 将 PR / GitHub / cloud execution 产品化体验向 Codex 靠拢</p>
+<h3 id="72">7.2 如果要对外表述</h3>
+<p>推荐说：
+- “当前已具备受控商用交付能力”
+- “后续工作属于平台化、规模化与长期运营增强，不影响当前交付成立”</p>
+<p>不推荐说：
+- “已经完成所有层面的企业级商用闭环”
+- “已经具备完全可复制的长期企业扩展能力”</p>
+<hr />
+<h2 id="_8">八、最终结论</h2>
+<blockquote>
+<p><strong><code>xagent</code> 的优势在于它已经把“交付闭环”本身产品化了；但和 Codex / Hermes 相比，它当前最需要继续增强的，不是再补功能，而是让 PR-first 体验、更强执行平面、长期运行 runtime、治理与长期实证更厚、更一致。</strong></p>
+</blockquote>
+<p>在当前阶段，最稳妥的判断是：</p>
+<ul>
+<li><strong>受控商用交付能力：已成立</strong></li>
+<li><strong>更广义、可复制、企业扩展级的 fully closed 商用闭环：仍应保守表述</strong></li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

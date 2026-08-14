@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/rfc/RFC-002-sso-oidc/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>RFC-002：SSO/OIDC 接通 Keycloak（授权码回调落地） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "RFC-002\uff1aSSO/OIDC \u63a5\u901a Keycloak\uff08\u6388\u6743\u7801\u56de\u8c03\u843d\u5730\uff09";
+        var mkdocs_page_input_path = "rfc/RFC-002-sso-oidc.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/rfc/RFC-002-sso-oidc/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">RFC-002：SSO/OIDC 接通 Keycloak（授权码回调落地）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/rfc/RFC-002-sso-oidc.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="rfc-002ssooidc-keycloak">RFC-002：SSO/OIDC 接通 Keycloak（授权码回调落地）</h1>
+<ul>
+<li><strong>状态</strong>：Draft（提案，未实施）</li>
+<li><strong>作者</strong>：工作流 F（竞品差距推进）</li>
+<li><strong>日期</strong>：2026-08-02</li>
+<li><strong>关联</strong>：<code>xagent/enterprise/auth/jwt_auth.py</code>（OIDC 验签已有）、<code>SecuritySettings</code>（<code>keycloak_url / keycloak_realm / oidc_jwks_url / oidc_issuer</code>）、README 架构表「enterprise: Keycloak + Casbin/OpenFGA/OPA」</li>
+</ul>
+<h2 id="1">1. 背景与现状</h2>
+<p>X-Agent 企业叙事里 SSO 底座是 Keycloak，当前<strong>已完成的一半</strong>：</p>
+<ul>
+<li>Bearer token 的 OIDC 验签链路已通：配置 <code>XAGENT_SECURITY__OIDC_JWKS_URL</code> 后，<code>decode_token</code> 优先走 JWKS/RS256 验签，claims 映射（<code>sub→user_id</code>、<code>realm_access.roles→roles</code>、<code>tenant_id</code>）已实现。</li>
+</ul>
+<p><strong>缺的一半</strong>：没有浏览器登录链路。用户无法通过 Keycloak 登录页完成认证——没有 <code>/auth/oidc/login</code> 跳转、没有 <code>/auth/oidc/callback</code> 回调、没有 state/nonce 防重放、没有会话建立。full/enterprise 客户只能手工从 Keycloak 换 token 再调 API，不可交付。</p>
+<h2 id="2">2. 目标与非目标</h2>
+<p><strong>目标</strong>：打通 OIDC Authorization Code Flow（浏览器 → Keycloak 登录 → 回调 → 建立 X-Agent 会话），让私有化部署客户用自己已有的 Keycloak 完成 SSO。</p>
+<p><strong>非目标</strong>：</p>
+<ul>
+<li>不做 SAML / LDAP（Keycloak 侧可自行联邦）；</li>
+<li>不做 IdP 发起的 SSO / SLO 单点登出（列入后续）；</li>
+<li>不替换 lite 内置 JWT 登录（admin/admin 本地账号保持，OIDC 是 full/enterprise 增量）。</li>
+</ul>
+<h2 id="3">3. 方案</h2>
+<h3 id="31-enterpriseauth">3.1 端点设计（挂在 enterprise/auth 下，复用现有薄路由风格）</h3>
+<table>
+<thead>
+<tr>
+<th>端点</th>
+<th>方法</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/v1/auth/oidc/login</code></td>
+<td>GET</td>
+<td>生成 <code>state</code>+<code>nonce</code>（签名/存 cache，TTL 10min），302 跳转到 Keycloak <code>authorization_endpoint</code>（<code>response_type=code&amp;scope=openid profile email</code>）</td>
+</tr>
+<tr>
+<td><code>/api/v1/auth/oidc/callback</code></td>
+<td>GET</td>
+<td>校验 <code>state</code>，用 <code>code</code> 调 <code>token_endpoint</code> 换 <code>id_token</code>+<code>access_token</code>，JWKS 验签 + <code>nonce</code> 比对，映射 Principal，签发 X-Agent 会话（HttpOnly Cookie 或回跳前端携带 access_token）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-securitysettings">3.2 配置（复用现有 <code>SecuritySettings</code>，仅补两个字段）</h3>
+<pre><code>XAGENT_SECURITY__KEYCLOAK_URL=https://sso.corp.example
+XAGENT_SECURITY__KEYCLOAK_REALM=xagent
+XAGENT_SECURITY__OIDC_JWKS_URL=https://sso.corp.example/realms/xagent/protocol/openid-connect/certs
+XAGENT_SECURITY__OIDC_ISSUER=https://sso.corp.example/realms/xagent
+XAGENT_SECURITY__OIDC_CLIENT_ID=xagent-web        # 新增
+XAGENT_SECURITY__OIDC_CLIENT_SECRET=***            # 新增（confidential client）
+</code></pre>
+<p>新增字段 <code>oidc_client_id / oidc_client_secret</code>，缺省时 OIDC 登录端点返回 503「未配置 SSO」，不影响现有 Bearer 验签。</p>
+<h3 id="33">3.3 用户与租户落地</h3>
+<ul>
+<li>首次回调成功时按 <code>sub</code>（或 <code>preferred_username</code>）在 <code>enterprise/auth/users.py</code> 自动开户（JIT provisioning），角色取 Keycloak <code>realm_access.roles</code> 与本地角色的交集映射，默认 <code>member</code>；</li>
+<li><code>tenant_id</code> 取自定义 claim <code>tenant_id</code>（Keycloak mapper 配置写入部署手册），缺省 <code>default</code>；</li>
+<li>审计：登录成功/失败写 <code>enterprise/audit</code>（event=<code>sso_login</code>），与现有多租户审计黑板一致。</li>
+</ul>
+<h3 id="34">3.4 前端</h3>
+<ul>
+<li>设置页/登录页在 <code>GET /api/v1/system/capabilities</code>（或等价端点）报告 <code>sso_enabled=true</code> 时显示「企业 SSO 登录」按钮，跳转 <code>/api/v1/auth/oidc/login</code>；</li>
+<li>回调完成后 302 回前端 <code>/runs</code>（token 走 HttpOnly Cookie 时无感；走 query 携带时前端落 localStorage 后清 URL——优先 Cookie 方案避免 token 落历史记录）。</li>
+</ul>
+<h2 id="4">4. 实施步骤（建议顺序）</h2>
+<ol>
+<li><code>SecuritySettings</code> 增加 <code>oidc_client_id / oidc_client_secret</code>；capability 上报 <code>sso_enabled</code>；</li>
+<li><code>enterprise/auth/</code> 新增 <code>oidc_flow.py</code>：discovery（<code>.well-known/openid-configuration</code> 带缓存）+ login 跳转 + callback 换票 + state/nonce 防重放（复用 <code>adapters/cache</code>）；</li>
+<li>路由：<code>/api/v1/auth/oidc/login|callback</code>（薄路由，逻辑全在 service 层）；</li>
+<li>JIT 开户 + 角色映射 + 审计事件；</li>
+<li>会话策略：HttpOnly Cookie（<code>SameSite=Lax</code>，生产 <code>Secure</code>）优先，保留 Bearer 双轨；</li>
+<li>前端登录页 SSO 按钮 + 回调落地页；</li>
+<li>部署手册：Keycloak realm/client 创建、redirect_uri 白名单、tenant_id claim mapper 配置；</li>
+<li>测试：</li>
+<li>单测：mock token_endpoint/JWKS，验证 state 不匹配拒绝、nonce 重放拒绝、claims→Principal 映射；</li>
+<li>集成：docker-compose 起 Keycloak（deploy/compose 已有依赖服务编排惯例），脚本化走通 login→callback→带 Cookie 访问受保护端点；</li>
+<li>回归：内置 JWT 登录（admin/admin）不受影响。</li>
+</ol>
+<h2 id="5">5. 安全要点</h2>
+<ul>
+<li><code>state</code> 一次性、TTL 10 分钟、与回调 IP/UA 弱绑定可选；</li>
+<li><code>nonce</code> 必须回比 <code>id_token</code>；</li>
+<li><code>id_token</code> 验签强制 RS256 + <code>iss</code>/<code>aud</code>/<code>exp</code> 全校验（复用 <code>_decode_oidc</code> 的严格项）；</li>
+<li><code>client_secret</code> 只走环境变量/secret 管理，不进 <code>.env.example</code> 真值；</li>
+<li>回调 URL 路径固定，redirect_uri 必须在 Keycloak client 白名单内精确匹配（不用通配）。</li>
+</ul>
+<h2 id="6">6. 风险与缓解</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>客户 Keycloak 版本差异（claims 结构不同）</td>
+<td>claims 映射做成可配置（claim 名环境变量），手册给 18/24/26 三版实测配置</td>
+</tr>
+<tr>
+<td>内网部署 API 无法直连 IdP token_endpoint</td>
+<td>支持 <code>OIDC_JWKS_URL</code> 独立配置 + 部署手册标注网络要求</td>
+</tr>
+<tr>
+<td>会话固定/CSRF</td>
+<td>state + SameSite=Lax + 回调一次性</td>
+</tr>
+<tr>
+<td>与 lite 模式混淆</td>
+<td>OIDC 端点仅在配置了 client_id 时启用；lite 默认不暴露</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7">7. 度量</h2>
+<ul>
+<li>SSO 登录成功率 ≥ 99%（审计事件统计）；</li>
+<li>回调 P95 延迟 &lt; 1.5s（排除 IdP 网络）；</li>
+<li>部署手册实测：新客户 Keycloak 接通时间 &lt; 0.5 人日。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

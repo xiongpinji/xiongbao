@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b2-target-rehearsal-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G2-B2 目标环境演练包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G2-B2 \u76ee\u6807\u73af\u5883\u6f14\u7ec3\u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g2-b2-target-rehearsal-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b2-target-rehearsal-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G2-B2 目标环境演练包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g2-b2-target-rehearsal-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g2-b2">G2-B2 目标环境演练包</h1>
+<blockquote>
+<p>适用阶段：G2 正式商用 GA</p>
+<p>用途：把正式商用候选在目标环境 / full-mode 下的演练步骤、证据要求、发布 / 回滚 / smoke 闭环整理成一个可执行包，确保 G2 不只是“冻结了候选”，而是真的能在目标环境里走通一次完整演练。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G2-B2 的目标是：</p>
+<blockquote>
+<p><strong>在目标环境或等价 full-mode 环境中，完成一次可追踪、可回滚、可复验的正式候选演练。</strong></p>
+</blockquote>
+<p>这一步不负责签字，不负责把系统永久改成企业长期运营形态；它只负责证明：</p>
+<ul>
+<li>候选可以在目标环境运行；</li>
+<li>发布步骤可执行；</li>
+<li>smoke 可通过；</li>
+<li>失败时可以按 runbook 回滚；</li>
+<li>证据可以被留档。</li>
+</ul>
+<hr />
+<h2 id="2">2. 演练输入</h2>
+<p>演练前必须明确以下输入：</p>
+<ul>
+<li>当前候选分支 / commit / PR（来自 G2-B1 冻结包）；</li>
+<li>目标环境类型：dev / staging / prod / 等价 full-mode；</li>
+<li>环境基线来源：<code>docs/ENVIRONMENT_BASELINE_V1.md</code>；</li>
+<li>发布 / 回滚手册来源：<code>docs/RELEASE_RUNBOOK_V1.md</code>；</li>
+<li>当前真实状态来源：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>；</li>
+<li>交付材料入口：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>。</li>
+</ul>
+<hr />
+<h2 id="3-gate">3. 演练前 Gate</h2>
+<h3 id="31">3.1 候选冻结已完成</h3>
+<p>必须确认：
+- G2-B1 候选已冻结；
+- 当前正式 GA 只指向唯一候选对象；
+- 不再以脏工作树或未提交内容作为演练对象。</p>
+<h3 id="32-secret">3.2 环境与 secret 已显式提供</h3>
+<p>必须确认：
+- <code>XAGENT_SECURITY__JWT_SECRET</code> 已显式配置；
+- <code>XAGENT_CORS_ORIGINS</code> 已显式配置；
+- <code>LANGFUSE_NEXTAUTH_SECRET</code> / <code>LANGFUSE_SALT</code> / <code>LANGFUSE_INIT_USER_PASSWORD</code> 已显式配置；
+- 至少一条真实 LLM 路径可达；
+- 不依赖默认管理员 <code>admin/admin</code>。</p>
+<h3 id="33">3.3 质量门禁可执行</h3>
+<p>必须确认：
+- backend <code>ruff check</code> / <code>pytest</code> 可执行；
+- frontend <code>lint</code> / <code>typecheck</code> / <code>build</code> 可执行；
+- 已有至少一组关键 E2E 可作为 smoke / 发布证据。</p>
+<hr />
+<h2 id="4">4. 演练步骤</h2>
+<h3 id="41">4.1 发布前准备</h3>
+<ol>
+<li>锁定当前候选 commit / PR；</li>
+<li>记录目标环境；</li>
+<li>准备 <code>.env</code> 或 secret manager 配置；</li>
+<li>确认当前候选对应 CI 结果为绿；</li>
+<li>备份数据库与必要数据卷。</li>
+</ol>
+<h3 id="42">4.2 构建与部署</h3>
+<p>按 runbook 的最小路径执行：</p>
+<pre><code class="language-powershell">cd apps/web
+npm ci
+npm run build
+
+cd ../../deploy/compose
+Copy-Item .env.example .env
+# 填入真实 secret 与环境地址
+docker compose --env-file .env config --quiet
+docker compose up -d --build postgres redis qdrant litellm langfuse
+docker compose up -d --build api worker web
+docker compose ps
+</code></pre>
+<h3 id="43-smoke">4.3 Smoke 验证</h3>
+<pre><code class="language-powershell">curl.exe -f http://localhost:8000/health
+curl.exe -f http://localhost:8000/ready
+curl.exe -f http://localhost:3000
+</code></pre>
+<p>再补充至少一条主链 smoke：
+- 登录；
+- 进入工作台；
+- 打开 Goal Board；
+- 打开 Run 详情。</p>
+<h3 id="44">4.4 迁移验证</h3>
+<pre><code class="language-powershell">cd deploy\compose
+docker compose run --rm api python -m alembic current
+docker compose run --rm api python -m alembic upgrade head
+docker compose run --rm api python -m alembic current
+</code></pre>
+<h3 id="45">4.5 发布后恢复演练</h3>
+<p>按 runbook 模拟一次失败或回滚条件：
+1. 记录故障现象；
+2. 导出日志；
+3. 判断是否需要回滚；
+4. 按 runbook 执行回滚；
+5. 再次 smoke；
+6. 记录恢复结果。</p>
+<hr />
+<h2 id="5">5. 证据要求</h2>
+<p>演练必须保留以下证据：</p>
+<ul>
+<li>版本号 / commit / PR；</li>
+<li>CI run 链接；</li>
+<li>目标环境说明；</li>
+<li>部署日志；</li>
+<li><code>docker compose ps</code> 输出；</li>
+<li><code>/health</code>、<code>/ready</code> 返回；</li>
+<li>smoke 截图或命令输出；</li>
+<li>迁移输出；</li>
+<li>回滚日志（若发生）；</li>
+<li>最终结论。</li>
+</ul>
+<p>证据应最终汇总到：
+- <code>docs/coordination/reports/auto-delivery-phase1-report.md</code>
+- <code>docs/coordination/reports/R5_FINAL_REVIEW_PACKAGE.md</code></p>
+<hr />
+<h2 id="6">6. 现有证据入口</h2>
+<p>可直接复用的材料：</p>
+<ul>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></li>
+<li><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></li>
+<li><code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></li>
+<li><code>docs/coordination/reports/auto-delivery-phase1-report.md</code></li>
+</ul>
+<hr />
+<h2 id="7">7. 完成定义</h2>
+<p>G2-B2 只有在以下条件同时成立时，才算完成：</p>
+<ul>
+<li>目标环境 / full-mode 演练步骤明确；</li>
+<li>发布 / 回滚 / smoke / migration 都能按 runbook 执行；</li>
+<li>证据已经保留；</li>
+<li>演练结果能回填到发布材料包；</li>
+<li>G2 候选对象没有漂移。</li>
+</ul>
+<hr />
+<h2 id="8">8. 当前结论</h2>
+<p>G2-B2 的作用不是新增能力，而是：</p>
+<blockquote>
+<p><strong>证明正式商用 GA 的唯一候选对象可以在目标环境中被真实演练，并且出现问题时有明确恢复路径与证据。</strong></p>
+</blockquote>
+<p>完成 G2-B2 后，G2 将具备进入签字 / 证据包阶段的基础。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

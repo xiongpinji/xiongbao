@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c4-capacity-verification/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G3-C4 容量 / 扩展边界验证结果 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G3-C4 \u5bb9\u91cf / \u6269\u5c55\u8fb9\u754c\u9a8c\u8bc1\u7ed3\u679c";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g3-c4-capacity-verification.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c4-capacity-verification/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G3-C4 容量 / 扩展边界验证结果</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g3-c4-capacity-verification.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g3-c4">G3-C4 容量 / 扩展边界验证结果</h1>
+<blockquote>
+<p>适用阶段：G3 企业级长期运营</p>
+<p>目的：记录 G3-C4 的第一轮真实验证结果，证明容量 / 扩展边界方向已经从“定义完成”推进到“已有真实通过证据”。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 验证目标</h2>
+<p>本轮验证覆盖：</p>
+<ul>
+<li>当前负载验证入口是否已存在；</li>
+<li>性能 / 容量检查项是否已进入正式检查表；</li>
+<li>关键瓶颈对象是否已被正式列出；</li>
+<li>试点 / 灰度 / 企业级规模边界是否已可解释；</li>
+<li>能否区分“已存在的验证入口”和“仍需后续实测的部分”。</li>
+</ul>
+<hr />
+<h2 id="2">2. 验证结果</h2>
+<h3 id="21">2.1 负载验证入口</h3>
+<ul>
+<li><strong>通过</strong></li>
+<li>当前材料中已存在可执行负载入口：</li>
+</ul>
+<pre><code class="language-bash">cd apps/api
+locust -f tests/load/locustfile.py --host http://localhost:8000 --headless -u 50 -r 5 -t 60s
+</code></pre>
+<p>这说明容量验证不再完全停留在口头设想。</p>
+<h3 id="22">2.2 性能 / 容量检查项</h3>
+<ul>
+<li><strong>通过</strong></li>
+<li><code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> 已明确：</li>
+<li>至少一轮负载测试</li>
+<li>基础容量结论（如 10/50/100 并发建议）</li>
+<li>API / worker / LLM / Redis / Qdrant 主要瓶颈点</li>
+<li>试点用户规模与限制条件</li>
+</ul>
+<p>这说明容量问题已经成为正式检查项，而不是完全空白。</p>
+<h3 id="23">2.3 关键瓶颈对象</h3>
+<ul>
+<li><strong>通过</strong></li>
+<li>当前已被正式列出的瓶颈 / 风险对象包括：</li>
+<li>API 请求吞吐</li>
+<li>worker 任务处理吞吐</li>
+<li>LLM provider 响应时间与失败率</li>
+<li>Redis / Postgres / Qdrant 依赖能力</li>
+<li>worker backlog / warmup / timeout</li>
+</ul>
+<h3 id="24">2.4 规模边界表达</h3>
+<ul>
+<li><strong>通过</strong></li>
+<li>当前已能明确区分：</li>
+<li>试点规模</li>
+<li>灰度规模</li>
+<li>企业级规模</li>
+<li>当前不再把“可试点”误写为“可无限扩展”。</li>
+</ul>
+<hr />
+<h2 id="3">3. 当前仍未完成的项</h2>
+<p>本轮验证通过后，G3-C4 仍未完成的部分包括：</p>
+<ol>
+<li><strong>完整压测结论</strong></li>
+<li>当前只是已存在入口与检查项，不是所有容量结论都已经实测完成。</li>
+<li><strong>企业级扩缩容策略落地</strong></li>
+<li>当前只是边界与瓶颈对象已明确，不是自动化扩容已经验证完成。</li>
+<li><strong>生产级性能签字</strong></li>
+<li>当前不等于已经有企业长期运营的最终性能签字版。</li>
+</ol>
+<hr />
+<h2 id="4">4. 当前判定</h2>
+<h3 id="_1">已成立</h3>
+<ul>
+<li>容量 / 扩展边界不再是模糊目标；</li>
+<li>至少一轮真实可执行的验证入口已经存在；</li>
+<li>容量检查项、瓶颈对象和规模边界都已有正式材料基础。</li>
+</ul>
+<h3 id="_2">尚不能成立</h3>
+<ul>
+<li>所有容量边界已经完整实测；</li>
+<li>所有扩缩容策略已经落地；</li>
+<li>企业级长期运营的性能与容量问题已经全部关闭。</li>
+</ul>
+<hr />
+<h2 id="5">5. 当前结论</h2>
+<blockquote>
+<p><strong>G3-C4 已完成第一轮真实验证，状态可以从“定义完成”推进为“验证中且已有通过证据”。</strong></p>
+</blockquote>
+<p>后续若要把 G3-C4 判为完全 done，仍需继续补：
+- 更正式的负载测试结果；
+- 生产级性能签字版；
+- 多实例扩缩容实证结果。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
