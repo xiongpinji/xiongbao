@@ -643,9 +643,13 @@ async def _execute_workflow_in_background(
         view = run.to_view()
     except Exception as exc:  # noqa: BLE001  后台任务必须自行收口
         logger.error("workflow_async_execute_failed", run_id=run_id, error=str(exc))
-        run = engine.get_run(run_id)
-        view = run.to_view() if run else {"run_id": run_id, "status": "failed", "steps": []}
-        if run is None:
+        failed_run = engine.get_run(run_id)
+        view = (
+            failed_run.to_view()
+            if failed_run is not None
+            else {"run_id": run_id, "status": "failed", "steps": []}
+        )
+        if failed_run is None:
             view["status"] = "failed"
     try:
         async with get_sessionmaker()() as session:
