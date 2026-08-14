@@ -283,9 +283,7 @@ async def update_llm_config(
     cfg = get_settings().llm
     changed: dict = {}
     # 先把非模型字段应用到临时视图，再校验目标模型可用性（无 key 拦截）
-    preview_fields = {
-        k: v for k, v in body.model_dump(exclude_none=True).items()
-    }
+    preview_fields = dict(body.model_dump(exclude_none=True))
     prospective = cfg.model_copy(update=preview_fields)
     if body.default_model is not None:
         provider = _model_provider(body.default_model)
