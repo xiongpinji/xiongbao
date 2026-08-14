@@ -2,7 +2,7 @@
 
 > 面向企业的自主智能体框架 —— **编排内核 + 适配层 + 独有语义**，底座全部采用 MIT/Apache 开源组件。
 
-**当前 Web/API 版本：1.1.1**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
+**当前 Web/API 版本：1.1.2**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
 
 当前增强与发布验收范围仅为 **Web/API**。短剧由独立项目运行，稳定后按集成规格接入；Tauri 桌面端暂不纳入本阶段发布结论。仓库中保留的相关源码属于后续接入资产，不代表当前 Web/API 已发布能力。
 
