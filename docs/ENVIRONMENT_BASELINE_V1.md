@@ -214,3 +214,17 @@ k8s 衔接（推荐路径）：
 
 禁止事项：任何环境都不要把真实 secret 明文写入 `deploy/helm/values*.yaml` 或 git 仓库；
 `SECRETREF:` 值本身不是密文，可安全入库。
+
+
+---
+
+## 附录：LLM 配置优先级（2026-08-14 P1 修复后明确）
+
+生效优先级（高 → 低）：
+
+1. **运行时磁盘覆盖**（设置页保存，持久化于 `apps/data/llm_config_overrides.json`，模块加载时强制应用）
+2. 进程环境变量 `XAGENT_LLM__*`
+3. 仓库根 `.env`
+4. 代码默认值
+
+⚠️ 一旦设置页保存过 LLM 配置，**env/.env 的同名修改不会生效**。设置页在覆盖生效时会显示琥珀色警示条；`GET /api/v1/system/llm-config` 的 `override_active`/`override_fields` 字段可编程查验。无可用凭证的模型会被 `PUT /llm-config` 以 422 拦截，避免"连接已中断"类运行期失败。

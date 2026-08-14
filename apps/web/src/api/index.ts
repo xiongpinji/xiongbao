@@ -326,6 +326,14 @@ export const getSystemCapabilities = () =>
   api.get<SystemCapabilities>("/system/capabilities").then((r) => r.data);
 
 // ---- LLM 模型配置 ----
+export interface LLMModelOption {
+  id: string;
+  label: string;
+  available: boolean;
+  current?: boolean;
+  reason?: string;
+}
+
 export interface LLMConfig {
   default_model: string;
   fallback_models: string[];
@@ -337,6 +345,11 @@ export interface LLMConfig {
   has_openai_key: boolean;
   has_anthropic_key: boolean;
   has_deepseek_key: boolean;
+  /** 磁盘覆盖是否生效（生效时 env/.env 同名配置不生效） */
+  override_active?: boolean;
+  override_fields?: string[];
+  /** 后端判定的可选模型及可用性 */
+  models?: LLMModelOption[];
 }
 
 export interface LLMConfigUpdate {

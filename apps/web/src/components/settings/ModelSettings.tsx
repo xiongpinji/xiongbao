@@ -140,6 +140,14 @@ export default function ModelSettings() {
           </div>
         )}
 
+        {/* 磁盘覆盖生效提示：此时 env/.env 的同名配置不生效（P1 陷阱防护） */}
+        {cfg?.override_active && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+            运行时覆盖生效中（{cfg.override_fields?.join("、")}）：此处保存的值优先级高于
+            env / .env 同名配置，部署文档中的环境变量修改不会生效，请以本页为准。
+          </div>
+        )}
+
         {!cfg ? (
           <div className="flex items-center gap-2 text-sm text-neutral-500">
             <Loader2 size={14} className="animate-spin" /> 加载中…

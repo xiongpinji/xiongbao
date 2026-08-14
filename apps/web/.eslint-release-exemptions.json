@@ -1,7 +1,7 @@
 {
   "react_compiler_migration": {
     "count": 89,
-    "sha256": "ecab6b14151a4cf78a8430317f08e60bbe644fa588855c7bc7dc3cee9936a941",
+    "sha256": "d919c2642861269e8b5ce116f3282564e80febc109c1dce7e125ad7a488ddfed",
     "owner": "web-platform",
     "reason": "React Hooks 7 compiler checks require component state-boundary refactoring and browser regression",
     "expires_on": "2026-09-30",
@@ -9,7 +9,7 @@
   },
   "react_effect_dependencies": {
     "count": 10,
-    "sha256": "498bbb88560bc90effbd198fc1689dddc9d18fa66a59c3b1abb54a7d383f1eea",
+    "sha256": "38f55c73729c64449905a9cda45bdea8382305550d195915c4f6632882e642c9",
     "owner": "web-platform",
     "reason": "Legacy effects need dependency stabilization without changing request or subscription timing",
     "expires_on": "2026-09-30",

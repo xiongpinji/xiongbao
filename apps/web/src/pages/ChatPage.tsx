@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
 import { readAgentRunStream, type StepInfo, type TokenUsage } from "../api/chatStream";
 import { getToken } from "../api/client";
-import { getLLMConfig, updateLLMConfig } from "../api";
+import { getLLMConfig, updateLLMConfig, type LLMModelOption } from "../api";
 import { useShellActions, useShellStore } from "../shell/useShellStore";
 import { MarkdownRenderer } from "../components/chat/MarkdownRenderer";
 import { copyToClipboard } from "../lib/clipboard";
@@ -71,6 +71,7 @@ export default function ChatPage() {
   const [completedSegments, setCompletedSegments] = useState<string[]>([]);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
   const [model, setModel] = useState("");
+  const [modelOptions, setModelOptions] = useState<LLMModelOption[]>([]);
   const [modelOpen, setModelOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false); const [streamingConversationId, setStreamingConversationId] = useState<string | null>(null);
 
@@ -82,9 +83,14 @@ export default function ChatPage() {
   const regenerateRef = useRef<() => Promise<void>>(async () => {});
   const previousChatSessionKeyRef = useRef<string | null>(null);
 
-  // 加载当前模型
+  // 加载当前模型 + 后端判定的可用模型列表（动态化，取代硬编码预设）
   useEffect(() => {
-    getLLMConfig().then((cfg) => setModel(cfg.default_model)).catch(() => {});
+    getLLMConfig()
+      .then((cfg) => {
+        setModel(cfg.default_model);
+        if (cfg.models?.length) setModelOptions(cfg.models);
+      })
+      .catch(() => {});
   }, []);
 
   // 点击外部关闭模型下拉
@@ -193,10 +199,19 @@ export default function ChatPage() {
   }, []);
 
   const handleModelSwitch = async (modelId: string) => {
+    const prev = model;
     setModel(modelId);
     setModelOpen(false);
     textareaRef.current?.focus();
-    try { await updateLLMConfig({ default_model: modelId }); } catch { /* silent */ }
+    try {
+      await updateLLMConfig({ default_model: modelId });
+    } catch (e) {
+      // 后端 422（无 key/无代理）或其他失败：回滚选择并提示原因，不再静默
+      setModel(prev);
+      const detail =
+        (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail || `切换模型 ${modelId} 失败，请在设置页检查凭证配置`);
+    }
   };
 
   const submit = useCallback(async (overrideText?: string) => {
@@ -319,7 +334,12 @@ export default function ChatPage() {
   const handleRegenerate = useCallback(() => { void regenerateRef.current(); }, []);
 
   const isEmpty = messages.length === 0 && !loading && !error && !loadingHistory;
-  const modelLabel = MODEL_PRESETS.find((m) => m.id === model)?.label || model || "选择模型";
+  // 动态模型列表：优先后端判定结果（含可用性），无则回退历史预设
+  const dropdownModels: LLMModelOption[] = modelOptions.length
+    ? modelOptions
+    : MODEL_PRESETS.map((m) => ({ id: m.id, label: m.label, available: true }));
+  const modelLabel =
+    dropdownModels.find((m) => m.id === model)?.label || model || "选择模型";
 
   /* ── 输入框组件（复用） ── */
   const InputBox = (
@@ -336,17 +356,26 @@ export default function ChatPage() {
             <ChevronDown size={10} />
           </button>
           {modelOpen && (
-            <div className="absolute bottom-full left-0 z-50 mb-2 w-52 rounded-lg border border-white/[0.08] bg-[#1e1e1e] py-1.5 shadow-xl shadow-black/30">
-              {MODEL_PRESETS.map((m) => (
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-lg border border-white/[0.08] bg-[#1e1e1e] py-1.5 shadow-xl shadow-black/30">
+              {dropdownModels.map((m) => (
                 <button
                   key={m.id}
                   type="button"
+                  disabled={!m.available}
+                  title={m.available ? undefined : m.reason || "该模型未配置可用凭证"}
                   onClick={() => handleModelSwitch(m.id)}
-                  className={`flex w-full items-center px-3.5 py-2 text-left text-[12px] transition hover:bg-white/[0.05] ${
-                    model === m.id ? "font-medium text-white" : "text-neutral-400"
+                  className={`flex w-full items-center px-3.5 py-2 text-left text-[12px] transition ${
+                    !m.available
+                      ? "cursor-not-allowed text-neutral-600"
+                      : model === m.id
+                        ? "font-medium text-white hover:bg-white/[0.05]"
+                        : "text-neutral-400 hover:bg-white/[0.05]"
                   }`}
                 >
                   {m.label}
+                  {!m.available && (
+                    <span className="ml-1 text-[10px] text-red-400/80">未配置</span>
+                  )}
                   {model === m.id && <Check size={12} className="ml-auto text-green-500" />}
                 </button>
               ))}

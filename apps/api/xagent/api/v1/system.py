@@ -147,6 +147,15 @@ def _save_llm_overrides(overrides: dict) -> None:
 _apply_llm_overrides()
 
 
+class LLMModelOption(BaseModel):
+    """可选模型及其可用性（供前端动态渲染选择器）。"""
+    id: str
+    label: str
+    available: bool
+    current: bool = False
+    reason: str = ""
+
+
 class LLMConfigOut(BaseModel):
     """LLM 配置输出（脱敏）。"""
     default_model: str
@@ -159,6 +168,73 @@ class LLMConfigOut(BaseModel):
     has_openai_key: bool
     has_anthropic_key: bool
     has_deepseek_key: bool
+    # 配置来源可见性：磁盘覆盖生效时 env/.env 的同名配置不生效（P1 修复）
+    override_active: bool = False
+    override_fields: list[str] = []
+    models: list[LLMModelOption] = []
+
+
+# 模型目录：与前端历史预设保持一致，可用性由后端按 key/代理/本地运行时判定
+_LLM_MODEL_CATALOG: tuple[tuple[str, str, str], ...] = (
+    ("deepseek-v4-flash", "DeepSeek V4 Flash", "deepseek"),
+    ("deepseek-chat", "DeepSeek Chat", "deepseek"),
+    ("deepseek-reasoner", "DeepSeek Reasoner", "deepseek"),
+    ("gpt-4o-mini", "GPT-4o Mini", "openai"),
+    ("gpt-4o", "GPT-4o", "openai"),
+    ("claude-sonnet-4-20250514", "Claude Sonnet 4", "anthropic"),
+    ("claude-3-5-haiku-20241022", "Claude 3.5 Haiku", "anthropic"),
+)
+
+_PROVIDER_REASON = {
+    "deepseek": "缺 DeepSeek key 且未配置代理",
+    "openai": "缺 OpenAI key 且未配置代理",
+    "anthropic": "缺 Anthropic key 且未配置代理",
+    "ollama": "未配置本地 Ollama 地址",
+}
+
+
+def _model_provider(model: str) -> str:
+    if model.startswith(("ollama/", "ollama_chat/")):
+        return "ollama"
+    if model.startswith("deepseek"):
+        return "deepseek"
+    if model.startswith(("claude", "anthropic/")):
+        return "anthropic"
+    return "openai"
+
+
+def _build_model_options(cfg) -> list[LLMModelOption]:
+    def provider_ready(provider: str) -> bool:
+        if cfg.proxy_url:  # 代理模式下由 proxy 侧路由，全部视为可用
+            return True
+        if provider == "deepseek":
+            return bool(cfg.deepseek_api_key)
+        if provider == "openai":
+            return bool(cfg.openai_api_key)
+        if provider == "anthropic":
+            return bool(cfg.anthropic_api_key)
+        return bool(cfg.ollama_base_url)
+
+    seen: set[str] = set()
+    options: list[LLMModelOption] = []
+    current = cfg.default_model
+    if current:
+        provider = _model_provider(current)
+        ready = provider_ready(provider)
+        options.append(LLMModelOption(
+            id=current, label=current, available=ready, current=True,
+            reason="" if ready else _PROVIDER_REASON[provider],
+        ))
+        seen.add(current)
+    for mid, label, provider in _LLM_MODEL_CATALOG:
+        if mid in seen:
+            continue
+        ready = provider_ready(provider)
+        options.append(LLMModelOption(
+            id=mid, label=label, available=ready,
+            reason="" if ready else _PROVIDER_REASON[provider],
+        ))
+    return options
 
 
 class LLMConfigIn(BaseModel):
@@ -180,7 +256,7 @@ async def get_llm_config(
     principal: Principal = Depends(require_permission("system", "read")),
 ) -> dict:
     # 先应用持久化覆盖（幂等），保证重启后 / 多实例下读到的是生效值
-    _apply_llm_overrides()
+    overrides = _apply_llm_overrides()
     cfg = get_settings().llm
     return LLMConfigOut(
         default_model=cfg.default_model,
@@ -193,6 +269,9 @@ async def get_llm_config(
         has_openai_key=bool(cfg.openai_api_key),
         has_anthropic_key=bool(cfg.anthropic_api_key),
         has_deepseek_key=bool(cfg.deepseek_api_key),
+        override_active=bool(overrides),
+        override_fields=sorted(overrides),
+        models=_build_model_options(cfg),
     ).model_dump()
 
 
@@ -203,6 +282,27 @@ async def update_llm_config(
 ) -> dict:
     cfg = get_settings().llm
     changed: dict = {}
+    # 先把非模型字段应用到临时视图，再校验目标模型可用性（无 key 拦截）
+    preview_fields = dict(body.model_dump(exclude_none=True))
+    prospective = cfg.model_copy(update=preview_fields)
+    if body.default_model is not None:
+        provider = _model_provider(body.default_model)
+        ready = (
+            bool(prospective.proxy_url)
+            or (provider == "deepseek" and bool(prospective.deepseek_api_key))
+            or (provider == "openai" and bool(prospective.openai_api_key))
+            or (provider == "anthropic" and bool(prospective.anthropic_api_key))
+            or (provider == "ollama" and bool(prospective.ollama_base_url))
+        )
+        if not ready:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"模型 {body.default_model} 不可用：{_PROVIDER_REASON[provider]}。"
+                    "请先配置对应 key 或代理，避免运行时出现『连接已中断』类失败。"
+                ),
+            )
     if body.default_model is not None:
         cfg.default_model = body.default_model
         changed["default_model"] = body.default_model
