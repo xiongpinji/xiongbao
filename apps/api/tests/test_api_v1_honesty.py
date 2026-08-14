@@ -126,7 +126,7 @@ async def test_llm_config_put_get_consistent_and_persisted(
     )
     resp = await client.put(
         "/api/v1/system/llm-config",
-        json={"default_model": "honesty-test-model"},
+        json={"proxy_url": "http://localhost:4000", "default_model": "honesty-test-model"},
         headers=_h(),
     )
     assert resp.status_code == 200
@@ -458,3 +458,54 @@ async def test_data_export_audit_matches_audit_chain(client: AsyncClient) -> Non
     resp = await client.get("/api/v1/audit", headers=_h())
     chain_count = len(resp.json()["events"])
     assert data_count == chain_count
+
+
+# ─── llm-config 可用性拦截与来源可见（P1 修复回归）───
+
+
+async def test_llm_config_rejects_model_without_provider_key(
+    client: AsyncClient, monkeypatch, tmp_path
+) -> None:
+    """无 key 且无代理时，切换到 deepseek 目录模型必须 422（防『连接已中断』陷阱）。"""
+    import xagent.api.v1.system as system_module
+
+    monkeypatch.setattr(
+        system_module, "_LLM_OVERRIDES_PATH", tmp_path / "ovr.json"
+    )
+    # 确保无代理残留
+    await client.put(
+        "/api/v1/system/llm-config", json={"proxy_url": ""}, headers=_h()
+    )
+    resp = await client.put(
+        "/api/v1/system/llm-config",
+        json={"default_model": "deepseek-chat"},
+        headers=_h(),
+    )
+    assert resp.status_code == 422
+    assert "DeepSeek" in resp.json()["detail"]
+
+
+async def test_llm_config_exposes_override_visibility_and_model_options(
+    client: AsyncClient, monkeypatch, tmp_path
+) -> None:
+    """GET 必须暴露 override_active/override_fields 与带可用性的 models 列表。"""
+    import xagent.api.v1.system as system_module
+
+    monkeypatch.setattr(
+        system_module, "_LLM_OVERRIDES_PATH", tmp_path / "ovr.json"
+    )
+    await client.put(
+        "/api/v1/system/llm-config",
+        json={"proxy_url": "http://localhost:4000", "default_model": "gpt-5.5"},
+        headers=_h(),
+    )
+    resp = await client.get("/api/v1/system/llm-config", headers=_h())
+    body = resp.json()
+    assert body["override_active"] is True
+    assert "default_model" in body["override_fields"]
+    assert "proxy_url" in body["override_fields"]
+    models = {m["id"]: m for m in body["models"]}
+    # 当前模型置顶且标记 current；代理模式下目录模型全部可用
+    assert models["gpt-5.5"]["current"] is True
+    assert models["gpt-5.5"]["available"] is True
+    assert models["deepseek-chat"]["available"] is True
