@@ -1,7 +1,7 @@
 {
   "ruff_line_length": {
     "count": 187,
-    "sha256": "ff523ea47fecc29029755f25d055693e3e4842ccb4d2902cd984243649698f55",
+    "sha256": "e9e6c73cdd38a32f51f6eae4eb1c3e828133509214047ed800f773441ca0dcf0",
     "owner": "backend-platform",
     "reason": "历史长行需要按模块拆分格式化，避免在发布加固中制造大面积无关差异",
     "expires_on": "2026-09-30",

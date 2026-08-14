@@ -659,7 +659,9 @@ async def _execute_workflow_in_background(
                 owner_id=principal.user_id,
                 tenant_id=principal.tenant_id,
             )
-            board_status, blocker_reason = _workflow_board_status(str(view.get("status") or "pending"))
+            board_status, blocker_reason = _workflow_board_status(
+                str(view.get("status") or "pending")
+            )
             await update_task_status_by_run_id(
                 session,
                 tenant_id=principal.tenant_id,
