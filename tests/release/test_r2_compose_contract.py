@@ -23,6 +23,18 @@ GRAFANA_DASHBOARD_PROVIDER_PATH = (
 )
 
 
+def _docker_compose_argv() -> list:
+    """Prefer the docker compose plugin, fall back to standalone docker-compose."""
+    import shutil
+
+    if shutil.which("docker-compose"):
+        probe = subprocess.run(
+            ("docker-compose", "version"), capture_output=True, check=False, timeout=20
+        )
+        if probe.returncode == 0:
+            return ["docker-compose"]
+    return ["docker", "compose"]
+
 def read_or_empty(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
@@ -188,8 +200,7 @@ class R2ComposeContractTest(unittest.TestCase):
             empty_env.write_text("", encoding="utf-8")
             result = subprocess.run(
                 (
-                    "docker",
-                    "compose",
+                    *_docker_compose_argv(),
                     "-f",
                     str(COMPOSE_PATH),
                     "--env-file",
@@ -262,8 +273,7 @@ class R2ComposeContractTest(unittest.TestCase):
             empty_env.write_text("", encoding="utf-8")
             result = subprocess.run(
                 (
-                    "docker",
-                    "compose",
+                    *_docker_compose_argv(),
                     "-f",
                     str(COMPOSE_PATH),
                     "--env-file",
@@ -356,8 +366,7 @@ class R2ComposeContractTest(unittest.TestCase):
             empty_env.write_text("", encoding="utf-8")
             result = subprocess.run(
                 (
-                    "docker",
-                    "compose",
+                    *_docker_compose_argv(),
                     "-f",
                     str(COMPOSE_PATH),
                     "--env-file",
@@ -468,8 +477,8 @@ class R2ComposeContractTest(unittest.TestCase):
             'XAGENT_CORS_ORIGINS=["http://127.0.0.1:18080"]',
             "XAGENT_SECURITY__REQUIRE_AUTH=true",
             "XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434",
-            "XAGENT_LLM__OLLAMA_MODEL=qwen3:4b",
-            "XAGENT_LLM__DEFAULT_MODEL=qwen3:4b",
+            "XAGENT_LLM__OLLAMA_MODEL=xagent-qwen3",
+            "XAGENT_LLM__DEFAULT_MODEL=xagent-qwen3",
             "XAGENT_TOOLS__ENABLE_SHELL=false",
             "XAGENT_TOOLS__ENABLE_PYTHON_EXEC=false",
             "XAGENT_SANDBOX__BACKEND=disabled",
