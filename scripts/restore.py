@@ -67,6 +67,17 @@ def load_and_verify_manifest(path: Path) -> tuple[dict[str, object], dict[str, P
     return manifest, artifacts
 
 
+def validate_restore_manifest_output(manifest_path: Path, output: Path) -> Path:
+    resolved_manifest = Path(manifest_path).resolve(strict=True)
+    rollback_root = resolved_manifest.parent.parent
+    resolved_output = Path(output).resolve()
+    if rollback_root not in resolved_output.parents:
+        raise ValueError("restore manifest must stay inside the rollback evidence root")
+    if resolved_output == resolved_manifest:
+        raise ValueError("restore manifest must not overwrite the backup manifest")
+    return resolved_output
+
+
 def _compose_command(project: str, compose_file: Path, *args: str) -> list[str]:
     return ["docker", "compose", "-p", project, "-f", str(compose_file), *args]
 
@@ -229,6 +240,10 @@ def main() -> int:
     parsed_pg_url = urlparse(args.target_pg_url)
     if parsed_pg_url.scheme not in {"postgres", "postgresql"} or not parsed_pg_url.path:
         raise ValueError("target Postgres URL is invalid")
+    output = validate_restore_manifest_output(
+        manifest_path,
+        args.output or manifest_path.with_name("restore-manifest.json"),
+    )
     compose_file = args.compose_file.resolve(strict=True)
     validate_compose_labels(scope.compose_project, compose_file)
     ensure_postgres_empty(
@@ -248,9 +263,6 @@ def main() -> int:
         vector_size=int(manifest.get("qdrant_vector_size", 1536)),
         snapshot=artifacts["qdrant.snapshot"],
     )
-    output = (args.output or manifest_path.with_name("restore-manifest.json")).resolve()
-    if manifest_path.parent not in output.parents:
-        raise ValueError("restore manifest must stay inside the rollback evidence root")
     backup_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
     _write_json_atomic(
         output,

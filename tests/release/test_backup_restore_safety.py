@@ -123,6 +123,32 @@ def test_restore_source_has_no_qdrant_delete_call() -> None:
     assert "DELETE" not in source
 
 
+def test_restore_manifest_output_accepts_rollback_evidence_root(
+    tmp_path: Path,
+) -> None:
+    backup_root = tmp_path / "rollback" / "backup"
+    backup_root.mkdir(parents=True)
+    manifest = backup_root / "backup-manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+    output = tmp_path / "rollback" / "restore-manifest.json"
+
+    assert restore.validate_restore_manifest_output(manifest, output) == output.resolve()
+
+
+def test_restore_manifest_output_rejects_path_outside_rollback_root(
+    tmp_path: Path,
+) -> None:
+    backup_root = tmp_path / "rollback" / "backup"
+    backup_root.mkdir(parents=True)
+    manifest = backup_root / "backup-manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="rollback evidence root"):
+        restore.validate_restore_manifest_output(
+            manifest, tmp_path / "outside" / "restore-manifest.json"
+        )
+
+
 def test_restore_rejects_tampered_backup_artifact(tmp_path: Path) -> None:
     artifact = tmp_path / "postgres.dump"
     artifact.write_bytes(b"original")
