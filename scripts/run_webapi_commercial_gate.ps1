@@ -120,6 +120,7 @@ $env:XAGENT_API_PORT = '18000'
 $env:XAGENT_WEB_PORT = '18080'
 $env:XAGENT_LLM__OLLAMA_BASE_URL = 'http://host.docker.internal:11434'
 $env:XAGENT_LLM__OLLAMA_MODEL = $OllamaModel
+$env:XAGENT_LLM__OLLAMA_NUM_CTX = '8192'
 $env:XAGENT_LLM__DEFAULT_MODEL = $OllamaModel
 $env:XAGENT_LLM__WARMUP_ENABLED = 'true'
 

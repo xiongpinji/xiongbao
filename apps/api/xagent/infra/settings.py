@@ -97,6 +97,7 @@ class LLMSettings(BaseModel):
     # 本地 Ollama（零费用本地推理）
     ollama_base_url: str = ""            # 例如 http://localhost:11434
     ollama_model: str = ""               # 例如 qwen3:4b（为空则用 default_model）
+    ollama_num_ctx: int = Field(default=0, ge=0)  # 0 => 使用 Ollama 模型默认值
     request_timeout_seconds: int = 60
     warmup_enabled: bool = False
     warmup_prompt: str = "回复一个字：好"

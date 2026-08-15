@@ -54,3 +54,17 @@ def test_kernel_gate_audits_the_cross_platform_lock_without_installing() -> None
         "Invoke-Checked 'pip-audit' '-r' 'apps/api/requirements.lock' "
         "'--no-deps' '--disable-pip'"
     ) in text
+
+
+@pytest.mark.parametrize(
+    "script",
+    [
+        "run_webapi_commercial_gate.ps1",
+        "run_short_drama_commercial_gate.ps1",
+        "run_rollback_drill.ps1",
+    ],
+)
+def test_real_model_gates_bound_ollama_context(script: str) -> None:
+    text = (ROOT / "scripts" / script).read_text(encoding="utf-8")
+
+    assert "$env:XAGENT_LLM__OLLAMA_NUM_CTX = '8192'" in text
