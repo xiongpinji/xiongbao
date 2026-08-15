@@ -130,7 +130,7 @@ class MediaSettings(BaseModel):
     """
 
     # 默认 provider 选择（image/video/audio）
-    default_image_provider: str = "null"   # null | openai
+    default_image_provider: str = "null"   # null | pollinations | openai
     default_video_provider: str = "null"   # null | kling | jimeng | generic
     default_audio_provider: str = "null"   # null | edge_tts（免 key 但需外网，故默认 null）
     tts_output_dir: str = Field(default_factory=lambda: str(data_path("tts")))
