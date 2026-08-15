@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Sequence
 
 SHA_PATTERN = re.compile(r"^[a-f0-9]{40}$")
-PROJECT_PATTERN = re.compile(r"^xagent-commercial-[a-f0-9]{8}$")
+PROJECT_PATTERN = re.compile(r"^xagent-rollback-candidate-[a-f0-9]{8}$")
 
 
 def validate_scope(
@@ -32,7 +32,7 @@ def validate_scope(
     sha8 = source_sha[:8]
     if (
         PROJECT_PATTERN.fullmatch(compose_project) is None
-        or compose_project != f"xagent-commercial-{sha8}"
+        or compose_project != f"xagent-rollback-candidate-{sha8}"
     ):
         raise ValueError("compose project does not match the source SHA")
     if qdrant_collection != f"xagent_memory_{sha8}":
@@ -69,18 +69,25 @@ def build_backup_manifest(
     compose_project: str,
     source_sha: str,
     qdrant_collection: str,
+    qdrant_vector_size: int,
     artifacts: Sequence[Path],
 ) -> dict[str, object]:
     root = Path(output_root).resolve(strict=True)
     validate_scope(compose_project, qdrant_collection, source_sha, root)
     if not artifacts:
         raise ValueError("backup manifest requires artifacts")
+    if (
+        isinstance(qdrant_vector_size, bool)
+        or not isinstance(qdrant_vector_size, int)
+        or qdrant_vector_size <= 0
+    ):
+        raise ValueError("Qdrant vector size must be a positive integer")
     return {
         "schema_version": "1.0",
         "source_sha": source_sha,
         "compose_project": compose_project,
         "qdrant_collection": qdrant_collection,
-        "qdrant_vector_size": 1536,
+        "qdrant_vector_size": qdrant_vector_size,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "artifacts": [_artifact_item(path, root) for path in artifacts],
     }
@@ -181,6 +188,28 @@ def backup_qdrant(*, qdrant_url: str, collection: str, output: Path) -> Path:
     return output
 
 
+def get_qdrant_vector_size(*, qdrant_url: str, collection: str) -> int:
+    import httpx
+
+    response = httpx.get(
+        f"{qdrant_url.rstrip('/')}/collections/{collection}", timeout=30
+    )
+    response.raise_for_status()
+    try:
+        vector_size = response.json()["result"]["config"]["params"]["vectors"][
+            "size"
+        ]
+    except (KeyError, TypeError) as exc:
+        raise RuntimeError("Qdrant collection has no single vector size") from exc
+    if (
+        isinstance(vector_size, bool)
+        or not isinstance(vector_size, int)
+        or vector_size <= 0
+    ):
+        raise RuntimeError("Qdrant collection returned an invalid vector size")
+    return vector_size
+
+
 def backup_audit(*, api_url: str, token: str, output: Path) -> Path:
     import httpx
 
@@ -226,6 +255,10 @@ def main() -> int:
     if bool(args.api_url) != bool(args.token):
         raise ValueError("audit backup requires both api URL and token")
 
+    qdrant_vector_size = get_qdrant_vector_size(
+        qdrant_url=args.qdrant_url,
+        collection=args.qdrant_collection,
+    )
     artifacts = [
         backup_postgres(
             output=output_root / "postgres.dump",
@@ -271,6 +304,7 @@ def main() -> int:
         compose_project=args.compose_project,
         source_sha=args.source_sha,
         qdrant_collection=args.qdrant_collection,
+        qdrant_vector_size=qdrant_vector_size,
         artifacts=artifacts,
     )
     manifest_path = output_root / "backup-manifest.json"

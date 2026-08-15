@@ -16,20 +16,78 @@ def test_backup_manifest_binds_project_collection_and_sha(tmp_path: Path) -> Non
 
     manifest = backup.build_backup_manifest(
         output_root=tmp_path,
-        compose_project="xagent-commercial-a1b2c3d4",
+        compose_project="xagent-rollback-candidate-a1b2c3d4",
         source_sha="a1b2c3d4" + "a" * 32,
         qdrant_collection="xagent_memory_a1b2c3d4",
+        qdrant_vector_size=256,
         artifacts=[artifact],
     )
 
-    assert manifest["compose_project"] == "xagent-commercial-a1b2c3d4"
+    assert manifest["compose_project"] == "xagent-rollback-candidate-a1b2c3d4"
     assert manifest["qdrant_collection"] == "xagent_memory_a1b2c3d4"
+    assert manifest["qdrant_vector_size"] == 256
     assert manifest["artifacts"][0]["sha256"] == hashlib.sha256(b"pg").hexdigest()
+
+
+def test_backup_reads_vector_size_from_qdrant_collection(monkeypatch) -> None:
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "result": {
+                    "config": {"params": {"vectors": {"size": 256}}}
+                }
+            }
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: Response())
+
+    assert (
+        backup.get_qdrant_vector_size(
+            qdrant_url="http://qdrant:6333",
+            collection="xagent_memory_a1b2c3d4",
+        )
+        == 256
+    )
+
+
+def test_backup_rejects_invalid_qdrant_vector_size(monkeypatch) -> None:
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "result": {
+                    "config": {"params": {"vectors": {"size": 0}}}
+                }
+            }
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: Response())
+
+    with pytest.raises(RuntimeError, match="vector size"):
+        backup.get_qdrant_vector_size(
+            qdrant_url="http://qdrant:6333",
+            collection="xagent_memory_a1b2c3d4",
+        )
 
 
 def test_backup_rejects_generic_project_and_collection(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         backup.validate_scope("xagent-r2", "xagent_memory", "a" * 40, tmp_path)
+
+
+def test_backup_rejects_the_webapi_project_even_for_the_same_sha(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="source SHA"):
+        backup.validate_scope(
+            "xagent-commercial-aaaaaaaa",
+            "xagent_memory_aaaaaaaa",
+            "a" * 40,
+            tmp_path,
+        )
 
 
 def test_backup_output_must_be_inside_sha_rollback_root(tmp_path: Path) -> None:
@@ -39,7 +97,7 @@ def test_backup_output_must_be_inside_sha_rollback_root(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="rollback"):
         backup.validate_scope(
-            "xagent-commercial-aaaaaaaa",
+            "xagent-rollback-candidate-aaaaaaaa",
             "xagent_memory_aaaaaaaa",
             "a" * 40,
             outside,
