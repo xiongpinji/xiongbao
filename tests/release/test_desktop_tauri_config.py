@@ -14,3 +14,4 @@ def test_tauri_hooks_resolve_web_from_monorepo_apps_directory() -> None:
     assert config["build"]["beforeBuildCommand"] == "npm --prefix web run build"
     assert config["build"]["frontendDist"] == "../web/dist"
     assert config["bundle"]["targets"] == ["msi", "nsis"]
+    assert "icons/icon.ico" in config["bundle"]["icon"]
