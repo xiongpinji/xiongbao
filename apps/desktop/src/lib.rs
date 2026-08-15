@@ -36,6 +36,22 @@ fn build_backend_url(base: &str, path: &str) -> Result<url::Url, String> {
     Ok(base_url)
 }
 
+pub async fn diagnose_backend(base: &str) -> Result<serde_json::Value, String> {
+    let url = build_backend_url(base, "/health")?;
+    let response = reqwest::Client::new()
+        .get(url)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("backend health returned {}", response.status()));
+    }
+    response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| format!("backend health JSON parse failed: {error}"))
+}
+
 #[tauri::command]
 async fn call_backend_api(
     path: String,
@@ -100,5 +116,23 @@ mod tests {
         assert_eq!(parse_method("DELETE").unwrap(), reqwest::Method::DELETE);
         assert!(parse_method("CONNECT").is_err());
         assert!(parse_method("TRACE").is_err());
+    }
+
+    #[tokio::test]
+    async fn diagnostics_reports_backend_health() {
+        let mut server = mockito::Server::new_async().await;
+        let health = server
+            .mock("GET", "/health")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"status":"ok","version":"1.1.3"}"#)
+            .create_async()
+            .await;
+
+        let result = diagnose_backend(&server.url()).await.unwrap();
+
+        assert_eq!(result["status"], "ok");
+        assert_eq!(result["version"], "1.1.3");
+        health.assert_async().await;
     }
 }
