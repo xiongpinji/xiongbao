@@ -20,6 +20,7 @@ def compose_prefix(compose_file: Path, project: str) -> list[str]:
 def workspace_commands(compose_file: Path, project: str) -> list[list[str]]:
     prefix = compose_prefix(compose_file, project) + ["exec", "-T", "api"]
     return [
+        prefix + ["mkdir", "-p", WORKSPACE],
         prefix + ["git", "-C", WORKSPACE, "init"],
         prefix
         + ["git", "-C", WORKSPACE, "config", "user.name", "X-Agent E2E"],
