@@ -63,6 +63,8 @@ output/playwright/r1-session-restored.png
 output/r2-runtime/
 output/r2-backups/
 output/reliability/
+output/e2e-local/
+output/commercial-delivery/
 
 # ---- Local automation ----
 .claude/
