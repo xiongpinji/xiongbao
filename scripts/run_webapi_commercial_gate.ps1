@@ -187,7 +187,7 @@ try {
         $env:E2E_SKILL_PACKAGE = $skillArchive
         for ($run = 1; $run -le 3; $run++) {
             $env:E2E_EVIDENCE_DIR = Join-Path $evidence "browser/run-$run"
-            Invoke-Checked 'npm' '--prefix' 'tests/e2e' 'exec' '--' 'playwright' 'test' 'specs/webapi-r2-full-compose.spec.ts' '--reporter=list'
+            Invoke-Checked 'npm' '--prefix' 'tests/e2e' 'exec' '--' 'playwright' 'test' 'specs/webapi-r2-full-compose.spec.ts' '--config' 'tests/e2e/playwright.config.ts' '--reporter=list'
         }
 
         $finalSha = (& git -C $RepoRoot rev-parse HEAD).Trim()

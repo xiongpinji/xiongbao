@@ -31,3 +31,5 @@ def test_gate_script_requires_real_ollama_and_same_sha() -> None:
         assert required in text
     assert "MockLLM" not in text
     assert "down -v" not in text
+    assert "--config" in text
+    assert "tests/e2e/playwright.config.ts" in text
