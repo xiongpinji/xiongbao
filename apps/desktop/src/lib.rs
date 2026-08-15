@@ -2,6 +2,40 @@
 // 前端主链路仍走浏览器 HTTP/SSE 直连后端（localhost:8000）；
 // 此处提供 call_backend_api 命令作为备用（带鉴权转发）。
 
+fn parse_method(method: &str) -> Result<reqwest::Method, String> {
+    match method.to_ascii_uppercase().as_str() {
+        "GET" => Ok(reqwest::Method::GET),
+        "POST" => Ok(reqwest::Method::POST),
+        "PUT" => Ok(reqwest::Method::PUT),
+        "PATCH" => Ok(reqwest::Method::PATCH),
+        "DELETE" => Ok(reqwest::Method::DELETE),
+        _ => Err(format!("unsupported method: {method}")),
+    }
+}
+
+fn build_backend_url(base: &str, path: &str) -> Result<url::Url, String> {
+    if !path.starts_with('/')
+        || path.starts_with("//")
+        || path.contains('\\')
+        || path.split('/').any(|part| part == "..")
+    {
+        return Err("backend path must be an absolute non-escaping path".to_string());
+    }
+    let mut base_url = url::Url::parse(base).map_err(|error| error.to_string())?;
+    let host = base_url.host_str().unwrap_or_default();
+    if base_url.scheme() != "http"
+        || !matches!(host, "127.0.0.1" | "localhost" | "::1")
+        || !base_url.username().is_empty()
+        || base_url.password().is_some()
+    {
+        return Err("backend base URL must use HTTP loopback".to_string());
+    }
+    base_url.set_path(path);
+    base_url.set_query(None);
+    base_url.set_fragment(None);
+    Ok(base_url)
+}
+
 #[tauri::command]
 async fn call_backend_api(
     path: String,
@@ -9,32 +43,25 @@ async fn call_backend_api(
     token: Option<String>,
     body: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    let url = format!("http://127.0.0.1:8000{}", path);
+    let base = std::env::var("XAGENT_DESKTOP_API_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8000".to_string());
+    let url = build_backend_url(&base, &path)?;
     let client = reqwest::Client::new();
-    let mut req = match method.to_uppercase().as_str() {
-        "GET" => client.get(&url),
-        "POST" => client.post(&url),
-        "PUT" => client.put(&url),
-        "DELETE" => client.delete(&url),
-        _ => return Err(format!("unsupported method: {method}")),
-    };
+    let mut req = client.request(parse_method(&method)?, url);
     if let Some(t) = token {
         req = req.bearer_auth(t);
     }
     if let Some(b) = body {
         req = req.json(&b);
     }
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let resp = req.send().await.map_err(|e| e.to_string())?;
     let status = resp.status();
     let text = resp.text().await.map_err(|e| e.to_string())?;
     if !status.is_success() {
-        return Err(format!("backend {}: {}", status, text));
+        return Err(format!("backend returned {status}"));
     }
     serde_json::from_str::<serde_json::Value>(&text)
-        .map_err(|e| format!("解析失败: {e}; body: {text}"))
+        .map_err(|e| format!("backend JSON parse failed: {e}"))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,4 +70,35 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![call_backend_api])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_url_accepts_loopback_api_path() {
+        let url =
+            build_backend_url("http://127.0.0.1:8000", "/api/v1/system/capabilities").unwrap();
+        assert_eq!(
+            url.as_str(),
+            "http://127.0.0.1:8000/api/v1/system/capabilities"
+        );
+    }
+
+    #[test]
+    fn backend_url_rejects_remote_hosts_and_path_escape() {
+        assert!(build_backend_url("https://example.com", "/health").is_err());
+        assert!(build_backend_url("http://127.0.0.1:8000", "//example.com/steal").is_err());
+        assert!(build_backend_url("http://127.0.0.1:8000", "/api/v1/../admin").is_err());
+        assert!(build_backend_url("http://127.0.0.1:8000", "health").is_err());
+    }
+
+    #[test]
+    fn request_method_is_allowlisted() {
+        assert_eq!(parse_method("get").unwrap(), reqwest::Method::GET);
+        assert_eq!(parse_method("DELETE").unwrap(), reqwest::Method::DELETE);
+        assert!(parse_method("CONNECT").is_err());
+        assert!(parse_method("TRACE").is_err());
+    }
 }
