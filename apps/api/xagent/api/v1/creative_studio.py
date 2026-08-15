@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from xagent.core.orchestration.task_view import build_task_view
 from xagent.domains.creative_studio import build_draft_from_brief
 from xagent.domains.creative_studio import persistence as creative_persistence
+from xagent.domains.creative_studio.editor.tools import get_timeline
 from xagent.domains.creative_studio.media import (
     GenerationMode,
     GenerationRequest,
@@ -1064,6 +1065,16 @@ class ProduceIn(BaseModel):
     with_video: bool = True
 
 
+def _attach_timeline_snapshot(doc: dict[str, Any]) -> dict[str, Any]:
+    timeline_id = str(doc.get("timeline_id") or "")
+    timeline = get_timeline(timeline_id) if timeline_id else None
+    doc["timeline"] = timeline.to_dict() if timeline is not None else None
+    if timeline_id and timeline is None:
+        doc["status"] = "partial"
+        doc.setdefault("failures", []).append("timeline_snapshot_missing")
+    return doc
+
+
 @router.post("/produce", summary="短剧全链路产出(故事板→关键帧→视频→质量门)")
 async def produce(
     body: ProduceIn,
@@ -1080,6 +1091,7 @@ async def produce(
     doc = result.to_dict()
     doc["tenant_id"] = principal.tenant_id
     doc["owner"] = principal.user_id
+    _attach_timeline_snapshot(doc)
     _productions[result.storyboard_id] = doc
     await creative_persistence.save_production(doc)
     artifacts = _build_production_artifacts(
@@ -1110,11 +1122,11 @@ async def produce(
         owner_id=principal.user_id,
         kind="creative.produce",
         backend="creative_studio",
-        status=result.status,
+        status=str(doc["status"]),
         input_payload=input_payload,
         result={
             "storyboard_id": result.storyboard_id,
-            "status": result.status,
+            "status": doc["status"],
             "title": doc.get("title", ""),
             "timeline_id": doc.get("timeline_id"),
             "shots": deepcopy(doc.get("shots") or []),
@@ -1161,7 +1173,7 @@ async def produce(
         detail={
             "storyboard_id": result.storyboard_id,
             "shots": len(result.shots),
-            "status": result.status,
+            "status": doc["status"],
         },
     )
     return doc

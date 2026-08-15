@@ -64,6 +64,25 @@ def test_openai_without_key_falls_back_to_null(
     assert registry.get(MediaKind.image) is registry.null
 
 
+def test_missing_timeline_snapshot_marks_production_partial(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import xagent.api.v1.creative_studio as creative_api
+
+    monkeypatch.setattr(creative_api, "get_timeline", lambda _timeline_id: None)
+    doc = {
+        "storyboard_id": "storyboard-test",
+        "status": "produced",
+        "timeline_id": "timeline-missing",
+    }
+
+    creative_api._attach_timeline_snapshot(doc)
+
+    assert doc["status"] == "partial"
+    assert doc["timeline"] is None
+    assert doc["failures"] == ["timeline_snapshot_missing"]
+
+
 def test_draft_node_chain_has_review_gate() -> None:
     draft = build_draft_from_brief("霸总逆袭短剧", genre="逆袭", platform="抖音")
     assert draft.status == "pending_review"
@@ -639,6 +658,42 @@ async def test_creative_production_runtime_persists_to_db_after_memory_clear(
     assert task_row.intent_type == "creative"
     assert task_row.route_source == "fallback"
     assert artifact_rows
+
+
+async def test_production_persists_openable_timeline_after_memory_clear(
+    db_client: AsyncClient,
+) -> None:
+    import xagent.api.v1.creative_studio as creative_api
+    from xagent.domains.creative_studio import persistence as creative_persistence
+
+    token = create_access_token(
+        user_id="u-timeline",
+        tenant_id="timeline-tenant",
+        roles=["member"],
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await db_client.post(
+        "/api/v1/creative-studio/produce",
+        headers=headers,
+        json={"brief": "离线交付测试", "with_video": False},
+    )
+
+    assert response.status_code == 200, response.text
+    produced = response.json()
+    assert produced["status"] == "produced"
+    assert produced["timeline"]["id"] == produced["timeline_id"]
+    assert produced["timeline"]["clips"]
+
+    creative_api._productions.clear()
+    creative_api._persistence_hydrated = False
+    creative_persistence.reset_creative_table_cache()
+    reopened = await db_client.get(
+        f"/api/v1/creative-studio/productions/{produced['storyboard_id']}",
+        headers=headers,
+    )
+
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["timeline"] == produced["timeline"]
 
 
 async def test_creative_media_task_exposes_delivery_summary_via_runs(
