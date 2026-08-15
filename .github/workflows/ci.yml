@@ -87,6 +87,72 @@ jobs:
       - name: License gate (拦截 AGPL/GPL/ELv2/SSPL)
         run: python scripts/license_check.py
 
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Audit locked Python dependencies
+        run: |
+          python -m pip install pip-audit==2.10.0
+          pip-audit -r apps/api/requirements.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            packages/sdk-ts/package-lock.json
+
+      - name: Audit locked Node production dependencies
+        run: |
+          npm --prefix apps/web audit --omit=dev --audit-level=high
+          npm --prefix packages/sdk-ts audit --omit=dev --audit-level=high
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Audit locked Rust dependencies
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked
+          cargo audit --file apps/desktop/Cargo.lock
+
+      - name: Build API image for SBOM
+        run: docker build -t xagent-api:ci-sbom apps/api
+
+      - name: Build web assets and image for SBOM
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+          docker build -t xagent-web:ci-sbom apps/web
+
+      - name: Generate API SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: xagent-api:ci-sbom
+          format: spdx-json
+          output-file: sbom-api.spdx.json
+          upload-artifact: false
+
+      - name: Generate web SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: xagent-web:ci-sbom
+          format: spdx-json
+          output-file: sbom-web.spdx.json
+          upload-artifact: false
+
+      - name: Upload commercial SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-sboms
+          path: sbom-*.spdx.json
+          if-no-files-found: error
+
   config-governance:
     runs-on: ubuntu-latest
     steps:
@@ -137,6 +203,7 @@ jobs:
       - backend
       - frontend
       - license-gate
+      - supply-chain
       - config-governance
       - e2e-api
       - load-test
@@ -415,6 +482,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install release contract dependencies
+        run: python -m pip install pytest==9.1.1 PyYAML==6.0.3
+
+      - name: Test release and container contracts
+        run: >-
+          python -m pytest
+          tests/release/test_release_version_gate.py
+          tests/release/test_container_contract.py
+          tests/release/test_helm_image_contract.py
+          tests/release/test_compose_image_contract.py -q
+
       - name: Verify release versions
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
