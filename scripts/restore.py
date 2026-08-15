@@ -1,150 +1,275 @@
 #!/usr/bin/env python
-"""数据恢复脚本：从备份文件恢复 Postgres + Qdrant。
-
-用法：
-  # 恢复 Postgres
-  python scripts/restore.py --pg-url "postgresql://..." --pg-backup ./backups/pg_backup_20260726.sql
-
-  # 恢复 Qdrant 快照
-  python scripts/restore.py --qdrant-url "http://..." --qdrant-backup ./backups/qdrant_20260726.snapshot
-
-  # 列出可用备份
-  python scripts/restore.py --list ./backups
-"""
+"""Restore a verified commercial backup into a new isolated target."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
+import re
 import subprocess
-import sys
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
+
+SHA_PATTERN = re.compile(r"^[a-f0-9]{40}$")
 
 
-def list_backups(backup_dir: str) -> None:
-    """列出备份目录中的可用备份。"""
-    p = Path(backup_dir)
-    if not p.exists():
-        print(f"❌ 目录不存在: {backup_dir}")
-        return
-
-    files = sorted(p.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True)
-    if not files:
-        print("（无备份文件）")
-        return
-
-    print(f"📂 备份目录: {backup_dir}\n")
-    print(f"{'文件名':<45} {'大小':>10} {'修改时间'}")
-    print("-" * 80)
-    for f in files:
-        if f.is_file():
-            size = f.stat().st_size
-            size_str = f"{size / 1024:.1f} KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f} MB"
-            from datetime import datetime
-            mtime = datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-            print(f"{f.name:<45} {size_str:>10} {mtime}")
+@dataclass(frozen=True)
+class RestoreScope:
+    compose_project: str
+    qdrant_collection: str
+    source_sha: str
 
 
-def restore_postgres(pg_url: str, backup_file: str) -> bool:
-    """从 SQL dump 恢复 Postgres。"""
-    if not os.path.isfile(backup_file):
-        print(f"❌ 备份文件不存在: {backup_file}")
-        return False
-
-    print(f"⏳ 正在恢复 Postgres: {backup_file}")
-    try:
-        with open(backup_file, "r", encoding="utf-8") as f:
-            subprocess.run(
-                ["psql", pg_url],
-                stdin=f,
-                check=True,
-                capture_output=True,
-            )
-        print(f"✅ Postgres 恢复完成: {backup_file}")
-        return True
-    except subprocess.CalledProcessError as exc:
-        print(f"❌ Postgres 恢复失败: {exc.stderr.decode()[:500]}")
-        return False
-    except Exception as exc:
-        print(f"❌ Postgres 恢复失败: {exc}")
-        return False
+def validate_restore_scope(
+    *, compose_project: str, qdrant_collection: str, source_sha: str
+) -> RestoreScope:
+    if SHA_PATTERN.fullmatch(source_sha) is None:
+        raise ValueError("source SHA must be 40 lowercase hexadecimal characters")
+    sha8 = source_sha[:8]
+    if compose_project != f"xagent-restore-{sha8}":
+        raise ValueError("restore project does not match the source SHA")
+    if qdrant_collection != f"xagent_restore_{sha8}":
+        raise ValueError("restore collection does not match the source SHA")
+    return RestoreScope(compose_project, qdrant_collection, source_sha)
 
 
-def restore_qdrant(qdrant_url: str, backup_file: str) -> bool:
-    """从快照恢复 Qdrant collection。"""
+def load_and_verify_manifest(path: Path) -> tuple[dict[str, object], dict[str, Path]]:
+    manifest_path = Path(path).resolve(strict=True)
+    root = manifest_path.parent
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != "1.0":
+        raise ValueError("unsupported backup manifest schema")
+    source_sha = str(manifest.get("source_sha") or "")
+    if SHA_PATTERN.fullmatch(source_sha) is None:
+        raise ValueError("backup manifest has an invalid source SHA")
+    artifacts: dict[str, Path] = {}
+    for item in manifest.get("artifacts", []):
+        relative = Path(str(item["path"]))
+        original = root / relative
+        if original.is_symlink():
+            raise ValueError("backup artifact must not be a symlink")
+        candidate = original.resolve(strict=True)
+        if root not in candidate.parents or not candidate.is_file():
+            raise ValueError("backup artifact escaped the manifest root")
+        payload = candidate.read_bytes()
+        if len(payload) != int(item["size_bytes"]):
+            raise ValueError(f"backup artifact size mismatch: {candidate.name}")
+        if hashlib.sha256(payload).hexdigest() != str(item["sha256"]):
+            raise ValueError(f"backup artifact sha256 mismatch: {candidate.name}")
+        artifacts[candidate.name] = candidate
+    if "postgres.dump" not in artifacts or "qdrant.snapshot" not in artifacts:
+        raise ValueError("backup manifest is missing required database artifacts")
+    return manifest, artifacts
+
+
+def _compose_command(project: str, compose_file: Path, *args: str) -> list[str]:
+    return ["docker", "compose", "-p", project, "-f", str(compose_file), *args]
+
+
+def validate_compose_labels(project: str, compose_file: Path) -> None:
+    listed = subprocess.run(
+        _compose_command(project, compose_file, "ps", "-q"),
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    container_ids = [line.strip() for line in listed.stdout.splitlines() if line.strip()]
+    if not container_ids:
+        raise ValueError("restore project has no running containers")
+    for container_id in container_ids:
+        inspected = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "--format",
+                '{{ index .Config.Labels "com.docker.compose.project" }}',
+                container_id,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if inspected.stdout.strip() != project:
+            raise ValueError("restore container label does not match target project")
+
+
+def ensure_postgres_empty(
+    project: str, compose_file: Path, pg_user: str, pg_database: str
+) -> None:
+    query = (
+        "SELECT count(*) FROM information_schema.tables "
+        "WHERE table_schema NOT IN ('pg_catalog','information_schema');"
+    )
+    result = subprocess.run(
+        _compose_command(
+            project,
+            compose_file,
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "--username",
+            pg_user,
+            "--dbname",
+            pg_database,
+            "--tuples-only",
+            "--no-align",
+            "--command",
+            query,
+        ),
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.stdout.strip() != "0":
+        raise ValueError("target Postgres is not empty")
+
+
+def restore_postgres(
+    *,
+    project: str,
+    compose_file: Path,
+    pg_user: str,
+    pg_database: str,
+    dump_path: Path,
+) -> int:
+    result = subprocess.run(
+        _compose_command(
+            project,
+            compose_file,
+            "exec",
+            "-T",
+            "postgres",
+            "pg_restore",
+            "--exit-on-error",
+            "--no-owner",
+            "--no-privileges",
+            "--username",
+            pg_user,
+            "--dbname",
+            pg_database,
+        ),
+        input=dump_path.read_bytes(),
+        check=True,
+        capture_output=True,
+    )
+    return result.returncode
+
+
+def restore_qdrant(
+    *, qdrant_url: str, collection: str, vector_size: int, snapshot: Path
+) -> int:
     import httpx
 
-    if not os.path.isfile(backup_file):
-        print(f"❌ 备份文件不存在: {backup_file}")
-        return False
-
-    print(f"⏳ 正在恢复 Qdrant: {backup_file}")
-    try:
-        collection = "xagent_memory"
-        # 1. 删除现有 collection（危险操作，需确认）
-        resp = httpx.delete(f"{qdrant_url}/collections/{collection}", timeout=30)
-        if resp.status_code not in (200, 404):
-            print(f"⚠️ 删除旧 collection 返回: {resp.status_code}")
-
-        # 2. 重建 collection
-        resp = httpx.put(
-            f"{qdrant_url}/collections/{collection}",
-            json={"vectors": {"size": 384, "distance": "Cosine"}},
-            timeout=30,
+    base = qdrant_url.rstrip("/")
+    existing = httpx.get(f"{base}/collections/{collection}", timeout=30)
+    if existing.status_code != 404:
+        raise ValueError("target Qdrant collection already exists")
+    created = httpx.put(
+        f"{base}/collections/{collection}",
+        json={"vectors": {"size": vector_size, "distance": "Cosine"}},
+        timeout=30,
+    )
+    created.raise_for_status()
+    with snapshot.open("rb") as stream:
+        uploaded = httpx.post(
+            f"{base}/collections/{collection}/snapshots/upload",
+            files={"snapshot": stream},
+            timeout=300,
         )
-        resp.raise_for_status()
+    uploaded.raise_for_status()
+    return uploaded.status_code
 
-        # 3. 上传快照
-        with open(backup_file, "rb") as f:
-            resp = httpx.post(
-                f"{qdrant_url}/collections/{collection}/snapshots/upload",
-                files={"snapshot": f},
-                timeout=300,
-            )
-            resp.raise_for_status()
 
-        print(f"✅ Qdrant 恢复完成: {backup_file}")
-        return True
-    except Exception as exc:
-        print(f"❌ Qdrant 恢复失败: {exc}")
-        return False
+def _write_json_atomic(path: Path, value: object) -> None:
+    payload = (
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="X-Agent 数据恢复")
-    ap.add_argument("--pg-url", default=os.environ.get("XAGENT_DB__URL", ""))
-    ap.add_argument("--pg-backup", default="", help="Postgres SQL dump 文件路径")
-    ap.add_argument("--qdrant-url", default=os.environ.get("XAGENT_MEMORY__QDRANT_URL", ""))
-    ap.add_argument("--qdrant-backup", default="", help="Qdrant 快照文件路径")
-    ap.add_argument("--list", default="", help="列出指定目录的备份")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--target-project", required=True)
+    parser.add_argument("--target-pg-url", required=True)
+    parser.add_argument("--target-qdrant-url", required=True)
+    parser.add_argument("--target-qdrant-collection", required=True)
+    parser.add_argument("--compose-file", type=Path, required=True)
+    parser.add_argument("--pg-user", default="xagent")
+    parser.add_argument("--pg-database", default="xagent")
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
 
-    if args.list:
-        list_backups(args.list)
-        return 0
+    manifest_path = args.manifest.resolve(strict=True)
+    manifest, artifacts = load_and_verify_manifest(manifest_path)
+    source_sha = str(manifest["source_sha"])
+    scope = validate_restore_scope(
+        compose_project=args.target_project,
+        qdrant_collection=args.target_qdrant_collection,
+        source_sha=source_sha,
+    )
+    parsed_pg_url = urlparse(args.target_pg_url)
+    if parsed_pg_url.scheme not in {"postgres", "postgresql"} or not parsed_pg_url.path:
+        raise ValueError("target Postgres URL is invalid")
+    compose_file = args.compose_file.resolve(strict=True)
+    validate_compose_labels(scope.compose_project, compose_file)
+    ensure_postgres_empty(
+        scope.compose_project, compose_file, args.pg_user, args.pg_database
+    )
 
-    ok = True
-    if args.pg_backup:
-        if not args.pg_url:
-            print("❌ 需要 --pg-url 参数")
-            return 1
-        if not restore_postgres(args.pg_url, args.pg_backup):
-            ok = False
-
-    if args.qdrant_backup:
-        if not args.qdrant_url:
-            print("❌ 需要 --qdrant-url 参数")
-            return 1
-        if not restore_qdrant(args.qdrant_url, args.qdrant_backup):
-            ok = False
-
-    if not args.pg_backup and not args.qdrant_backup:
-        print("请指定 --pg-backup 或 --qdrant-backup，或用 --list 查看可用备份")
-        return 1
-
-    print("\n" + ("✅ 恢复完成" if ok else "❌ 部分恢复失败"))
-    return 0 if ok else 1
+    pg_exit = restore_postgres(
+        project=scope.compose_project,
+        compose_file=compose_file,
+        pg_user=args.pg_user,
+        pg_database=args.pg_database,
+        dump_path=artifacts["postgres.dump"],
+    )
+    qdrant_status = restore_qdrant(
+        qdrant_url=args.target_qdrant_url,
+        collection=scope.qdrant_collection,
+        vector_size=int(manifest.get("qdrant_vector_size", 1536)),
+        snapshot=artifacts["qdrant.snapshot"],
+    )
+    output = (args.output or manifest_path.with_name("restore-manifest.json")).resolve()
+    if manifest_path.parent not in output.parents:
+        raise ValueError("restore manifest must stay inside the rollback evidence root")
+    backup_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    _write_json_atomic(
+        output,
+        {
+            "schema_version": "1.0",
+            "source_sha": source_sha,
+            "source_backup_sha256": backup_hash,
+            "target_project": scope.compose_project,
+            "target_qdrant_collection": scope.qdrant_collection,
+            "postgres_restore_exit_code": pg_exit,
+            "qdrant_restore_status": qdrant_status,
+            "finished_at": datetime.now(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
+        },
+    )
+    print(output)
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
