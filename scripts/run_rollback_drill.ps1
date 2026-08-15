@@ -158,8 +158,12 @@ function Write-RuntimeOverride {
 services:
   api:
     image: {0}
+    environment:
+      XAGENT_LLM__WARMUP_ENABLED: "false"
   worker:
     image: {0}
+    environment:
+      XAGENT_LLM__WARMUP_ENABLED: "false"
   web:
     image: {1}
 '@ -f $ApiImage, $WebImage | Set-Content -LiteralPath $Path -Encoding utf8

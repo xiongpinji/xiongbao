@@ -29,3 +29,9 @@ def test_rollback_drill_pins_compatible_baseline_and_exact_service_switch() -> N
     for service in ("api", "worker", "web"):
         assert f"'{service}'" in text
     assert "worktree remove" in text
+
+
+def test_rollback_runtime_switch_disables_model_warmup() -> None:
+    text = (ROOT / "scripts/run_rollback_drill.ps1").read_text(encoding="utf-8")
+
+    assert 'XAGENT_LLM__WARMUP_ENABLED: "false"' in text
