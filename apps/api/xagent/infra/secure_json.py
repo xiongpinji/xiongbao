@@ -66,7 +66,10 @@ def _restrict_windows_file(path: Path) -> None:
 
 def _get_windows_system32() -> Path:
     buffer = ctypes.create_unicode_buffer(32768)
-    length = ctypes.windll.kernel32.GetSystemDirectoryW(buffer, len(buffer))
+    windll = getattr(ctypes, "windll", None)
+    if windll is None:
+        raise OSError("Windows system APIs are unavailable")
+    length = windll.kernel32.GetSystemDirectoryW(buffer, len(buffer))
     if length <= 0 or length >= len(buffer):
         raise RuntimeError("failed to locate System32")
     system32 = Path(buffer.value)
@@ -78,18 +81,23 @@ def _get_windows_system32() -> Path:
 def _get_windows_identity_unicode() -> str:
     from ctypes import wintypes
 
+    win_dll = getattr(ctypes, "WinDLL", None)
+    win_error = getattr(ctypes, "WinError", None)
+    get_last_error = getattr(ctypes, "get_last_error", None)
+    if win_dll is None or win_error is None or get_last_error is None:
+        raise OSError("Windows identity APIs are unavailable")
     name_sam_compatible = 2
     size = wintypes.ULONG(0)
-    secur32 = ctypes.WinDLL("secur32", use_last_error=True)
+    secur32 = win_dll("secur32", use_last_error=True)
     function = secur32.GetUserNameExW
     function.argtypes = [wintypes.ULONG, wintypes.LPWSTR, ctypes.POINTER(wintypes.ULONG)]
     function.restype = wintypes.BOOL
     function(name_sam_compatible, None, ctypes.byref(size))
     if size.value == 0:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise win_error(get_last_error())
     buffer = ctypes.create_unicode_buffer(size.value)
     if not function(name_sam_compatible, buffer, ctypes.byref(size)):
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise win_error(get_last_error())
     return buffer.value.strip()
 
 
