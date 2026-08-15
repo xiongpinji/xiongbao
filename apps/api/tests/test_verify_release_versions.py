@@ -21,11 +21,27 @@ def _load_version_verifier():
 def _write_release_files(root: Path) -> None:
     (root / "apps" / "api").mkdir(parents=True)
     (root / "apps" / "web").mkdir(parents=True)
+    (root / "apps" / "api" / "xagent").mkdir(parents=True)
+    (root / "apps" / "desktop").mkdir(parents=True)
+    (root / "deploy" / "helm").mkdir(parents=True)
     (root / "apps" / "api" / "pyproject.toml").write_text(
         '[project]\nname = "xagent"\nversion = "1.0.0"\n', encoding="utf-8"
     )
     (root / "apps" / "web" / "package.json").write_text(
         json.dumps({"name": "xagent-web", "version": "1.0.0"}), encoding="utf-8"
+    )
+    (root / "apps" / "api" / "xagent" / "__init__.py").write_text(
+        '__version__ = "1.0.0"\n', encoding="utf-8"
+    )
+    (root / "deploy" / "helm" / "Chart.yaml").write_text(
+        'version: 1.0.0\nappVersion: "1.0.0"\n', encoding="utf-8"
+    )
+    (root / "apps" / "desktop" / "Cargo.toml").write_text(
+        '[package]\nname = "xagent-desktop"\nversion = "1.0.0"\n',
+        encoding="utf-8",
+    )
+    (root / "apps" / "desktop" / "tauri.conf.json").write_text(
+        json.dumps({"version": "1.0.0"}), encoding="utf-8"
     )
     (root / "README.md").write_text(
         "**当前 Web/API 版本：1.0.0**\n", encoding="utf-8"
