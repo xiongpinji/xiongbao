@@ -206,6 +206,7 @@ def main() -> int:
     parser.add_argument("--pg-database", default="xagent")
     parser.add_argument("--api-url")
     parser.add_argument("--token")
+    parser.add_argument("--audit-file", type=Path)
     parser.add_argument("--short-drama-bundle", type=Path, action="append", default=[])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -248,6 +249,15 @@ def main() -> int:
                 output=output_root / "audit.json",
             )
         )
+    if args.audit_file:
+        if args.api_url or args.token:
+            raise ValueError("use either an audit file or API audit parameters")
+        audit_source = args.audit_file.resolve(strict=True)
+        if not audit_source.is_file() or audit_source.is_symlink():
+            raise ValueError("audit export must be a regular file")
+        audit_destination = output_root / "audit.json"
+        shutil.copyfile(audit_source, audit_destination)
+        artifacts.append(audit_destination)
     for index, source in enumerate(args.short_drama_bundle, start=1):
         resolved = source.resolve(strict=True)
         if not resolved.is_file() or resolved.is_symlink():
