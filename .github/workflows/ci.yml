@@ -54,6 +54,63 @@ jobs:
       - name: Test complete API product suite
         run: python scripts/run_backend_commercial_tests.py
 
+  short-drama:
+    name: Short drama offline delivery gate
+    runs-on: ubuntu-latest
+    env:
+      XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER: "null"
+      XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER: "null"
+      XAGENT_MEDIA__DEFAULT_AUDIO_PROVIDER: "null"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Test offline short drama delivery
+        working-directory: apps/api
+        run: |
+          mkdir -p ../../output/ci-short-drama
+          python -m pytest -q \
+            tests/test_creative_delivery_bundle.py \
+            tests/test_creative_studio.py \
+            tests/test_creative_persistence.py \
+            tests/test_pipeline.py \
+            tests/test_audio_providers.py \
+            --junitxml=../../output/ci-short-drama/junit.xml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Audit and load short drama browser contract
+        working-directory: tests/e2e
+        env:
+          E2E_EVIDENCE_DIR: /tmp/xagent-short-drama-contract
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npx playwright test specs/short-drama-delivery.spec.ts \
+            --config playwright.config.ts --list
+
+      - name: Upload non-sensitive short drama test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-drama-test-evidence
+          path: output/ci-short-drama/junit.xml
+          if-no-files-found: error
+          retention-days: 7
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -222,6 +279,7 @@ jobs:
     needs:
       - backend
       - backend-commercial
+      - short-drama
       - frontend
       - license-gate
       - supply-chain
@@ -533,6 +591,7 @@ jobs:
     needs:
       - backend
       - backend-commercial
+      - short-drama
       - frontend
       - license-gate
       - config-governance
