@@ -13,6 +13,28 @@ fn parse_method(method: &str) -> Result<reqwest::Method, String> {
     }
 }
 
+fn normalize_backend_base_url(base: &str) -> Result<String, String> {
+    let base_url = url::Url::parse(base).map_err(|error| error.to_string())?;
+    let host = base_url.host_str().unwrap_or_default();
+    if base_url.scheme() != "http"
+        || !matches!(host, "127.0.0.1" | "localhost" | "::1")
+        || !base_url.username().is_empty()
+        || base_url.password().is_some()
+        || !matches!(base_url.path(), "" | "/")
+        || base_url.query().is_some()
+        || base_url.fragment().is_some()
+    {
+        return Err("backend base URL must be an HTTP loopback origin".to_string());
+    }
+    Ok(base_url.origin().ascii_serialization())
+}
+
+fn configured_backend_base_url() -> Result<String, String> {
+    let value = std::env::var("XAGENT_DESKTOP_API_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8000".to_string());
+    normalize_backend_base_url(&value)
+}
+
 fn build_backend_url(base: &str, path: &str) -> Result<url::Url, String> {
     if !path.starts_with('/')
         || path.starts_with("//")
@@ -21,19 +43,17 @@ fn build_backend_url(base: &str, path: &str) -> Result<url::Url, String> {
     {
         return Err("backend path must be an absolute non-escaping path".to_string());
     }
-    let mut base_url = url::Url::parse(base).map_err(|error| error.to_string())?;
-    let host = base_url.host_str().unwrap_or_default();
-    if base_url.scheme() != "http"
-        || !matches!(host, "127.0.0.1" | "localhost" | "::1")
-        || !base_url.username().is_empty()
-        || base_url.password().is_some()
-    {
-        return Err("backend base URL must use HTTP loopback".to_string());
-    }
+    let normalized_base = normalize_backend_base_url(base)?;
+    let mut base_url = url::Url::parse(&normalized_base).map_err(|error| error.to_string())?;
     base_url.set_path(path);
     base_url.set_query(None);
     base_url.set_fragment(None);
     Ok(base_url)
+}
+
+#[tauri::command]
+fn desktop_api_base_url() -> Result<String, String> {
+    configured_backend_base_url()
 }
 
 pub async fn diagnose_backend(base: &str) -> Result<serde_json::Value, String> {
@@ -59,8 +79,7 @@ async fn call_backend_api(
     token: Option<String>,
     body: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    let base = std::env::var("XAGENT_DESKTOP_API_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:8000".to_string());
+    let base = configured_backend_base_url()?;
     let url = build_backend_url(&base, &path)?;
     let client = reqwest::Client::new();
     let mut req = client.request(parse_method(&method)?, url);
@@ -83,7 +102,10 @@ async fn call_backend_api(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![call_backend_api])
+        .invoke_handler(tauri::generate_handler![
+            call_backend_api,
+            desktop_api_base_url
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -108,6 +130,17 @@ mod tests {
         assert!(build_backend_url("http://127.0.0.1:8000", "//example.com/steal").is_err());
         assert!(build_backend_url("http://127.0.0.1:8000", "/api/v1/../admin").is_err());
         assert!(build_backend_url("http://127.0.0.1:8000", "health").is_err());
+    }
+
+    #[test]
+    fn backend_base_url_rejects_remote_credentials_and_paths() {
+        assert!(normalize_backend_base_url("http://example.com:8000").is_err());
+        assert!(normalize_backend_base_url("http://user@127.0.0.1:8000").is_err());
+        assert!(normalize_backend_base_url("http://127.0.0.1:8000/api").is_err());
+        assert_eq!(
+            normalize_backend_base_url("http://127.0.0.1:8123/").unwrap(),
+            "http://127.0.0.1:8123"
+        );
     }
 
     #[test]

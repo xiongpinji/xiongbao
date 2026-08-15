@@ -275,7 +275,13 @@ class Settings(BaseSettings):
     mode: RunMode = RunMode.lite
     debug: bool = False
     # 生产禁止用 "*"，启动时校验
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://tauri.localhost",
+            "tauri://localhost",
+        ]
+    )
 
     db: DatabaseSettings = Field(default_factory=DatabaseSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)

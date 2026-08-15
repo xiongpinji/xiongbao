@@ -27,6 +27,9 @@
 - 修改：`apps/desktop/src/lib.rs`
 - 修改：`apps/desktop/Cargo.toml`
 - 修改：`apps/desktop/Cargo.lock`
+- 创建：`apps/web/src/api/baseUrl.ts`
+- 修改：`apps/web/src/api/client.ts`、`apps/web/src/main.tsx` 与使用原生 Fetch/SSE 的页面
+- 修改：`apps/api/xagent/infra/settings.py`、`deploy/compose/docker-compose.yml`
 
 - [ ] **步骤 1：先写 URL、路径和方法单元测试**
 
@@ -101,6 +104,8 @@ fn build_backend_url(base: &str, path: &str) -> Result<url::Url, String> {
 ```
 
 `call_backend_api` 从 `XAGENT_DESKTOP_API_URL` 读取 base，缺省 `http://127.0.0.1:8000`；使用 `client.request(parse_method(&method)?, build_backend_url(&base, &path)?)`。错误不得包含 bearer token 或请求 body。
+
+安装包可视验收补充要求：Rust 同时暴露只返回规范化 loopback origin 的 `desktop_api_base_url` 命令。Web 启动必须等待该命令，并让 Axios、Fetch 与 SSE 统一使用返回的 origin；普通浏览器构建继续使用相对 `/api/v1`。Windows API CORS 允许 `http://tauri.localhost`，跨平台候选同时允许 `tauri://localhost`，不得使用通配符。
 
 - [ ] **步骤 4：运行 Rust 质量门**
 
@@ -389,7 +394,7 @@ $installer = $installers[0].FullName
 pwsh -NoProfile -File scripts/verify_desktop_installer.ps1 -Installer $installer -SourceSha $sha
 ```
 
-预期：安装、诊断、首次 GUI、关闭、重启、卸载全部 PASS；证据 JSON 记录精确 PID/路径/退出码且不含 token。用 computer-use 技能打开一次安装后的 GUI，确认标题为 `X-Agent`、Web 内容渲染且能访问本地 API，再按应用内关闭；截图写到该 SHA 的 desktop evidence 目录。
+预期：安装、诊断、首次 GUI、关闭、重启、卸载全部 PASS；证据 JSON 记录精确 PID/路径/退出码且不含 token。用 computer-use 技能打开一次安装后的 GUI，确认标题为 `X-Agent`、Web 内容渲染，并用隔离测试账号真实登录进入主工作台；截图写到该 SHA 的 desktop evidence 目录，再按应用内关闭。
 
 - [ ] **步骤 6：提交 installer verifier**
 

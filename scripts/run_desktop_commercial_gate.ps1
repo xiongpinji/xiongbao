@@ -155,7 +155,7 @@ try {
         @(
             @{ command = 'cargo fmt --check'; exit_code = 0; passed = 1; failed = 0; skipped = 0 }
             @{ command = 'cargo clippy -D warnings'; exit_code = 0; passed = 1; failed = 0; skipped = 0 }
-            @{ command = 'cargo test --locked'; exit_code = 0; passed = 4; failed = 0; skipped = 0 }
+            @{ command = 'cargo test --locked'; exit_code = 0; passed = 5; failed = 0; skipped = 0 }
             @{ command = 'cargo audit'; exit_code = 0; passed = 1; failed = 0; skipped = 0 }
             @{ command = 'npm ci and build'; exit_code = 0; passed = 2; failed = 0; skipped = 0 }
             @{ command = 'cargo tauri build --bundles msi,nsis'; exit_code = 0; passed = 2; failed = 0; skipped = 0 }
