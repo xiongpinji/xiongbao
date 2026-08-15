@@ -24,3 +24,12 @@ def test_gate_script_writes_shared_schema(script: str, gate: str) -> None:
     assert "commands" in text
     assert "artifacts" in text
     assert "not_authorized" in text
+
+
+def test_kernel_gate_imports_api_from_the_current_worktree() -> None:
+    text = (ROOT / "scripts/run_commercial_kernel_gate.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "$env:PYTHONPATH" in text
+    assert "Join-Path $RepoRoot 'apps/api'" in text

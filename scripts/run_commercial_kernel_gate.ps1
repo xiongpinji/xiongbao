@@ -52,6 +52,12 @@ function Resolve-PythonCommand {
 
 $pythonCommand = Resolve-PythonCommand
 $env:PYTHONNOUSERSITE = '1'
+$currentApiPath = Join-Path $RepoRoot 'apps/api'
+if ($env:PYTHONPATH) {
+    $env:PYTHONPATH = $currentApiPath + [System.IO.Path]::PathSeparator + $env:PYTHONPATH
+} else {
+    $env:PYTHONPATH = $currentApiPath
+}
 try {
     Start-Transcript -LiteralPath $transcriptPath -Force | Out-Null
     $transcriptStarted = $true
