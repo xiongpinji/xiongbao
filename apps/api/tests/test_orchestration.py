@@ -1045,6 +1045,41 @@ class _RequiredWriteThenEmptySummaryLLM(LiteLLMClient):
         return True
 
 
+class _RequiredWriteThenBriefSummaryLLM(LiteLLMClient):
+    """必需写入成功后返回简短总结，但不含通用完成关键词。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": "call_write",
+                        "function": {
+                            "name": "file_write",
+                            "arguments": '{"path":"artifact.txt","content":"ok"}',
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(delta_content="文件已写入。", finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="文件已写入。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
 class _RejectedThenSuccessfulFileWriteLLM(LiteLLMClient):
     """流式：先尝试越界路径被拒绝，再写入合法产物。"""
 
@@ -1264,6 +1299,34 @@ async def test_required_tool_success_survives_empty_summary(monkeypatch) -> None
     assert "artifact.txt" in run.final_answer
     assert "1 次工具调用, 成功率 100%" in run.final_answer
     assert any(event.kind == StepKind.final for event in run.events)
+
+
+async def test_required_tool_success_accepts_brief_summary_without_looping(
+    monkeypatch,
+) -> None:
+    llm = _RequiredWriteThenBriefSummaryLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert run.final_answer.startswith("文件已写入。")
+    assert llm.calls == 2
 
 
 @pytest.mark.parametrize(

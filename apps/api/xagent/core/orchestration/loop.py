@@ -839,7 +839,31 @@ def _is_tool_echo(text: str) -> bool:
     return False
 
 
-def _detect_final_answer(content: str, state: AgentState) -> bool:
+def _required_tool_completion_content(
+    content: str,
+    required_tool: str | None,
+    required_tool_seen: bool,
+    changed_files: list[str],
+) -> tuple[str, bool]:
+    has_evidence = bool(required_tool and required_tool_seen and changed_files)
+    if not has_evidence:
+        return content, False
+    if content.strip() and not _is_tool_echo(content):
+        return content, True
+    changed = "、".join(changed_files[:10])
+    return (
+        f"必需工具 {required_tool} 已成功执行，"
+        f"真实变更已记录：{changed}。全部完成。",
+        True,
+    )
+
+
+def _detect_final_answer(
+    content: str,
+    state: AgentState,
+    *,
+    required_tool_evidence: bool = False,
+) -> bool:
     """智能判断 LLM 输出是否为真正的最终回答。
 
     策略：综合多个信号判断，避免误判中间规划为最终回答。
@@ -890,10 +914,13 @@ def _detect_final_answer(content: str, state: AgentState) -> bool:
         return False
     # 规则 3：有询问 → 中间
     # (已在上面处理)
-    # 规则 4：之前有工具调用 + 文本较短(<800字) + 无完成证据 → 中间
+    # 规则 4：必需工具已产生真实变更后，简短总结即可收敛。
+    if required_tool_evidence:
+        return True
+    # 规则 5：之前有工具调用 + 文本较短(<800字) + 无完成证据 → 中间
     if has_recent_tools and len(text) < 800 and not has_final_evidence:
         return False
-    # 规则 5：步数很少(<3)且无完成证据 → 可能是第一轮分析，允许终止
+    # 规则 6：步数很少(<3)且无完成证据 → 可能是第一轮分析，允许终止
     #   但如果用户 goal 含多个子任务（数字列表），则不允许
     if state.step <= 2 and not has_final_evidence:
         # 检查 goal 是否含多步骤
@@ -2095,9 +2122,18 @@ async def run_agent(
                               ),
                           ))
                           continue
-                      content_buf = await _handle_empty_or_echo(
-                          content_buf, state, llm, target_model
+                      content_buf, _required_tool_evidence = (
+                          _required_tool_completion_content(
+                              content_buf,
+                              required_first_tool,
+                              _required_tool_seen,
+                              _changed_files,
+                          )
                       )
+                      if not _required_tool_evidence:
+                          content_buf = await _handle_empty_or_echo(
+                              content_buf, state, llm, target_model
+                          )
                       await _emit(
                           StepEvent(kind=StepKind.reason, content=content_buf, step=state.step)
                       )
@@ -2105,7 +2141,11 @@ async def run_agent(
 
                       # ── 防过早终止：智能完成检测 ──
                       # 策略：综合判断是否为真正的最终回答
-                      _is_final = _detect_final_answer(content_buf, state)
+                      _is_final = _detect_final_answer(
+                          content_buf,
+                          state,
+                          required_tool_evidence=_required_tool_evidence,
+                      )
                       if not _is_final and state.step < _effective_max_steps - 2:
                           # 不是最终回答 → 注入继续指令
                           state.messages.append(Message(
@@ -2127,7 +2167,12 @@ async def run_agent(
                           state.final_answer = content_buf
 
                       # ── 自反思：有编辑操作时，完成前做一次质量检查 ──
-                      if _edit_count > 0 and not _did_reflect and state.step < _effective_max_steps - 1:
+                      if (
+                          _edit_count > 0
+                          and not _did_reflect
+                          and not _required_tool_evidence
+                          and state.step < _effective_max_steps - 1
+                      ):
                           _did_reflect = True
                           state.messages.append(Message(
                               role="user",
@@ -2144,13 +2189,23 @@ async def run_agent(
                       # ── 最终回答质量门控：防空/过短/回显 ──
                       _fa = (state.final_answer or "").strip()
                       if len(_fa) < 10 and state.step > 1:
-                          # 回答过短，要求模型补充
-                          state.messages.append(Message(
-                              role="user",
-                              content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
-                          ))
-                          state.final_answer = ""
-                          continue
+                          if _required_tool_evidence:
+                              evidence, _ = _required_tool_completion_content(
+                                  "",
+                                  required_first_tool,
+                                  _required_tool_seen,
+                                  _changed_files,
+                              )
+                              _fa = f"{_fa} {evidence}".strip()
+                              state.final_answer = _fa
+                          else:
+                              # 回答过短，要求模型补充
+                              state.messages.append(Message(
+                                  role="user",
+                                  content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
+                              ))
+                              state.final_answer = ""
+                              continue
 
                       _terminal_success = True
                       state.finished = True
@@ -2405,16 +2460,29 @@ async def run_agent(
                       ))
                       continue
 
-                  content_buf_ns = await _handle_empty_or_echo(
-                      resp.content, state, llm, target_model
+                  content_buf_ns, _required_tool_evidence = (
+                      _required_tool_completion_content(
+                          resp.content,
+                          required_first_tool,
+                          _required_tool_seen,
+                          _changed_files,
+                      )
                   )
+                  if not _required_tool_evidence:
+                      content_buf_ns = await _handle_empty_or_echo(
+                          resp.content, state, llm, target_model
+                      )
                   await _emit(
                       StepEvent(kind=StepKind.reason, content=content_buf_ns, step=state.step)
                   )
                   state.messages.append(Message(role="assistant", content=content_buf_ns))
 
                   # 防过早终止（非流式路径）— 智能完成检测
-                  _is_final_ns = _detect_final_answer(content_buf_ns, state)
+                  _is_final_ns = _detect_final_answer(
+                      content_buf_ns,
+                      state,
+                      required_tool_evidence=_required_tool_evidence,
+                  )
                   if not _is_final_ns and state.step < _effective_max_steps - 2:
                       state.messages.append(Message(
                           role="user",
