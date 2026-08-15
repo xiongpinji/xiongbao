@@ -6,7 +6,19 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 
+import pytest
+from httpx import ASGITransport, AsyncClient
 from xagent.domains.creative_studio.delivery_bundle import build_delivery_bundle
+from xagent.enterprise.auth import create_access_token
+from xagent.main import create_app
+
+
+@pytest.fixture
+async def client() -> AsyncClient:
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as http_client:
+        yield http_client
 
 
 def sample_production(
@@ -95,3 +107,46 @@ def test_bundle_is_byte_for_byte_deterministic(tmp_path: Path) -> None:
     second = build_delivery_bundle(production, allowed_roots=(tmp_path,))
 
     assert first == second
+
+
+async def test_bundle_download_reopens_and_is_tenant_isolated(
+    client: AsyncClient,
+) -> None:
+    import xagent.api.v1.creative_studio as creative_api
+
+    token_a = create_access_token(user_id="a", tenant_id="bundle-a", roles=["member"])
+    token_b = create_access_token(user_id="b", tenant_id="bundle-b", roles=["member"])
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+    create_response = await client.post(
+        "/api/v1/creative-studio/produce",
+        headers=headers_a,
+        json={"brief": "交付包租户测试", "with_video": False},
+    )
+    assert create_response.status_code == 200, create_response.text
+    produced = create_response.json()
+    storyboard_id = produced["storyboard_id"]
+    creative_api._productions.clear()
+
+    response = await client.get(
+        f"/api/v1/creative-studio/productions/{storyboard_id}/bundle",
+        headers=headers_a,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("application/zip")
+    assert (
+        f'filename="short-drama-{storyboard_id}.zip"'
+        in response.headers["content-disposition"]
+    )
+    with ZipFile(BytesIO(response.content)) as archive:
+        assert archive.testzip() is None
+        bundled = json.loads(archive.read("production.json"))
+        assert bundled["storyboard_id"] == storyboard_id
+        assert bundled["timeline"] == produced["timeline"]
+
+    forbidden = await client.get(
+        f"/api/v1/creative-studio/productions/{storyboard_id}/bundle",
+        headers=headers_b,
+    )
+    assert forbidden.status_code == 404
