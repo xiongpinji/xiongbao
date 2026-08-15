@@ -41,3 +41,15 @@ def test_supply_chain_job_is_fail_closed_and_emits_both_sboms() -> None:
     assert sum(item.startswith("anchore/sbom-action@") for item in uses) == 2
     assert any(item.startswith("actions/upload-artifact@") for item in uses)
     assert "supply-chain" in workflow["jobs"]["docker-build"]["needs"]
+
+
+def test_full_backend_gate_is_separate_from_fast_feedback() -> None:
+    workflow = _workflow()
+    assert workflow["jobs"]["backend"]["name"] == "Backend fast feedback (Web/API scope)"
+
+    commercial = workflow["jobs"]["backend-commercial"]
+    commands = "\n".join(
+        str(step.get("run", "")) for step in commercial["steps"]
+    )
+    assert "python scripts/run_backend_commercial_tests.py" in commands
+    assert "backend-commercial" in workflow["jobs"]["release"]["needs"]
