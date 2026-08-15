@@ -206,6 +206,85 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  commercial-kernel:
+    name: Commercial kernel contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify kernel contracts
+        run: >-
+          python -m pytest -q
+          tests/release/test_release_version_gate.py
+          tests/release/test_r2_preflight.py
+          tests/release/test_migrate_llm_overrides.py
+          tests/release/test_container_contract.py
+          tests/release/test_helm_image_contract.py
+          tests/security/test_scan.py
+          apps/api/tests/test_secure_json.py
+          apps/api/tests/test_llm_config_security.py
+
+  commercial-evidence:
+    name: Aggregate CI component evidence
+    runs-on: ubuntu-latest
+    needs:
+      - commercial-kernel
+      - backend-commercial
+      - frontend
+      - short-drama
+      - desktop
+      - supply-chain
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write bounded component evidence
+        env:
+          XAGENT_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p output/ci-commercial-evidence
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = {
+              "schema_version": "1.0",
+              "source_sha": os.environ["XAGENT_SOURCE_SHA"],
+              "classification": "ci_component_evidence",
+              "components": {
+                  name: "passed_by_needs"
+                  for name in (
+                      "commercial-kernel", "backend-commercial", "frontend",
+                      "short-drama", "desktop", "supply-chain",
+                  )
+              },
+              "local_installer_lifecycle": "not_available_in_ci",
+              "real_local_model": "not_available_in_ci",
+              "rollback_drill": "not_available_in_ci",
+              "remote_release": "not_authorized",
+          }
+          path = Path("output/ci-commercial-evidence/component-evidence.json")
+          path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload commercial component evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-component-evidence
+          path: output/ci-commercial-evidence/component-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+
   license-gate:
     runs-on: ubuntu-latest
     steps:
@@ -342,6 +421,7 @@ jobs:
       - short-drama
       - frontend
       - desktop
+      - commercial-evidence
       - license-gate
       - supply-chain
       - config-governance
@@ -351,7 +431,8 @@ jobs:
       - release-version
     if: >-
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
+      vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     permissions:
       contents: read
       packages: write
@@ -655,6 +736,7 @@ jobs:
       - short-drama
       - frontend
       - desktop
+      - commercial-evidence
       - license-gate
       - config-governance
       - docker-build
@@ -662,7 +744,9 @@ jobs:
       - load-test
       - promptfoo-eval
       - release-version
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
