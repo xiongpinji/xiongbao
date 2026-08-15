@@ -868,6 +868,7 @@ def _detect_final_answer(content: str, state: AgentState) -> bool:
     _FINAL_EVIDENCE = (
         "passed", "failed", "测试通过", "测试失败",
         "全部完成", "所有测试通过", "所有子任务已完成",
+        "所有子任务执行完毕",
         "项目完成总结", "开发完成", "✅ 全部",
         "exit code: 0", "RETURNCODE: 0",
     )

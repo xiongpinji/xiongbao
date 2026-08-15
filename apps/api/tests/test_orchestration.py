@@ -11,8 +11,13 @@ from xagent.adapters.tools.base import ToolResult
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
 from xagent.core.orchestration.conversation import get_conversation_manager
-from xagent.core.orchestration.loop import run_agent as run_agent_builtin
-from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
+from xagent.core.orchestration.loop import (
+    _detect_final_answer,
+)
+from xagent.core.orchestration.loop import (
+    run_agent as run_agent_builtin,
+)
+from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, StepKind
 from xagent.core.skills import SkillStore
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
@@ -32,6 +37,23 @@ def test_agent_run_status_fields_preserve_positional_events_compatibility() -> N
     assert run.events == [event]
     assert run.status == "succeeded"
     assert run.error == ""
+
+
+def test_detect_final_answer_accepts_executed_all_subtasks_summary() -> None:
+    state = AgentState(goal="create artifact", role_name="developer", tenant_id="t1")
+    state.messages.append(
+        Message(
+            role="tool",
+            name="file_write",
+            tool_call_id="call-1",
+            content="[file_write 执行成功] 已写入 R2_AGENT_RESULT.md",
+        )
+    )
+
+    assert _detect_final_answer(
+        "✅ 所有子任务执行完毕\n最终结果：R2_AGENT_RESULT.md 已正确创建",
+        state,
+    )
 
 
 async def test_run_agent_converges_offline() -> None:
