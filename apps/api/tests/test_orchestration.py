@@ -976,6 +976,85 @@ class _RequiredStreamingFileWriteLLM(LiteLLMClient):
         return True
 
 
+class _RejectedThenSuccessfulFileWriteLLM(LiteLLMClient):
+    """流式：先尝试越界路径被拒绝，再写入合法产物。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls <= 2:
+            path = "../outside.txt" if self.calls == 1 else "artifact.txt"
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": f"call_{self.calls}",
+                        "function": {
+                            "name": "file_write",
+                            "arguments": (
+                                '{"path":"' + path + '","content":"ok"}'
+                            ),
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(
+            delta_content="开发任务已全部完成并写入合法产物。",
+            finished=True,
+        )
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _RejectedThenSuccessfulNonStreamingFileWriteLLM(LLMClient):
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        from xagent.adapters.llm.base import ToolCall
+
+        self.calls += 1
+        if self.calls <= 2:
+            path = "../outside.txt" if self.calls == 1 else "artifact.txt"
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(
+                        id=f"call_{self.calls}",
+                        name="file_write",
+                        args={"path": path, "content": "ok"},
+                    )
+                ],
+            )
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def health(self) -> bool:
+        return True
+
+
 class _FileWriteRegistry:
     def specs(self) -> list[dict]:
         return [
@@ -998,6 +1077,62 @@ class _FileWriteRegistry:
 
     async def call(self, name, args, ctx):  # noqa: ARG002
         return ToolResult(ok=True, output="written")
+
+
+class _RejectingFileWriteRegistry(_FileWriteRegistry):
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        if args.get("path") == "../outside.txt":
+            return ToolResult(ok=False, error="写入路径必须位于 workspace 内")
+        return ToolResult(ok=True, output="written")
+
+
+@pytest.mark.parametrize(
+    "llm_type",
+    [
+        _RejectedThenSuccessfulFileWriteLLM,
+        _RejectedThenSuccessfulNonStreamingFileWriteLLM,
+    ],
+    ids=["stream", "non-stream"],
+)
+async def test_failed_file_write_is_not_persisted_as_changed_file(
+    monkeypatch, llm_type
+) -> None:
+    llm = llm_type()
+    checkpoint_files: list[list[str]] = []
+
+    async def capture_checkpoint(*args, **kwargs):  # noqa: ARG001
+        checkpoint_files.append(list(args[4]))
+
+    async def verification_passes(*args, **kwargs):  # noqa: ARG001
+        return True, "ok"
+
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _RejectingFileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._run_verification", verification_passes
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.checkpoint.save_checkpoint_snapshot",
+        capture_checkpoint,
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert run.status == "succeeded"
+    assert checkpoint_files == [["artifact.txt"]]
 
 
 async def test_required_first_tool_retries_once_after_plain_text(monkeypatch) -> None:

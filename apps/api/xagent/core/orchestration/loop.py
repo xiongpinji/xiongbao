@@ -1874,6 +1874,7 @@ async def run_agent(
                       else:
                           # ══ 顺序路径：含编辑工具时逐个执行 ══
                           for tc_name, tc_id, tc_args in _parsed_calls:
+                              _edit_succeeded = False
                               _trace_seq += 1
                               await _emit(
                                   StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step, trace_id=f"s{state.step}-{_trace_seq}")
@@ -1938,6 +1939,7 @@ async def run_agent(
                                               if not isinstance(result.output, str)
                                               else result.output
                                           )
+                                          _edit_succeeded = True
                                           _consecutive_errors = 0
                                       else:
                                           result_text = f"[错误] {result.error}"
@@ -1962,7 +1964,7 @@ async def run_agent(
                                                           result_text += f"\n[系统已自动读取文件] 以下是 {_fail_path} 的当前内容，请从中复制精确的 old_text 重试：\n{_retry_txt[:2000]}"
                                                   except Exception:  # noqa: S110
                                                       pass
-                              if tc_name in _EDIT_TOOLS:
+                              if tc_name in _EDIT_TOOLS and _edit_succeeded:
                                   _had_edit = True
                                   _edit_count += 1
                                   _fp = tc_args.get("path", "")
@@ -2237,6 +2239,7 @@ async def run_agent(
                       else:
                           # 顺序路径（含编辑工具）
                           for tc in resp.tool_calls:
+                              _edit_succeeded = False
                               await _emit(
                                   StepEvent(kind=StepKind.tool_call, tool=tc.name, content=tc.args, step=state.step)
                               )
@@ -2269,6 +2272,7 @@ async def run_agent(
                                           if not isinstance(result.output, str)
                                           else result.output
                                       )
+                                      _edit_succeeded = True
                                       _consecutive_errors = 0
                                   else:
                                       result_text = f"[错误] {result.error}"
@@ -2278,7 +2282,7 @@ async def run_agent(
                                       # ── 重复错误检测 ──
                                       _err_sig = f"{tc.name}:{str(result.error)[:80]}"
                                       _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
-                              if tc.name in _EDIT_TOOLS:
+                              if tc.name in _EDIT_TOOLS and _edit_succeeded:
                                   _had_edit_ns = True
                                   _edit_count += 1
                                   _fp = tc.args.get("path", "")
