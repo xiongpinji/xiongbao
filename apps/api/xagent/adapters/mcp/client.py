@@ -20,11 +20,11 @@ from pathlib import Path
 from typing import Any
 
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.mcp")
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_CONFIG_PATH = _PROJECT_ROOT / "data" / "mcp_servers.json"
+_CONFIG_PATH = data_path("mcp_servers.json")
 
 
 @dataclass

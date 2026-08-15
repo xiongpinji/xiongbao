@@ -26,7 +26,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: post-deploy-summary
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "xagent.image" .Values.image | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - python
@@ -54,7 +54,7 @@ spec:
               memory: "512Mi"
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1000
+            runAsUser: 10001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -63,5 +63,5 @@ spec:
         - name: summary-data
           emptyDir: {}
       securityContext:
-        fsGroup: 1000
+        fsGroup: 10001
 {{- end }}

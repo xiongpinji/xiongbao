@@ -16,6 +16,7 @@ from xagent.domains.creative_studio.editor.models import (
     TrackType,
 )
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.editor")
 
@@ -23,9 +24,9 @@ logger = get_logger("xagent.editor")
 class VideoEditor:
     """视频剪辑引擎。"""
 
-    def __init__(self, output_dir: str = "./data/renders") -> None:
-        self._output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+    def __init__(self, output_dir: str | None = None) -> None:
+        self._output_dir = output_dir or str(data_path("renders"))
+        os.makedirs(self._output_dir, exist_ok=True)
 
     def has_moviepy(self) -> bool:
         try:

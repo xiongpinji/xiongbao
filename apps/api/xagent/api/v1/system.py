@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -12,6 +10,7 @@ from xagent.adapters.tools import get_tool_registry
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 from xagent.infra.secrets import is_secret_ref, resolve_secret
 from xagent.infra.secure_json import write_private_json
 from xagent.infra.settings import RunMode, get_settings
@@ -96,9 +95,7 @@ async def capabilities(
 
 # 运行时 LLM 配置覆盖持久化文件（非密字段和 secretRef 才会写入）。
 # 明文密钥仅在当前进程生效，响应会明确标注 session_only。
-_LLM_OVERRIDES_PATH = (
-    Path(__file__).resolve().parents[4] / "data" / "llm_config_overrides.json"
-)
+_LLM_OVERRIDES_PATH = data_path("llm_config_overrides.json")
 # 允许通过 API 覆盖的 LLM 字段白名单
 _LLM_OVERRIDABLE_FIELDS = (
     "default_model",

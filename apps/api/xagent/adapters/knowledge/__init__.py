@@ -9,6 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.knowledge")
 
@@ -31,7 +32,8 @@ class KnowledgeRetriever:
             from lightrag.utils import EmbeddingFunc
 
             self._rag = LightRAG(
-                working_dir=os.environ.get("XAGENT_KNOWLEDGE_DIR", "./data/knowledge"),
+                working_dir=os.environ.get("XAGENT_KNOWLEDGE_DIR")
+                or str(data_path("knowledge")),
                 embedding=EmbeddingFunc(
                     model="text-embedding-3-small",
                     api_key=os.environ.get("XAGENT_LLM__OPENAI_API_KEY", ""),

@@ -22,6 +22,7 @@ from typing import cast
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from xagent.infra.paths import data_path
 from xagent.infra.secrets import resolve_settings_secrets
 
 
@@ -132,7 +133,7 @@ class MediaSettings(BaseModel):
     default_image_provider: str = "null"   # null | openai
     default_video_provider: str = "null"   # null | kling | jimeng | generic
     default_audio_provider: str = "null"   # null | edge_tts（免 key 但需外网，故默认 null）
-    tts_output_dir: str = "./data/tts"     # TTS 合成音频落盘目录
+    tts_output_dir: str = Field(default_factory=lambda: str(data_path("tts")))
 
     # 图像（OpenAI 兼容）
     openai_image_api_key: str = ""
@@ -182,7 +183,9 @@ class RecoverySettings(BaseModel):
     max_consecutive_llm_timeouts: int = 3
     fallback_on_llm_failure: bool = True
     worker_restart_threshold: int = 5
-    evidence_output_dir: str = "./data/recovery-evidence"
+    evidence_output_dir: str = Field(
+        default_factory=lambda: str(data_path("recovery-evidence"))
+    )
 
 
 class SecuritySettings(BaseModel):

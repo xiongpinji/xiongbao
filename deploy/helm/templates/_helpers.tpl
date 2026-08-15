@@ -6,6 +6,17 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
+Render an immutable digest when supplied, otherwise the explicit release tag.
+*/}}
+{{- define "xagent.image" -}}
+{{- if .digest -}}
+{{ printf "%s@%s" .repository .digest }}
+{{- else -}}
+{{ printf "%s:%s" .repository .tag }}
+{{- end -}}
+{{- end }}
+
+{{/*
 Create a default fully qualified app name.
 */}}
 {{- define "xagent.fullname" -}}

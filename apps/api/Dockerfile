@@ -1,29 +1,47 @@
-FROM python:3.11-slim AS base
+FROM python:3.11-slim AS builder
 
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
-WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1
+WORKDIR /build
 
-# 系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libffi-dev curl git && rm -rf /var/lib/apt/lists/*
+COPY requirements.lock build-requirements.lock ./
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --require-hashes -r requirements.lock \
+    && python -m venv /opt/build-venv \
+    && /opt/build-venv/bin/pip install --no-cache-dir --require-hashes -r build-requirements.lock
 
-# 先复制元数据 + 源码（pyproject 引用 README，需一并复制）
 COPY pyproject.toml README.md ./
 COPY xagent ./xagent
-# 装构建后端再装包（非 editable，避免 hatchling editable 元数据问题）
-RUN pip install --upgrade pip hatchling && pip install ".[dev]" && \
-    pip install "bcrypt==4.0.1" --force-reinstall --no-deps
+RUN /opt/build-venv/bin/pip wheel --no-build-isolation --no-deps --wheel-dir /tmp/wheels . \
+    && /opt/venv/bin/pip install --no-cache-dir --no-deps /tmp/wheels/xagent-*.whl
 
-# 移除 /app 下的源码副本：cwd 在 sys.path 中会遮蔽 site-packages 已安装包，
-# 而 settings.py 按安装布局（parents[4]）推算项目根，/app/xagent 布局过浅会导致 IndexError。
-RUN rm -rf /app/xagent
 
+FROM python:3.11-slim AS runtime
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    XAGENT_DATA_DIR=/data
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 xagent \
+    && useradd --uid 10001 --gid 10001 --no-create-home xagent
+
+COPY --from=builder /opt/venv /opt/venv
+WORKDIR /app
 COPY migrations ./migrations
-COPY scripts/auto_archive_evidence.py scripts/collect_ops_evidence.py ./scripts/
-COPY alembic.ini ./
+COPY alembic.ini ./alembic.ini
+COPY scripts/post_deploy_summary.py ./scripts/post_deploy_summary.py
+COPY scripts/collect_ops_evidence.py ./scripts/collect_ops_evidence.py
+COPY scripts/auto_archive_evidence.py ./scripts/auto_archive_evidence.py
 
+RUN mkdir -p /data \
+    && chown 10001:10001 /data
+
+USER 10001:10001
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -fsS http://localhost:8000/health || exit 1
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
 
 CMD ["uvicorn", "xagent.main:app", "--host", "0.0.0.0", "--port", "8000"]
