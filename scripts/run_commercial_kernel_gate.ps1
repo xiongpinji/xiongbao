@@ -89,7 +89,7 @@ try {
             throw 'Windows preflight did not create its isolated output'
         }
 
-        Invoke-Checked 'pip-audit' '-r' 'apps/api/requirements.lock'
+        Invoke-Checked 'pip-audit' '-r' 'apps/api/requirements.lock' '--no-deps' '--disable-pip'
         Invoke-Checked 'npm' '--prefix' 'apps/web' 'audit' '--omit=dev' '--audit-level=high'
         Invoke-Checked 'npm' '--prefix' 'packages/sdk-ts' 'audit' '--omit=dev' '--audit-level=high'
         Invoke-Checked 'cargo' 'audit' '--file' 'apps/desktop/Cargo.lock'

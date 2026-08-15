@@ -43,3 +43,14 @@ def test_kernel_gate_uses_the_preflight_cli_contract() -> None:
     assert "'--init-env' $temporaryEnv" in text
     assert "'--output' $temporaryReport" in text
     assert "'scripts/r2_preflight.py' 'init-env'" not in text
+
+
+def test_kernel_gate_audits_the_cross_platform_lock_without_installing() -> None:
+    text = (ROOT / "scripts/run_commercial_kernel_gate.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "Invoke-Checked 'pip-audit' '-r' 'apps/api/requirements.lock' "
+        "'--no-deps' '--disable-pip'"
+    ) in text
