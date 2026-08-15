@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_rollback_drill_uses_only_audited_projects() -> None:
     text = (ROOT / "scripts/run_rollback_drill.ps1").read_text(encoding="utf-8")
 
-    assert "xagent-commercial-" in text
+    assert "xagent-rollback-candidate-" in text
+    assert 'candidate project must be new and empty' in text
     assert "xagent-restore-" in text
     assert "com.docker.compose.project" in text
     assert "backup-manifest.json" in text

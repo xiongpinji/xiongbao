@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0 -or $worktreeStatus) {
 if ($LASTEXITCODE -ne 0) { throw 'Docker engine is unavailable' }
 
 $sha8 = $sourceSha.Substring(0, 8)
-$candidateProject = "xagent-commercial-$sha8"
+$candidateProject = "xagent-rollback-candidate-$sha8"
 $restoreProject = "xagent-restore-$sha8"
 $candidateCollection = "xagent_memory_$sha8"
 $restoreCollection = "xagent_restore_$sha8"
@@ -102,6 +102,22 @@ function Assert-ProjectLabels {
         if ($LASTEXITCODE -ne 0 -or $label -ne $Project) {
             throw "container label does not match audited project $Project"
         }
+    }
+}
+
+function Assert-ProjectAbsent {
+    param(
+        [Parameter(Mandatory = $true)][string]$Project,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+    $containers = @(& docker ps -a -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker containers' }
+    $volumes = @(& docker volume ls -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker volumes' }
+    $networks = @(& docker network ls -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker networks' }
+    if ($containers.Count -ne 0 -or $volumes.Count -ne 0 -or $networks.Count -ne 0) {
+        throw $FailureMessage
     }
 }
 
@@ -235,6 +251,8 @@ try {
 
     Set-DrillPorts -Scope candidate
     $candidateFiles = @($composePath, $candidateOverride)
+    Assert-ProjectAbsent -Project $candidateProject `
+        -FailureMessage 'candidate project must be new and empty'
     Invoke-Compose -Project $candidateProject -Files $candidateFiles 'up' '-d' '--build' 'postgres' 'redis' 'qdrant' 'api' 'worker' 'web'
     foreach ($service in @('postgres', 'redis', 'qdrant', 'api', 'worker')) {
         Wait-ComposeService -Project $candidateProject -Files $candidateFiles -Service $service
@@ -261,10 +279,8 @@ try {
 
     Set-DrillPorts -Scope restore
     $restoreFiles = @($composePath, $candidateOverride)
-    $existingRestoreIds = @(& docker compose -p $restoreProject -f $composePath -f $candidateOverride ps -a -q)
-    if ($LASTEXITCODE -ne 0 -or $existingRestoreIds.Count -ne 0) {
-        throw 'restore project must be new and empty'
-    }
+    Assert-ProjectAbsent -Project $restoreProject `
+        -FailureMessage 'restore project must be new and empty'
     Invoke-Compose -Project $restoreProject -Files $restoreFiles 'up' '-d' 'postgres' 'redis' 'qdrant'
     foreach ($service in @('postgres', 'redis', 'qdrant')) {
         Wait-ComposeService -Project $restoreProject -Files $restoreFiles -Service $service
