@@ -20,7 +20,9 @@ $startedAt = [DateTimeOffset]::UtcNow.ToString('o')
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $transcriptStarted = $false
 $gateStatus = 'failed'
+$temporaryRoot = $null
 $temporaryEnv = $null
+$temporaryReport = $null
 
 function Invoke-Checked {
     param(
@@ -74,9 +76,15 @@ try {
             'apps/api/tests/test_secure_json.py' `
             'apps/api/tests/test_llm_config_security.py'
 
-        $temporaryEnv = (New-TemporaryFile).FullName
-        Invoke-Checked $pythonCommand 'scripts/r2_preflight.py' 'init-env' `
-            '--output' $temporaryEnv '--force'
+        $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
+            ("xagent-kernel-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $temporaryRoot | Out-Null
+        Copy-Item -LiteralPath 'deploy/compose/r2.env.example' `
+            -Destination (Join-Path $temporaryRoot 'r2.env.example')
+        $temporaryEnv = Join-Path $temporaryRoot 'r2.env.local'
+        $temporaryReport = Join-Path $temporaryRoot 'preflight.json'
+        Invoke-Checked $pythonCommand 'scripts/r2_preflight.py' `
+            '--init-env' $temporaryEnv '--output' $temporaryReport
         if (-not (Test-Path -LiteralPath $temporaryEnv -PathType Leaf)) {
             throw 'Windows preflight did not create its isolated output'
         }
@@ -128,6 +136,16 @@ try {
 } finally {
     if ($temporaryEnv -and (Test-Path -LiteralPath $temporaryEnv -PathType Leaf)) {
         Remove-Item -LiteralPath $temporaryEnv -Force
+    }
+    if ($temporaryReport -and (Test-Path -LiteralPath $temporaryReport -PathType Leaf)) {
+        Remove-Item -LiteralPath $temporaryReport -Force
+    }
+    if ($temporaryRoot -and (Test-Path -LiteralPath $temporaryRoot -PathType Container)) {
+        $temporaryTemplate = Join-Path $temporaryRoot 'r2.env.example'
+        if (Test-Path -LiteralPath $temporaryTemplate -PathType Leaf) {
+            Remove-Item -LiteralPath $temporaryTemplate -Force
+        }
+        Remove-Item -LiteralPath $temporaryRoot -Force
     }
     if ($transcriptStarted) { Stop-Transcript | Out-Null }
 }

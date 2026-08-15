@@ -33,3 +33,13 @@ def test_kernel_gate_imports_api_from_the_current_worktree() -> None:
 
     assert "$env:PYTHONPATH" in text
     assert "Join-Path $RepoRoot 'apps/api'" in text
+
+
+def test_kernel_gate_uses_the_preflight_cli_contract() -> None:
+    text = (ROOT / "scripts/run_commercial_kernel_gate.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "'--init-env' $temporaryEnv" in text
+    assert "'--output' $temporaryReport" in text
+    assert "'scripts/r2_preflight.py' 'init-env'" not in text
