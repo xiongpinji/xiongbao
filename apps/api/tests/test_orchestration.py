@@ -693,11 +693,18 @@ class _EmptyRecoveryStreamingLLM(LiteLLMClient):
 
     def __init__(self, recovery_content: str = "") -> None:
         self.recovery_content = recovery_content
+        self.complete_calls = 0
+        self.complete_chat_calls = 0
 
     async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
         yield StreamChunk(finished=True)
 
     async def complete(self, messages, **kwargs):  # noqa: ARG002
+        self.complete_calls += 1
+        return LLMResponse(content=self.recovery_content, model="test")
+
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
+        self.complete_chat_calls += 1
         return LLMResponse(content=self.recovery_content, model="test")
 
     async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
@@ -738,6 +745,8 @@ async def test_stream_empty_response_can_recover_with_real_content(monkeypatch) 
     assert run.status == "succeeded"
     assert run.error == ""
     assert run.final_answer == "恢复后的真实模型回答。"
+    assert llm.complete_chat_calls == 1
+    assert llm.complete_calls == 0
 
 
 class _EmptyRecoveryNativeLLM(LLMClient):
@@ -836,7 +845,7 @@ async def test_nonstream_empty_response_can_recover_with_real_content(
 
 
 class _FailingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
-    async def complete(self, messages, **kwargs):  # noqa: ARG002
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
         raise ValueError("recovery provider failed")
 
 
@@ -860,7 +869,7 @@ class _BlockingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
         super().__init__()
         self.recovery_started = asyncio.Event()
 
-    async def complete(self, messages, **kwargs):  # noqa: ARG002
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
         self.recovery_started.set()
         await asyncio.Event().wait()
 

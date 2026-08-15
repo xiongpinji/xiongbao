@@ -916,6 +916,12 @@ async def _handle_empty_or_echo(
     target_model: str | None,
 ) -> str:
     """处理空内容或工具结果回显；恢复失败时抛出可诊断异常。"""
+    async def _complete_recovery() -> LLMResponse:
+        complete_chat = getattr(llm, "complete_chat", None)
+        if callable(complete_chat):
+            return await complete_chat(state.messages, model=target_model)
+        return await llm.complete(state.messages, model=target_model)
+
     if _is_tool_echo(content_buf):
         state.messages.append(Message(role="assistant", content=content_buf))
         state.messages.append(Message(
@@ -927,7 +933,7 @@ async def _handle_empty_or_echo(
             ),
         ))
         try:
-            retry_resp = await llm.complete(state.messages, model=target_model)
+            retry_resp = await _complete_recovery()
             content_buf = retry_resp.content or ""
         except Exception as exc:
             raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
@@ -943,7 +949,7 @@ async def _handle_empty_or_echo(
             ),
         ))
         try:
-            retry_resp = await llm.complete(state.messages, model=target_model)
+            retry_resp = await _complete_recovery()
             content_buf = retry_resp.content or ""
         except Exception as exc:
             raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
