@@ -157,9 +157,11 @@ class LiteLLMClient(LLMClient):
         if (
             self._cfg.ollama_base_url
             and not self._cfg.proxy_url
-            and target_model.startswith("ollama/")
         ):
-            target_model = f"ollama_chat/{target_model.removeprefix('ollama/')}"
+            if target_model.startswith("ollama/"):
+                target_model = f"ollama_chat/{target_model.removeprefix('ollama/')}"
+            elif "/" not in target_model:
+                target_model = f"ollama_chat/{target_model}"
         return await self._complete(
             messages,
             model=target_model,

@@ -343,6 +343,20 @@ async def test_litellm_chat_complete_uses_direct_ollama_chat_contract(
     assert "reasoning_effort" not in captured
 
 
+async def test_litellm_chat_complete_normalizes_explicit_bare_ollama_model(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+
+    await client.complete_chat(
+        [Message(role="user", content="recovery summary")],
+        model="qwen3:4b",
+    )
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
+
+
 async def test_litellm_complete_preserves_model_response_finish_reason(
     monkeypatch,
 ) -> None:
