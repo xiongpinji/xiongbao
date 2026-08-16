@@ -10,6 +10,8 @@ import os
 import re
 import sys
 import tempfile
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 
@@ -31,6 +33,27 @@ EVIDENCE_FIELDS = (
     "Rollback evidence",
 )
 SIGNOFF_FIELDS = ("TL signoff", "QA signoff", "DevOps signoff", "Owner signoff")
+SIGNOFF_PATTERN = re.compile(
+    r"^(?P<identity>[^/]+?)\s*/\s*(?P<date>\d{4}-\d{2}-\d{2})$"
+)
+HOSTED_CI_COMPONENTS = frozenset(
+    {
+        "backend-commercial",
+        "commercial-kernel",
+        "desktop",
+        "frontend",
+        "load-test",
+        "short-drama",
+        "supply-chain",
+    }
+)
+GENERIC_EVIDENCE_GATES = {
+    "Backup evidence": "backup",
+    "Migration evidence": "migration",
+    "Health evidence": "health",
+    "Browser evidence": "browser",
+    "Rollback evidence": "rollback",
+}
 
 
 class TargetEnvGateError(RuntimeError):
@@ -55,8 +78,107 @@ def _fields(packet: Path) -> dict[str, str]:
     for line in text.splitlines():
         match = FIELD_PATTERN.match(line)
         if match:
-            result[match.group("label").strip()] = match.group("value").strip()
+            label = match.group("label").strip()
+            if label in result:
+                raise TargetEnvGateError(f"duplicate packet field: {label}")
+            result[label] = match.group("value").strip()
     return result
+
+
+def _require(document: dict[str, object], label: str, key: str, expected: object) -> None:
+    if document.get(key) != expected:
+        raise TargetEnvGateError(f"{label} must prove {key}={expected}")
+
+
+def _validate_hosted_ci(label: str, document: dict[str, object]) -> None:
+    _require(document, label, "classification", "ci_component_evidence")
+    components = document.get("components")
+    if not isinstance(components, dict) or any(
+        components.get(name) != "passed_by_needs" for name in HOSTED_CI_COMPONENTS
+    ):
+        raise TargetEnvGateError(f"{label} must prove every required CI component passed")
+
+
+def _validate_paid_model(label: str, document: dict[str, object]) -> None:
+    expected = {
+        "status": "passed",
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "authorization": "one_batch_8_calls",
+        "authorized_evaluations": 8,
+        "application_max_attempts": 1,
+        "promptfoo_max_retries": 0,
+        "successes": 8,
+        "failures": 0,
+        "errors": 0,
+        "paid_call_started": True,
+        "paid_call_completed": True,
+    }
+    for key, value in expected.items():
+        if type(document.get(key)) is not type(value) or document.get(key) != value:
+            raise TargetEnvGateError(f"{label} must prove {key}={value}")
+    digest = document.get("promptfoo_results_sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[a-f0-9]{64}", digest) is None:
+        raise TargetEnvGateError(f"{label} must bind the raw Promptfoo result digest")
+    try:
+        maximum_cost = Decimal(str(document.get("max_cost_usd", "")))
+    except InvalidOperation as exc:
+        raise TargetEnvGateError(f"{label} has an invalid maximum cost") from exc
+    if (
+        not maximum_cost.is_finite()
+        or maximum_cost <= 0
+        or maximum_cost > Decimal("1.00")
+    ):
+        raise TargetEnvGateError(f"{label} maximum cost is outside the limit")
+    pricing_source = document.get("pricing_source")
+    if not isinstance(pricing_source, str) or not pricing_source.startswith("https://"):
+        raise TargetEnvGateError(f"{label} must preserve the HTTPS pricing source")
+    for field in ("price_verified_at", "balance_verified_at"):
+        value = document.get(field)
+        if not isinstance(value, str):
+            raise TargetEnvGateError(f"{label} is missing {field}")
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise TargetEnvGateError(f"{label} has an invalid {field}") from exc
+        if parsed.tzinfo is None:
+            raise TargetEnvGateError(f"{label} {field} must include a timezone")
+
+
+def _validate_signed_desktop(label: str, document: dict[str, object]) -> None:
+    _require(document, label, "classification", "signed_timestamped_candidate")
+    artifacts = document.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 2:
+        raise TargetEnvGateError(f"{label} must contain exactly two installers")
+    if {
+        item.get("format") for item in artifacts if isinstance(item, dict)
+    } != {"msi", "nsis"}:
+        raise TargetEnvGateError(f"{label} must contain MSI and NSIS installers")
+    for item in artifacts:
+        if not isinstance(item, dict):
+            raise TargetEnvGateError(f"{label} contains an invalid installer entry")
+        if item.get("signature") != "valid" or item.get("arch") != "x64":
+            raise TargetEnvGateError(f"{label} installers must be valid signed x64 artifacts")
+        for field in ("signer_subject", "timestamp_subject"):
+            if not isinstance(item.get(field), str) or not item[field].strip():
+                raise TargetEnvGateError(f"{label} installer is missing {field}")
+        for field in ("signer_thumbprint", "timestamp_thumbprint"):
+            value = item.get(field)
+            if not isinstance(value, str) or re.fullmatch(r"[A-Fa-f0-9]{40}", value) is None:
+                raise TargetEnvGateError(f"{label} installer has invalid {field}")
+
+
+def _validate_evidence_document(label: str, document: dict[str, object]) -> None:
+    _require(document, label, "schema_version", "1.0")
+    if label == "Hosted CI evidence":
+        _validate_hosted_ci(label, document)
+    elif label == "Paid model evidence":
+        _validate_paid_model(label, document)
+    elif label == "Signed desktop evidence":
+        _validate_signed_desktop(label, document)
+    else:
+        _require(document, label, "gate", GENERIC_EVIDENCE_GATES[label])
+        _require(document, label, "status", "passed")
 
 
 def _verify_reference(
@@ -85,6 +207,7 @@ def _verify_reference(
         raise TargetEnvGateError(f"{label} must be a JSON evidence document") from exc
     if not isinstance(document, dict) or document.get("source_sha") != source_sha:
         raise TargetEnvGateError(f"{label} source SHA mismatch")
+    _validate_evidence_document(label, document)
     return {
         "label": label,
         "path": path.relative_to(resolved_root).as_posix(),
@@ -120,6 +243,16 @@ def validate_packet(
         raise TargetEnvGateError(f"explicit authorization must equal {AUTHORIZATION}")
     if _normalize(fields["Final disposition"]) != AUTHORIZATION:
         raise TargetEnvGateError(f"final disposition must equal {AUTHORIZATION}")
+    for label in SIGNOFF_FIELDS:
+        match = SIGNOFF_PATTERN.fullmatch(fields[label])
+        if match is None or _placeholder(match.group("identity")):
+            raise TargetEnvGateError(
+                f"{label} must contain a named identity and ISO date: identity / YYYY-MM-DD"
+            )
+        try:
+            date.fromisoformat(match.group("date"))
+        except ValueError as exc:
+            raise TargetEnvGateError(f"{label} contains an invalid ISO date") from exc
     evidence = [
         _verify_reference(root, label, fields[label], source_sha)
         for label in EVIDENCE_FIELDS

@@ -87,6 +87,25 @@ def test_preflight_records_safe_fresh_cost_and_balance_boundary(tmp_path: Path) 
     assert "secret" not in json.dumps(payload).lower()
 
 
+def test_preflight_rejects_non_finite_cost_without_a_traceback(tmp_path: Path) -> None:
+    env = _authorized_env()
+    env["XAGENT_PAID_EVAL_MAX_USD"] = "NaN"
+    result = _run(
+        "preflight",
+        "--source-sha",
+        SHA,
+        "--expected-calls",
+        "8",
+        "--output",
+        str(tmp_path / "preflight.json"),
+        env=env,
+    )
+
+    assert result.returncode == 2
+    assert "maximum cost" in result.stderr.lower()
+    assert "traceback" not in result.stderr.lower()
+
+
 def test_verify_requires_exact_success_matrix_and_writes_same_sha_evidence(
     tmp_path: Path,
 ) -> None:
@@ -130,3 +149,44 @@ def test_verify_requires_exact_success_matrix_and_writes_same_sha_evidence(
     assert payload["failures"] == payload["errors"] == 0
     assert payload["provider"] == "deepseek"
     assert payload["model"] == "deepseek-chat"
+
+
+def test_verify_rejects_a_tampered_preflight_contract(tmp_path: Path) -> None:
+    preflight = tmp_path / "preflight.json"
+    result = _run(
+        "preflight",
+        "--source-sha",
+        SHA,
+        "--expected-calls",
+        "8",
+        "--output",
+        str(preflight),
+        env=_authorized_env(),
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(preflight.read_text(encoding="utf-8"))
+    payload["provider"] = "unverified-provider"
+    preflight.write_text(json.dumps(payload), encoding="utf-8")
+
+    promptfoo = tmp_path / "promptfoo.json"
+    promptfoo.write_text(
+        json.dumps(
+            {"results": {"stats": {"successes": 8, "failures": 0, "errors": 0}}}
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "paid-model-evidence.json"
+    result = _run(
+        "verify",
+        "--preflight",
+        str(preflight),
+        "--promptfoo-results",
+        str(promptfoo),
+        "--output",
+        str(output),
+        env=_authorized_env(),
+    )
+
+    assert result.returncode == 1
+    assert "provider" in result.stderr.lower()
+    assert not output.exists()

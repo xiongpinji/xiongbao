@@ -88,7 +88,11 @@ def build_preflight(
         maximum_cost = Decimal(environ.get("XAGENT_PAID_EVAL_MAX_USD", ""))
     except InvalidOperation as exc:
         raise PaidModelGateError("maximum cost must be a decimal USD amount") from exc
-    if maximum_cost <= 0 or maximum_cost > Decimal("1.00"):
+    if (
+        not maximum_cost.is_finite()
+        or maximum_cost <= 0
+        or maximum_cost > Decimal("1.00")
+    ):
         raise PaidModelGateError("maximum cost must be greater than 0 and at most 1 USD")
     return {
         "schema_version": "1.0",
@@ -108,6 +112,50 @@ def build_preflight(
     }
 
 
+def _validate_preflight_document(preflight: object) -> dict[str, object]:
+    if not isinstance(preflight, dict):
+        raise PaidModelGateError("paid model preflight must be a JSON object")
+    expected = {
+        "schema_version": "1.0",
+        "status": "passed",
+        "provider": PROVIDER,
+        "model": MODEL,
+        "authorization": AUTHORIZATION,
+        "authorized_evaluations": 8,
+        "application_max_attempts": 1,
+        "promptfoo_max_retries": 0,
+        "paid_call_started": False,
+    }
+    for key, value in expected.items():
+        if type(preflight.get(key)) is not type(value) or preflight.get(key) != value:
+            raise PaidModelGateError(f"paid model preflight {key} must equal {value}")
+    source_sha = preflight.get("source_sha")
+    if not isinstance(source_sha, str) or SHA_PATTERN.fullmatch(source_sha) is None:
+        raise PaidModelGateError("paid model preflight source SHA is invalid")
+    pricing_source = preflight.get("pricing_source")
+    if not isinstance(pricing_source, str) or not pricing_source.startswith("https://"):
+        raise PaidModelGateError("paid model preflight pricing source is invalid")
+    for key, label in (
+        ("price_verified_at", "price verification"),
+        ("balance_verified_at", "balance verification"),
+    ):
+        value = preflight.get(key)
+        if not isinstance(value, str):
+            raise PaidModelGateError(f"paid model preflight {key} is invalid")
+        _fresh_timestamp(label, value)
+    try:
+        maximum_cost = Decimal(str(preflight.get("max_cost_usd", "")))
+    except InvalidOperation as exc:
+        raise PaidModelGateError("paid model preflight maximum cost is invalid") from exc
+    if (
+        not maximum_cost.is_finite()
+        or maximum_cost <= 0
+        or maximum_cost > Decimal("1.00")
+    ):
+        raise PaidModelGateError("paid model preflight maximum cost is outside the limit")
+    return preflight
+
+
 def verify_results(preflight_path: Path, results_path: Path) -> dict[str, object]:
     try:
         preflight = json.loads(preflight_path.read_text(encoding="utf-8-sig"))
@@ -119,8 +167,7 @@ def verify_results(preflight_path: Path, results_path: Path) -> dict[str, object
         errors = stats["errors"]
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise PaidModelGateError("paid model evidence is missing or invalid") from exc
-    if preflight.get("schema_version") != "1.0" or preflight.get("status") != "passed":
-        raise PaidModelGateError("paid model preflight did not pass")
+    preflight = _validate_preflight_document(preflight)
     expected = preflight.get("authorized_evaluations")
     if any(type(value) is not int for value in (expected, successes, failures, errors)):
         raise PaidModelGateError("Promptfoo statistics must be integers")

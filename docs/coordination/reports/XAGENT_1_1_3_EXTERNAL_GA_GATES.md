@@ -29,6 +29,11 @@ same-SHA evidence JSON. If a provider request has an unknown outcome, do not
 rerun automatically; record it as `needs_attention/submission_unknown` and
 obtain a new explicit authorization before another batch.
 
+The final evidence must preserve the fixed preflight contract and prove an
+exact `8/0/0` success/failure/error matrix. Editing the preflight provider,
+model, authorization, retry, cost, or freshness fields after preflight makes
+the evidence invalid.
+
 ## Desktop signing
 
 `scripts/collect_desktop_artifacts.py` verifies both MSI and NSIS artifacts with
@@ -42,5 +47,15 @@ signing gate.
 Complete `XAGENT_1_1_3_TARGET_ENV_SIGNOFF_PACKET.md` only after Hosted CI, paid
 model, signed desktop, backup, migration, health, browser, and rollback evidence
 exists. Every evidence reference is a relative path plus SHA-256; every file is
-a JSON object internally bound to the same 40-character source SHA. The target
-gate also requires explicit authorization and four named signoffs.
+a schema-versioned JSON object internally bound to the same 40-character source
+SHA. Hosted CI must prove all required components passed; paid-model evidence
+must prove the fixed real-call contract and `8/0/0` result; desktop evidence must
+contain valid timestamped MSI and NSIS signatures. Backup, migration, health,
+browser, and rollback documents must name their matching gate and report
+`status=passed`. Duplicate packet fields are rejected. The target gate also
+requires explicit authorization and four signoffs formatted as
+`identity / YYYY-MM-DD`.
+
+This gate validates the offline authorization packet. A PASS is not evidence
+that deployment or target-environment acceptance happened unless the referenced
+target evidence was produced by those real operations.
