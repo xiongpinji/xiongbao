@@ -253,6 +253,7 @@ jobs:
       - short-drama
       - desktop
       - supply-chain
+      - load-test
     steps:
       - uses: actions/checkout@v4
 
@@ -274,7 +275,7 @@ jobs:
                   name: "passed_by_needs"
                   for name in (
                       "commercial-kernel", "backend-commercial", "frontend",
-                      "short-drama", "desktop", "supply-chain",
+                      "short-drama", "desktop", "supply-chain", "load-test",
                   )
               },
               "local_installer_lifecycle": "not_available_in_ci",
@@ -580,7 +581,9 @@ jobs:
   load-test:
     runs-on: ubuntu-latest
     needs: [backend]
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
     env:
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "false"
