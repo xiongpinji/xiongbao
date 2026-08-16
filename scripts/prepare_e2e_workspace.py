@@ -7,7 +7,7 @@ import re
 import subprocess
 from pathlib import Path
 
-PROJECT_PATTERN = re.compile(r"^xagent-commercial-[a-f0-9]{8}$")
+PROJECT_PATTERN = re.compile(r"^xagent-commercial-[a-f0-9]{8}-[a-f0-9]{8}$")
 WORKSPACE = "/data/workspace"
 
 

@@ -514,3 +514,15 @@ Get-NetTCPConnection -LocalPort 8000,18081 -State Listen -ErrorAction SilentlyCo
 - [x] 新增运行时不携带 `setuptools/wheel` 的合同测试，先稳定失败。
 - [x] 在最终 runtime stage 从系统 Python 与应用 venv 卸载运行时不需要的 `setuptools/wheel`。
 - [x] 重建 API 镜像，验证应用及系统 Python 均无 `setuptools/wheel`、`xagent` 可导入，并用同一 Trivy digest 复扫为 0 个可修复 High/Critical。
+
+### A11：Web/API E2E 工作区初始化不接受 nonce 项目名
+
+**实证：** 最终 SHA 的 Web/API 门在六服务全部健康、迁移到 head 后，`prepare_e2e_workspace.py` 因仅接受旧 `xagent-commercial-<sha8>` 格式而拒绝已加固的 `<sha8>-<nonce8>` 项目名；脚本 finally 已完整清理本轮容器、卷与网络。
+
+**文件：**
+- 修改：`scripts/prepare_e2e_workspace.py`
+- 修改：`tests/release/test_prepare_e2e_workspace.py`
+
+- [x] 先将正例改为门禁实际生成的 `sha8 + nonce8`，稳定复现 `invalid compose project`。
+- [x] 最小收紧正则为 `^xagent-commercial-[a-f0-9]{8}-[a-f0-9]{8}$`，明确拒绝旧作用域与 shell 元字符。
+- [x] 相关 22 条 release 合同测试与 Ruff 关键规则通过。
