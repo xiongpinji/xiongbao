@@ -29,6 +29,8 @@ RUN apt-get update \
     && useradd --uid 10001 --gid 10001 --no-create-home xagent
 
 COPY --from=builder /opt/venv /opt/venv
+RUN /opt/venv/bin/pip uninstall --yes setuptools wheel \
+    && /usr/local/bin/python -m pip uninstall --yes setuptools wheel
 WORKDIR /app
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini

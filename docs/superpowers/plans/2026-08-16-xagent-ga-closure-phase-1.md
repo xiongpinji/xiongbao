@@ -502,3 +502,15 @@ Get-NetTCPConnection -LocalPort 8000,18081 -State Listen -ErrorAction SilentlyCo
 - [x] 用 `asyncio.shield` 避免 `wait_for` 在超时后无界等待子任务取消；随后以有界 grace period 重试取消。
 - [x] 子任务在重试后仍不确认取消时 fail closed，不误报为普通 timeout。
 - [x] 4 条超时 / 取消 / 预算定向用例和整个 `test_parallel_worktrees.py` 21 条用例通过；完整后端商用测试退出码为 0。
+
+### A10：API 运行时镜像携带可修复 High 构建工具漏洞
+
+**实证：** Docker Scout 因本机未登录无法扫描；固定 `aquasec/trivy:0.66.0` 及镜像 digest 后，API 镜像发现 `setuptools` 内置 `jaraco.context 5.3.0` 和 `wheel 0.45.1` 两类可修复 High，各在系统 Python 与 `/opt/venv` 重复；Web 镜像为 0。
+
+**文件：**
+- 修改：`apps/api/Dockerfile`
+- 修改：`tests/release/test_container_contract.py`
+
+- [x] 新增运行时不携带 `setuptools/wheel` 的合同测试，先稳定失败。
+- [x] 在最终 runtime stage 从系统 Python 与应用 venv 卸载运行时不需要的 `setuptools/wheel`。
+- [x] 重建 API 镜像，验证应用及系统 Python 均无 `setuptools/wheel`、`xagent` 可导入，并用同一 Trivy digest 复扫为 0 个可修复 High/Critical。

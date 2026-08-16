@@ -18,6 +18,14 @@ def test_api_runtime_image_is_non_root_and_has_no_dev_extra() -> None:
     assert "git" in runtime
 
 
+def test_api_runtime_removes_build_only_python_tooling() -> None:
+    dockerfile = (ROOT / "apps/api/Dockerfile").read_text(encoding="utf-8")
+    runtime = dockerfile.split("FROM python:3.11-slim AS runtime", 1)[1]
+
+    assert "/opt/venv/bin/pip uninstall --yes setuptools wheel" in runtime
+    assert "/usr/local/bin/python -m pip uninstall --yes setuptools wheel" in runtime
+
+
 def test_api_runtime_keeps_operational_assets() -> None:
     dockerfile = (ROOT / "apps/api/Dockerfile").read_text(encoding="utf-8")
     runtime = dockerfile.split("FROM python:3.11-slim AS runtime", 1)[1]
