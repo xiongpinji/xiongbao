@@ -64,7 +64,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             ).inc()
         except Exception:  # noqa: S110  指标失败不影响请求
             pass
-        logger.info(
+        logger.debug(
             "request",
             method=request.method,
             path=request.url.path,

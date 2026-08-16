@@ -175,7 +175,7 @@ services:
     command: >
       sh -c "python -m alembic upgrade head &&
              python -m xagent.cli warmup &&
-             uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
+             uvicorn xagent.main:app --host 0.0.0.0 --port 8000 --no-access-log"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx,sys; r=httpx.get('http://localhost:8000/health/deep',timeout=5); sys.exit(0 if r.status_code == 200 and r.json().get('status') == 'healthy' else 1)"]
       interval: 30s
