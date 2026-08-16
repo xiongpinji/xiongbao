@@ -20,10 +20,11 @@ if ($LASTEXITCODE -ne 0 -or $worktreeStatus) {
 if ($LASTEXITCODE -ne 0) { throw 'Docker engine is unavailable' }
 
 $sha8 = $sourceSha.Substring(0, 8)
-$candidateProject = "xagent-rollback-candidate-$sha8"
-$restoreProject = "xagent-restore-$sha8"
-$candidateCollection = "xagent_memory_$sha8"
-$restoreCollection = "xagent_restore_$sha8"
+$runNonce = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$candidateProject = "xagent-rollback-candidate-$sha8-$runNonce"
+$restoreProject = "xagent-restore-$sha8-$runNonce"
+$candidateCollection = "xagent_memory_${sha8}_$runNonce"
+$restoreCollection = "xagent_restore_${sha8}_$runNonce"
 $evidence = Join-Path $RepoRoot "output/commercial-delivery/$sourceSha/rollback"
 $backupRoot = Join-Path $evidence 'backup'
 $gatePath = Join-Path $evidence 'gate.json'
@@ -35,6 +36,18 @@ $currentOverride = Join-Path $evidence 'current.override.yml'
 $privateState = Join-Path ([System.IO.Path]::GetTempPath()) "xagent-rollback-$sha8-$PID.json"
 $startedAt = [DateTimeOffset]::UtcNow.ToString('o')
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+$gateLockPath = Join-Path $evidence 'gate.lock'
+$gateLock = $null
+try {
+    $gateLock = [System.IO.File]::Open(
+        $gateLockPath,
+        [System.IO.FileMode]::OpenOrCreate,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None
+    )
+} catch {
+    throw "another rollback gate is already writing evidence for source SHA $sourceSha"
+}
 if (Test-Path -LiteralPath $privateState) { throw 'private drill state path already exists' }
 
 function Invoke-Checked {
@@ -105,6 +118,28 @@ function Assert-ProjectLabels {
     }
 }
 
+function Assert-ProjectOwnership {
+    param([Parameter(Mandatory = $true)][string]$Project)
+    $containers = @(& docker ps -a -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker containers' }
+    foreach ($containerId in $containers) {
+        $label = (& docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' $containerId).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $Project) { throw 'container project label mismatch' }
+    }
+    $volumes = @(& docker volume ls -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker volumes' }
+    foreach ($volume in $volumes) {
+        $label = (& docker volume inspect --format '{{ index .Labels "com.docker.compose.project" }}' $volume).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $Project) { throw 'volume project label mismatch' }
+    }
+    $networks = @(& docker network ls -q --filter "label=com.docker.compose.project=$Project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker networks' }
+    foreach ($network in $networks) {
+        $label = (& docker network inspect --format '{{ index .Labels "com.docker.compose.project" }}' $network).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $Project) { throw 'network project label mismatch' }
+    }
+}
+
 function Assert-ProjectAbsent {
     param(
         [Parameter(Mandatory = $true)][string]$Project,
@@ -118,6 +153,45 @@ function Assert-ProjectAbsent {
     if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker networks' }
     if ($containers.Count -ne 0 -or $volumes.Count -ne 0 -or $networks.Count -ne 0) {
         throw $FailureMessage
+    }
+}
+
+function Remove-AuditedComposeProject {
+    param(
+        [Parameter(Mandatory = $true)][string]$Project,
+        [Parameter(Mandatory = $true)][string[]]$Files
+    )
+    Assert-ProjectOwnership -Project $Project
+    Invoke-Compose -Project $Project -Files $Files 'down' '--remove-orphans' '--volumes'
+    Assert-ProjectAbsent -Project $Project -FailureMessage "compose project cleanup did not finish: $Project"
+}
+
+function Close-GateLock {
+    param(
+        [System.IO.FileStream]$GateLock,
+        [System.Collections.Generic.List[string]]$CleanupErrors
+    )
+    if (-not $GateLock) { return }
+    try { $GateLock.Dispose() } catch {
+        $message = "gate lock: $($_.Exception.Message)"
+        $null = $CleanupErrors.Add($message)
+        [Console]::Error.WriteLine($message)
+    }
+}
+
+function Write-CleanupEvidence {
+    param(
+        [System.Collections.Generic.List[string]]$CleanupErrors,
+        [string]$EvidenceRoot
+    )
+    if ($CleanupErrors.Count -eq 0) { return }
+    try {
+        [ordered]@{ errors = @($CleanupErrors) } | ConvertTo-Json | Set-Content `
+            -LiteralPath (Join-Path $EvidenceRoot 'cleanup-errors.json') -Encoding utf8
+    } catch {
+        $message = "cleanup evidence: $($_.Exception.Message)"
+        $null = $CleanupErrors.Add($message)
+        [Console]::Error.WriteLine($message)
     }
 }
 
@@ -203,7 +277,17 @@ function Resolve-PythonCommand {
     return (Get-Command python -ErrorAction Stop).Source
 }
 
+function Assert-Python311 {
+    param([Parameter(Mandatory = $true)][string]$PythonCommand)
+    $probe = 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}"); raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 42)'
+    $actual = (& $PythonCommand -c $probe).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "commercial gate requires Python 3.11; resolved version: $actual"
+    }
+}
+
 $pythonCommand = Resolve-PythonCommand
+Assert-Python311 -PythonCommand $pythonCommand
 $env:PYTHONNOUSERSITE = '1'
 $env:POSTGRES_USER = 'xagent'
 $env:POSTGRES_DB = 'xagent'
@@ -241,7 +325,7 @@ if (-not [System.IO.Path]::IsPathRooted($commonGitDir)) {
 }
 $commonRepoRoot = Split-Path -Parent ([System.IO.Path]::GetFullPath($commonGitDir))
 $baseParent = [System.IO.Path]::GetFullPath((Join-Path $commonRepoRoot '.worktrees'))
-$baseWorktree = [System.IO.Path]::GetFullPath((Join-Path $baseParent "rollback-base-$sha8"))
+$baseWorktree = [System.IO.Path]::GetFullPath((Join-Path $baseParent "rollback-base-$sha8-$runNonce"))
 if ((Split-Path -Parent $baseWorktree) -ne $baseParent) {
     throw 'baseline worktree escaped the audited worktree root'
 }
@@ -249,6 +333,10 @@ if (Test-Path -LiteralPath $baseWorktree) { throw 'baseline worktree path alread
 
 $transcriptStarted = $false
 $baseWorktreeAdded = $false
+$candidateProjectOwned = $false
+$restoreProjectOwned = $false
+$primaryError = $null
+$cleanupErrors = [System.Collections.Generic.List[string]]::new()
 $gateStatus = 'failed'
 try {
     Start-Transcript -LiteralPath $transcriptPath -Force | Out-Null
@@ -258,6 +346,7 @@ try {
     $candidateFiles = @($composePath, $candidateOverride)
     Assert-ProjectAbsent -Project $candidateProject `
         -FailureMessage 'candidate project must be new and empty'
+    $candidateProjectOwned = $true
     Invoke-Compose -Project $candidateProject -Files $candidateFiles 'up' '-d' '--build' 'postgres' 'redis' 'qdrant' 'api' 'worker' 'web'
     foreach ($service in @('postgres', 'redis', 'qdrant', 'api', 'worker')) {
         Wait-ComposeService -Project $candidateProject -Files $candidateFiles -Service $service
@@ -286,6 +375,7 @@ try {
     $restoreFiles = @($composePath, $candidateOverride)
     Assert-ProjectAbsent -Project $restoreProject `
         -FailureMessage 'restore project must be new and empty'
+    $restoreProjectOwned = $true
     Invoke-Compose -Project $restoreProject -Files $restoreFiles 'up' '-d' 'postgres' 'redis' 'qdrant'
     foreach ($service in @('postgres', 'redis', 'qdrant')) {
         Wait-ComposeService -Project $restoreProject -Files $restoreFiles -Service $service
@@ -372,21 +462,42 @@ try {
         @{ command = 'baseline current rollback runtime verification'; exit_code = 0; passed = 3; failed = 0; skipped = 0 }
         @{ command = 'tenant memory scheduler short-drama audit integrity'; exit_code = 0; passed = 10; failed = 0; skipped = 0 }
     ) | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $commandsPath -Encoding utf8
-} finally {
+} catch { $primaryError = $_ } finally {
+    if ($restoreProjectOwned) {
+        try {
+            Remove-AuditedComposeProject -Project $restoreProject -Files @($composePath, $candidateOverride)
+        } catch { $null = $cleanupErrors.Add("restore project: $($_.Exception.Message)") }
+    }
+    if ($candidateProjectOwned) {
+        try {
+            Remove-AuditedComposeProject -Project $candidateProject -Files @($composePath, $candidateOverride)
+        } catch { $null = $cleanupErrors.Add("candidate project: $($_.Exception.Message)") }
+    }
     if ($baseWorktreeAdded) {
-        $resolvedBaseParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $baseWorktree))
-        if ($resolvedBaseParent -ne $baseParent) {
-            throw 'refusing to remove baseline worktree outside audited parent'
-        }
-        & git -C $commonRepoRoot worktree remove $baseWorktree
-        if ($LASTEXITCODE -ne 0) { throw 'unable to remove baseline worktree safely' }
+        try {
+            $resolvedBaseParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $baseWorktree))
+            if ($resolvedBaseParent -ne $baseParent) {
+                throw 'refusing to remove baseline worktree outside audited parent'
+            }
+            Invoke-Checked 'git' '-C' $commonRepoRoot 'worktree' 'remove' '--force' $baseWorktree
+        } catch { $null = $cleanupErrors.Add("baseline worktree: $($_.Exception.Message)") }
     }
     if (Test-Path -LiteralPath $privateState -PathType Leaf) {
-        Remove-Item -LiteralPath $privateState -Force
+        try { Remove-Item -LiteralPath $privateState -Force } catch {
+            $null = $cleanupErrors.Add("private state: $($_.Exception.Message)")
+        }
     }
-    if ($transcriptStarted) { Stop-Transcript | Out-Null }
+    if ($transcriptStarted) {
+        try { Stop-Transcript | Out-Null } catch {
+            $null = $cleanupErrors.Add("transcript: $($_.Exception.Message)")
+        }
+    }
+    Close-GateLock -GateLock $gateLock -CleanupErrors $cleanupErrors
+    Write-CleanupEvidence -CleanupErrors $cleanupErrors -EvidenceRoot $evidence
 }
 
+if ($primaryError) { throw $primaryError }
+if ($cleanupErrors.Count -gt 0) { throw "rollback gate cleanup failed: $($cleanupErrors -join '; ')" }
 if ($gateStatus -ne 'passed') { throw 'rollback drill did not pass' }
 Invoke-Checked $pythonCommand 'scripts/gate_evidence.py' 'build' `
     '--gate' 'rollback' '--repo-root' $RepoRoot '--source-sha' $sourceSha `

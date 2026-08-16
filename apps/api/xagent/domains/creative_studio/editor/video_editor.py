@@ -225,10 +225,16 @@ class VideoEditor:
         except TypeError:
             script = draft.ScriptFile(timeline.width, timeline.height)
 
-        # 添加轨道
-        script.add_track(draft.TrackType.video, "main")
-        script.add_track(draft.TrackType.text, "subtitles")
-        script.add_track(draft.TrackType.audio, "bgm")
+        # 添加轨道（pyJianYingDraft 0.3 改为 TrackSpec + append_track）
+        for track_type, track_name in (
+            (draft.TrackType.video, "main"),
+            (draft.TrackType.text, "subtitles"),
+            (draft.TrackType.audio, "bgm"),
+        ):
+            if hasattr(script, "append_track") and hasattr(draft, "TrackSpec"):
+                script.append_track(draft.TrackSpec(track_type, track_name))
+            else:
+                script.add_track(track_type, track_name)
 
         # 添加片段
         for clip in timeline.clips:

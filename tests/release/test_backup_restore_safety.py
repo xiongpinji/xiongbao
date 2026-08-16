@@ -8,6 +8,12 @@ from scripts import backup, restore
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SOURCE_SHA = "a1b2c3d4" + "a" * 32
+RUN_NONCE = "deadbeef"
+CANDIDATE_PROJECT = f"xagent-rollback-candidate-a1b2c3d4-{RUN_NONCE}"
+CANDIDATE_COLLECTION = f"xagent_memory_a1b2c3d4_{RUN_NONCE}"
+RESTORE_PROJECT = f"xagent-restore-a1b2c3d4-{RUN_NONCE}"
+RESTORE_COLLECTION = f"xagent_restore_a1b2c3d4_{RUN_NONCE}"
 
 
 def test_backup_manifest_binds_project_collection_and_sha(tmp_path: Path) -> None:
@@ -16,15 +22,15 @@ def test_backup_manifest_binds_project_collection_and_sha(tmp_path: Path) -> Non
 
     manifest = backup.build_backup_manifest(
         output_root=tmp_path,
-        compose_project="xagent-rollback-candidate-a1b2c3d4",
-        source_sha="a1b2c3d4" + "a" * 32,
-        qdrant_collection="xagent_memory_a1b2c3d4",
+        compose_project=CANDIDATE_PROJECT,
+        source_sha=SOURCE_SHA,
+        qdrant_collection=CANDIDATE_COLLECTION,
         qdrant_vector_size=256,
         artifacts=[artifact],
     )
 
-    assert manifest["compose_project"] == "xagent-rollback-candidate-a1b2c3d4"
-    assert manifest["qdrant_collection"] == "xagent_memory_a1b2c3d4"
+    assert manifest["compose_project"] == CANDIDATE_PROJECT
+    assert manifest["qdrant_collection"] == CANDIDATE_COLLECTION
     assert manifest["qdrant_vector_size"] == 256
     assert manifest["artifacts"][0]["sha256"] == hashlib.sha256(b"pg").hexdigest()
 
@@ -78,6 +84,30 @@ def test_backup_rejects_generic_project_and_collection(tmp_path: Path) -> None:
         backup.validate_scope("xagent-r2", "xagent_memory", "a" * 40, tmp_path)
 
 
+def test_backup_scope_accepts_matching_sha_and_run_nonce(tmp_path: Path) -> None:
+    assert backup.validate_scope(
+        CANDIDATE_PROJECT,
+        CANDIDATE_COLLECTION,
+        SOURCE_SHA,
+        tmp_path,
+    ) == tmp_path.resolve()
+
+
+@pytest.mark.parametrize(
+    ("project", "collection"),
+    (
+        ("xagent-rollback-candidate-a1b2c3d4-cafebabe", CANDIDATE_COLLECTION),
+        (CANDIDATE_PROJECT, "xagent_memory_a1b2c3d4_cafebabe"),
+        ("xagent-rollback-candidate-ffffffff-deadbeef", CANDIDATE_COLLECTION),
+    ),
+)
+def test_backup_scope_rejects_mismatched_sha_or_nonce(
+    tmp_path: Path, project: str, collection: str
+) -> None:
+    with pytest.raises(ValueError, match="source SHA|run nonce"):
+        backup.validate_scope(project, collection, SOURCE_SHA, tmp_path)
+
+
 def test_backup_rejects_the_webapi_project_even_for_the_same_sha(
     tmp_path: Path,
 ) -> None:
@@ -97,8 +127,8 @@ def test_backup_output_must_be_inside_sha_rollback_root(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="rollback"):
         backup.validate_scope(
-            "xagent-rollback-candidate-aaaaaaaa",
-            "xagent_memory_aaaaaaaa",
+            "xagent-rollback-candidate-aaaaaaaa-deadbeef",
+            "xagent_memory_aaaaaaaa_deadbeef",
             "a" * 40,
             outside,
             repo_root=repo,
@@ -107,13 +137,32 @@ def test_backup_output_must_be_inside_sha_rollback_root(tmp_path: Path) -> None:
 
 def test_restore_requires_new_restore_project_and_collection() -> None:
     scope = restore.validate_restore_scope(
-        compose_project="xagent-restore-a1b2c3d4",
-        qdrant_collection="xagent_restore_a1b2c3d4",
-        source_sha="a1b2c3d4" + "a" * 32,
+        compose_project=RESTORE_PROJECT,
+        qdrant_collection=RESTORE_COLLECTION,
+        source_sha=SOURCE_SHA,
     )
 
-    assert scope.compose_project == "xagent-restore-a1b2c3d4"
-    assert scope.qdrant_collection == "xagent_restore_a1b2c3d4"
+    assert scope.compose_project == RESTORE_PROJECT
+    assert scope.qdrant_collection == RESTORE_COLLECTION
+
+
+@pytest.mark.parametrize(
+    ("project", "collection"),
+    (
+        ("xagent-restore-a1b2c3d4-cafebabe", RESTORE_COLLECTION),
+        (RESTORE_PROJECT, "xagent_restore_a1b2c3d4_cafebabe"),
+        ("xagent-restore-ffffffff-deadbeef", RESTORE_COLLECTION),
+    ),
+)
+def test_restore_scope_rejects_mismatched_sha_or_nonce(
+    project: str, collection: str
+) -> None:
+    with pytest.raises(ValueError, match="source SHA|run nonce"):
+        restore.validate_restore_scope(
+            compose_project=project,
+            qdrant_collection=collection,
+            source_sha=SOURCE_SHA,
+        )
 
 
 def test_restore_source_has_no_qdrant_delete_call() -> None:

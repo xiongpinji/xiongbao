@@ -22,12 +22,28 @@ $worktreeStatus = & git -C $RepoRoot status --porcelain
 if ($LASTEXITCODE -ne 0) { throw 'unable to inspect worktree status' }
 if ($worktreeStatus) { throw 'commercial gate requires a clean worktree' }
 
-$project = "xagent-short-$($sourceSha.Substring(0, 8))"
+$runNonce = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$project = "xagent-short-$($sourceSha.Substring(0, 8))-$runNonce"
 $evidence = Join-Path $RepoRoot "output/commercial-delivery/$sourceSha/short-drama"
 $browserEvidence = Join-Path $evidence 'browser'
 New-Item -ItemType Directory -Force -Path $browserEvidence | Out-Null
+$gateLockPath = Join-Path $evidence 'gate.lock'
+$gateLock = $null
+try {
+    $gateLock = [System.IO.File]::Open(
+        $gateLockPath,
+        [System.IO.FileMode]::OpenOrCreate,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None
+    )
+} catch {
+    throw "another short-drama gate is already writing evidence for source SHA $sourceSha"
+}
 $transcriptPath = Join-Path $evidence 'gate.log'
 $transcriptStarted = $false
+$composeProjectOwned = $false
+$primaryError = $null
+$cleanupErrors = [System.Collections.Generic.List[string]]::new()
 $gateStatus = 'failed'
 $startedAt = [DateTimeOffset]::UtcNow.ToString('o')
 $commandsPath = Join-Path $evidence 'commands.raw.json'
@@ -49,6 +65,75 @@ function Invoke-Compose {
     & docker compose -p $project -f $composePath @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Assert-ProjectAbsent {
+    $containers = @(& docker ps -a -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker containers' }
+    $volumes = @(& docker volume ls -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker volumes' }
+    $networks = @(& docker network ls -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker networks' }
+    if ($containers.Count -ne 0 -or $volumes.Count -ne 0 -or $networks.Count -ne 0) {
+        throw "compose project must be new and empty: $project"
+    }
+}
+
+function Assert-ProjectOwnership {
+    $containers = @(& docker ps -a -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker containers' }
+    foreach ($containerId in $containers) {
+        $label = (& docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' $containerId).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $project) { throw 'container project label mismatch' }
+    }
+    $volumes = @(& docker volume ls -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker volumes' }
+    foreach ($volume in $volumes) {
+        $label = (& docker volume inspect --format '{{ index .Labels "com.docker.compose.project" }}' $volume).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $project) { throw 'volume project label mismatch' }
+    }
+    $networks = @(& docker network ls -q --filter "label=com.docker.compose.project=$project")
+    if ($LASTEXITCODE -ne 0) { throw 'unable to inspect Docker networks' }
+    foreach ($network in $networks) {
+        $label = (& docker network inspect --format '{{ index .Labels "com.docker.compose.project" }}' $network).Trim()
+        if ($LASTEXITCODE -ne 0 -or $label -ne $project) { throw 'network project label mismatch' }
+    }
+}
+
+function Remove-AuditedComposeProject {
+    if (-not $composeProjectOwned) { return }
+    Assert-ProjectOwnership
+    Invoke-Compose 'down' '--remove-orphans' '--volumes'
+    Assert-ProjectAbsent
+}
+
+function Close-GateLock {
+    param(
+        [System.IO.FileStream]$GateLock,
+        [System.Collections.Generic.List[string]]$CleanupErrors
+    )
+    if (-not $GateLock) { return }
+    try { $GateLock.Dispose() } catch {
+        $message = "gate lock: $($_.Exception.Message)"
+        $null = $CleanupErrors.Add($message)
+        [Console]::Error.WriteLine($message)
+    }
+}
+
+function Write-CleanupEvidence {
+    param(
+        [System.Collections.Generic.List[string]]$CleanupErrors,
+        [string]$EvidenceRoot
+    )
+    if ($CleanupErrors.Count -eq 0) { return }
+    try {
+        [ordered]@{ errors = @($CleanupErrors) } | ConvertTo-Json | Set-Content `
+            -LiteralPath (Join-Path $EvidenceRoot 'cleanup-errors.json') -Encoding utf8
+    } catch {
+        $message = "cleanup evidence: $($_.Exception.Message)"
+        $null = $CleanupErrors.Add($message)
+        [Console]::Error.WriteLine($message)
     }
 }
 
@@ -97,6 +182,15 @@ function Resolve-PythonCommand {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
     }
     return (Get-Command python -ErrorAction Stop).Source
+}
+
+function Assert-Python311 {
+    param([Parameter(Mandatory = $true)][string]$PythonCommand)
+    $probe = 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}"); raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 42)'
+    $actual = (& $PythonCommand -c $probe).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "commercial gate requires Python 3.11; resolved version: $actual"
+    }
 }
 
 function New-RandomHex {
@@ -150,6 +244,7 @@ function Test-DeliveryBundle {
 }
 
 $pythonCommand = Resolve-PythonCommand
+Assert-Python311 -PythonCommand $pythonCommand
 $env:PYTHONNOUSERSITE = '1'
 $env:POSTGRES_USER = 'xagent'
 $env:POSTGRES_PASSWORD = New-RandomHex
@@ -181,6 +276,8 @@ try {
         Invoke-Checked 'npm' '--prefix' 'tests/e2e' 'ci'
         Invoke-Checked 'npm' '--prefix' 'tests/e2e' 'audit' '--audit-level=high'
 
+        Assert-ProjectAbsent
+        $composeProjectOwned = $true
         Invoke-Compose 'up' '-d' '--build' 'postgres' 'redis' 'qdrant' 'api'
         foreach ($service in @('postgres', 'redis', 'qdrant', 'api')) {
             Wait-ComposeService -Service $service
@@ -253,14 +350,31 @@ try {
     } finally {
         Pop-Location
     }
-} finally {
-    & docker compose -p $project -f $composePath ps --all 2>&1 |
-        Out-File -LiteralPath (Join-Path $evidence 'compose-ps.txt') -Encoding utf8
-    & docker compose -p $project -f $composePath logs --no-color 2>&1 |
-        Out-File -LiteralPath (Join-Path $evidence 'compose-logs.txt') -Encoding utf8
-    if ($transcriptStarted) { Stop-Transcript | Out-Null }
+} catch { $primaryError = $_ } finally {
+    try {
+        & docker compose -p $project -f $composePath ps --all 2>&1 |
+            Out-File -LiteralPath (Join-Path $evidence 'compose-ps.txt') -Encoding utf8
+        if ($LASTEXITCODE -ne 0) { throw 'unable to capture compose ps' }
+    } catch { $null = $cleanupErrors.Add("compose ps: $($_.Exception.Message)") }
+    try {
+        & docker compose -p $project -f $composePath logs --no-color 2>&1 |
+            Out-File -LiteralPath (Join-Path $evidence 'compose-logs.txt') -Encoding utf8
+        if ($LASTEXITCODE -ne 0) { throw 'unable to capture compose logs' }
+    } catch { $null = $cleanupErrors.Add("compose logs: $($_.Exception.Message)") }
+    try { Remove-AuditedComposeProject } catch {
+        $null = $cleanupErrors.Add("compose project: $($_.Exception.Message)")
+    }
+    if ($transcriptStarted) {
+        try { Stop-Transcript | Out-Null } catch {
+            $null = $cleanupErrors.Add("transcript: $($_.Exception.Message)")
+        }
+    }
+    Close-GateLock -GateLock $gateLock -CleanupErrors $cleanupErrors
+    Write-CleanupEvidence -CleanupErrors $cleanupErrors -EvidenceRoot $evidence
 }
 
+if ($primaryError) { throw $primaryError }
+if ($cleanupErrors.Count -gt 0) { throw "Short-drama gate cleanup failed: $($cleanupErrors -join '; ')" }
 if ($gateStatus -ne 'passed') { throw 'Short-drama commercial gate did not pass' }
 Invoke-Checked $pythonCommand 'scripts/gate_evidence.py' 'build' `
     '--gate' 'short_drama' '--repo-root' $RepoRoot '--source-sha' $sourceSha `

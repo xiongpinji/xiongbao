@@ -65,6 +65,7 @@ output/r2-backups/
 output/reliability/
 output/e2e-local/
 output/commercial-delivery/
+output/ga-closure/
 
 # ---- Local automation ----
 .claude/

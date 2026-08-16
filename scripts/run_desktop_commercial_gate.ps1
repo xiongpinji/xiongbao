@@ -73,7 +73,17 @@ function Resolve-PythonCommand {
     return (Get-Command python -ErrorAction Stop).Source
 }
 
+function Assert-Python311 {
+    param([Parameter(Mandatory = $true)][string]$PythonCommand)
+    $probe = 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}"); raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 42)'
+    $actual = (& $PythonCommand -c $probe).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "commercial gate requires Python 3.11; resolved version: $actual"
+    }
+}
+
 $pythonCommand = Resolve-PythonCommand
+Assert-Python311 -PythonCommand $pythonCommand
 $env:PYTHONNOUSERSITE = '1'
 try {
     Start-Transcript -LiteralPath $transcriptPath -Force | Out-Null

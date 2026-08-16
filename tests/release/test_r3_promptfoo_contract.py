@@ -91,9 +91,11 @@ class R3PromptfooContractTests(unittest.TestCase):
             "tenant_id",
             "PROMPTFOO_TENANT_ID",
             "context.vars.query",
-            "result.final_answer.includes(query)",
+            "result.goal.includes(query)",
+            "result.final_answer.trim().length > 0",
         ):
             self.assertIn(required, javascript)
+        self.assertNotIn("result.final_answer.includes(query)", javascript)
         self.assertIn("Traceback", source)
         self.assertIn("Internal Server Error", source)
 

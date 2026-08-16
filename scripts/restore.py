@@ -16,6 +16,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SHA_PATTERN = re.compile(r"^[a-f0-9]{40}$")
+PROJECT_PATTERN = re.compile(
+    r"^xagent-restore-(?P<sha>[a-f0-9]{8})-(?P<nonce>[a-f0-9]{8})$"
+)
+QDRANT_PATTERN = re.compile(
+    r"^xagent_restore_(?P<sha>[a-f0-9]{8})_(?P<nonce>[a-f0-9]{8})$"
+)
 
 
 @dataclass(frozen=True)
@@ -31,10 +37,14 @@ def validate_restore_scope(
     if SHA_PATTERN.fullmatch(source_sha) is None:
         raise ValueError("source SHA must be 40 lowercase hexadecimal characters")
     sha8 = source_sha[:8]
-    if compose_project != f"xagent-restore-{sha8}":
+    project_match = PROJECT_PATTERN.fullmatch(compose_project)
+    collection_match = QDRANT_PATTERN.fullmatch(qdrant_collection)
+    if project_match is None or project_match.group("sha") != sha8:
         raise ValueError("restore project does not match the source SHA")
-    if qdrant_collection != f"xagent_restore_{sha8}":
+    if collection_match is None or collection_match.group("sha") != sha8:
         raise ValueError("restore collection does not match the source SHA")
+    if project_match.group("nonce") != collection_match.group("nonce"):
+        raise ValueError("restore project and collection run nonce do not match")
     return RestoreScope(compose_project, qdrant_collection, source_sha)
 
 

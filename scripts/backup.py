@@ -16,7 +16,12 @@ from pathlib import Path
 from typing import Sequence
 
 SHA_PATTERN = re.compile(r"^[a-f0-9]{40}$")
-PROJECT_PATTERN = re.compile(r"^xagent-rollback-candidate-[a-f0-9]{8}$")
+PROJECT_PATTERN = re.compile(
+    r"^xagent-rollback-candidate-(?P<sha>[a-f0-9]{8})-(?P<nonce>[a-f0-9]{8})$"
+)
+QDRANT_PATTERN = re.compile(
+    r"^xagent_memory_(?P<sha>[a-f0-9]{8})_(?P<nonce>[a-f0-9]{8})$"
+)
 
 
 def validate_scope(
@@ -30,13 +35,14 @@ def validate_scope(
     if SHA_PATTERN.fullmatch(source_sha) is None:
         raise ValueError("source SHA must be 40 lowercase hexadecimal characters")
     sha8 = source_sha[:8]
-    if (
-        PROJECT_PATTERN.fullmatch(compose_project) is None
-        or compose_project != f"xagent-rollback-candidate-{sha8}"
-    ):
+    project_match = PROJECT_PATTERN.fullmatch(compose_project)
+    collection_match = QDRANT_PATTERN.fullmatch(qdrant_collection)
+    if project_match is None or project_match.group("sha") != sha8:
         raise ValueError("compose project does not match the source SHA")
-    if qdrant_collection != f"xagent_memory_{sha8}":
+    if collection_match is None or collection_match.group("sha") != sha8:
         raise ValueError("Qdrant collection does not match the source SHA")
+    if project_match.group("nonce") != collection_match.group("nonce"):
+        raise ValueError("compose project and Qdrant collection run nonce do not match")
     resolved_output = Path(output).resolve()
     if repo_root is not None:
         root = Path(repo_root).resolve(strict=True)
