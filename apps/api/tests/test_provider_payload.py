@@ -257,6 +257,20 @@ def test_litellm_call_kwargs_uses_request_timeout_seconds() -> None:
     assert kwargs["model"] == "ollama/qwen2.5vl:7b"
 
 
+def test_litellm_call_kwargs_transmits_configured_ollama_context() -> None:
+    client = LiteLLMClient(
+        LLMSettings(
+            ollama_base_url="http://host.docker.internal:11434",
+            ollama_model="qwen3:4b",
+            ollama_num_ctx=8192,
+        )
+    )
+
+    kwargs = client._call_kwargs()
+
+    assert kwargs["num_ctx"] == 8192
+
+
 def test_litellm_call_kwargs_deepseek_key_transmitted() -> None:
     cfg = LLMSettings(default_model="deepseek-v4-flash", deepseek_api_key="sk-fake")
     client = LiteLLMClient(cfg)
@@ -327,6 +341,20 @@ async def test_litellm_chat_complete_uses_direct_ollama_chat_contract(
     assert "tools" not in captured
     assert "tool_choice" not in captured
     assert "reasoning_effort" not in captured
+
+
+async def test_litellm_chat_complete_normalizes_explicit_bare_ollama_model(
+    monkeypatch,
+) -> None:
+    captured = _capture_completion(monkeypatch)
+    client = _ollama_client()
+
+    await client.complete_chat(
+        [Message(role="user", content="recovery summary")],
+        model="qwen3:4b",
+    )
+
+    assert captured["model"] == "ollama_chat/qwen3:4b"
 
 
 async def test_litellm_complete_preserves_model_response_finish_reason(

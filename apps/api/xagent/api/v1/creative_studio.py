@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from xagent.core.orchestration.task_view import build_task_view
 from xagent.domains.creative_studio import build_draft_from_brief
 from xagent.domains.creative_studio import persistence as creative_persistence
+from xagent.domains.creative_studio.delivery_bundle import build_delivery_bundle
+from xagent.domains.creative_studio.editor.tools import get_timeline
 from xagent.domains.creative_studio.media import (
     GenerationMode,
     GenerationRequest,
@@ -36,6 +40,7 @@ from xagent.infra.repos.artifact import (
     upsert_artifact_record,
 )
 from xagent.infra.repos.evidence import persist_evidence_bundle
+from xagent.infra.settings import get_settings
 
 router = APIRouter(prefix="/creative-studio", tags=["creative-studio"])
 logger = get_logger("xagent.api.creative_studio")
@@ -371,7 +376,7 @@ def _build_media_task_state(
         mode=str(input_payload.get("mode") or ""),
         outputs=list(outputs),
     )
-    validation = {"risks": []}
+    validation: dict[str, Any] = {"risks": []}
     delivery = _attach_delivery_bundle(
         delivery=_build_media_delivery_summary(
             kind=kind,
@@ -381,12 +386,12 @@ def _build_media_task_state(
         artifacts=artifacts,
         validation=validation,
     )
-    preview_summary = {
+    preview_summary: dict[str, Any] = {
         "prompt": str(input_payload.get("prompt") or ""),
         "mode": str(input_payload.get("mode") or ""),
         "provider": provider,
     }
-    evidence = [
+    evidence: list[dict[str, Any]] = [
         {"kind": "request.input", "payload": deepcopy(input_payload)},
         {
             "kind": "media.poll_result" if outputs else "media.request",
@@ -1064,6 +1069,16 @@ class ProduceIn(BaseModel):
     with_video: bool = True
 
 
+def _attach_timeline_snapshot(doc: dict[str, Any]) -> dict[str, Any]:
+    timeline_id = str(doc.get("timeline_id") or "")
+    timeline = get_timeline(timeline_id) if timeline_id else None
+    doc["timeline"] = timeline.to_dict() if timeline is not None else None
+    if timeline_id and timeline is None:
+        doc["status"] = "partial"
+        doc.setdefault("failures", []).append("timeline_snapshot_missing")
+    return doc
+
+
 @router.post("/produce", summary="短剧全链路产出(故事板→关键帧→视频→质量门)")
 async def produce(
     body: ProduceIn,
@@ -1080,6 +1095,7 @@ async def produce(
     doc = result.to_dict()
     doc["tenant_id"] = principal.tenant_id
     doc["owner"] = principal.user_id
+    _attach_timeline_snapshot(doc)
     _productions[result.storyboard_id] = doc
     await creative_persistence.save_production(doc)
     artifacts = _build_production_artifacts(
@@ -1110,11 +1126,11 @@ async def produce(
         owner_id=principal.user_id,
         kind="creative.produce",
         backend="creative_studio",
-        status=result.status,
+        status=str(doc["status"]),
         input_payload=input_payload,
         result={
             "storyboard_id": result.storyboard_id,
-            "status": result.status,
+            "status": doc["status"],
             "title": doc.get("title", ""),
             "timeline_id": doc.get("timeline_id"),
             "shots": deepcopy(doc.get("shots") or []),
@@ -1161,7 +1177,7 @@ async def produce(
         detail={
             "storyboard_id": result.storyboard_id,
             "shots": len(result.shots),
-            "status": result.status,
+            "status": doc["status"],
         },
     )
     return doc
@@ -1174,6 +1190,41 @@ async def list_productions(
     await _hydrate_from_persistence()
     items = [p for p in _productions.values() if p.get("tenant_id") == principal.tenant_id]
     return {"productions": items}
+
+
+def _creative_delivery_roots() -> tuple[Path, ...]:
+    roots = [Path(get_settings().media.tts_output_dir).expanduser().resolve()]
+    for raw_root in os.environ.get("FS_ALLOWED_ROOTS", "").split(","):
+        value = raw_root.strip()
+        if not value:
+            continue
+        candidate = Path(value).expanduser()
+        if candidate.is_absolute():
+            roots.append(candidate.resolve())
+    return tuple(dict.fromkeys(roots))
+
+
+@router.get("/productions/{storyboard_id}/bundle", summary="下载短剧交付包")
+async def download_production_bundle(
+    storyboard_id: str,
+    principal: Principal = Depends(require_permission("creative", "read")),
+) -> Response:
+    doc = await creative_persistence.load_production(
+        storyboard_id,
+        principal.tenant_id,
+    )
+    if doc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "产物不存在或无权访问")
+    payload = build_delivery_bundle(doc, allowed_roots=_creative_delivery_roots())
+    return Response(
+        payload,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="short-drama-{storyboard_id}.zip"'
+            )
+        },
+    )
 
 
 @router.get("/productions/{storyboard_id}", summary="查看成片产物详情")

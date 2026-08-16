@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -12,7 +10,10 @@ from xagent.adapters.tools import get_tool_registry
 from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.logging import get_logger
-from xagent.infra.settings import get_settings
+from xagent.infra.paths import data_path
+from xagent.infra.secrets import is_secret_ref, resolve_secret
+from xagent.infra.secure_json import write_private_json
+from xagent.infra.settings import RunMode, get_settings
 
 router = APIRouter(prefix="/system", tags=["system"])
 logger = get_logger("xagent.api.system")
@@ -92,11 +93,9 @@ async def capabilities(
 
 # ---- LLM 模型配置 ----
 
-# 运行时 LLM 配置覆盖持久化文件（PUT /llm-config 写入，GET/启动时回读）。
-# 避免"PUT 回显新值、重启后丢失"的假成功。
-_LLM_OVERRIDES_PATH = (
-    Path(__file__).resolve().parents[4] / "data" / "llm_config_overrides.json"
-)
+# 运行时 LLM 配置覆盖持久化文件（非密字段和 secretRef 才会写入）。
+# 明文密钥仅在当前进程生效，响应会明确标注 session_only。
+_LLM_OVERRIDES_PATH = data_path("llm_config_overrides.json")
 # 允许通过 API 覆盖的 LLM 字段白名单
 _LLM_OVERRIDABLE_FIELDS = (
     "default_model",
@@ -110,37 +109,65 @@ _LLM_OVERRIDABLE_FIELDS = (
     "anthropic_api_key",
     "deepseek_api_key",
 )
+_LLM_SENSITIVE_FIELDS = frozenset({
+    "proxy_api_key",
+    "openai_api_key",
+    "anthropic_api_key",
+    "deepseek_api_key",
+})
 
 
-def _load_llm_overrides() -> dict:
+def _load_llm_overrides(*, mode: RunMode | None = None) -> dict:
+    current_mode = mode or get_settings().mode
+    if not _LLM_OVERRIDES_PATH.is_file():
+        return {}
     try:
-        if _LLM_OVERRIDES_PATH.is_file():
-            import json
+        import json
 
-            data = json.loads(_LLM_OVERRIDES_PATH.read_text(encoding="utf-8"))
-            return {k: v for k, v in data.items() if k in _LLM_OVERRIDABLE_FIELDS}
-    except Exception as exc:  # noqa: BLE001  覆盖文件损坏不阻断启动
-        logger.warning("llm_overrides_load_failed", error=str(exc))
-    return {}
+        data = json.loads(_LLM_OVERRIDES_PATH.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("LLM override root must be an object")
+    except Exception as exc:  # noqa: BLE001
+        if current_mode != RunMode.lite:
+            raise RuntimeError("LLM override file is invalid") from exc
+        logger.warning("llm_overrides_load_failed", error_type=type(exc).__name__)
+        return {}
+
+    overrides = {k: v for k, v in data.items() if k in _LLM_OVERRIDABLE_FIELDS}
+    plaintext_fields = sorted(
+        key
+        for key, value in overrides.items()
+        if key in _LLM_SENSITIVE_FIELDS and not is_secret_ref(value)
+    )
+    if plaintext_fields:
+        fields = ", ".join(plaintext_fields)
+        if current_mode != RunMode.lite:
+            raise RuntimeError(f"plaintext LLM overrides are forbidden: {fields}")
+        logger.warning("llm_plaintext_overrides_ignored", fields=plaintext_fields)
+        for key in plaintext_fields:
+            overrides.pop(key)
+    return overrides
 
 
 def _apply_llm_overrides() -> dict:
     """把持久化的覆盖值应用到当前 settings（幂等），返回应用的覆盖。"""
-    overrides = _load_llm_overrides()
+    settings = get_settings()
+    overrides = _load_llm_overrides(mode=settings.mode)
     if overrides:
-        cfg = get_settings().llm
+        cfg = settings.llm
         for key, value in overrides.items():
+            if key in _LLM_SENSITIVE_FIELDS:
+                value = resolve_secret(
+                    value,
+                    field=f"llm.{key}",
+                    lite=settings.mode == RunMode.lite,
+                )
             setattr(cfg, key, value)
     return overrides
 
 
 def _save_llm_overrides(overrides: dict) -> None:
-    import json
-
-    _LLM_OVERRIDES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _LLM_OVERRIDES_PATH.write_text(
-        json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    write_private_json(_LLM_OVERRIDES_PATH, overrides)
 
 
 # 模块导入时（即 app 创建时）恢复上次持久化的覆盖，保证重启后配置仍生效
@@ -280,11 +307,20 @@ async def update_llm_config(
     body: LLMConfigIn,
     principal: Principal = Depends(require_permission("system", "manage")),
 ) -> dict:
-    cfg = get_settings().llm
-    changed: dict = {}
+    settings = get_settings()
+    cfg = settings.llm
+    submitted = dict(body.model_dump(exclude_none=True))
+    runtime_fields = dict(submitted)
+    for key, value in runtime_fields.items():
+        if key in _LLM_SENSITIVE_FIELDS and is_secret_ref(value):
+            runtime_fields[key] = resolve_secret(
+                value,
+                field=f"llm.{key}",
+                lite=settings.mode == RunMode.lite,
+            )
+
     # 先把非模型字段应用到临时视图，再校验目标模型可用性（无 key 拦截）
-    preview_fields = dict(body.model_dump(exclude_none=True))
-    prospective = cfg.model_copy(update=preview_fields)
+    prospective = cfg.model_copy(update=runtime_fields)
     if body.default_model is not None:
         provider = _model_provider(body.default_model)
         ready = (
@@ -303,40 +339,30 @@ async def update_llm_config(
                     "请先配置对应 key 或代理，避免运行时出现『连接已中断』类失败。"
                 ),
             )
-    if body.default_model is not None:
-        cfg.default_model = body.default_model
-        changed["default_model"] = body.default_model
-    if body.fallback_models is not None:
-        cfg.fallback_models = body.fallback_models
-        changed["fallback_models"] = body.fallback_models
-    if body.proxy_url is not None:
-        cfg.proxy_url = body.proxy_url
-        changed["proxy_url"] = body.proxy_url
-    if body.proxy_api_key is not None:
-        cfg.proxy_api_key = body.proxy_api_key
-        changed["proxy_api_key"] = body.proxy_api_key
-    if body.ollama_base_url is not None:
-        cfg.ollama_base_url = body.ollama_base_url
-        changed["ollama_base_url"] = body.ollama_base_url
-    if body.ollama_model is not None:
-        cfg.ollama_model = body.ollama_model
-        changed["ollama_model"] = body.ollama_model
-    if body.request_timeout_seconds is not None:
-        cfg.request_timeout_seconds = body.request_timeout_seconds
-        changed["request_timeout_seconds"] = body.request_timeout_seconds
-    if body.openai_api_key is not None:
-        cfg.openai_api_key = body.openai_api_key
-        changed["openai_api_key"] = body.openai_api_key
-    if body.anthropic_api_key is not None:
-        cfg.anthropic_api_key = body.anthropic_api_key
-        changed["anthropic_api_key"] = body.anthropic_api_key
-    if body.deepseek_api_key is not None:
-        cfg.deepseek_api_key = body.deepseek_api_key
-        changed["deepseek_api_key"] = body.deepseek_api_key
+    for key, value in runtime_fields.items():
+        setattr(cfg, key, value)
+
+    session_only_fields = sorted(
+        key
+        for key, value in submitted.items()
+        if key in _LLM_SENSITIVE_FIELDS and not is_secret_ref(value)
+    )
+    reference_fields = sorted(
+        key
+        for key, value in submitted.items()
+        if key in _LLM_SENSITIVE_FIELDS and is_secret_ref(value)
+    )
+    persistable_changes = {
+        key: value
+        for key, value in submitted.items()
+        if key not in _LLM_SENSITIVE_FIELDS or is_secret_ref(value)
+    }
 
     # 持久化覆盖到磁盘（与已有覆盖合并），重启后仍生效
-    overrides = _load_llm_overrides()
-    overrides.update(changed)
+    overrides = _load_llm_overrides(mode=settings.mode)
+    for key in session_only_fields:
+        overrides.pop(key, None)
+    overrides.update(persistable_changes)
     try:
         _save_llm_overrides(overrides)
         persisted = True
@@ -351,6 +377,15 @@ async def update_llm_config(
     return {
         "status": "ok",
         "persisted": persisted,
+        "persisted_fields": sorted(persistable_changes) if persisted else [],
+        "session_only_fields": session_only_fields,
+        "secret_persistence": (
+            "session_only"
+            if session_only_fields
+            else "reference_only"
+            if reference_fields
+            else "not_applicable"
+        ),
         "default_model": cfg.default_model,
         "fallback_models": cfg.fallback_models,
         "proxy_url": cfg.proxy_url,

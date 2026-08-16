@@ -11,8 +11,13 @@ from xagent.adapters.tools.base import ToolResult
 from xagent.core.agents import get_role_registry, match_role
 from xagent.core.orchestration import run_agent
 from xagent.core.orchestration.conversation import get_conversation_manager
-from xagent.core.orchestration.loop import run_agent as run_agent_builtin
-from xagent.core.orchestration.state import AgentRun, StepEvent, StepKind
+from xagent.core.orchestration.loop import (
+    _detect_final_answer,
+)
+from xagent.core.orchestration.loop import (
+    run_agent as run_agent_builtin,
+)
+from xagent.core.orchestration.state import AgentRun, AgentState, StepEvent, StepKind
 from xagent.core.skills import SkillStore
 from xagent.enterprise.audit import get_audit_log
 from xagent.enterprise.auth.principal import Principal
@@ -32,6 +37,23 @@ def test_agent_run_status_fields_preserve_positional_events_compatibility() -> N
     assert run.events == [event]
     assert run.status == "succeeded"
     assert run.error == ""
+
+
+def test_detect_final_answer_accepts_executed_all_subtasks_summary() -> None:
+    state = AgentState(goal="create artifact", role_name="developer", tenant_id="t1")
+    state.messages.append(
+        Message(
+            role="tool",
+            name="file_write",
+            tool_call_id="call-1",
+            content="[file_write 执行成功] 已写入 R2_AGENT_RESULT.md",
+        )
+    )
+
+    assert _detect_final_answer(
+        "✅ 所有子任务执行完毕\n最终结果：R2_AGENT_RESULT.md 已正确创建",
+        state,
+    )
 
 
 async def test_run_agent_converges_offline() -> None:
@@ -671,11 +693,18 @@ class _EmptyRecoveryStreamingLLM(LiteLLMClient):
 
     def __init__(self, recovery_content: str = "") -> None:
         self.recovery_content = recovery_content
+        self.complete_calls = 0
+        self.complete_chat_calls = 0
 
     async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
         yield StreamChunk(finished=True)
 
     async def complete(self, messages, **kwargs):  # noqa: ARG002
+        self.complete_calls += 1
+        return LLMResponse(content=self.recovery_content, model="test")
+
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
+        self.complete_chat_calls += 1
         return LLMResponse(content=self.recovery_content, model="test")
 
     async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
@@ -716,6 +745,8 @@ async def test_stream_empty_response_can_recover_with_real_content(monkeypatch) 
     assert run.status == "succeeded"
     assert run.error == ""
     assert run.final_answer == "恢复后的真实模型回答。"
+    assert llm.complete_chat_calls == 1
+    assert llm.complete_calls == 0
 
 
 class _EmptyRecoveryNativeLLM(LLMClient):
@@ -814,7 +845,7 @@ async def test_nonstream_empty_response_can_recover_with_real_content(
 
 
 class _FailingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
-    async def complete(self, messages, **kwargs):  # noqa: ARG002
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
         raise ValueError("recovery provider failed")
 
 
@@ -838,7 +869,7 @@ class _BlockingRecoveryStreamingLLM(_EmptyRecoveryStreamingLLM):
         super().__init__()
         self.recovery_started = asyncio.Event()
 
-    async def complete(self, messages, **kwargs):  # noqa: ARG002
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
         self.recovery_started.set()
         await asyncio.Event().wait()
 
@@ -976,6 +1007,158 @@ class _RequiredStreamingFileWriteLLM(LiteLLMClient):
         return True
 
 
+class _RequiredWriteThenEmptySummaryLLM(LiteLLMClient):
+    """必需写入成功，但后续总结及恢复调用都返回空内容。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": "call_write",
+                        "function": {
+                            "name": "file_write",
+                            "arguments": '{"path":"artifact.txt","content":"ok"}',
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="", model="test")
+
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _RequiredWriteThenBriefSummaryLLM(LiteLLMClient):
+    """必需写入成功后返回简短总结，但不含通用完成关键词。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls == 1:
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": "call_write",
+                        "function": {
+                            "name": "file_write",
+                            "arguments": '{"path":"artifact.txt","content":"ok"}',
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(delta_content="文件已写入。", finished=True)
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="文件已写入。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _RejectedThenSuccessfulFileWriteLLM(LiteLLMClient):
+    """流式：先尝试越界路径被拒绝，再写入合法产物。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        self.calls += 1
+        if self.calls <= 2:
+            path = "../outside.txt" if self.calls == 1 else "artifact.txt"
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {
+                        "index": 0,
+                        "id": f"call_{self.calls}",
+                        "function": {
+                            "name": "file_write",
+                            "arguments": (
+                                '{"path":"' + path + '","content":"ok"}'
+                            ),
+                        },
+                    }
+                ],
+                finished=True,
+            )
+            return
+        yield StreamChunk(
+            delta_content="开发任务已全部完成并写入合法产物。",
+            finished=True,
+        )
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        raise AssertionError("流式回归不得进入非流式路径")
+
+    async def health(self) -> bool:
+        return True
+
+
+class _RejectedThenSuccessfulNonStreamingFileWriteLLM(LLMClient):
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
+        from xagent.adapters.llm.base import ToolCall
+
+        self.calls += 1
+        if self.calls <= 2:
+            path = "../outside.txt" if self.calls == 1 else "artifact.txt"
+            return LLMResponse(
+                content="",
+                model="test",
+                tool_calls=[
+                    ToolCall(
+                        id=f"call_{self.calls}",
+                        name="file_write",
+                        args={"path": path, "content": "ok"},
+                    )
+                ],
+            )
+        return LLMResponse(
+            content="开发任务已全部完成并写入合法产物。", model="test"
+        )
+
+    async def health(self) -> bool:
+        return True
+
+
 class _FileWriteRegistry:
     def specs(self) -> list[dict]:
         return [
@@ -998,6 +1181,62 @@ class _FileWriteRegistry:
 
     async def call(self, name, args, ctx):  # noqa: ARG002
         return ToolResult(ok=True, output="written")
+
+
+class _RejectingFileWriteRegistry(_FileWriteRegistry):
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        if args.get("path") == "../outside.txt":
+            return ToolResult(ok=False, error="写入路径必须位于 workspace 内")
+        return ToolResult(ok=True, output="written")
+
+
+@pytest.mark.parametrize(
+    "llm_type",
+    [
+        _RejectedThenSuccessfulFileWriteLLM,
+        _RejectedThenSuccessfulNonStreamingFileWriteLLM,
+    ],
+    ids=["stream", "non-stream"],
+)
+async def test_failed_file_write_is_not_persisted_as_changed_file(
+    monkeypatch, llm_type
+) -> None:
+    llm = llm_type()
+    checkpoint_files: list[list[str]] = []
+
+    async def capture_checkpoint(*args, **kwargs):  # noqa: ARG001
+        checkpoint_files.append(list(args[4]))
+
+    async def verification_passes(*args, **kwargs):  # noqa: ARG001
+        return True, "ok"
+
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _RejectingFileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._run_verification", verification_passes
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.checkpoint.save_checkpoint_snapshot",
+        capture_checkpoint,
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert run.status == "succeeded"
+    assert checkpoint_files == [["artifact.txt"]]
 
 
 async def test_required_first_tool_retries_once_after_plain_text(monkeypatch) -> None:
@@ -1032,6 +1271,62 @@ async def test_required_first_tool_retries_once_after_plain_text(monkeypatch) ->
         for event in run.events
     )
     assert run.final_answer
+
+
+async def test_required_tool_success_survives_empty_summary(monkeypatch) -> None:
+    llm = _RequiredWriteThenEmptySummaryLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert "file_write" in run.final_answer
+    assert "artifact.txt" in run.final_answer
+    assert "1 次工具调用, 成功率 100%" in run.final_answer
+    assert any(event.kind == StepKind.final for event in run.events)
+
+
+async def test_required_tool_success_accepts_brief_summary_without_looping(
+    monkeypatch,
+) -> None:
+    llm = _RequiredWriteThenBriefSummaryLLM()
+    monkeypatch.setattr("xagent.core.orchestration.loop.get_llm_client", lambda: llm)
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_tool_registry",
+        lambda: _FileWriteRegistry(),
+    )
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop._git_create_work_branch",
+        lambda workspace, run_id: "agent/test",
+    )
+    principal = Principal(user_id="u", tenant_id="t1", roles=frozenset({"member"}))
+
+    run = await run_agent_builtin(
+        "创建开发产物",
+        principal=principal,
+        role_name="general",
+        required_first_tool="file_write",
+    )
+
+    assert run.status == "succeeded"
+    assert run.error == ""
+    assert run.final_answer.startswith("文件已写入。")
+    assert llm.calls == 2
 
 
 @pytest.mark.parametrize(

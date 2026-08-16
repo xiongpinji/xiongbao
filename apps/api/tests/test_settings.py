@@ -11,6 +11,8 @@ def test_lite_defaults() -> None:
     assert s.is_lite
     assert not s.is_production
     assert s.db.url.startswith("sqlite")
+    assert "http://tauri.localhost" in s.cors_origins
+    assert "tauri://localhost" in s.cors_origins
     # lite 默认不应有生产校验问题
     assert s.validate_for_production() == []
 

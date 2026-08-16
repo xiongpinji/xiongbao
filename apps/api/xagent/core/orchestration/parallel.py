@@ -27,7 +27,38 @@ MAX_PARALLEL_AGENTS = 5
 SUB_TASK_TIMEOUT = 180
 # 严格隔离 file_write 需覆盖 240 秒 SLO，并为 Git finalize/HTTP 返回留余量。
 STRICT_FILE_WRITE_TIMEOUT = 270
+TASK_CANCEL_GRACE_SECONDS = 2.0
+TASK_CANCEL_ATTEMPTS = 3
 _RUNNING_DEVELOPMENT_TASKS: dict[str, asyncio.Task[Any]] = {}
+
+
+async def _cancel_agent_task(task: asyncio.Task[Any]) -> bool:
+    """Cancel a child run without waiting forever for one ignored cancellation."""
+    for attempt in range(1, TASK_CANCEL_ATTEMPTS + 1):
+        task.cancel()
+        done, _ = await asyncio.wait({task}, timeout=TASK_CANCEL_GRACE_SECONDS)
+        if task in done:
+            try:
+                task.result()
+            except BaseException as exc:
+                logger.debug("agent_cancel_result_ignored", error=repr(exc))
+            return True
+        logger.warning("agent_cancel_retry", attempt=attempt)
+    logger.error("agent_cancel_unacknowledged", attempts=TASK_CANCEL_ATTEMPTS)
+    return False
+
+
+async def _run_agent_with_timeout(coro: Any, timeout: float) -> Any:
+    task = asyncio.create_task(coro)
+    try:
+        return await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
+    except asyncio.CancelledError:
+        await _cancel_agent_task(task)
+        raise
+    except TimeoutError as exc:
+        if not await _cancel_agent_task(task):
+            raise RuntimeError("agent task did not acknowledge cancellation") from exc
+        raise
 
 
 def cancel_running_development_task(task_id: str) -> bool:
@@ -196,7 +227,7 @@ async def run_parallel_agents(
                 if required_first_tool is not None:
                     agent_kwargs["required_first_tool"] = required_first_tool
                     task_timeout = STRICT_FILE_WRITE_TIMEOUT
-                result = await asyncio.wait_for(
+                result = await _run_agent_with_timeout(
                     run_agent(
                         task.goal,
                         principal=principal,

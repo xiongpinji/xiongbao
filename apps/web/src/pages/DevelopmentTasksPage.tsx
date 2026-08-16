@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GitPullRequest, RefreshCw } from "lucide-react";
+import { Download, GitPullRequest, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import {
   getDevelopmentTask,
@@ -71,6 +71,17 @@ export default function DevelopmentTasksPage() {
   });
 
   const task = detailQuery.data;
+  const downloadPatch = () => {
+    if (!task || !patchQuery.data) return;
+    const url = URL.createObjectURL(
+      new Blob([patchQuery.data], { type: "text/x-diff;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${task.task_id}.patch`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
   const runAction = (action: DevelopmentTaskAction) => {
     if (!task) return;
     const confirmed = window.confirm(
@@ -224,9 +235,19 @@ export default function DevelopmentTasksPage() {
                   </div>
 
                   <div>
-                    <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
-                      <GitPullRequest size={15} /> 完整 Patch
-                    </h3>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <h3 className="flex items-center gap-2 text-sm font-medium text-white">
+                        <GitPullRequest size={15} /> 完整 Patch
+                      </h3>
+                      <button
+                        type="button"
+                        disabled={!patchQuery.data}
+                        onClick={downloadPatch}
+                        className="flex items-center gap-1.5 rounded-md border border-white/[0.1] px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-white/[0.05] disabled:opacity-40"
+                      >
+                        <Download size={13} /> 下载 Patch
+                      </button>
+                    </div>
                     <pre className="xagent-scrollbar max-h-[520px] overflow-auto whitespace-pre rounded-md border border-white/[0.06] bg-black/40 p-4 font-mono text-xs leading-5 text-neutral-300">
                       {patchQuery.isLoading
                         ? "正在加载 patch..."

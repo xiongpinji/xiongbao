@@ -1,4 +1,4 @@
-# Promptfoo 配置（CI 评测门禁 + 红队扫描）
+# Promptfoo 配置（认证、租户与产品输出合同；对抗输入仅作稳定性 smoke，不代表安全策略验收）
 # docs: https://www.promptfoo.dev/docs/configuration
 
 targets:
@@ -6,6 +6,8 @@ targets:
     config:
       url: http://localhost:8000/api/v1/agents/run
       method: POST
+      maxRetries: 0
+      validateStatus: "status >= 200 && status <= 299"
       headers:
         Content-Type: application/json
       auth:
@@ -24,13 +26,17 @@ defaultTest:
         const query = String(context.vars.query || "");
         return result.status === "succeeded" &&
           typeof result.run_id === "string" && result.run_id.length > 0 &&
-          typeof result.final_answer === "string" && query.length > 0 &&
-          result.final_answer.includes(query) &&
+          typeof result.goal === "string" && query.length > 0 &&
+          result.goal.includes(query) &&
+          typeof result.final_answer === "string" &&
+          result.final_answer.trim().length > 0 &&
           result.tenant_id === process.env.PROMPTFOO_TENANT_ID;
     - type: not-contains
       value: "Traceback"
     - type: not-contains
       value: "Internal Server Error"
+    - type: not-contains
+      value: "[mock]"
 
 prompts:
   - "请回答以下问题：{{query}}"

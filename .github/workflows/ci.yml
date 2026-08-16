@@ -6,9 +6,19 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      paid_eval_source_sha:
+        description: Exact 40-character candidate SHA for one paid evaluation batch
+        required: false
+        type: string
+      paid_eval_authorization:
+        description: Enter one_batch_8_calls to authorize this manual run
+        required: false
+        type: string
 
 jobs:
   backend:
+    name: Backend fast feedback (Web/API scope)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +43,82 @@ jobs:
 
       - name: Test (Web/API release scope)
         run: python ../../scripts/run_webapi_release_tests.py
+
+  backend-commercial:
+    name: Backend commercial (full API suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Test complete API product suite
+        run: python scripts/run_backend_commercial_tests.py
+
+  short-drama:
+    name: Short drama offline delivery gate
+    runs-on: ubuntu-latest
+    env:
+      XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER: "null"
+      XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER: "null"
+      XAGENT_MEDIA__DEFAULT_AUDIO_PROVIDER: "null"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Test offline short drama delivery
+        working-directory: apps/api
+        run: |
+          mkdir -p ../../output/ci-short-drama
+          python -m pytest -q \
+            tests/test_creative_delivery_bundle.py \
+            tests/test_creative_studio.py \
+            tests/test_creative_persistence.py \
+            tests/test_pipeline.py \
+            tests/test_audio_providers.py \
+            --junitxml=../../output/ci-short-drama/junit.xml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Audit and load short drama browser contract
+        working-directory: tests/e2e
+        env:
+          E2E_EVIDENCE_DIR: /tmp/xagent-short-drama-contract
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npx playwright test specs/short-drama-delivery.spec.ts \
+            --config playwright.config.ts --list
+
+      - name: Upload non-sensitive short drama test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-drama-test-evidence
+          path: output/ci-short-drama/junit.xml
+          if-no-files-found: error
+          retention-days: 7
 
   frontend:
     runs-on: ubuntu-latest
@@ -69,6 +155,146 @@ jobs:
       - name: Build
         run: npm run build
 
+  desktop:
+    name: Windows desktop quality and installers
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop build and audit tools
+        run: |
+          cargo install tauri-cli --version 2.11.4 --locked
+          cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Install and build web assets
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+
+      - name: Rust quality and dependency audit
+        run: |
+          cargo fmt --manifest-path apps/desktop/Cargo.toml -- --check
+          cargo clippy --manifest-path apps/desktop/Cargo.toml --all-targets --locked -- -D warnings
+          cargo test --manifest-path apps/desktop/Cargo.toml --locked
+          cargo audit --file apps/desktop/Cargo.lock
+
+      - name: Build MSI and NSIS installers
+        working-directory: apps/desktop
+        run: cargo tauri build --bundles msi,nsis
+
+      - name: Collect installer hashes and Authenticode state
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path output/ci-desktop | Out-Null
+          python scripts/collect_desktop_artifacts.py `
+            --bundle-root apps/desktop/target/release/bundle `
+            --source-sha $env:GITHUB_SHA `
+            --version 1.1.3 `
+            --output output/ci-desktop/artifacts.json
+
+      - name: Upload desktop installers and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-installers
+          path: |
+            apps/desktop/target/release/bundle/msi/*.msi
+            apps/desktop/target/release/bundle/nsis/*-setup.exe
+            output/ci-desktop/artifacts.json
+          if-no-files-found: error
+          retention-days: 14
+
+  commercial-kernel:
+    name: Commercial kernel contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        working-directory: apps/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify kernel contracts
+        run: >-
+          python -m pytest -q
+          tests/release/test_release_version_gate.py
+          tests/release/test_r2_preflight.py
+          tests/release/test_migrate_llm_overrides.py
+          tests/release/test_container_contract.py
+          tests/release/test_helm_image_contract.py
+          tests/security/test_scan.py
+          apps/api/tests/test_secure_json.py
+          apps/api/tests/test_llm_config_security.py
+
+  commercial-evidence:
+    name: Aggregate CI component evidence
+    runs-on: ubuntu-latest
+    needs:
+      - commercial-kernel
+      - backend-commercial
+      - frontend
+      - short-drama
+      - desktop
+      - supply-chain
+      - load-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write bounded component evidence
+        env:
+          XAGENT_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p output/ci-commercial-evidence
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = {
+              "schema_version": "1.0",
+              "source_sha": os.environ["XAGENT_SOURCE_SHA"],
+              "classification": "ci_component_evidence",
+              "components": {
+                  name: "passed_by_needs"
+                  for name in (
+                      "commercial-kernel", "backend-commercial", "frontend",
+                      "short-drama", "desktop", "supply-chain", "load-test",
+                  )
+              },
+              "local_installer_lifecycle": "not_available_in_ci",
+              "real_local_model": "not_available_in_ci",
+              "rollback_drill": "not_available_in_ci",
+              "remote_release": "not_authorized",
+          }
+          path = Path("output/ci-commercial-evidence/component-evidence.json")
+          path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload commercial component evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-component-evidence
+          path: output/ci-commercial-evidence/component-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+
   license-gate:
     runs-on: ubuntu-latest
     steps:
@@ -87,6 +313,72 @@ jobs:
       - name: License gate (拦截 AGPL/GPL/ELv2/SSPL)
         run: python scripts/license_check.py
 
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Audit locked Python dependencies
+        run: |
+          python -m pip install pip-audit==2.10.0
+          pip-audit -r apps/api/requirements.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            packages/sdk-ts/package-lock.json
+
+      - name: Audit locked Node production dependencies
+        run: |
+          npm --prefix apps/web audit --omit=dev --audit-level=high
+          npm --prefix packages/sdk-ts audit --omit=dev --audit-level=high
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Audit locked Rust dependencies
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked
+          cargo audit --file apps/desktop/Cargo.lock
+
+      - name: Build API image for SBOM
+        run: docker build -t xagent-api:ci-sbom apps/api
+
+      - name: Build web assets and image for SBOM
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+          docker build -t xagent-web:ci-sbom apps/web
+
+      - name: Generate API SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: xagent-api:ci-sbom
+          format: spdx-json
+          output-file: sbom-api.spdx.json
+          upload-artifact: false
+
+      - name: Generate web SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: xagent-web:ci-sbom
+          format: spdx-json
+          output-file: sbom-web.spdx.json
+          upload-artifact: false
+
+      - name: Upload commercial SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-sboms
+          path: sbom-*.spdx.json
+          if-no-files-found: error
+
   config-governance:
     runs-on: ubuntu-latest
     steps:
@@ -96,8 +388,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install governance dependencies
+        run: pip install pyyaml pytest==9.1.1
 
       - name: Validate Helm values (all envs)
         run: |
@@ -124,6 +416,13 @@ jobs:
       - name: R3 Promptfoo contract
         run: python -m unittest discover -s tests/release -p "test_r3_promptfoo_contract.py" -v
 
+      - name: External GA gate contracts
+        run: >-
+          python -m pytest
+          tests/release/test_paid_model_eval_gate.py
+          tests/release/test_target_env_release_gate.py
+          tests/release/test_collect_desktop_artifacts.py -q
+
       - name: R2 compose render
         env:
           POSTGRES_PASSWORD: config-only-postgres-strong-value
@@ -135,8 +434,13 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - backend
+      - backend-commercial
+      - short-drama
       - frontend
+      - desktop
+      - commercial-evidence
       - license-gate
+      - supply-chain
       - config-governance
       - e2e-api
       - load-test
@@ -144,7 +448,8 @@ jobs:
       - release-version
     if: >-
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
+      vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     permissions:
       contents: read
       packages: write
@@ -276,7 +581,9 @@ jobs:
   load-test:
     runs-on: ubuntu-latest
     needs: [backend]
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
     env:
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "false"
@@ -298,7 +605,7 @@ jobs:
       - name: Start API
         working-directory: apps/api
         run: |
-          nohup uvicorn xagent.main:app --host 0.0.0.0 --port 8000 >/tmp/xagent-load.log 2>&1 &
+          nohup uvicorn xagent.main:app --host 0.0.0.0 --port 8000 --no-access-log >/tmp/xagent-load.log 2>&1 &
 
       - name: Wait for API
         run: |
@@ -317,15 +624,35 @@ jobs:
   promptfoo-eval:
     runs-on: ubuntu-latest
     needs: [backend, license-gate]
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.paid_eval_source_sha == github.sha &&
+      inputs.paid_eval_authorization == 'one_batch_8_calls' &&
+      vars.XAGENT_PAID_EVAL_AUTHORIZED == 'true'
     env:
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "true"
       XAGENT_DB__URL: sqlite+aiosqlite:///./xagent-ci.db
+      XAGENT_PAID_EVAL_AUTHORIZATION: ${{ inputs.paid_eval_authorization }}
+      XAGENT_LLM__DEFAULT_MODEL: deepseek-chat
+      XAGENT_LLM__MAX_ATTEMPTS: "1"
+      XAGENT_LLM__DEEPSEEK_API_KEY: ${{ secrets.XAGENT_LLM_DEEPSEEK_API_KEY }}
+      XAGENT_PAID_EVAL_PRICING_SOURCE: ${{ vars.XAGENT_PAID_EVAL_PRICING_SOURCE }}
+      XAGENT_PAID_EVAL_PRICE_VERIFIED_AT: ${{ vars.XAGENT_PAID_EVAL_PRICE_VERIFIED_AT }}
+      XAGENT_PAID_EVAL_BALANCE_VERIFIED_AT: ${{ vars.XAGENT_PAID_EVAL_BALANCE_VERIFIED_AT }}
+      XAGENT_PAID_EVAL_MAX_USD: ${{ vars.XAGENT_PAID_EVAL_MAX_USD }}
+      PROMPTFOO_DISABLE_ADAPTIVE_SCHEDULER: "true"
+      PROMPTFOO_RETRY_5XX: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - name: Verify paid-model authorization
+        run: >-
+          python scripts/paid_model_eval_gate.py preflight
+          --source-sha "${GITHUB_SHA}"
+          --expected-calls 8
+          --output /tmp/paid-model-preflight.json
       - name: Configure CI JWT secret
         run: |
           python - <<'PY'
@@ -405,8 +732,23 @@ jobs:
         run: |
           promptfoo eval -c .promptfoo/config.yaml --no-cache --max-concurrency 1 \
             --output /tmp/promptfoo-results.json
-          python scripts/check_promptfoo_results.py \
-            /tmp/promptfoo-results.json --expected 8
+      - name: Finalize paid-model evidence
+        run: >-
+          python scripts/paid_model_eval_gate.py verify
+          --preflight /tmp/paid-model-preflight.json
+          --promptfoo-results /tmp/promptfoo-results.json
+          --output /tmp/paid-model-evidence.json
+      - name: Upload paid-model evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paid-model-evidence-${{ github.sha }}
+          path: |
+            /tmp/paid-model-preflight.json
+            /tmp/promptfoo-results.json
+            /tmp/paid-model-evidence.json
+          if-no-files-found: error
+          retention-days: 30
 
   release-version:
     if: >-
@@ -415,6 +757,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install release contract dependencies
+        run: python -m pip install pytest==9.1.1 PyYAML==6.0.3
+
+      - name: Test release and container contracts
+        run: >-
+          python -m pytest
+          tests/release/test_release_version_gate.py
+          tests/release/test_container_contract.py
+          tests/release/test_helm_image_contract.py
+          tests/release/test_compose_image_contract.py -q
+
       - name: Verify release versions
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
@@ -429,7 +786,11 @@ jobs:
   release:
     needs:
       - backend
+      - backend-commercial
+      - short-drama
       - frontend
+      - desktop
+      - commercial-evidence
       - license-gate
       - config-governance
       - docker-build
@@ -437,7 +798,9 @@ jobs:
       - load-test
       - promptfoo-eval
       - release-version
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

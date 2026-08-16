@@ -43,6 +43,7 @@ from xagent.domains.creative_studio.storyboard import (
     Storyboard,
 )
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.creative.consistency")
 
@@ -118,7 +119,7 @@ class ConsistencyManager:
         self.tenant_id = tenant_id
         self._provider = provider
         if cache_dir is None:
-            root = os.environ.get("XAGENT_STORAGE__LOCAL_ROOT", "./data/storage")
+            root = os.environ.get("XAGENT_STORAGE__LOCAL_ROOT") or data_path("storage")
             cache_dir = Path(root) / _safe_tenant(tenant_id) / "consistency"
         self._cache_dir = Path(cache_dir)
         self._cache_dir.mkdir(parents=True, exist_ok=True)

@@ -10,11 +10,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.workflow_templates")
-
-_DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "workflow_templates"
-
 
 @dataclass
 class WorkflowTemplate:
@@ -35,7 +33,7 @@ class WorkflowTemplateStore:
     """文件级工作流模板存储，按 tenant 隔离。"""
 
     def __init__(self, data_dir: Path | None = None):
-        self._dir = data_dir or _DATA_DIR
+        self._dir = data_dir or data_path("workflow_templates")
         self._dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, WorkflowTemplate] = {}
         self._load_all()

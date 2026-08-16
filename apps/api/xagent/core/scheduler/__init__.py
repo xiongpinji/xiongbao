@@ -20,12 +20,9 @@ from typing import Any
 
 from xagent.domains.scheduled_jobs.models import ClaimedScheduledJob
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.scheduler")
-
-# 项目根目录
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-
 
 class RedisJobLock:
     """基于 Redis ``SET NX PX`` 的 job 粒度分布式锁（多实例防重复触发）。
@@ -142,7 +139,7 @@ class Scheduler:
         *,
         job_lock: RedisJobLock | None = None,
     ) -> None:
-        base = storage_dir or _PROJECT_ROOT / "data" / "scheduler"
+        base = storage_dir or data_path("scheduler")
         self._dir = base
         self._dir.mkdir(parents=True, exist_ok=True)
         self._jobs: dict[str, ScheduledJob] = {}

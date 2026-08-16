@@ -21,6 +21,7 @@ cargo tauri build   # 产出 MSI / NSIS 安装包
 
 ## 说明
 
-- 前端主链路：浏览器 HTTP/SSE 直连后端 `localhost:8000`（CSP 已放行）。
+- 前端主链路：启动时读取并校验 `XAGENT_DESKTOP_API_URL`，浏览器 HTTP/SSE 仅直连本机回环后端（默认 `127.0.0.1:8000`）。
+- 后端 CORS 必须允许 Windows 的 `http://tauri.localhost`；跨平台包同时允许 `tauri://localhost`。
 - 备用：`call_backend_api` Rust 命令做带鉴权转发（`invoke` 调用）。
 - lite 模式后端可匿名；full 模式需在 Web 设置页填 token。
