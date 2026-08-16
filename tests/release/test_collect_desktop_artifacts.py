@@ -38,6 +38,58 @@ def test_collect_records_hash_size_arch_and_unsigned_state(tmp_path: Path) -> No
     assert all(item["signature"] == "unsigned" for item in manifest["artifacts"])
 
 
+def test_collect_classifies_only_timestamped_valid_signatures_as_signed_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_installers(tmp_path)
+    monkeypatch.setattr(
+        collector,
+        "_inspect_signature",
+        lambda _path: {
+            "status": "valid",
+            "signer_subject": "CN=Commercial Publisher",
+            "signer_thumbprint": "A" * 40,
+            "timestamp_subject": "CN=Trusted Timestamp Authority",
+            "timestamp_thumbprint": "B" * 40,
+        },
+    )
+
+    manifest = collector.collect_artifacts(
+        tmp_path,
+        source_sha="c" * 40,
+        version="1.1.3",
+    )
+
+    assert manifest["classification"] == "signed_timestamped_candidate"
+    assert all(item["signature"] == "valid" for item in manifest["artifacts"])
+    assert all(item["timestamp_subject"] for item in manifest["artifacts"])
+
+
+def test_collect_does_not_promote_untimestamped_valid_signatures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_installers(tmp_path)
+    monkeypatch.setattr(
+        collector,
+        "_inspect_signature",
+        lambda _path: {
+            "status": "valid",
+            "signer_subject": "CN=Commercial Publisher",
+            "signer_thumbprint": "A" * 40,
+            "timestamp_subject": "",
+            "timestamp_thumbprint": "",
+        },
+    )
+
+    manifest = collector.collect_artifacts(
+        tmp_path,
+        source_sha="d" * 40,
+        version="1.1.3",
+    )
+
+    assert manifest["classification"] == "signed_untimestamped_candidate"
+
+
 @pytest.mark.parametrize("source_sha", ["A" * 40, "a" * 39, "../escape"])
 def test_collect_rejects_invalid_source_sha(tmp_path: Path, source_sha: str) -> None:
     _write_installers(tmp_path)

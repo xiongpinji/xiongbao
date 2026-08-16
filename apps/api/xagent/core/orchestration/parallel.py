@@ -40,8 +40,8 @@ async def _cancel_agent_task(task: asyncio.Task[Any]) -> bool:
         if task in done:
             try:
                 task.result()
-            except BaseException:
-                pass
+            except BaseException as exc:
+                logger.debug("agent_cancel_result_ignored", error=repr(exc))
             return True
         logger.warning("agent_cancel_retry", attempt=attempt)
     logger.error("agent_cancel_unacknowledged", attempts=TASK_CANCEL_ATTEMPTS)
@@ -55,9 +55,9 @@ async def _run_agent_with_timeout(coro: Any, timeout: float) -> Any:
     except asyncio.CancelledError:
         await _cancel_agent_task(task)
         raise
-    except TimeoutError:
+    except TimeoutError as exc:
         if not await _cancel_agent_task(task):
-            raise RuntimeError("agent task did not acknowledge cancellation")
+            raise RuntimeError("agent task did not acknowledge cancellation") from exc
         raise
 
 

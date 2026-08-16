@@ -376,7 +376,7 @@ def _build_media_task_state(
         mode=str(input_payload.get("mode") or ""),
         outputs=list(outputs),
     )
-    validation = {"risks": []}
+    validation: dict[str, Any] = {"risks": []}
     delivery = _attach_delivery_bundle(
         delivery=_build_media_delivery_summary(
             kind=kind,
@@ -386,12 +386,12 @@ def _build_media_task_state(
         artifacts=artifacts,
         validation=validation,
     )
-    preview_summary = {
+    preview_summary: dict[str, Any] = {
         "prompt": str(input_payload.get("prompt") or ""),
         "mode": str(input_payload.get("mode") or ""),
         "provider": provider,
     }
-    evidence = [
+    evidence: list[dict[str, Any]] = [
         {"kind": "request.input", "payload": deepcopy(input_payload)},
         {
             "kind": "media.poll_result" if outputs else "media.request",

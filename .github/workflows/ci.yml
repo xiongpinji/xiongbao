@@ -6,6 +6,15 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      paid_eval_source_sha:
+        description: Exact 40-character candidate SHA for one paid evaluation batch
+        required: false
+        type: string
+      paid_eval_authorization:
+        description: Enter one_batch_8_calls to authorize this manual run
+        required: false
+        type: string
 
 jobs:
   backend:
@@ -378,8 +387,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install governance dependencies
+        run: pip install pyyaml pytest==9.1.1
 
       - name: Validate Helm values (all envs)
         run: |
@@ -405,6 +414,13 @@ jobs:
 
       - name: R3 Promptfoo contract
         run: python -m unittest discover -s tests/release -p "test_r3_promptfoo_contract.py" -v
+
+      - name: External GA gate contracts
+        run: >-
+          python -m pytest
+          tests/release/test_paid_model_eval_gate.py
+          tests/release/test_target_env_release_gate.py
+          tests/release/test_collect_desktop_artifacts.py -q
 
       - name: R2 compose render
         env:
@@ -605,15 +621,35 @@ jobs:
   promptfoo-eval:
     runs-on: ubuntu-latest
     needs: [backend, license-gate]
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.paid_eval_source_sha == github.sha &&
+      inputs.paid_eval_authorization == 'one_batch_8_calls' &&
+      vars.XAGENT_PAID_EVAL_AUTHORIZED == 'true'
     env:
       XAGENT_MODE: lite
       XAGENT_SECURITY__REQUIRE_AUTH: "true"
       XAGENT_DB__URL: sqlite+aiosqlite:///./xagent-ci.db
+      XAGENT_PAID_EVAL_AUTHORIZATION: ${{ inputs.paid_eval_authorization }}
+      XAGENT_LLM__DEFAULT_MODEL: deepseek-chat
+      XAGENT_LLM__MAX_ATTEMPTS: "1"
+      XAGENT_LLM__DEEPSEEK_API_KEY: ${{ secrets.XAGENT_LLM_DEEPSEEK_API_KEY }}
+      XAGENT_PAID_EVAL_PRICING_SOURCE: ${{ vars.XAGENT_PAID_EVAL_PRICING_SOURCE }}
+      XAGENT_PAID_EVAL_PRICE_VERIFIED_AT: ${{ vars.XAGENT_PAID_EVAL_PRICE_VERIFIED_AT }}
+      XAGENT_PAID_EVAL_BALANCE_VERIFIED_AT: ${{ vars.XAGENT_PAID_EVAL_BALANCE_VERIFIED_AT }}
+      XAGENT_PAID_EVAL_MAX_USD: ${{ vars.XAGENT_PAID_EVAL_MAX_USD }}
+      PROMPTFOO_DISABLE_ADAPTIVE_SCHEDULER: "true"
+      PROMPTFOO_RETRY_5XX: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - name: Verify paid-model authorization
+        run: >-
+          python scripts/paid_model_eval_gate.py preflight
+          --source-sha "${GITHUB_SHA}"
+          --expected-calls 8
+          --output /tmp/paid-model-preflight.json
       - name: Configure CI JWT secret
         run: |
           python - <<'PY'
@@ -693,8 +729,23 @@ jobs:
         run: |
           promptfoo eval -c .promptfoo/config.yaml --no-cache --max-concurrency 1 \
             --output /tmp/promptfoo-results.json
-          python scripts/check_promptfoo_results.py \
-            /tmp/promptfoo-results.json --expected 8
+      - name: Finalize paid-model evidence
+        run: >-
+          python scripts/paid_model_eval_gate.py verify
+          --preflight /tmp/paid-model-preflight.json
+          --promptfoo-results /tmp/promptfoo-results.json
+          --output /tmp/paid-model-evidence.json
+      - name: Upload paid-model evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paid-model-evidence-${{ github.sha }}
+          path: |
+            /tmp/paid-model-preflight.json
+            /tmp/promptfoo-results.json
+            /tmp/paid-model-evidence.json
+          if-no-files-found: error
+          retention-days: 30
 
   release-version:
     if: >-

@@ -46,7 +46,18 @@ MAX_STEPS = 40
 _AGENT_RUN_TIMEOUT = 600  # 10 分钟
 
 # ── LLM 调用重试配置（对标 Codex 的自动重试 + 指数退避） ──
-_LLM_MAX_RETRIES = 3
+def _resolve_llm_max_attempts(environ: Any) -> int:
+    raw = environ.get("XAGENT_LLM__MAX_ATTEMPTS", "3")
+    try:
+        attempts = int(raw)
+    except ValueError as exc:
+        raise ValueError("XAGENT_LLM__MAX_ATTEMPTS must be an integer from 1 to 3") from exc
+    if attempts not in {1, 2, 3}:
+        raise ValueError("XAGENT_LLM__MAX_ATTEMPTS must be an integer from 1 to 3")
+    return attempts
+
+
+_LLM_MAX_RETRIES = _resolve_llm_max_attempts(os.environ)
 _LLM_RETRY_BASE_DELAY = 2.0  # 秒
 _LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", "overloaded", "503", "429")
 

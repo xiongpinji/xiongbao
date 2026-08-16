@@ -30,3 +30,18 @@ def test_remote_publish_jobs_require_explicit_authorization_variable() -> None:
     text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     assert text.count("vars.XAGENT_RELEASE_AUTHORIZED == 'true'") >= 2
+
+
+def test_ci_discovers_external_ga_gate_contracts() -> None:
+    workflow = yaml.safe_load(
+        (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["config-governance"]["steps"]
+    commands = "\n".join(str(step.get("run", "")) for step in steps)
+
+    for contract in (
+        "test_paid_model_eval_gate.py",
+        "test_target_env_release_gate.py",
+        "test_collect_desktop_artifacts.py",
+    ):
+        assert contract in commands

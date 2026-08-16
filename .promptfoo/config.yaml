@@ -6,6 +6,8 @@ targets:
     config:
       url: http://localhost:8000/api/v1/agents/run
       method: POST
+      maxRetries: 0
+      validateStatus: "status >= 200 && status <= 299"
       headers:
         Content-Type: application/json
       auth:
@@ -33,6 +35,8 @@ defaultTest:
       value: "Traceback"
     - type: not-contains
       value: "Internal Server Error"
+    - type: not-contains
+      value: "[mock]"
 
 prompts:
   - "请回答以下问题：{{query}}"

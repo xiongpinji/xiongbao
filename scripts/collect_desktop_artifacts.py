@@ -16,18 +16,25 @@ _SOURCE_SHA = re.compile(r"^[a-f0-9]{40}$")
 _VERSION = re.compile(r"^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$")
 
 
-def _inspect_signature(path: Path) -> str:
+def _inspect_signature(path: Path) -> dict[str, str]:
     shell = shutil.which("pwsh") or shutil.which("powershell")
     if os.name != "nt" or shell is None:
         raise RuntimeError(
             "Authenticode signature inspection requires Windows PowerShell"
         )
     env = {**os.environ, "XAGENT_ARTIFACT_PATH": str(path)}
-    script = (
-        "$ErrorActionPreference='Stop'; "
-        "[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); "
-        "(Get-AuthenticodeSignature -LiteralPath $env:XAGENT_ARTIFACT_PATH).Status.ToString()"
-    )
+    script = """
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new()
+$signature = Get-AuthenticodeSignature -LiteralPath $env:XAGENT_ARTIFACT_PATH
+[ordered]@{
+  status = $signature.Status.ToString()
+  signer_subject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { '' }
+  signer_thumbprint = if ($signature.SignerCertificate) { $signature.SignerCertificate.Thumbprint } else { '' }
+  timestamp_subject = if ($signature.TimeStamperCertificate) { $signature.TimeStamperCertificate.Subject } else { '' }
+  timestamp_thumbprint = if ($signature.TimeStamperCertificate) { $signature.TimeStamperCertificate.Thumbprint } else { '' }
+} | ConvertTo-Json -Compress
+"""
     result = subprocess.run(
         [shell, "-NoProfile", "-NonInteractive", "-Command", script],
         check=False,
@@ -38,12 +45,31 @@ def _inspect_signature(path: Path) -> str:
     )
     if result.returncode != 0:
         raise ValueError(f"signature inspection failed for {path.name}")
-    status = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else ""
+    try:
+        payload = json.loads(result.stdout.strip().splitlines()[-1])
+        status = str(payload["status"])
+    except (IndexError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid signature inspection output for {path.name}") from exc
     if status == "NotSigned":
-        return "unsigned"
-    if status == "Valid":
-        return "valid"
-    raise ValueError(f"invalid Authenticode signature for {path.name}: {status}")
+        return {
+            "status": "unsigned",
+            "signer_subject": "",
+            "signer_thumbprint": "",
+            "timestamp_subject": "",
+            "timestamp_thumbprint": "",
+        }
+    if status != "Valid":
+        raise ValueError(f"invalid Authenticode signature for {path.name}: {status}")
+    details = {
+        "status": "valid",
+        "signer_subject": str(payload.get("signer_subject") or ""),
+        "signer_thumbprint": str(payload.get("signer_thumbprint") or ""),
+        "timestamp_subject": str(payload.get("timestamp_subject") or ""),
+        "timestamp_thumbprint": str(payload.get("timestamp_thumbprint") or ""),
+    }
+    if not details["signer_subject"] or not details["signer_thumbprint"]:
+        raise ValueError(f"valid signature is missing signer identity: {path.name}")
+    return details
 
 
 def _artifact_entry(
@@ -59,15 +85,32 @@ def _artifact_entry(
     if "_x64" not in lowered:
         raise ValueError(f"installer architecture is not x64: {path.name}")
     payload = path.read_bytes()
-    return {
+    inspection = _inspect_signature(path)
+    if isinstance(inspection, str):
+        inspection = {
+            "status": inspection,
+            "signer_subject": "",
+            "signer_thumbprint": "",
+            "timestamp_subject": "",
+            "timestamp_thumbprint": "",
+        }
+    result = {
         "path": path.relative_to(root).as_posix(),
         "format": format_name,
         "version": version,
         "arch": "x64",
         "size_bytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
-        "signature": _inspect_signature(path),
+        "signature": inspection["status"],
     }
+    if inspection["status"] == "valid":
+        result.update(
+            signer_subject=inspection["signer_subject"],
+            signer_thumbprint=inspection["signer_thumbprint"],
+            timestamp_subject=inspection["timestamp_subject"],
+            timestamp_thumbprint=inspection["timestamp_thumbprint"],
+        )
+    return result
 
 
 def collect_artifacts(
@@ -100,7 +143,15 @@ def collect_artifacts(
     if signatures == {"unsigned"}:
         classification = "unsigned_local_candidate"
     elif signatures == {"valid"}:
-        classification = "signed_candidate"
+        timestamped = all(
+            item.get("timestamp_subject") and item.get("timestamp_thumbprint")
+            for item in artifacts
+        )
+        classification = (
+            "signed_timestamped_candidate"
+            if timestamped
+            else "signed_untimestamped_candidate"
+        )
     else:
         raise ValueError("installer signatures are inconsistent")
     return {
