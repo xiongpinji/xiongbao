@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
+from starlette.middleware.base import BaseHTTPMiddleware
 from xagent.api import middleware
 
 
@@ -44,3 +45,34 @@ async def test_successful_request_logging_is_debug_only(monkeypatch) -> None:
     assert fields["method"] == "GET"
     assert fields["path"] == "/ok"
     assert fields["status"] == 200
+
+
+async def test_request_context_preserves_headers_and_request_state() -> None:
+    app = FastAPI()
+    app.add_middleware(middleware.RequestContextMiddleware)
+
+    @app.get("/context")
+    async def context(request: Request) -> dict[str, str]:
+        return {
+            "request_id": request.state.request_id,
+            "tenant_id": request.state.tenant_id,
+        }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get(
+            "/context",
+            headers={"x-request-id": "req-123", "x-tenant-id": "tenant-456"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == "req-123"
+    assert response.json() == {
+        "request_id": "req-123",
+        "tenant_id": "tenant-456",
+    }
+
+
+def test_request_context_uses_native_asgi_middleware() -> None:
+    assert not issubclass(middleware.RequestContextMiddleware, BaseHTTPMiddleware)
