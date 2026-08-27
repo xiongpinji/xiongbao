@@ -43,3 +43,22 @@ def test_windows_ci_builds_and_uploads_desktop_installers() -> None:
 
     assert "desktop" in workflow["jobs"]["docker-build"]["needs"]
     assert "desktop" in workflow["jobs"]["release"]["needs"]
+
+
+def test_windows_ci_manifest_binds_to_pull_request_head_sha() -> None:
+    workflow = yaml.safe_load(
+        (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    )
+    desktop = workflow["jobs"]["desktop"]
+    collect_step = next(
+        step
+        for step in desktop["steps"]
+        if step.get("name") == "Collect installer hashes and Authenticode state"
+    )
+    commands = "\n".join(str(step.get("run", "")) for step in desktop["steps"])
+
+    assert collect_step["env"]["XAGENT_SOURCE_SHA"] == (
+        "${{ github.event.pull_request.head.sha || github.sha }}"
+    )
+    assert "--source-sha $env:XAGENT_SOURCE_SHA" in commands
+    assert "--source-sha $env:GITHUB_SHA" not in commands

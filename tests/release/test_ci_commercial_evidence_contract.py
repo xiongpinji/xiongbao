@@ -27,6 +27,20 @@ def test_ci_component_evidence_does_not_claim_local_candidate() -> None:
     assert "commercial-component-evidence" in text
 
 
+def test_ci_component_evidence_binds_to_pull_request_head_sha() -> None:
+    workflow = yaml.safe_load(
+        (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    )
+    job = workflow["jobs"]["commercial-evidence"]
+    write_step = next(
+        step for step in job["steps"] if step.get("name") == "Write bounded component evidence"
+    )
+
+    assert write_step["env"]["XAGENT_SOURCE_SHA"] == (
+        "${{ github.event.pull_request.head.sha || github.sha }}"
+    )
+
+
 def test_manual_ci_runs_and_aggregates_the_load_test() -> None:
     workflow = yaml.safe_load(
         (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
