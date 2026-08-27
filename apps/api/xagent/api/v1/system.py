@@ -13,7 +13,7 @@ from xagent.infra.logging import get_logger
 from xagent.infra.paths import data_path
 from xagent.infra.secrets import is_secret_ref, resolve_secret
 from xagent.infra.secure_json import write_private_json
-from xagent.infra.settings import RunMode, get_settings
+from xagent.infra.settings import LLMSettings, RunMode, get_settings
 
 router = APIRouter(prefix="/system", tags=["system"])
 logger = get_logger("xagent.api.system")
@@ -220,9 +220,13 @@ _PROVIDER_REASON = {
 }
 
 
-def _model_provider(model: str) -> str:
+def _model_provider(model: str, cfg: LLMSettings | None = None) -> str:
     if model.startswith(("ollama/", "ollama_chat/")):
         return "ollama"
+    if cfg is not None and cfg.ollama_base_url:
+        configured = cfg.ollama_model.removeprefix("ollama/").removeprefix("ollama_chat/")
+        if configured and model == configured:
+            return "ollama"
     if model.startswith("deepseek"):
         return "deepseek"
     if model.startswith(("claude", "anthropic/")):
@@ -246,7 +250,7 @@ def _build_model_options(cfg) -> list[LLMModelOption]:
     options: list[LLMModelOption] = []
     current = cfg.default_model
     if current:
-        provider = _model_provider(current)
+        provider = _model_provider(current, cfg)
         ready = provider_ready(provider)
         options.append(LLMModelOption(
             id=current, label=current, available=ready, current=True,
@@ -322,7 +326,7 @@ async def update_llm_config(
     # 先把非模型字段应用到临时视图，再校验目标模型可用性（无 key 拦截）
     prospective = cfg.model_copy(update=runtime_fields)
     if body.default_model is not None:
-        provider = _model_provider(body.default_model)
+        provider = _model_provider(body.default_model, prospective)
         ready = (
             bool(prospective.proxy_url)
             or (provider == "deepseek" and bool(prospective.deepseek_api_key))

@@ -28,10 +28,21 @@ from xagent.infra.secrets import resolve_settings_secrets
 
 def _detect_project_root(start: Path) -> Path:
     candidates = [start, *start.parents]
-    # 优先：向上找到第一个真实存在的 .env（仓库根布局）
-    for parent in candidates:
+    git_root_index = next(
+        (index for index, parent in enumerate(candidates) if (parent / ".git").exists()),
+        None,
+    )
+    scoped_candidates = (
+        candidates[: git_root_index + 1]
+        if git_root_index is not None
+        else candidates
+    )
+    # 只在最近 Git 工作树内查找 .env，防止嵌套 worktree 读取父仓密钥。
+    for parent in scoped_candidates:
         if (parent / ".env").exists():
             return parent
+    if git_root_index is not None:
+        return candidates[git_root_index]
     # 兜底：第一个含 pyproject.toml 的目录（包布局）
     for parent in candidates:
         if (parent / "pyproject.toml").exists():

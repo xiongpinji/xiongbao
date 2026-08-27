@@ -49,13 +49,16 @@ export function createRunShellRoute(
           ? "运行"
           : "对话";
   const encodedRunId = encodeURIComponent(runId);
+  const standaloneRun = options.source === "run";
 
   return {
     taskId: `run:${runId}`,
     kind: "run",
     route: `/runs/${encodedRunId}`,
-    title: options.title?.trim() || `${sourceLabel}运行`,
-    subtitle: options.subtitle?.trim() || `${sourceLabel}运行详情 · ${runId}`,
+    title: options.title?.trim() || (standaloneRun ? "运行详情" : `${sourceLabel}运行`),
+    subtitle:
+      options.subtitle?.trim() ||
+      `${standaloneRun ? "运行详情" : `${sourceLabel}运行详情`} · ${runId}`,
     badge: "运行",
     pinned: false,
     isPrimary: false,

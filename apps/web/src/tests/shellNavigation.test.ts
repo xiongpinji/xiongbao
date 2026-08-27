@@ -1,4 +1,8 @@
-import { buildPrimaryNavigation, PRIMARY_SHELL_SURFACES } from "../shell/shellRoutes";
+import {
+  buildPrimaryNavigation,
+  createRunShellRoute,
+  PRIMARY_SHELL_SURFACES,
+} from "../shell/shellRoutes";
 import { resolveSettingsLocation } from "../pages/settingsLocation";
 
 type LightweightTask = {
@@ -131,6 +135,16 @@ function stateCommandPaletteMarkup(open: boolean) {
 }
 
 describe("shell navigation integration", () => {
+  it("does not duplicate the run label in standalone run titles", () => {
+    const route = createRunShellRoute("run-123", { source: "run" });
+
+    assert(route.title === "运行详情", `Unexpected standalone run title ${route.title}`);
+    assert(
+      route.subtitle === "运行详情 · run-123",
+      `Unexpected standalone run subtitle ${route.subtitle}`,
+    );
+  });
+
   it("includes goal board in primary shell navigation", () => {
     assert(
       PRIMARY_SHELL_SURFACES.some((surface) => surface.taskId === "goal-board"),

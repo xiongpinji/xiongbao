@@ -165,6 +165,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install locked Windows API dependencies
+        run: python -m pip install --require-hashes -r apps/api/requirements-windows.lock
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"

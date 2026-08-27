@@ -3,11 +3,12 @@ import { clearToken, getToken, setToken } from "../../api/client";
 import { useUnsavedChangesWarning } from "../../hooks/useUnsavedChangesWarning";
 
 export default function GeneralSettings() {
-  const [token, setTok] = useState(getToken() ?? "");
+  const [token, setTok] = useState("");
+  const [hasStoredToken, setHasStoredToken] = useState(() => Boolean(getToken()));
   const [message, setMessage] = useState<string | null>(null);
 
-  // 输入的 Token 与已保存值不一致时，拦截刷新/关闭，避免未保存的 Token 丢失
-  useUnsavedChangesWarning(token.trim() !== (getToken() ?? ""));
+  // 输入框只保存待提交值，已持久化的 Token 不回填到 DOM。
+  useUnsavedChangesWarning(token.trim().length > 0);
 
   // 成功消息 3s 自动消失
   useEffect(() => {
@@ -27,10 +28,11 @@ export default function GeneralSettings() {
         <label className="block space-y-1.5">
           <span className="text-[12px] text-neutral-400">Token</span>
           <input
+            type="password"
             className="w-full rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm font-mono text-neutral-100 outline-none transition focus:border-white/[0.16]"
             value={token}
             onChange={(e) => setTok(e.target.value)}
-            placeholder="Bearer token"
+            placeholder={hasStoredToken ? "已保存（输入新 Token 可替换）" : "Bearer token"}
           />
         </label>
         <div className="flex gap-2">
@@ -39,6 +41,8 @@ export default function GeneralSettings() {
             disabled={!token.trim()}
             onClick={() => {
               setToken(token.trim());
+              setTok("");
+              setHasStoredToken(true);
               setMessage("已保存访问 Token");
             }}
           >
@@ -49,6 +53,7 @@ export default function GeneralSettings() {
             onClick={() => {
               clearToken();
               setTok("");
+              setHasStoredToken(false);
               setMessage("已清除访问 Token");
             }}
           >

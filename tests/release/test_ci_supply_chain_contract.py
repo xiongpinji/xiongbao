@@ -7,6 +7,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
+WINDOWS_API_LOCK_PATH = ROOT / "apps" / "api" / "requirements-windows.lock"
 
 
 def _workflow() -> dict:
@@ -53,3 +54,18 @@ def test_full_backend_gate_is_separate_from_fast_feedback() -> None:
     )
     assert "python scripts/run_backend_commercial_tests.py" in commands
     assert "backend-commercial" in workflow["jobs"]["release"]["needs"]
+
+
+def test_windows_api_dependencies_are_locked_and_installed_by_ci() -> None:
+    lock_text = WINDOWS_API_LOCK_PATH.read_text(encoding="utf-8")
+    commands = "\n".join(
+        str(step.get("run", "")) for step in _workflow()["jobs"]["desktop"]["steps"]
+    )
+
+    assert "--python-platform x86_64-pc-windows-msvc" in lock_text
+    assert "\npywin32==" in lock_text
+    assert "\nuvloop==" not in lock_text
+    assert (
+        "python -m pip install --require-hashes -r apps/api/requirements-windows.lock"
+        in commands
+    )
