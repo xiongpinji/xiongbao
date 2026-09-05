@@ -452,9 +452,15 @@ jobs:
       - load-test
       - promptfoo-eval
       - release-version
+    # !failure()/!cancelled()：needs 里 promptfoo-eval 在 push 事件必然跳过，
+    # 无此守卫时 skipped 会连带跳过本 job，授权发布（XAGENT_RELEASE_AUTHORIZED）
+    # 将结构性不可能（2026-09-05 v1.2.0 发布实测发现）。
+    # workflow_dispatch 放行用于既有 tag 的镜像补建（发布不随之重跑）。
     if: >-
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
+      !failure() && !cancelled() &&
+      (github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'push' &&
+          (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')))) &&
       vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     permissions:
       contents: read
@@ -804,8 +810,11 @@ jobs:
       - load-test
       - promptfoo-eval
       - release-version
+    # !failure()/!cancelled()：同 docker-build——阻断 needs 中 skipped 依赖的连带跳过
     if: >-
+      !failure() && !cancelled() &&
       startsWith(github.ref, 'refs/tags/v') &&
+      github.event_name == 'push' &&
       vars.XAGENT_RELEASE_AUTHORIZED == 'true'
     runs-on: ubuntu-latest
     permissions:
