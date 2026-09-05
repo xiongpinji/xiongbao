@@ -1,6 +1,6 @@
 [package]
 name = "xagent-desktop"
-version = "1.2.0"
+version = "1.2.1"
 description = "X-Agent 桌面壳（Tauri 2.x）"
 edition = "2021"
 
