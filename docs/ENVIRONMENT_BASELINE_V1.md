@@ -228,3 +228,15 @@ k8s 衔接（推荐路径）：
 4. 代码默认值
 
 ⚠️ 一旦设置页保存过 LLM 配置，**env/.env 的同名修改不会生效**。设置页在覆盖生效时会显示琥珀色警示条；`GET /api/v1/system/llm-config` 的 `override_active`/`override_fields` 字段可编程查验。无可用凭证的模型会被 `PUT /llm-config` 以 422 拦截，避免"连接已中断"类运行期失败。
+
+**恢复环境变量控制的两种方式**：
+
+```bash
+# 方式一（服务运行中，管理员）：API 立即生效，无需重启
+curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/system/llm-config/override
+
+# 方式二（服务不可用/启动前，运维本地）：删除覆盖文件并保留 .bak 备份
+xagent config clear-override            # 加 --no-backup 跳过备份
+```
+
+清除后 `override_active=false`，`env/.env` 恢复完全控制；方式二清除后运行中的服务需重启生效。

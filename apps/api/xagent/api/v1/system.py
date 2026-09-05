@@ -399,6 +399,49 @@ async def update_llm_config(
     }
 
 
+@router.delete(
+    "/llm-config/override",
+    summary="清除持久化的 LLM 配置覆盖（恢复环境变量/.env 控制）",
+)
+async def clear_llm_config_override(
+    principal: Principal = Depends(require_permission("system", "manage")),
+) -> dict:
+    """删除磁盘 override 文件并把进程内 LLM 配置恢复为环境来源值。
+
+    覆盖值曾直接写入内存 settings，删除文件本身不会还原 env 值，
+    因此这里用一次全新的 Settings 读取重建 llm 段。
+    """
+    import json as _json
+
+    removed: list[str] = []
+    if _LLM_OVERRIDES_PATH.is_file():
+        try:
+            data = _json.loads(_LLM_OVERRIDES_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                removed = sorted(k for k in data if k in _LLM_OVERRIDABLE_FIELDS)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "llm_overrides_clear_parse_failed", error_type=type(exc).__name__
+            )
+        try:
+            _LLM_OVERRIDES_PATH.unlink()
+        except FileNotFoundError:
+            pass
+
+    from xagent.adapters.llm.factory import reset_llm_client
+    from xagent.infra.settings import Settings
+
+    get_settings().llm = Settings().llm
+    reset_llm_client()
+    logger.info("llm_overrides_cleared", fields=removed)
+    return {
+        "status": "ok",
+        "cleared": True,
+        "removed_fields": removed,
+        "restored_from": "env",
+    }
+
+
 # ─── Webhook 管理 ───
 
 

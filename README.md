@@ -91,6 +91,8 @@ X-Agent 默认按「最小权限」启动，所有放宽都必须显式配置：
 
 ## 快速开始（单机）
 
+> **环境一键重建**（venv 丢失/换机接手时）：`python scripts/bootstrap_dev_env.py`（需 [uv](https://docs.astral.sh/uv/)；`--check` 仅诊断，`--skip-web` 跳过前端）。LLM 配置被设置页覆盖、env 不生效时：`xagent config clear-override`。
+
 ### 方式 A：本地模型（零 API 费用，推荐）
 
 ```bash
