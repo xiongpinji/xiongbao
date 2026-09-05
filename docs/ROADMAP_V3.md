@@ -12,6 +12,9 @@
 | 技能自进化深度不足（GEPA 代差） | Hermes GEPA：轨迹反思→变体→评测→人工 PR | V3-2 |
 | 并行子代理无 worktree 隔离 | Codex multi-agent worktrees | V3-3 |
 | 主服务不能作为 MCP server 被外部 agent 调用 | Codex CLI 可作 MCP server（MCP 双向） | V3-4 |
+| 无上下文预算管理（长任务成本失控/旧上下文盲截丢失） | Codex compaction + token 预算（2026-09 主线） | V3-5 |
+| 无消息渠道接入 | Hermes Telegram/Discord/Slack/Email 网关 | V3-6 ⏳ |
+| 技能无分发/目录（只有导入） | Hermes Skills Hub / Codex 1751 插件市场 | V3-7 ⏳ |
 
 明确不做（维持 v2 边界）：云端沙箱托管任务队列（与私有化交付冲突）、DSPy/GEPA 重依赖引入。
 
@@ -81,6 +84,28 @@ git status 零污染断言、分支/worktree 清理断言、降级路径）。
 - 当前只证明本机单实例受控私有部署候选；远端 push/CI、新版本发布、多机 HA、E2B、付费 provider 和客户现场仍不在本结论内。
 
 证据：`docs/coordination/reports/WEB_API_R3_INDEPENDENT_ACCEPTANCE.md`。
+
+## V3-5 上下文压缩 ✅（2026-09-05）
+
+- 交付：`core/orchestration/compaction.py` —— token 预算（默认 24000，
+  `XAGENT_LLM__CONTEXT_BUDGET_TOKENS` 可配/0 关闭）+ 超预算摘要折叠旧消息
+  （优先 LLM 摘要，失败降级首尾截取启发式）+ 近期 8 条原样保留；
+  编排循环由"盲截 8 轮"改为"30 轮窗口 + 预算压缩"，旧上下文不再静默丢失。
+- 零新依赖：token 用 CJK/ASCII 启发式估算，不引入 tokenizer。
+- 证据：`tests/test_compaction.py` 10 项 + 编排回归（test_orchestration 等 62 项）全绿。
+
+## V3-6 消息渠道网关 ⏳（2026-09-05 立项，目标 v1.2.x）
+
+对标 Hermes 渠道接入面。范围收敛：先做 **Telegram 网关**（长轮询，无公网回调要求，
+企业内网/私服最易落地），消息 → 既有 `/api/v1/agents/run` 链路；后续再评估
+Slack/Discord（需公网 webhook）。验收：真实 bot token 冒烟 + 回归测试 + 渠道侧
+安全（tenant 绑定、命令白名单、速率限制）。
+
+## V3-7 技能目录化 ⏳（2026-09-05 立项，目标 v1.3）
+
+对标 Hermes Skills Hub。范围收敛：**内网技能目录**（`GET /api/v1/skills/catalog`
++ 前端设置页目录视图 + 一键导入 SKILL.md URL/git 路径），复用 V3-1 导入器与
+gate_candidate 门禁；不做公网市场。
 
 ## 维护约定
 

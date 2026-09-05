@@ -39,6 +39,7 @@ from xagent.core.orchestration.state import (
 from xagent.core.workspace import get_workspace  # V3-3: 每任务 contextvar 可覆盖
 from xagent.enterprise.auth.principal import Principal
 from xagent.infra.logging import get_logger
+from xagent.infra.settings import get_settings
 
 logger = get_logger("xagent.loop")
 
@@ -1142,13 +1143,16 @@ async def run_agent(
             conv_mgr.restore(conv_session)
     if conv_session is None:
         conv_session = conv_mgr.get_or_create(conversation_id, principal.tenant_id)
-    history = conv_session.get_history(max_turns=8)
+    # 拉宽窗口交给 compaction 按 token 预算裁剪（对标 Codex compaction），
+    # 而不是在这里盲截 8 轮导致旧上下文信息直接丢失
+    history = conv_session.get_history(max_turns=30)
 
     # ── 自动记忆注入：检索相关记忆 ──
     memory_context = await _retrieve_relevant_memories(goal, principal.tenant_id)
 
     # 构建消息列表：system + 历史 + 当前 goal
     messages: list[Message] = []
+    compacted = False
     if resume_messages is not None:
         for item in resume_messages:
             messages.append(
@@ -1161,9 +1165,17 @@ async def run_agent(
                 )
             )
     else:
+        from xagent.core.orchestration.compaction import compact_history
+
+        result = await compact_history(
+            history,
+            budget_tokens=get_settings().llm.context_budget_tokens,
+        )
+        history = result.messages
+        compacted = result.changed
         messages.extend(history)
-    # ── 多轮对话上下文注入：历史较长时添加摘要提示 ──
-    if resume_messages is None and len(history) >= 6:
+    # ── 多轮对话上下文注入：历史较长时添加摘要提示（compaction 已摘要时跳过）──
+    if resume_messages is None and not compacted and len(history) >= 6:
         _hist_topics = []
         for m in history[-6:]:
             if m.role == "user" and m.content:
