@@ -9,4 +9,4 @@
     api/         FastAPI 路由（薄）
 """
 
-__version__ = "1.1.3"
+__version__ = "1.2.0"
