@@ -99,11 +99,16 @@ class R2BackendReleaseScopeTests(unittest.TestCase):
         self.assertIn("refs/tags/v", jobs["docker-build"]["if"])
         self.assertIn("refs/heads/master", jobs["release-version"]["if"])
         self.assertIn("refs/tags/v", jobs["release-version"]["if"])
-        self.assertEqual(
-            jobs["release"]["if"],
-            "startsWith(github.ref, 'refs/tags/v') && "
-            "vars.XAGENT_RELEASE_AUTHORIZED == 'true'",
-        )
+        # release 安全不变量：仅 tag push + 授权变量可发布；
+        # 需保留 !failure()/!cancelled() 守卫（needs 中 skipped 依赖不得连带
+        # 跳过授权发布，2026-09-05 v1.2.0 发布实测回归）；禁 workflow_dispatch。
+        release_if = jobs["release"]["if"]
+        self.assertIn("refs/tags/v", release_if)
+        self.assertIn("github.event_name == 'push'", release_if)
+        self.assertIn("vars.XAGENT_RELEASE_AUTHORIZED == 'true'", release_if)
+        self.assertIn("!failure()", release_if)
+        self.assertIn("!cancelled()", release_if)
+        self.assertNotIn("workflow_dispatch", release_if)
         version_step = next(
             step
             for step in jobs["release-version"]["steps"]
