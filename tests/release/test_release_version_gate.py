@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -19,20 +20,31 @@ VERSION_FILES = (
 )
 
 
+def _api_version() -> str:
+    """从版本事实源（apps/api/pyproject.toml）动态读取当前产品版本。"""
+    text = (ROOT / "apps/api/pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"', text, re.MULTILINE)
+    assert match is not None, "pyproject.toml 缺少 version 字段"
+    return match.group(1)
+
+
+V = _api_version()
+
+
 def _copy_version_files(target_root: Path) -> None:
     for relative in VERSION_FILES:
         target = target_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / relative).read_bytes())
     replacements = {
-        "apps/api/xagent/__init__.py": (('__version__ = "1.0.0"', '__version__ = "1.1.3"'),),
+        "apps/api/xagent/__init__.py": (('__version__ = "1.0.0"', f'__version__ = "{V}"'),),
         "deploy/helm/Chart.yaml": (
-            ("version: 1.0.0", "version: 1.1.3"),
-            ('appVersion: "1.0.0"', 'appVersion: "1.1.3"'),
+            ("version: 1.0.0", f"version: {V}"),
+            ('appVersion: "1.0.0"', f'appVersion: "{V}"'),
         ),
-        "apps/desktop/Cargo.toml": (('version = "0.1.0"', 'version = "1.1.3"'),),
+        "apps/desktop/Cargo.toml": (('version = "0.1.0"', f'version = "{V}"'),),
         "apps/desktop/tauri.conf.json": (
-            ('"version": "0.1.0"', '"version": "1.1.3"'),
+            ('"version": "0.1.0"', f'"version": "{V}"'),
         ),
     }
     for relative, pairs in replacements.items():
@@ -47,7 +59,7 @@ def _copy_version_files(target_root: Path) -> None:
 
 
 def test_current_tree_has_one_product_version() -> None:
-    assert verify_versions(ROOT, tag="v1.1.3") == []
+    assert verify_versions(ROOT, tag=f"v{V}") == []
 
 
 @pytest.mark.parametrize(
@@ -55,33 +67,33 @@ def test_current_tree_has_one_product_version() -> None:
     (
         (
             "apps/api/xagent/__init__.py",
-            '__version__ = "1.1.3"',
+            f'__version__ = "{V}"',
             '__version__ = "9.9.9"',
-            "Python runtime version 9.9.9 != API version 1.1.3",
+            f"Python runtime version 9.9.9 != API version {V}",
         ),
         (
             "deploy/helm/Chart.yaml",
-            "version: 1.1.3",
+            f"version: {V}",
             "version: 9.9.9",
-            "Helm chart version 9.9.9 != API version 1.1.3",
+            f"Helm chart version 9.9.9 != API version {V}",
         ),
         (
             "deploy/helm/Chart.yaml",
-            'appVersion: "1.1.3"',
+            f'appVersion: "{V}"',
             'appVersion: "9.9.9"',
-            "Helm appVersion 9.9.9 != API version 1.1.3",
+            f"Helm appVersion 9.9.9 != API version {V}",
         ),
         (
             "apps/desktop/Cargo.toml",
-            'version = "1.1.3"',
+            f'version = "{V}"',
             'version = "9.9.9"',
-            "Tauri Cargo version 9.9.9 != API version 1.1.3",
+            f"Tauri Cargo version 9.9.9 != API version {V}",
         ),
         (
             "apps/desktop/tauri.conf.json",
-            '"version": "1.1.3"',
+            f'"version": "{V}"',
             '"version": "9.9.9"',
-            "Tauri config version 9.9.9 != API version 1.1.3",
+            f"Tauri config version 9.9.9 != API version {V}",
         ),
     ),
 )

@@ -61,7 +61,7 @@ async def compact_history(
     messages: list[Message],
     *,
     budget_tokens: int = DEFAULT_BUDGET_TOKENS,
-    llm: "LLMClient | None" = None,
+    llm: LLMClient | None = None,
     recent_keep: int = RECENT_KEEP_MESSAGES,
 ) -> CompactionResult:
     """按 token 预算压缩历史：摘要折叠旧消息 + 原样保留近期消息。
@@ -84,11 +84,13 @@ async def compact_history(
 
     old, recent = messages[:-recent_keep], messages[-recent_keep:]
     summary_text, strategy = await _summarize(old, llm=llm)
+    old_tokens = estimate_messages_tokens(old)
+    summary_tokens = estimate_tokens(summary_text)
     summary_message = Message(
         role="user",
         content=(
             f"[上下文摘要] 以下为此前对话的压缩摘要（{len(old)} 条消息已折叠，"
-            f"估算 {estimate_messages_tokens(old)} tokens → {estimate_tokens(summary_text)} tokens）：\n"
+            f"估算 {old_tokens} tokens → {summary_tokens} tokens）：\n"
             f"{summary_text}"
         ),
     )
@@ -103,7 +105,7 @@ async def compact_history(
 
 
 async def _summarize(
-    messages: list[Message], *, llm: "LLMClient | None"
+    messages: list[Message], *, llm: LLMClient | None
 ) -> tuple[str, str]:
     """优先 LLM 摘要；客户端缺失或调用失败时降级为首尾截取启发式。"""
     transcript = "\n".join(
@@ -120,8 +122,12 @@ async def _summarize(
         text = (response.content or "").strip()
         if text:
             return text, "llm_summary"
-    except Exception:  # noqa: BLE001  摘要失败绝不阻断编排
-        pass
+    except Exception as exc:  # noqa: BLE001  摘要失败绝不阻断编排
+        from xagent.infra.logging import get_logger
+
+        get_logger("xagent.compaction").warning(
+            "context_summary_llm_failed", error_type=type(exc).__name__
+        )
     return _heuristic_summary(messages), "heuristic"
 
 
