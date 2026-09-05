@@ -1,11 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const API_BASE = process.env.E2E_API_URL ?? "http://127.0.0.1:18000";
-const screenshotDir = resolve(process.cwd(), "../../output/playwright");
+const evidenceDir = process.env.E2E_EVIDENCE_DIR
+  ? resolve(process.env.E2E_EVIDENCE_DIR)
+  : resolve(process.cwd(), "../../output/e2e-local");
+const screenshotDir = resolve(evidenceDir, "screenshots");
 const expectedScreenshots = [
   "r2-chat.png",
   "r2-run-console.png",
@@ -279,7 +282,7 @@ test("完整技能包导入后在 Web 可见", async ({ page }) => {
 });
 
 test("开发任务产物可审查和下载", async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(660_000);
   await login(page);
   const parallel = await page.request.post("/api/v1/agents/parallel-run", {
     data: {
@@ -293,7 +296,7 @@ test("开发任务产物可审查和下载", async ({ page }) => {
       use_worktrees: true,
     },
     headers: authHeaders(),
-    timeout: 240_000,
+    timeout: 600_000,
   });
   expect(parallel.ok()).toBeTruthy();
   const parallelBody = await parallel.json();
@@ -314,6 +317,9 @@ test("开发任务产物可审查和下载", async ({ page }) => {
   expect(detail.ok()).toBeTruthy();
   const detailBody = await detail.json();
   expect(detailBody.status).toBe("awaiting_review");
+  expect(detailBody.base_commit).toMatch(/^[a-f0-9]{40}$/);
+  expect(detailBody.result_commit).toMatch(/^[a-f0-9]{40}$/);
+  expect(detailBody.result_commit).not.toBe(detailBody.base_commit);
   expect(detailBody.diff_stat).toContain("R2_AGENT_RESULT.md");
 
   const patchResponse = await page.request.get(`/api/v1/development-tasks/${developmentTaskId}/patch`, {
@@ -329,6 +335,17 @@ test("开发任务产物可审查和下载", async ({ page }) => {
   await expect(page.getByText("待审查").first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("R2_AGENT_RESULT.md").first()).toBeVisible();
   await expect(page.getByText("R2-DEVELOPMENT-TASK-OK").first()).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 Patch", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(`${developmentTaskId}.patch`);
+  const downloadDir = resolve(evidenceDir, "downloads");
+  await mkdir(downloadDir, { recursive: true });
+  const downloadedPatchPath = resolve(downloadDir, download.suggestedFilename());
+  await download.saveAs(downloadedPatchPath);
+  const downloadedPatch = await readFile(downloadedPatchPath, "utf8");
+  expect(downloadedPatch).toBe(patch);
+  expect(createHash("sha256").update(downloadedPatch).digest("hex")).toBe(developmentPatchHash);
   await page.screenshot({ path: resolve(screenshotDir, "r2-development-task.png"), fullPage: true });
 });
 

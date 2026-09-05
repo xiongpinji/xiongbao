@@ -1,11 +1,17 @@
 import axios from "axios";
+import { buildApiUrl, initializeApiBaseUrl } from "./baseUrl";
 
 const TOKEN_KEY = "xagent_token";
 
 export const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: buildApiUrl("/api/v1"),
   timeout: 30_000,
 });
+
+export async function initializeApiClient(): Promise<void> {
+  await initializeApiBaseUrl();
+  api.defaults.baseURL = buildApiUrl("/api/v1");
+}
 
 // 注入鉴权头
 api.interceptors.request.use((cfg) => {

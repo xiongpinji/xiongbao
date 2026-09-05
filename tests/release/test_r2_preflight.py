@@ -10,6 +10,7 @@ from unittest import mock
 from scripts.r2_preflight import (
     check_port_available,
     check_ports,
+    get_windows_identity,
     init_env,
     load_env,
     main,
@@ -89,20 +90,57 @@ class R2PreflightTest(unittest.TestCase):
             target = Path(directory) / "r2.env.local"
             target.write_text("POSTGRES_PASSWORD=secret\n", encoding="utf-8")
             system32 = Path("C:/Windows/System32")
-            completed = mock.Mock(returncode=0, stdout="MACHINE\\real-user\n", stderr="")
+            completed = mock.Mock(returncode=0, stdout="", stderr="")
 
             with mock.patch("scripts.r2_preflight.os.name", "nt"), \
                     mock.patch.dict(os.environ, {"USERNAME": "Everyone", "USERDOMAIN": "BUILTIN"}), \
                     mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
+                    mock.patch(
+                        "scripts.r2_preflight._get_windows_identity_unicode",
+                        return_value="MACHINE\\real-user",
+                    ), \
                     mock.patch("scripts.r2_preflight.subprocess.run", return_value=completed) as subprocess_run:
                 restrict_env_permissions(target)
 
             commands = [call.args[0] for call in subprocess_run.call_args_list]
-            self.assertEqual(commands[0][0], str(system32 / "whoami.exe"))
-            self.assertEqual(commands[1][0], str(system32 / "icacls.exe"))
-            self.assertIn("MACHINE\\real-user:F", commands[1])
-            self.assertNotIn("Everyone:F", commands[1])
-            self.assertNotIn("BUILTIN\\Everyone:F", commands[1])
+            self.assertEqual(commands[0][0], str(system32 / "icacls.exe"))
+            self.assertIn("MACHINE\\real-user:F", commands[0])
+            self.assertNotIn("Everyone:F", commands[0])
+            self.assertNotIn("BUILTIN\\Everyone:F", commands[0])
+
+    def test_get_windows_identity_uses_unicode_api(self) -> None:
+        system32 = Path("C:/Windows/System32")
+        with mock.patch(
+            "scripts.r2_preflight._get_windows_identity_unicode",
+            return_value="峰哥工作站\\canqu",
+        ) as unicode_identity, mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
+            identity = get_windows_identity(system32)
+
+        self.assertEqual(identity, "峰哥工作站\\canqu")
+        unicode_identity.assert_called_once_with()
+        subprocess_run.assert_not_called()
+
+    def test_get_windows_identity_fallback_decodes_utf8(self) -> None:
+        system32 = Path("C:/Windows/System32")
+        completed = mock.Mock(
+            returncode=0,
+            stdout="机器\\用户\r\n".encode(),
+            stderr=b"",
+        )
+        with mock.patch(
+            "scripts.r2_preflight._get_windows_identity_unicode",
+            side_effect=OSError("unavailable"),
+        ), mock.patch(
+            "scripts.r2_preflight._console_codepage",
+            return_value="cp936",
+        ), mock.patch(
+            "scripts.r2_preflight.subprocess.run",
+            return_value=completed,
+        ) as subprocess_run:
+            identity = get_windows_identity(system32)
+
+        self.assertEqual(identity, "机器\\用户")
+        self.assertEqual(subprocess_run.call_args.args[0][0], str(system32 / "whoami.exe"))
 
     def test_windows_acl_decodes_whoami_with_console_codepage(self) -> None:
         # 回归：中文 Windows 的 whoami 输出为 GBK（cp936），按 UTF-8 解码会乱码，
@@ -119,6 +157,10 @@ class R2PreflightTest(unittest.TestCase):
 
             with mock.patch("scripts.r2_preflight.os.name", "nt"), \
                     mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
+                    mock.patch(
+                        "scripts.r2_preflight._get_windows_identity_unicode",
+                        side_effect=OSError("unavailable"),
+                    ), \
                     mock.patch("scripts.r2_preflight._console_codepage", return_value="cp936"), \
                     mock.patch("scripts.r2_preflight.subprocess.run", side_effect=responses) as subprocess_run:
                 restrict_env_permissions(target)
@@ -137,12 +179,16 @@ class R2PreflightTest(unittest.TestCase):
 
             with mock.patch("scripts.r2_preflight.os.name", "nt"), \
                     mock.patch("scripts.r2_preflight.get_windows_system32", return_value=system32), \
+                    mock.patch(
+                        "scripts.r2_preflight._get_windows_identity_unicode",
+                        return_value="Everyone",
+                    ), \
                     mock.patch("scripts.r2_preflight.subprocess.run") as subprocess_run:
-                subprocess_run.return_value = mock.Mock(returncode=0, stdout="Everyone\n", stderr="")
                 with self.assertRaises(RuntimeError):
                     init_env(template, target)
 
             self.assertFalse(target.exists())
+            subprocess_run.assert_not_called()
 
     def test_load_env_parses_only_simple_key_values(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

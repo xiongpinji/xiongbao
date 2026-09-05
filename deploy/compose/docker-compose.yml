@@ -17,7 +17,7 @@ name: ${COMPOSE_PROJECT_NAME:-xagent-r2}
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-xagent}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/compose/.env}
@@ -34,7 +34,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_REDIS_PORT:-16379}:6379"
@@ -47,7 +47,7 @@ services:
       retries: 5
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.12.5@sha256:05fecce7dce45d1254e0468bc037e8210e187fd56fa847688b012293d5f08aae
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_HTTP_PORT:-16333}:6333"  # HTTP
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_QDRANT_GRPC_PORT:-16334}:6334"  # gRPC
@@ -62,7 +62,7 @@ services:
   # IBM ContextForge MCP 网关（生产级联邦 MCP 网关）
   contextforge:
     profiles: ["federation"]
-    image: ghcr.io/ibm/mcp-context-forge:latest
+    image: ghcr.io/ibm/mcp-context-forge@sha256:b4ec3759d1fa0d4282515291bd24d5c53eb522ed993a1fc49130e99a99ef15ca
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,7 +79,7 @@ services:
   # OpenFGA 细粒度授权（Google Zanzibar 模型）
   openfga:
     profiles: ["federation"]
-    image: openfga/openfga:latest
+    image: openfga/openfga@sha256:01a6000aa6040a4d0bde6ea1d3359ac3b9f21dc972ac6103a87b38659a836776
     command: ["run"]
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_OPENFGA_PORT:-18082}:8081"    # HTTP API
@@ -93,7 +93,7 @@ services:
   # LiteLLM Proxy：统一 LLM 网关。模型/key 配在 litellm-config.yaml
   litellm:
     profiles: ["gateway"]
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm@sha256:1f16117e4a5707116729c3dea53505e5b2fabe7c63fe6ab02c046a9b42b222fe
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_LITELLM_PORT:-14000}:4000"
@@ -106,7 +106,7 @@ services:
   # Langfuse v2：运行时追踪 + prompt 管理（v2 只需 Postgres；v3 需 ClickHouse 太重）
   langfuse:
     profiles: ["tracing"]
-    image: langfuse/langfuse:2
+    image: langfuse/langfuse:2@sha256:85c278dcab96c15db94191a5c1664f85aba2d7fb6771a00e99681c902c4b7015
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,6 +155,7 @@ services:
       # 置空 XAGENT_LLM__OLLAMA_BASE_URL 且无其它 provider key 时自动降级为内置 MockLLM
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__OLLAMA_NUM_CTX=${XAGENT_LLM__OLLAMA_NUM_CTX:-0}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=${XAGENT_LLM__REQUEST_TIMEOUT_SECONDS:-150}
@@ -168,13 +169,13 @@ services:
       - XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY:-}
       - XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY=${XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
-      - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://127.0.0.1:18080"]}
+      - XAGENT_CORS_ORIGINS=${XAGENT_CORS_ORIGINS:-["http://127.0.0.1:18080","http://tauri.localhost","tauri://localhost"]}
     volumes:
       - xagentdata:/data
     command: >
       sh -c "python -m alembic upgrade head &&
              python -m xagent.cli warmup &&
-             uvicorn xagent.main:app --host 0.0.0.0 --port 8000"
+             uvicorn xagent.main:app --host 0.0.0.0 --port 8000 --no-access-log"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx,sys; r=httpx.get('http://localhost:8000/health/deep',timeout=5); sys.exit(0 if r.status_code == 200 and r.json().get('status') == 'healthy' else 1)"]
       interval: 30s
@@ -205,6 +206,7 @@ services:
       - XAGENT_MEMORY__QDRANT_URL=http://qdrant:6333
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__OLLAMA_NUM_CTX=${XAGENT_LLM__OLLAMA_NUM_CTX:-0}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_SECURITY__JWT_SECRET=${XAGENT_SECURITY__JWT_SECRET:?set XAGENT_SECURITY__JWT_SECRET in deploy/compose/.env}
@@ -247,6 +249,7 @@ services:
       - XAGENT_SKILL_PACKAGES_ROOT=/data/skill-packages
       - XAGENT_LLM__OLLAMA_BASE_URL=${XAGENT_LLM__OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - XAGENT_LLM__OLLAMA_MODEL=${XAGENT_LLM__OLLAMA_MODEL:-qwen3:4b}
+      - XAGENT_LLM__OLLAMA_NUM_CTX=${XAGENT_LLM__OLLAMA_NUM_CTX:-0}
       - XAGENT_LLM__DEFAULT_MODEL=${XAGENT_LLM__DEFAULT_MODEL:-qwen3:4b}
       - XAGENT_LLM__PROXY_URL=${XAGENT_LLM__PROXY_URL:-}
       - XAGENT_LLM__REQUEST_TIMEOUT_SECONDS=${XAGENT_LLM__REQUEST_TIMEOUT_SECONDS:-150}
@@ -283,7 +286,7 @@ services:
   # Prometheus 指标采集 + 告警
   prometheus:
     profiles: ["observability"]
-    image: prom/prometheus:latest
+    image: prom/prometheus@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_PROMETHEUS_PORT:-19090}:9090"
     volumes:
@@ -297,7 +300,7 @@ services:
   # Grafana 可视化仪表盘
   grafana:
     profiles: ["observability"]
-    image: grafana/grafana:latest
+    image: grafana/grafana@sha256:ab5cb380e3ff3172d6c8bd2e7cfd31cce977d2881b260e1f5bc089bf0b759b43
     ports:
       - "${XAGENT_BIND_ADDRESS:-127.0.0.1}:${XAGENT_GRAFANA_PORT:-13002}:3000"
     environment:

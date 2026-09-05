@@ -73,6 +73,9 @@ class _EmptyRecoveryStreamingLLM(LiteLLMClient):
     async def complete(self, messages, **kwargs):  # noqa: ARG002
         return LLMResponse(content="", model="test")
 
+    async def complete_chat(self, messages, **kwargs):  # noqa: ARG002
+        return LLMResponse(content="", model="test")
+
     async def complete_with_tools(self, messages, tools, **kwargs):  # noqa: ARG002
         raise AssertionError("流式合同测试不得进入非流式路径")
 

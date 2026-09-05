@@ -45,8 +45,8 @@ export default function GoalBoard({
           onCreateRelease={onCreateRelease}
         />
       ) : null}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="space-y-4">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
           {taskColumns.map(([column, tasks]) => (
             <TaskColumn
               key={column}

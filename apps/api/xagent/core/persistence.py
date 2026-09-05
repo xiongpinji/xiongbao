@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import json
 import time
-from pathlib import Path
 from typing import Any
 
 import aiosqlite
 
-_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+from xagent.infra.paths import data_dir
+
+_DATA_DIR = data_dir()
 DB_PATH = _DATA_DIR / "xagent.db"
 
 _SCHEMA = """

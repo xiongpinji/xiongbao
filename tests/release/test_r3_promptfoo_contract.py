@@ -24,8 +24,39 @@ class R3PromptfooContractTests(unittest.TestCase):
         job = workflow["jobs"]["promptfoo-eval"]
         steps = {step.get("name"): step for step in job["steps"] if step.get("name")}
 
+        self.assertIn(
+            "vars.XAGENT_PAID_EVAL_AUTHORIZED == 'true'",
+            job.get("if", ""),
+        )
+        self.assertIn("github.event_name == 'workflow_dispatch'", job.get("if", ""))
+        self.assertIn("inputs.paid_eval_source_sha == github.sha", job.get("if", ""))
+        self.assertIn(
+            "inputs.paid_eval_authorization == 'one_batch_8_calls'",
+            job.get("if", ""),
+        )
+        self.assertIn(
+            "inputs.paid_eval_authorization",
+            job["env"].get("XAGENT_PAID_EVAL_AUTHORIZATION", ""),
+        )
+        self.assertEqual(
+            job["env"].get("XAGENT_LLM__DEFAULT_MODEL"),
+            "deepseek-chat",
+        )
+        self.assertEqual(
+            job["env"].get("XAGENT_LLM__MAX_ATTEMPTS"),
+            "1",
+        )
+        self.assertIn(
+            "secrets.XAGENT_LLM_DEEPSEEK_API_KEY",
+            job["env"].get("XAGENT_LLM__DEEPSEEK_API_KEY", ""),
+        )
         self.assertEqual(job["env"]["XAGENT_SECURITY__REQUIRE_AUTH"], "true")
         self.assertEqual(steps["Configure CI JWT secret"]["run"].count("GITHUB_ENV"), 1)
+
+        preflight = steps["Verify paid-model authorization"]
+        self.assertIn("scripts/paid_model_eval_gate.py preflight", preflight["run"])
+        self.assertIn("--expected-calls 8", preflight["run"])
+        self.assertIn("--source-sha \"${GITHUB_SHA}\"", preflight["run"])
 
         registration = steps["Create Promptfoo member token"]["run"]
         self.assertIn("/api/v1/auth/register", registration)
@@ -45,8 +76,16 @@ class R3PromptfooContractTests(unittest.TestCase):
         eval_command = steps["Run eval"]["run"]
         self.assertIn("--max-concurrency 1", eval_command)
         self.assertIn("--output /tmp/promptfoo-results.json", eval_command)
-        self.assertIn("python scripts/check_promptfoo_results.py", eval_command)
-        self.assertIn("/tmp/promptfoo-results.json --expected 8", eval_command)
+        self.assertNotIn("scripts/check_promptfoo_results.py", eval_command)
+
+        finalize = steps["Finalize paid-model evidence"]["run"]
+        self.assertIn("scripts/paid_model_eval_gate.py verify", finalize)
+        self.assertIn("/tmp/promptfoo-results.json", finalize)
+        self.assertIn("/tmp/paid-model-preflight.json", finalize)
+
+        artifact = steps["Upload paid-model evidence"]
+        self.assertIn("actions/upload-artifact@", artifact["uses"])
+        self.assertIn("paid-model-evidence.json", artifact["with"]["path"])
 
     def test_ci_discovers_the_promptfoo_contract(self) -> None:
         workflow = yaml.safe_load(CI_PATH.read_text(encoding="utf-8"))
@@ -74,6 +113,8 @@ class R3PromptfooContractTests(unittest.TestCase):
         )
         self.assertEqual(target["body"]["tool_mode"], "none")
         self.assertEqual(target["transformResponse"], "JSON.stringify(json)")
+        self.assertEqual(target["maxRetries"], 0)
+        self.assertIn("status >= 200", target["validateStatus"])
         self.assertNotIn("[mock] 收到", source)
         self.assertNotIn("最后一条用户内容：", source)
 
@@ -91,11 +132,19 @@ class R3PromptfooContractTests(unittest.TestCase):
             "tenant_id",
             "PROMPTFOO_TENANT_ID",
             "context.vars.query",
-            "result.final_answer.includes(query)",
+            "result.goal.includes(query)",
+            "result.final_answer.trim().length > 0",
         ):
             self.assertIn(required, javascript)
+        self.assertNotIn("result.final_answer.includes(query)", javascript)
         self.assertIn("Traceback", source)
         self.assertIn("Internal Server Error", source)
+        self.assertTrue(
+            any(
+                item.get("type") == "not-contains" and item.get("value") == "[mock]"
+                for item in assertions
+            )
+        )
 
     def test_result_checker_accepts_only_the_complete_expected_matrix(self) -> None:
         result = self._run_checker(successes=8, failures=0, errors=0, expected=8)

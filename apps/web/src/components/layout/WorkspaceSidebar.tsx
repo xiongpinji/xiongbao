@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useShellActions, useShellStore } from "../../shell/useShellStore";
 import { getToken } from "../../api/client";
+import { buildApiUrl } from "../../api/baseUrl";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useEscapeClose } from "../../hooks/useEscapeClose";
 
@@ -233,7 +234,7 @@ function ConversationList({ activeId, onSelect }: { activeId: string | null; onS
   const fetchList = useCallback(async () => {
     try {
       const token = getToken();
-      const resp = await fetch("/api/v1/stream/conversations", {
+      const resp = await fetch(buildApiUrl("/api/v1/stream/conversations"), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!resp.ok) return;
@@ -257,7 +258,7 @@ function ConversationList({ activeId, onSelect }: { activeId: string | null; onS
     const ok = await confirm({ title: "删除对话", message: "确定删除该对话？历史记录将一并清除。", danger: true, confirmText: "删除" });
     if (!ok) return;
     const token = getToken();
-    await fetch(`/api/v1/stream/conversations/${id}`, {
+    await fetch(buildApiUrl(`/api/v1/stream/conversations/${id}`), {
       method: "DELETE",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

@@ -46,7 +46,18 @@ MAX_STEPS = 40
 _AGENT_RUN_TIMEOUT = 600  # 10 分钟
 
 # ── LLM 调用重试配置（对标 Codex 的自动重试 + 指数退避） ──
-_LLM_MAX_RETRIES = 3
+def _resolve_llm_max_attempts(environ: Any) -> int:
+    raw = environ.get("XAGENT_LLM__MAX_ATTEMPTS", "3")
+    try:
+        attempts = int(raw)
+    except ValueError as exc:
+        raise ValueError("XAGENT_LLM__MAX_ATTEMPTS must be an integer from 1 to 3") from exc
+    if attempts not in {1, 2, 3}:
+        raise ValueError("XAGENT_LLM__MAX_ATTEMPTS must be an integer from 1 to 3")
+    return attempts
+
+
+_LLM_MAX_RETRIES = _resolve_llm_max_attempts(os.environ)
 _LLM_RETRY_BASE_DELAY = 2.0  # 秒
 _LLM_RETRYABLE_ERRORS = ("rate_limit", "timeout", "connection", "server_error", "overloaded", "503", "429")
 
@@ -839,7 +850,31 @@ def _is_tool_echo(text: str) -> bool:
     return False
 
 
-def _detect_final_answer(content: str, state: AgentState) -> bool:
+def _required_tool_completion_content(
+    content: str,
+    required_tool: str | None,
+    required_tool_seen: bool,
+    changed_files: list[str],
+) -> tuple[str, bool]:
+    has_evidence = bool(required_tool and required_tool_seen and changed_files)
+    if not has_evidence:
+        return content, False
+    if content.strip() and not _is_tool_echo(content):
+        return content, True
+    changed = "、".join(changed_files[:10])
+    return (
+        f"必需工具 {required_tool} 已成功执行，"
+        f"真实变更已记录：{changed}。全部完成。",
+        True,
+    )
+
+
+def _detect_final_answer(
+    content: str,
+    state: AgentState,
+    *,
+    required_tool_evidence: bool = False,
+) -> bool:
     """智能判断 LLM 输出是否为真正的最终回答。
 
     策略：综合多个信号判断，避免误判中间规划为最终回答。
@@ -868,6 +903,7 @@ def _detect_final_answer(content: str, state: AgentState) -> bool:
     _FINAL_EVIDENCE = (
         "passed", "failed", "测试通过", "测试失败",
         "全部完成", "所有测试通过", "所有子任务已完成",
+        "所有子任务执行完毕",
         "项目完成总结", "开发完成", "✅ 全部",
         "exit code: 0", "RETURNCODE: 0",
     )
@@ -889,10 +925,13 @@ def _detect_final_answer(content: str, state: AgentState) -> bool:
         return False
     # 规则 3：有询问 → 中间
     # (已在上面处理)
-    # 规则 4：之前有工具调用 + 文本较短(<800字) + 无完成证据 → 中间
+    # 规则 4：必需工具已产生真实变更后，简短总结即可收敛。
+    if required_tool_evidence:
+        return True
+    # 规则 5：之前有工具调用 + 文本较短(<800字) + 无完成证据 → 中间
     if has_recent_tools and len(text) < 800 and not has_final_evidence:
         return False
-    # 规则 5：步数很少(<3)且无完成证据 → 可能是第一轮分析，允许终止
+    # 规则 6：步数很少(<3)且无完成证据 → 可能是第一轮分析，允许终止
     #   但如果用户 goal 含多个子任务（数字列表），则不允许
     if state.step <= 2 and not has_final_evidence:
         # 检查 goal 是否含多步骤
@@ -915,6 +954,12 @@ async def _handle_empty_or_echo(
     target_model: str | None,
 ) -> str:
     """处理空内容或工具结果回显；恢复失败时抛出可诊断异常。"""
+    async def _complete_recovery() -> LLMResponse:
+        complete_chat = getattr(llm, "complete_chat", None)
+        if callable(complete_chat):
+            return await complete_chat(state.messages, model=target_model)
+        return await llm.complete(state.messages, model=target_model)
+
     if _is_tool_echo(content_buf):
         state.messages.append(Message(role="assistant", content=content_buf))
         state.messages.append(Message(
@@ -926,7 +971,7 @@ async def _handle_empty_or_echo(
             ),
         ))
         try:
-            retry_resp = await llm.complete(state.messages, model=target_model)
+            retry_resp = await _complete_recovery()
             content_buf = retry_resp.content or ""
         except Exception as exc:
             raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
@@ -942,7 +987,7 @@ async def _handle_empty_or_echo(
             ),
         ))
         try:
-            retry_resp = await llm.complete(state.messages, model=target_model)
+            retry_resp = await _complete_recovery()
             content_buf = retry_resp.content or ""
         except Exception as exc:
             raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
@@ -1365,11 +1410,26 @@ async def run_agent(
         _tool_stats: dict[str, int] = {}  # tool_name -> call_count
         _tool_success: int = 0
         _tool_fail: int = 0
-        _loop_error: str = ""  # 循环级异常信息（空 = 主循环未崩溃），供失败反思提炼
-        _trace_seq: int = 0  # 链路追踪序号计数器
         _tool_success_by_type: dict[str, int] = {}  # tool_name -> success_count
         _tool_fail_by_type: dict[str, int] = {}  # tool_name -> fail_count
         _tool_time_by_type: dict[str, list[float]] = {}  # tool_name -> [elapsed_times]
+
+        def _record_executed_tool_outcome(tool_name: str, result_text: str) -> None:
+            nonlocal _tool_success, _tool_fail
+            _tool_stats[tool_name] = _tool_stats.get(tool_name, 0) + 1
+            if result_text.startswith(("[错误]", "[拒绝]", "[参数错误]")):
+                _tool_fail += 1
+                _tool_fail_by_type[tool_name] = (
+                    _tool_fail_by_type.get(tool_name, 0) + 1
+                )
+            else:
+                _tool_success += 1
+                _tool_success_by_type[tool_name] = (
+                    _tool_success_by_type.get(tool_name, 0) + 1
+                )
+
+        _loop_error: str = ""  # 循环级异常信息（空 = 主循环未崩溃），供失败反思提炼
+        _trace_seq: int = 0  # 链路追踪序号计数器
 
         # ── 重复错误检测：同错误 3 次提前终止 ──
         _error_signatures: dict[str, int] = {}  # error_sig -> count
@@ -1874,6 +1934,8 @@ async def run_agent(
                       else:
                           # ══ 顺序路径：含编辑工具时逐个执行 ══
                           for tc_name, tc_id, tc_args in _parsed_calls:
+                              _edit_succeeded = False
+                              _tool_executed = False
                               _trace_seq += 1
                               await _emit(
                                   StepEvent(kind=StepKind.tool_call, tool=tc_name, content=tc_args, step=state.step, trace_id=f"s{state.step}-{_trace_seq}")
@@ -1912,6 +1974,7 @@ async def run_agent(
                                       _t0 = time.perf_counter()
                                       _tool_timeout = _TOOL_TIMEOUTS.get(tc_name, _DEFAULT_TOOL_TIMEOUT)
                                       try:
+                                          _tool_executed = True
                                           result = await asyncio.wait_for(
                                               tools.call(tc_name, tc_args, ctx),
                                               timeout=_tool_timeout,
@@ -1938,6 +2001,7 @@ async def run_agent(
                                               if not isinstance(result.output, str)
                                               else result.output
                                           )
+                                          _edit_succeeded = True
                                           _consecutive_errors = 0
                                       else:
                                           result_text = f"[错误] {result.error}"
@@ -1962,7 +2026,9 @@ async def run_agent(
                                                           result_text += f"\n[系统已自动读取文件] 以下是 {_fail_path} 的当前内容，请从中复制精确的 old_text 重试：\n{_retry_txt[:2000]}"
                                                   except Exception:  # noqa: S110
                                                       pass
-                              if tc_name in _EDIT_TOOLS:
+                              if _tool_executed:
+                                  _record_executed_tool_outcome(tc_name, result_text)
+                              if tc_name in _EDIT_TOOLS and _edit_succeeded:
                                   _had_edit = True
                                   _edit_count += 1
                                   _fp = tc_args.get("path", "")
@@ -2067,9 +2133,18 @@ async def run_agent(
                               ),
                           ))
                           continue
-                      content_buf = await _handle_empty_or_echo(
-                          content_buf, state, llm, target_model
+                      content_buf, _required_tool_evidence = (
+                          _required_tool_completion_content(
+                              content_buf,
+                              required_first_tool,
+                              _required_tool_seen,
+                              _changed_files,
+                          )
                       )
+                      if not _required_tool_evidence:
+                          content_buf = await _handle_empty_or_echo(
+                              content_buf, state, llm, target_model
+                          )
                       await _emit(
                           StepEvent(kind=StepKind.reason, content=content_buf, step=state.step)
                       )
@@ -2077,7 +2152,11 @@ async def run_agent(
 
                       # ── 防过早终止：智能完成检测 ──
                       # 策略：综合判断是否为真正的最终回答
-                      _is_final = _detect_final_answer(content_buf, state)
+                      _is_final = _detect_final_answer(
+                          content_buf,
+                          state,
+                          required_tool_evidence=_required_tool_evidence,
+                      )
                       if not _is_final and state.step < _effective_max_steps - 2:
                           # 不是最终回答 → 注入继续指令
                           state.messages.append(Message(
@@ -2099,7 +2178,12 @@ async def run_agent(
                           state.final_answer = content_buf
 
                       # ── 自反思：有编辑操作时，完成前做一次质量检查 ──
-                      if _edit_count > 0 and not _did_reflect and state.step < _effective_max_steps - 1:
+                      if (
+                          _edit_count > 0
+                          and not _did_reflect
+                          and not _required_tool_evidence
+                          and state.step < _effective_max_steps - 1
+                      ):
                           _did_reflect = True
                           state.messages.append(Message(
                               role="user",
@@ -2116,13 +2200,23 @@ async def run_agent(
                       # ── 最终回答质量门控：防空/过短/回显 ──
                       _fa = (state.final_answer or "").strip()
                       if len(_fa) < 10 and state.step > 1:
-                          # 回答过短，要求模型补充
-                          state.messages.append(Message(
-                              role="user",
-                              content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
-                          ))
-                          state.final_answer = ""
-                          continue
+                          if _required_tool_evidence:
+                              evidence, _ = _required_tool_completion_content(
+                                  "",
+                                  required_first_tool,
+                                  _required_tool_seen,
+                                  _changed_files,
+                              )
+                              _fa = f"{_fa} {evidence}".strip()
+                              state.final_answer = _fa
+                          else:
+                              # 回答过短，要求模型补充
+                              state.messages.append(Message(
+                                  role="user",
+                                  content="[系统] 你的回答过短，请补充完整的任务总结（包括做了什么、修改了哪些文件、结果如何）。",
+                              ))
+                              state.final_answer = ""
+                              continue
 
                       _terminal_success = True
                       state.finished = True
@@ -2237,6 +2331,8 @@ async def run_agent(
                       else:
                           # 顺序路径（含编辑工具）
                           for tc in resp.tool_calls:
+                              _edit_succeeded = False
+                              _tool_executed = False
                               await _emit(
                                   StepEvent(kind=StepKind.tool_call, tool=tc.name, content=tc.args, step=state.step)
                               )
@@ -2247,6 +2343,7 @@ async def run_agent(
                                   _consecutive_errors += 1
                               else:
                                   try:
+                                      _tool_executed = True
                                       result = await asyncio.wait_for(
                                           tools.call(tc.name, tc.args, ctx),
                                           timeout=_TOOL_TIMEOUT,
@@ -2269,6 +2366,7 @@ async def run_agent(
                                           if not isinstance(result.output, str)
                                           else result.output
                                       )
+                                      _edit_succeeded = True
                                       _consecutive_errors = 0
                                   else:
                                       result_text = f"[错误] {result.error}"
@@ -2278,7 +2376,9 @@ async def run_agent(
                                       # ── 重复错误检测 ──
                                       _err_sig = f"{tc.name}:{str(result.error)[:80]}"
                                       _error_signatures[_err_sig] = _error_signatures.get(_err_sig, 0) + 1
-                              if tc.name in _EDIT_TOOLS:
+                              if _tool_executed:
+                                  _record_executed_tool_outcome(tc.name, result_text)
+                              if tc.name in _EDIT_TOOLS and _edit_succeeded:
                                   _had_edit_ns = True
                                   _edit_count += 1
                                   _fp = tc.args.get("path", "")
@@ -2371,16 +2471,29 @@ async def run_agent(
                       ))
                       continue
 
-                  content_buf_ns = await _handle_empty_or_echo(
-                      resp.content, state, llm, target_model
+                  content_buf_ns, _required_tool_evidence = (
+                      _required_tool_completion_content(
+                          resp.content,
+                          required_first_tool,
+                          _required_tool_seen,
+                          _changed_files,
+                      )
                   )
+                  if not _required_tool_evidence:
+                      content_buf_ns = await _handle_empty_or_echo(
+                          resp.content, state, llm, target_model
+                      )
                   await _emit(
                       StepEvent(kind=StepKind.reason, content=content_buf_ns, step=state.step)
                   )
                   state.messages.append(Message(role="assistant", content=content_buf_ns))
 
                   # 防过早终止（非流式路径）— 智能完成检测
-                  _is_final_ns = _detect_final_answer(content_buf_ns, state)
+                  _is_final_ns = _detect_final_answer(
+                      content_buf_ns,
+                      state,
+                      required_tool_evidence=_required_tool_evidence,
+                  )
                   if not _is_final_ns and state.step < _effective_max_steps - 2:
                       state.messages.append(Message(
                           role="user",
@@ -2544,26 +2657,45 @@ async def run_agent(
                 )
             await _emit(StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step))
         except Exception as loop_exc:
-            _loop_error = str(loop_exc)[:300]
-            _run_error = _loop_error or type(loop_exc).__name__
-            # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
-            if not state.final_answer:
-                # 从消息历史中提取最后的工具结果作为回答
-                tool_results = [
-                    m.content for m in state.messages
-                    if m.role == "tool" and m.content and not m.content.startswith("[错误]")
-                ]
-                if tool_results:
-                    state.final_answer = (
-                        "工具已执行完成，但模型整合结果时出错。\n\n"
-                        "以下是工具返回的原始结果：\n\n"
-                        + "\n---\n".join(tool_results[-3:])[:3000]
-                    )
-                else:
-                    state.final_answer = f"执行过程中出错：{loop_exc!s:.200}"
-                await _emit(
-                    StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step)
+            if (
+                str(loop_exc) == "model_empty_response_after_retry"
+                and required_first_tool
+                and _required_tool_seen
+                and _changed_files
+            ):
+                changed = "、".join(_changed_files[:10])
+                state.final_answer = (
+                    f"必需工具 {required_first_tool} 已成功执行，真实变更已记录：{changed}。"
+                    "模型完成摘要返回空内容，系统已基于工具执行证据生成确定性结果；全部完成。"
                 )
+                _terminal_success = True
+                state.finished = True
+                _pending_final_event = StepEvent(
+                    kind=StepKind.final,
+                    content=state.final_answer,
+                    step=state.step,
+                )
+            else:
+                _loop_error = str(loop_exc)[:300]
+                _run_error = _loop_error or type(loop_exc).__name__
+                # LLM 调用失败（超时/上下文过长等）——用已有工具结果兆底
+                if not state.final_answer:
+                    # 从消息历史中提取最后的工具结果作为回答
+                    tool_results = [
+                        m.content for m in state.messages
+                        if m.role == "tool" and m.content and not m.content.startswith("[错误]")
+                    ]
+                    if tool_results:
+                        state.final_answer = (
+                            "工具已执行完成，但模型整合结果时出错。\n\n"
+                            "以下是工具返回的原始结果：\n\n"
+                            + "\n---\n".join(tool_results[-3:])[:3000]
+                        )
+                    else:
+                        state.final_answer = f"执行过程中出错：{loop_exc!s:.200}"
+                    await _emit(
+                        StepEvent(kind=StepKind.error, content=state.final_answer, step=state.step)
+                    )
         span.set_output(state.final_answer)
         # ── Git 清理：任务完成后清理临时分支 ──
         if _work_branch:

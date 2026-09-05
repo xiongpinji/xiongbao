@@ -122,6 +122,34 @@ def get_windows_system32() -> Path:
 
 
 def get_windows_identity(system32: Path) -> str:
+    try:
+        identity = _get_windows_identity_unicode()
+    except OSError:
+        identity = _get_windows_identity_from_whoami(system32)
+    if not is_safe_windows_identity(identity):
+        raise RuntimeError("failed to identify current user")
+    return identity
+
+
+def _get_windows_identity_unicode() -> str:
+    from ctypes import wintypes
+
+    name_sam_compatible = 2
+    size = wintypes.ULONG(0)
+    secur32 = ctypes.WinDLL("secur32", use_last_error=True)
+    function = secur32.GetUserNameExW
+    function.argtypes = [wintypes.ULONG, wintypes.LPWSTR, ctypes.POINTER(wintypes.ULONG)]
+    function.restype = wintypes.BOOL
+    function(name_sam_compatible, None, ctypes.byref(size))
+    if size.value == 0:
+        raise ctypes.WinError(ctypes.get_last_error())
+    buffer = ctypes.create_unicode_buffer(size.value)
+    if not function(name_sam_compatible, buffer, ctypes.byref(size)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return buffer.value.strip()
+
+
+def _get_windows_identity_from_whoami(system32: Path) -> str:
     result = subprocess.run(
         [str(system32 / "whoami.exe")],
         capture_output=True,
@@ -132,13 +160,18 @@ def get_windows_identity(system32: Path) -> str:
         raise RuntimeError("failed to identify current user")
     stdout = result.stdout
     if isinstance(stdout, bytes):
-        # whoami.exe 按控制台 OEM 代码页输出（中文 Windows 为 GBK/cp936），
-        # 不能按 UTF-8 解码，否则非 ASCII 机器名/用户名乱码导致 icacls 1332。
-        stdout = stdout.decode(_console_codepage(), errors="replace")
-    identity = stdout.strip()
-    if not is_safe_windows_identity(identity):
-        raise RuntimeError("failed to identify current user")
-    return identity
+        stdout = _decode_identity(stdout)
+    return stdout.strip()
+
+
+def _decode_identity(raw: bytes) -> str:
+    encodings = ("utf-8", _console_codepage())
+    for encoding in dict.fromkeys(encodings):
+        try:
+            return raw.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="surrogateescape").strip()
 
 
 def _console_codepage() -> str:

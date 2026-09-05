@@ -13,6 +13,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from xagent.infra.paths import data_path
+
 
 @dataclass
 class StoredObject:
@@ -38,8 +40,8 @@ class LocalObjectStore:
 
     backend = "local"
 
-    def __init__(self, root: str = "./data/storage") -> None:
-        self._root = Path(root)
+    def __init__(self, root: str | Path | None = None) -> None:
+        self._root = Path(root) if root is not None else data_path("storage")
         self._root.mkdir(parents=True, exist_ok=True)
 
     async def put(
@@ -121,7 +123,7 @@ def get_object_store() -> ObjectStore:
         except Exception:  # noqa: S110  S3 初始化失败降级本地
             pass
     return LocalObjectStore(
-        root=os.environ.get("XAGENT_STORAGE__LOCAL_ROOT", "./data/storage")
+        root=os.environ.get("XAGENT_STORAGE__LOCAL_ROOT") or data_path("storage")
     )
 
 

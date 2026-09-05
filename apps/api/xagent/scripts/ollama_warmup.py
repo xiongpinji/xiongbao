@@ -54,6 +54,9 @@ async def _warmup_via_ollama(cfg: LLMSettings, *, timeout_seconds: float | None 
     model = _raw_ollama_model_name(cfg)
     effective_timeout = cfg.request_timeout_seconds if timeout_seconds is None else timeout_seconds
     timeout = httpx.Timeout(effective_timeout)
+    options = {"num_predict": cfg.warmup_max_tokens}
+    if cfg.ollama_num_ctx > 0:
+        options["num_ctx"] = cfg.ollama_num_ctx
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         tags = await client.get(f"{base_url}/api/tags")
@@ -64,7 +67,7 @@ async def _warmup_via_ollama(cfg: LLMSettings, *, timeout_seconds: float | None 
                 "model": model,
                 "messages": [{"role": "user", "content": cfg.warmup_prompt}],
                 "stream": False,
-                "options": {"num_predict": cfg.warmup_max_tokens},
+                "options": options,
             },
         )
         resp.raise_for_status()

@@ -20,7 +20,7 @@ spec:
       serviceAccountName: {{ include "xagent.serviceAccountName" . }}
       containers:
         - name: web
-          image: "{{ .Values.web.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "xagent.image" .Values.web.image | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports: [{ containerPort: 80 }]
           resources:

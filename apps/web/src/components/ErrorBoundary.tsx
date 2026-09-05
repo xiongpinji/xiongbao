@@ -9,6 +9,7 @@
  */
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { buildApiUrl } from "../api/baseUrl";
 
 interface Props {
   children: ReactNode;
@@ -37,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // 上报（生产环境可对接 Sentry / 自建日志）
     if (import.meta.env.PROD) {
       try {
-        fetch("/api/v1/system/client-errors", {
+        fetch(buildApiUrl("/api/v1/system/client-errors"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

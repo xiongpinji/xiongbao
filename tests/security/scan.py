@@ -1,128 +1,235 @@
-"""安全自动化扫描：越权 / 注入 / 安全头 / 限流 检查。
-
-用法：python tests/security/scan.py --host http://localhost:8000
-退出码 0 = 全部通过，非 0 = 发现问题。
-"""
+"""Fail-closed security scan for authentication, isolation, headers and rate limits."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import secrets
 import sys
+from collections import Counter
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 import httpx
 
 
-def _report(name: str, passed: bool, detail: str = "") -> bool:
-    mark = "✅" if passed else "❌"
-    print(f"  {mark} {name}: {detail}")
-    return passed
+@dataclass(frozen=True)
+class CheckResult:
+    name: str
+    passed: bool
+    detail: str
 
 
-async def scan(host: str) -> int:
-    """运行全部安全检查，返回失败数。"""
-    fails = 0
+REQUIRED_CHECKS = (
+    "health",
+    "nosniff",
+    "frame_deny",
+    "auth_required",
+    "tenant_header_injection",
+    "tenant_memory_isolation",
+    "sql_injection",
+    "rate_limit",
+)
+
+
+def request_count_for_rate_limit(configured_limit: int) -> int:
+    if configured_limit < 1:
+        raise ValueError("configured_limit must be positive")
+    return configured_limit + 2
+
+
+def required_results(results: Mapping[str, CheckResult]) -> list[CheckResult]:
+    return [
+        results.get(name, CheckResult(name, False, "missing"))
+        for name in REQUIRED_CHECKS
+    ]
+
+
+def exit_code(results: Sequence[CheckResult]) -> int:
+    counts = Counter(item.name for item in results)
+    if set(counts) != set(REQUIRED_CHECKS):
+        return 1
+    if any(counts[name] != 1 for name in REQUIRED_CHECKS):
+        return 1
+    return 0 if all(item.passed for item in results) else 1
+
+
+def _record(
+    results: dict[str, CheckResult], name: str, passed: bool, detail: str
+) -> None:
+    results[name] = CheckResult(name, passed, detail)
+
+
+async def scan(
+    host: str,
+    *,
+    expected_mode: str,
+    configured_limit: int,
+) -> list[CheckResult]:
+    results: dict[str, CheckResult] = {}
+    token_a = ""
     print(f"\n安全扫描：{host}\n")
 
-    async with httpx.AsyncClient(base_url=host, timeout=15) as c:
-        # 1. 健康探针无鉴权（豁免）
-        r = await c.get("/health")
-        fails += 0 if _report("健康探针无鉴权", r.status_code == 200, str(r.status_code)) else 1
+    try:
+        async with httpx.AsyncClient(base_url=host, timeout=15) as client:
+            response = await client.get("/health")
+            _record(results, "health", response.status_code == 200, str(response.status_code))
+            _record(
+                results,
+                "nosniff",
+                response.headers.get("X-Content-Type-Options") == "nosniff",
+                response.headers.get("X-Content-Type-Options", "missing"),
+            )
+            _record(
+                results,
+                "frame_deny",
+                response.headers.get("X-Frame-Options") == "DENY",
+                response.headers.get("X-Frame-Options", "missing"),
+            )
 
-        # 2. 安全响应头
-        fails += (
-            0
-            if _report(
-                "X-Content-Type-Options",
-                r.headers.get("X-Content-Type-Options") == "nosniff",
+            response = await client.get("/api/v1/agents/roles")
+            auth_passed = (
+                response.status_code == 401
+                if expected_mode in {"full", "enterprise"}
+                else response.status_code in {200, 401}
             )
-            else 1
-        )
-        fails += (
-            0
-            if _report("X-Frame-Options", r.headers.get("X-Frame-Options") == "DENY") else 1
-        )
+            _record(results, "auth_required", auth_passed, str(response.status_code))
 
-        # 3. 越权：无 token 访问受保护端点（full 模式应 401，lite 可 200）
-        r = await c.get("/api/v1/agents/roles")
-        _report(
-            "无 token 访问业务端点",
-            r.status_code in (200, 401),
-            f"{r.status_code}（full 应 401，lite 可 200）",
-        )
-
-        # 4. 租户隔离：两个不同租户 token，A 看不到 B 的记忆
-        await asyncio.sleep(2)  # 让限流窗口恢复
-        # 注册两个用户
-        ta = await c.post("/api/v1/auth/register", json={"username": f"sec_a_{id(c)}", "password": "pass123456"})
-        tb = await c.post("/api/v1/auth/register", json={"username": f"sec_b_{id(c)}", "password": "pass123456"})
-        if ta.status_code == 200 and tb.status_code == 200:
-            tok_a = ta.json()["access_token"]
-            tok_b = tb.json()["access_token"]
-            tenant_b = tb.json()["tenant_id"]
-            # A 写记忆
-            await c.post(
-                "/api/v1/memory",
-                json={"items": [{"id": "secret-sec", "text": "租户A机密"}]},
-                headers={"Authorization": f"Bearer {tok_a}"},
+            suffix = secrets.token_hex(6)
+            register_a = await client.post(
+                "/api/v1/auth/register",
+                json={"username": f"sec_a_{suffix}", "password": "pass123456"},
             )
-            # B 用自己的 token 但声明 X-Tenant-Id=A -> 应 403
-            r = await c.get(
-                "/api/v1/agents/roles",
-                headers={"Authorization": f"Bearer {tok_a}", "X-Tenant-Id": tenant_b},
+            register_b = await client.post(
+                "/api/v1/auth/register",
+                json={"username": f"sec_b_{suffix}", "password": "pass123456"},
             )
-            fails += (
-                0
-                if _report("跨租户头注入防护", r.status_code == 403, str(r.status_code))
-                else 1
+            registrations_ok = (
+                register_a.status_code == 200 and register_b.status_code == 200
             )
-            # B 搜索看不到 A 的数据
-            r = await c.post(
-                "/api/v1/memory/search",
-                json={"query": "机密", "top_k": 10},
-                headers={"Authorization": f"Bearer {tok_b}"},
-            )
-            if r.status_code == 200:
-                ids = {h["id"] for h in r.json().get("hits", [])}
-                fails += (
-                    0
-                    if _report("租户记忆隔离", "secret-sec" not in ids, str(ids))
-                    else 1
+            if registrations_ok:
+                token_a = register_a.json()["access_token"]
+                token_b = register_b.json()["access_token"]
+                tenant_b = register_b.json()["tenant_id"]
+                memory_id = f"security-scan-{suffix}"
+                write_response = await client.post(
+                    "/api/v1/memory",
+                    json={"items": [{"id": memory_id, "text": "tenant-a-marker"}]},
+                    headers={"Authorization": f"Bearer {token_a}"},
                 )
+                header_response = await client.get(
+                    "/api/v1/agents/roles",
+                    headers={
+                        "Authorization": f"Bearer {token_a}",
+                        "X-Tenant-Id": tenant_b,
+                    },
+                )
+                _record(
+                    results,
+                    "tenant_header_injection",
+                    header_response.status_code == 403,
+                    str(header_response.status_code),
+                )
+                if write_response.status_code == 200:
+                    search_response = await client.post(
+                        "/api/v1/memory/search",
+                        json={"query": "tenant-a-marker", "top_k": 10},
+                        headers={"Authorization": f"Bearer {token_b}"},
+                    )
+                    if search_response.status_code == 200:
+                        ids = {
+                            hit.get("id")
+                            for hit in search_response.json().get("hits", [])
+                        }
+                        _record(
+                            results,
+                            "tenant_memory_isolation",
+                            memory_id not in ids,
+                            f"status={search_response.status_code}",
+                        )
+                    else:
+                        _record(
+                            results,
+                            "tenant_memory_isolation",
+                            False,
+                            f"search_status={search_response.status_code}",
+                        )
+                else:
+                    _record(
+                        results,
+                        "tenant_memory_isolation",
+                        False,
+                        f"write_status={write_response.status_code}",
+                    )
+            else:
+                detail = f"register_status={register_a.status_code},{register_b.status_code}"
+                _record(results, "tenant_header_injection", False, detail)
+                _record(results, "tenant_memory_isolation", False, detail)
 
-        # 5. SQL 注入尝试（参数化应安全）—— 放在限流之前避免被 429
-        r = await c.post(
-            "/api/v1/memory/search",
-            json={"query": "'; DROP TABLE users; --", "top_k": 3},
+            if token_a:
+                response = await client.post(
+                    "/api/v1/memory/search",
+                    json={"query": "'; DROP TABLE users; --", "top_k": 3},
+                    headers={"Authorization": f"Bearer {token_a}"},
+                )
+                _record(
+                    results,
+                    "sql_injection",
+                    response.status_code == 200,
+                    str(response.status_code),
+                )
+            else:
+                _record(results, "sql_injection", False, "no_test_identity")
+
+            rate_codes: list[int] = []
+            for _ in range(request_count_for_rate_limit(configured_limit)):
+                response = await client.get("/api/v1/agents/roles")
+                rate_codes.append(response.status_code)
+                if response.status_code == 429:
+                    break
+            _record(
+                results,
+                "rate_limit",
+                429 in rate_codes,
+                f"requests={len(rate_codes)} status_429={rate_codes.count(429)}",
+            )
+    except httpx.RequestError as exc:
+        print(f"  request_failed: {type(exc).__name__}")
+
+    return required_results(results)
+
+
+def _print_results(results: Sequence[CheckResult]) -> None:
+    for result in results:
+        mark = "PASS" if result.passed else "FAIL"
+        print(f"  [{mark}] {result.name}: {result.detail}")
+    print("\nPASS" if exit_code(results) == 0 else "\nFAIL")
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="http://localhost:8000")
+    parser.add_argument(
+        "--expected-mode",
+        choices=("lite", "full", "enterprise"),
+        required=True,
+    )
+    parser.add_argument("--rate-limit-requests", type=int, required=True)
+    args = parser.parse_args(argv)
+
+    try:
+        request_count_for_rate_limit(args.rate_limit_requests)
+    except ValueError as exc:
+        parser.error(str(exc))
+    results = asyncio.run(
+        scan(
+            args.host,
+            expected_mode=args.expected_mode,
+            configured_limit=args.rate_limit_requests,
         )
-        fails += (
-            0
-            if _report("SQL 注入防护", r.status_code in (200, 401, 403), str(r.status_code))
-            else 1
-        )
-
-        # 6. 限流：快速发请求触发 429（健康探针豁免，用业务端点）
-        await asyncio.sleep(2)  # 让限流窗口恢复
-        codes_429 = 0
-        for _ in range(150):
-            r = await c.get("/api/v1/agents/roles")
-            if r.status_code == 429:
-                codes_429 += 1
-                break
-        _report("限流触发", codes_429 > 0, f"429 次数 {codes_429}（lite 低阈值可能不触发）")
-
-    print(f"\n{'PASS ✅' if fails == 0 else f'FAIL ❌ {fails} 项失败'}")
-    return fails
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="http://localhost:8000")
-    args = ap.parse_args()
-
-    import asyncio
-
-    return asyncio.run(scan(args.host))
+    )
+    _print_results(results)
+    return exit_code(results)
 
 
 if __name__ == "__main__":

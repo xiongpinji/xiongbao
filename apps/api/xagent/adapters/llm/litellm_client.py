@@ -72,6 +72,8 @@ class LiteLLMClient(LLMClient):
         elif self._cfg.ollama_base_url:
             # 走本地 Ollama：LiteLLM 用 ollama/ 前缀 + api_base 路由
             kwargs["api_base"] = self._cfg.ollama_base_url
+            if self._cfg.ollama_num_ctx > 0:
+                kwargs["num_ctx"] = self._cfg.ollama_num_ctx
         elif self._cfg.deepseek_api_key and target.startswith("deepseek/"):
             # 直连 DeepSeek：litellm 靠 deepseek/ 前缀 + api_key 路由
             kwargs["api_key"] = self._cfg.deepseek_api_key
@@ -155,9 +157,11 @@ class LiteLLMClient(LLMClient):
         if (
             self._cfg.ollama_base_url
             and not self._cfg.proxy_url
-            and target_model.startswith("ollama/")
         ):
-            target_model = f"ollama_chat/{target_model.removeprefix('ollama/')}"
+            if target_model.startswith("ollama/"):
+                target_model = f"ollama_chat/{target_model.removeprefix('ollama/')}"
+            elif "/" not in target_model:
+                target_model = f"ollama_chat/{target_model}"
         return await self._complete(
             messages,
             model=target_model,

@@ -74,8 +74,13 @@ class R2BackendReleaseScopeTests(unittest.TestCase):
             set(workflow["jobs"]["docker-build"]["needs"]),
             {
                 "backend",
+                "backend-commercial",
+                "short-drama",
                 "frontend",
+                "desktop",
+                "commercial-evidence",
                 "license-gate",
+                "supply-chain",
                 "config-governance",
                 "e2e-api",
                 "load-test",
@@ -94,7 +99,11 @@ class R2BackendReleaseScopeTests(unittest.TestCase):
         self.assertIn("refs/tags/v", jobs["docker-build"]["if"])
         self.assertIn("refs/heads/master", jobs["release-version"]["if"])
         self.assertIn("refs/tags/v", jobs["release-version"]["if"])
-        self.assertEqual(jobs["release"]["if"], "startsWith(github.ref, 'refs/tags/v')")
+        self.assertEqual(
+            jobs["release"]["if"],
+            "startsWith(github.ref, 'refs/tags/v') && "
+            "vars.XAGENT_RELEASE_AUTHORIZED == 'true'",
+        )
         version_step = next(
             step
             for step in jobs["release-version"]["steps"]

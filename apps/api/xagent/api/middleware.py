@@ -9,9 +9,8 @@ from __future__ import annotations
 import time
 import uuid
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.datastructures import Headers, MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from xagent.infra.logging import (
     bind_request_context,
@@ -25,52 +24,70 @@ REQUEST_ID_HEADER = "x-request-id"
 TENANT_HEADER = "x-tenant-id"
 
 
-class RequestContextMiddleware(BaseHTTPMiddleware):
+class RequestContextMiddleware:
     """为每个请求注入 request_id，记录访问日志，绑定日志上下文。"""
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        request_id = request.headers.get(REQUEST_ID_HEADER) or uuid.uuid4().hex
-        tenant_id = request.headers.get(TENANT_HEADER, "")
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = Headers(scope=scope)
+        request_id = headers.get(REQUEST_ID_HEADER) or uuid.uuid4().hex
+        tenant_id = headers.get(TENANT_HEADER, "")
         bind_request_context(request_id=request_id, tenant_id=tenant_id)
 
         # 暴露给下游 handler
-        request.state.request_id = request_id
-        request.state.tenant_id = tenant_id
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
+        state["tenant_id"] = tenant_id
+
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+        status_code = 500
+
+        async def send_with_request_id(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                MutableHeaders(scope=message)[REQUEST_ID_HEADER] = request_id
+            await send(message)
 
         start = time.perf_counter()
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_request_id)
         except Exception:
             elapsed_ms = (time.perf_counter() - start) * 1000
             logger.exception(
                 "request_failed",
-                method=request.method,
-                path=request.url.path,
+                method=method,
+                path=path,
                 elapsed_ms=round(elapsed_ms, 2),
             )
-            clear_request_context()
             raise
+        else:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            # Prometheus 指标
+            try:
+                from xagent.adapters.observability.metrics import http_requests
 
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        response.headers[REQUEST_ID_HEADER] = request_id
-        # Prometheus 指标
-        try:
-            from xagent.adapters.observability.metrics import http_requests
-
-            http_requests.labels(
-                method=request.method,
-                path=request.url.path,
-                status=str(response.status_code),
-            ).inc()
-        except Exception:  # noqa: S110  指标失败不影响请求
-            pass
-        logger.info(
-            "request",
-            method=request.method,
-            path=request.url.path,
-            status=response.status_code,
-            elapsed_ms=round(elapsed_ms, 2),
-            request_id=request_id,  # 显式携带：内层中间件可能清空 contextvars
-        )
-        clear_request_context()
-        return response
+                http_requests.labels(
+                    method=method,
+                    path=path,
+                    status=str(status_code),
+                ).inc()
+            except Exception:  # noqa: S110  指标失败不影响请求
+                pass
+            logger.debug(
+                "request",
+                method=method,
+                path=path,
+                status=status_code,
+                elapsed_ms=round(elapsed_ms, 2),
+                request_id=request_id,  # 显式携带：内层中间件可能清空 contextvars
+            )
+        finally:
+            clear_request_context()

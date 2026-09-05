@@ -56,6 +56,7 @@ async def test_warmup_ollama_model_posts_minimal_chat(
         warmup_enabled=True,
         warmup_prompt="回复一个字：好",
         warmup_max_tokens=8,
+        ollama_num_ctx=8192,
     )
 
     result = await warmup_ollama_model(cfg)
@@ -67,7 +68,7 @@ async def test_warmup_ollama_model_posts_minimal_chat(
         "model": "qwen2.5vl:7b",
         "messages": [{"role": "user", "content": "回复一个字：好"}],
         "stream": False,
-        "options": {"num_predict": 8},
+        "options": {"num_predict": 8, "num_ctx": 8192},
     }
 
 

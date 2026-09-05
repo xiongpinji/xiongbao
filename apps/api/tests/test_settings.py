@@ -2,8 +2,31 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
-from xagent.infra.settings import RunMode, Settings
+from xagent.infra.settings import RunMode, Settings, _detect_project_root
+
+
+def test_project_root_detection_does_not_escape_git_worktree(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    (repository / ".env").write_text(
+        "XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER=openai\n",
+        encoding="utf-8",
+    )
+    worktree = repository / ".worktrees" / "candidate"
+    worktree.mkdir(parents=True)
+    (worktree / ".git").write_text(
+        "gitdir: ../../.git/worktrees/candidate\n",
+        encoding="utf-8",
+    )
+    start = worktree / "apps" / "api" / "xagent" / "infra"
+    start.mkdir(parents=True)
+
+    assert _detect_project_root(start) == worktree
 
 
 def test_lite_defaults() -> None:
@@ -11,6 +34,8 @@ def test_lite_defaults() -> None:
     assert s.is_lite
     assert not s.is_production
     assert s.db.url.startswith("sqlite")
+    assert "http://tauri.localhost" in s.cors_origins
+    assert "tauri://localhost" in s.cors_origins
     # lite 默认不应有生产校验问题
     assert s.validate_for_production() == []
 

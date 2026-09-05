@@ -4,8 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import { createGoal, createRelease, getGoalBoard, reviewTask, setAutoAdvance } from "../api/spine";
 import GoalBoard from "../components/spine/GoalBoard";
 
-const DEFAULT_GOAL_ID = "phase1-xagent";
-
 function CreateGoalForm({ onCreated }: { onCreated: (goalId: string) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -48,11 +46,12 @@ export default function GoalBoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
-  const goalId = useMemo(() => searchParams.get("goalId")?.trim() || DEFAULT_GOAL_ID, [searchParams]);
+  const goalId = useMemo(() => searchParams.get("goalId")?.trim() || "", [searchParams]);
 
   const query = useQuery({
     queryKey: ["goal-board", goalId],
     queryFn: () => getGoalBoard(goalId),
+    enabled: goalId.length > 0,
     // 看板任务状态会变化，每 10s 静默刷新
     refetchInterval: 10000,
     refetchIntervalInBackground: false,
@@ -95,6 +94,29 @@ export default function GoalBoardPage() {
   const actionBusy =
     advanceMutation.isPending || releaseMutation.isPending || reviewMutation.isPending;
 
+  const handleCreated = (id: string) => {
+    setShowCreate(false);
+    setSearchParams({ goalId: id });
+    queryClient.invalidateQueries({ queryKey: ["goal-board"] });
+  };
+
+  if (!goalId) {
+    return (
+      <div className="p-8 text-neutral-400">
+        <div className="text-lg font-medium text-white">尚未选择 Goal。</div>
+        <div className="mt-2 text-sm text-neutral-500">请新建 Goal，创建后将自动打开任务看板。</div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((value) => !value)}
+          className="mt-4 rounded-md border border-white/[0.08] px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:border-white/[0.16]"
+        >
+          {showCreate ? "取消" : "新建 Goal"}
+        </button>
+        {showCreate ? <CreateGoalForm onCreated={handleCreated} /> : null}
+      </div>
+    );
+  }
+
   if (query.isLoading) {
     return <div className="p-8 text-neutral-400">正在加载 Goal Board...</div>;
   }
@@ -106,6 +128,14 @@ export default function GoalBoardPage() {
         <div className="text-lg font-medium text-white">暂无 Goal 数据。</div>
         <div className="mt-2 text-sm text-neutral-500">当前 goalId：{goalId}</div>
         <div className="mt-2 text-sm text-neutral-500">{message}</div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((value) => !value)}
+          className="mt-4 rounded-md border border-white/[0.08] px-3 py-1.5 text-[12px] text-neutral-300 transition-colors hover:border-white/[0.16]"
+        >
+          {showCreate ? "取消" : "新建 Goal"}
+        </button>
+        {showCreate ? <CreateGoalForm onCreated={handleCreated} /> : null}
       </div>
     );
   }
@@ -129,11 +159,7 @@ export default function GoalBoardPage() {
         {showCreate ? (
           <div className="mb-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <CreateGoalForm
-              onCreated={(id) => {
-                setShowCreate(false);
-                setSearchParams({ goalId: id });
-                queryClient.invalidateQueries({ queryKey: ["goal-board"] });
-              }}
+              onCreated={handleCreated}
             />
           </div>
         ) : null}

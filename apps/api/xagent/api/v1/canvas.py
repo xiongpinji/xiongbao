@@ -38,6 +38,7 @@ from xagent.enterprise.auth.principal import Principal
 from xagent.enterprise.authz.guards import require_permission
 from xagent.infra.db import get_session
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 from xagent.infra.repos.workflow import persist_workflow_run
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
@@ -46,7 +47,9 @@ logger = get_logger("xagent.api.canvas")
 _canvases: dict[str, ProductionCanvas] = {}
 _canvas_tenants: dict[str, str] = {}
 
-_CANVAS_SNAPSHOT_PATH = Path(os.environ.get("XAGENT_CANVAS_SNAPSHOT", "data/canvas_snapshot.json"))
+_CANVAS_SNAPSHOT_PATH = Path(
+    os.environ.get("XAGENT_CANVAS_SNAPSHOT", str(data_path("canvas_snapshot.json")))
+)
 
 
 def _persist_snapshot() -> None:

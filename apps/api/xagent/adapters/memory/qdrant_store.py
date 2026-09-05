@@ -11,6 +11,7 @@ import uuid
 from typing import Any
 
 from xagent.adapters.memory.base import Embedder, MemoryRecord, SearchHit, VectorStore
+from xagent.infra.paths import data_path
 from xagent.infra.settings import MemorySettings
 
 
@@ -28,10 +29,7 @@ class QdrantVectorStore(VectorStore):
         else:
             # 本地磁盘模式：数据持久化到项目目录（重启不丢失）；
             # qdrant_local_path 可覆盖默认路径（测试隔离 / 多实例部署）
-            from pathlib import Path
-            db_path = cfg.qdrant_local_path or str(
-                Path(__file__).resolve().parents[4] / "data" / "qdrant"
-            )
+            db_path = cfg.qdrant_local_path or str(data_path("qdrant"))
             self._client = AsyncQdrantClient(path=db_path)
         self._ready = False
 

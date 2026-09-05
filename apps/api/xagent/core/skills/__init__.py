@@ -19,16 +19,13 @@ from pathlib import Path
 from typing import Any
 
 from xagent.infra.logging import get_logger
+from xagent.infra.paths import data_path
 
 logger = get_logger("xagent.skills")
 
-# 项目根目录
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-
-
 def default_skills_root() -> Path:
     configured = os.environ.get("XAGENT_SKILLS_ROOT", "").strip()
-    return Path(configured).expanduser() if configured else _PROJECT_ROOT / "data" / "skills"
+    return Path(configured).expanduser() if configured else data_path("skills")
 
 # ─── 自进化配置 ───
 MIN_STEPS_FOR_EXTRACTION = 3      # 任务步数 >= 此值才考虑提炼

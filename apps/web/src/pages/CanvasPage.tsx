@@ -15,6 +15,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Send, Check, X, MessageSquare, Image, Video, Clapperboard } from "lucide-react";
 import { callMcpTool } from "../api";
+import { buildApiUrl } from "../api/baseUrl";
 
 const NODE_COLORS: Record<string, string> = {
   "需求分析": "#3b82f6",
@@ -236,7 +237,7 @@ export default function CanvasPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("xagent_token");
-      const resp = await fetch("/api/v1/canvas", {
+      const resp = await fetch(buildApiUrl("/api/v1/canvas"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ brief, title: brief.slice(0, 30) }),
@@ -265,7 +266,7 @@ export default function CanvasPage() {
     const token = localStorage.getItem("xagent_token");
     const body: any = { status, human_note: humanNote };
     if (content !== undefined) body.content = content;
-    const resp = await fetch(`/api/v1/canvas/${canvas.canvas_id}/nodes/${nodeId}/review`, {
+    const resp = await fetch(buildApiUrl(`/api/v1/canvas/${canvas.canvas_id}/nodes/${nodeId}/review`), {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
@@ -282,7 +283,7 @@ export default function CanvasPage() {
     const token = localStorage.getItem("xagent_token");
     const mode = kind === "image" ? "text_to_image" : "text_to_video";
     try {
-      const resp = await fetch("/api/v1/creative-studio/media/generate", {
+      const resp = await fetch(buildApiUrl("/api/v1/creative-studio/media/generate"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ kind, prompt, mode, wait: false }),

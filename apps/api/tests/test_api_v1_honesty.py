@@ -14,10 +14,12 @@
 from __future__ import annotations
 
 import sys
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from xagent.enterprise.auth import create_access_token
+from xagent.infra.settings import LLMSettings, RunMode
 from xagent.main import create_app
 
 
@@ -461,6 +463,64 @@ async def test_data_export_audit_matches_audit_chain(client: AsyncClient) -> Non
 
 
 # ─── llm-config 可用性拦截与来源可见（P1 修复回归）───
+
+
+async def test_llm_config_marks_configured_bare_ollama_model_available(
+    client: AsyncClient, monkeypatch, tmp_path
+) -> None:
+    """直连 Ollama 时，未带 provider 前缀的已配置模型也必须可选。"""
+    import xagent.api.v1.system as system_module
+
+    cfg = LLMSettings(
+        default_model="qwen3:4b",
+        ollama_base_url="http://127.0.0.1:11434",
+        ollama_model="qwen3:4b",
+    )
+    settings = SimpleNamespace(mode=RunMode.lite, llm=cfg)
+    monkeypatch.setattr(system_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        system_module, "_LLM_OVERRIDES_PATH", tmp_path / "ovr.json"
+    )
+
+    resp = await client.get("/api/v1/system/llm-config", headers=_h())
+
+    assert resp.status_code == 200
+    current = next(model for model in resp.json()["models"] if model["current"])
+    assert current["id"] == "qwen3:4b"
+    assert current["available"] is True
+    assert current["reason"] == ""
+
+    update = await client.put(
+        "/api/v1/system/llm-config",
+        json={"default_model": "qwen3:4b"},
+        headers=_h(),
+    )
+    assert update.status_code == 200
+
+
+async def test_llm_config_does_not_treat_an_unconfigured_bare_model_as_ollama(
+    client: AsyncClient, monkeypatch, tmp_path
+) -> None:
+    import xagent.api.v1.system as system_module
+
+    cfg = LLMSettings(
+        default_model="gpt-4o",
+        ollama_base_url="http://127.0.0.1:11434",
+        ollama_model="",
+    )
+    settings = SimpleNamespace(mode=RunMode.lite, llm=cfg)
+    monkeypatch.setattr(system_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        system_module, "_LLM_OVERRIDES_PATH", tmp_path / "ovr.json"
+    )
+
+    resp = await client.get("/api/v1/system/llm-config", headers=_h())
+
+    assert resp.status_code == 200
+    current = next(model for model in resp.json()["models"] if model["current"])
+    assert current["id"] == "gpt-4o"
+    assert current["available"] is False
+    assert current["reason"] == "缺 OpenAI key 且未配置代理"
 
 
 async def test_llm_config_rejects_model_without_provider_key(

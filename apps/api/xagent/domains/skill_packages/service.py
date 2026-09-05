@@ -24,17 +24,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from xagent.core.skills.importer import candidate_from_skillmd, parse_skillmd
 from xagent.infra.models.skill_package import SkillPackageORM
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+from xagent.infra.paths import data_path
 
 
 def default_packages_root() -> Path:
     configured = os.environ.get("XAGENT_SKILL_PACKAGES_ROOT", "").strip()
-    return (
-        Path(configured).expanduser()
-        if configured
-        else _PROJECT_ROOT / "data" / "skill-packages"
-    )
+    return Path(configured).expanduser() if configured else data_path("skill-packages")
 
 
 @dataclass(frozen=True)

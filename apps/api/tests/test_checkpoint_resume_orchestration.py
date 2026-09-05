@@ -538,13 +538,14 @@ async def test_native_tool_then_final_success_saves_terminal_checkpoint(
         run_id="native-terminal-run",
     )
 
-    assert result.final_answer == "native terminal complete passed"
+    assert result.final_answer.startswith("native terminal complete passed")
+    assert "1 次工具调用, 成功率 100%, 常用: echo(1)" in result.final_answer
     assert result.steps == 2
     checkpoints = await _list_run_checkpoints(principal.tenant_id, result.run_id)
     assert [checkpoint.step for checkpoint in checkpoints] == [2]
     assert checkpoints[0].messages[-2:] == [
         {"role": "user", "content": "use native tool before final"},
-        {"role": "assistant", "content": "native terminal complete passed"},
+        {"role": "assistant", "content": result.final_answer},
     ]
 
 

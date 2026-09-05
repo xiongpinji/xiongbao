@@ -93,11 +93,16 @@ class R2ComposeContractTest(unittest.TestCase):
     def test_api_image_contains_operational_scripts(self) -> None:
         dockerfile = API_DOCKERFILE_PATH.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "COPY scripts/auto_archive_evidence.py "
-            "scripts/collect_ops_evidence.py ./scripts/",
-            dockerfile,
-        )
+        for script in (
+            "post_deploy_summary.py",
+            "collect_ops_evidence.py",
+            "auto_archive_evidence.py",
+        ):
+            with self.subTest(script=script):
+                self.assertIn(
+                    f"COPY scripts/{script} ./scripts/{script}",
+                    dockerfile,
+                )
 
     def test_runbook_host_debug_uses_r2_core_dependency_command(self) -> None:
         expected_command = (
@@ -474,7 +479,8 @@ class R2ComposeContractTest(unittest.TestCase):
             "POSTGRES_DB=xagent",
             "XAGENT_MODE=full",
             "XAGENT_DEBUG=false",
-            'XAGENT_CORS_ORIGINS=["http://127.0.0.1:18080"]',
+            'XAGENT_CORS_ORIGINS=["http://127.0.0.1:18080",'
+            '"http://tauri.localhost","tauri://localhost"]',
             "XAGENT_SECURITY__REQUIRE_AUTH=true",
             "XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434",
             "XAGENT_LLM__OLLAMA_MODEL=xagent-qwen3",

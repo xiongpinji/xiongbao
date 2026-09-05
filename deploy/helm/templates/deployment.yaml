@@ -26,11 +26,11 @@ spec:
       serviceAccountName: {{ include "xagent.serviceAccountName" . }}
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        runAsUser: 10001
+        fsGroup: 10001
       containers:
         - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "xagent.image" .Values.image | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports: [{ containerPort: {{ .Values.api.port }} }]
           securityContext:
@@ -54,7 +54,7 @@ spec:
           {{- end }}
           command: ["sh", "-c"]
           args:
-            - "python -m alembic upgrade head && (python -m xagent.cli warmup || true) && uvicorn xagent.main:app --host 0.0.0.0 --port {{ .Values.api.port }} --workers {{ .Values.api.workers }}"
+            - "python -m alembic upgrade head && (python -m xagent.cli warmup || true) && uvicorn xagent.main:app --host 0.0.0.0 --port {{ .Values.api.port }} --workers {{ .Values.api.workers }} --no-access-log"
           resources: {{ toYaml .Values.api.resources | nindent 12 }}
           livenessProbe:
             httpGet: { path: /health, port: {{ .Values.api.port }} }

@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
 import { readAgentRunStream, type StepInfo, type TokenUsage } from "../api/chatStream";
 import { getToken } from "../api/client";
+import { buildApiUrl } from "../api/baseUrl";
 import { getLLMConfig, updateLLMConfig, type LLMModelOption } from "../api";
 import { useShellActions, useShellStore } from "../shell/useShellStore";
 import { MarkdownRenderer } from "../components/chat/MarkdownRenderer";
@@ -177,7 +178,7 @@ export default function ChatPage() {
     let cancelled = false;
     setLoadingHistory(true);
     const token = getToken();
-    fetch(`/api/v1/stream/conversations/${conversationId}/messages`, {
+    fetch(buildApiUrl(`/api/v1/stream/conversations/${conversationId}/messages`), {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => (r.ok ? r.json() : null))
@@ -268,7 +269,7 @@ export default function ChatPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const resp = await fetch("/api/v1/stream/agents/run", {
+    const resp = await fetch(buildApiUrl("/api/v1/stream/agents/run"), {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined, tool_mode: "none" }),

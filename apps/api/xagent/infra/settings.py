@@ -22,15 +22,27 @@ from typing import cast
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from xagent.infra.paths import data_path
 from xagent.infra.secrets import resolve_settings_secrets
 
 
 def _detect_project_root(start: Path) -> Path:
     candidates = [start, *start.parents]
-    # 优先：向上找到第一个真实存在的 .env（仓库根布局）
-    for parent in candidates:
+    git_root_index = next(
+        (index for index, parent in enumerate(candidates) if (parent / ".git").exists()),
+        None,
+    )
+    scoped_candidates = (
+        candidates[: git_root_index + 1]
+        if git_root_index is not None
+        else candidates
+    )
+    # 只在最近 Git 工作树内查找 .env，防止嵌套 worktree 读取父仓密钥。
+    for parent in scoped_candidates:
         if (parent / ".env").exists():
             return parent
+    if git_root_index is not None:
+        return candidates[git_root_index]
     # 兜底：第一个含 pyproject.toml 的目录（包布局）
     for parent in candidates:
         if (parent / "pyproject.toml").exists():
@@ -96,6 +108,7 @@ class LLMSettings(BaseModel):
     # 本地 Ollama（零费用本地推理）
     ollama_base_url: str = ""            # 例如 http://localhost:11434
     ollama_model: str = ""               # 例如 qwen3:4b（为空则用 default_model）
+    ollama_num_ctx: int = Field(default=0, ge=0)  # 0 => 使用 Ollama 模型默认值
     request_timeout_seconds: int = 60
     warmup_enabled: bool = False
     warmup_prompt: str = "回复一个字：好"
@@ -129,10 +142,10 @@ class MediaSettings(BaseModel):
     """
 
     # 默认 provider 选择（image/video/audio）
-    default_image_provider: str = "null"   # null | openai
+    default_image_provider: str = "null"   # null | pollinations | openai
     default_video_provider: str = "null"   # null | kling | jimeng | generic
     default_audio_provider: str = "null"   # null | edge_tts（免 key 但需外网，故默认 null）
-    tts_output_dir: str = "./data/tts"     # TTS 合成音频落盘目录
+    tts_output_dir: str = Field(default_factory=lambda: str(data_path("tts")))
 
     # 图像（OpenAI 兼容）
     openai_image_api_key: str = ""
@@ -182,7 +195,9 @@ class RecoverySettings(BaseModel):
     max_consecutive_llm_timeouts: int = 3
     fallback_on_llm_failure: bool = True
     worker_restart_threshold: int = 5
-    evidence_output_dir: str = "./data/recovery-evidence"
+    evidence_output_dir: str = Field(
+        default_factory=lambda: str(data_path("recovery-evidence"))
+    )
 
 
 class SecuritySettings(BaseModel):
@@ -271,7 +286,13 @@ class Settings(BaseSettings):
     mode: RunMode = RunMode.lite
     debug: bool = False
     # 生产禁止用 "*"，启动时校验
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://tauri.localhost",
+            "tauri://localhost",
+        ]
+    )
 
     db: DatabaseSettings = Field(default_factory=DatabaseSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)

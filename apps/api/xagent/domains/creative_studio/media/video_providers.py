@@ -8,6 +8,7 @@ KlingProvider / JimengProvider 为预留具体实现骨架（真实签名按各�
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from xagent.domains.creative_studio.media.base import (
     GenerationMode,
@@ -213,7 +214,7 @@ class VolcanoArkVideoProvider:
     async def submit(self, req: GenerationRequest) -> GenerationTask:
         import httpx
 
-        content = [{"type": "text", "text": req.prompt}]
+        content: list[dict[str, Any]] = [{"type": "text", "text": req.prompt}]
         # 图生视频：加图片输入
         if req.mode == GenerationMode.image_to_video and req.reference_images:
             content.append({"type": "image_url", "image_url": {"url": req.reference_images[0]}})
