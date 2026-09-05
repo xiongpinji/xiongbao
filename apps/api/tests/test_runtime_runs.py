@@ -91,7 +91,7 @@ class _ExactNoToolsChatLLM(LiteLLMClient):
     async def complete_chat(self, messages, **kwargs) -> LLMResponse:
         self.calls += 1
         self.messages = list(messages)
-        assert kwargs["max_tokens"] == 512
+        assert kwargs["max_tokens"] == 2048
         return LLMResponse(
             content="exact chat answer",
             model="ollama_chat/qwen3:4b",
