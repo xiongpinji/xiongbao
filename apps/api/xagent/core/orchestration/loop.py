@@ -1286,9 +1286,11 @@ async def run_agent(
             return "analysis"
         if any(w in g_lower for w in ("查找", "搜索", "检索", "search", "find")):
             return "search"
-        if any(w in g_lower for w in ("创建", "开发", "实现", "编写", "create", "build", "implement")):
+        if any(w in g_lower for w in ("创建", "开发", "实现", "编写", "写一个", "写个", "create", "build", "implement", "代码", "函数", "脚本", "script", "code")):
             return "coding"
-        return "coding"  # 默认
+        # 兜底=chat：问答类目标不得注入"优先使用 file_write"类编码提示——
+        # 实测该提示会让本地思考型小模型（qwen3）进入纯思考/零输出（2026-09-05 P1）
+        return "chat"
     _task_type = "chat" if no_tools_chat else _detect_task_type(goal)
 
     _is_complex = not no_tools_chat and (
@@ -1330,7 +1332,9 @@ async def run_agent(
     if _type_hint:
         state.messages.append(Message(role="user", content=_type_hint))
 
-    async def _complete_no_tools_chat(max_tokens: int = 512) -> LLMResponse:
+    async def _complete_no_tools_chat(max_tokens: int = 2048) -> LLMResponse:
+        # 默认 2048：思考型模型（qwen3 系）会先消耗思考 token，512 会在思考内部
+        # 截断导致正文为空（2026-09-05 P1 实测：512 全 think → 空；2048 正常出码）
         complete_chat = getattr(llm, "complete_chat", None)
         if callable(complete_chat):
             return await complete_chat(
@@ -1573,11 +1577,11 @@ async def run_agent(
                   state.total_completion_tokens += chat_resp.completion_tokens
                   chat_content = (chat_resp.content or "").strip()
                   response_incomplete = _no_tools_chat_response_incomplete(
-                      chat_resp, 512
+                      chat_resp, 2048
                   )
                   if not chat_content or response_incomplete:
                       recovery_max_tokens = (
-                          1024 if response_incomplete else 512
+                          3072 if response_incomplete else 2048
                       )
                       state.messages.append(Message(
                           role="user",

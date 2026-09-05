@@ -171,7 +171,7 @@ class _LengthLimitedNoToolsChatLLM(_NoToolsChatLLM):
     async def complete_chat(self, messages, **kwargs) -> LLMResponse:
         max_tokens = kwargs["max_tokens"]
         self.max_tokens_calls.append(max_tokens)
-        if max_tokens < 1024:
+        if max_tokens < 3072:
             return LLMResponse(
                 content="",
                 model="ollama_chat/qwen3:4b",
@@ -195,11 +195,11 @@ class _NonEmptyTruncatedNoToolsChatLLM(_NoToolsChatLLM):
     async def complete_chat(self, messages, **kwargs) -> LLMResponse:
         max_tokens = kwargs["max_tokens"]
         self.max_tokens_calls.append(max_tokens)
-        if max_tokens < 1024:
+        if max_tokens < 3072:
             return LLMResponse(
                 content="R3-CHAT-TRUNCATED-PREFIX",
                 model="ollama_chat/qwen3:4b",
-                completion_tokens=512,
+                completion_tokens=2048,
                 raw={"choices": [{"finish_reason": "stop"}]},
             )
         if self.recovery_still_truncated:
@@ -238,7 +238,7 @@ async def test_builtin_tool_mode_none_expands_length_limited_recovery_budget(
 
     assert run.status == "succeeded", run.error
     assert run.final_answer == "R2-RESTORE-OK"
-    assert llm.max_tokens_calls == [512, 1024]
+    assert llm.max_tokens_calls == [2048, 3072]
 
 
 async def test_builtin_tool_mode_none_recovers_nonempty_truncated_response(
@@ -262,7 +262,7 @@ async def test_builtin_tool_mode_none_recovers_nonempty_truncated_response(
 
     assert run.status == "succeeded", run.error
     assert run.final_answer == "R3-CHAT-COMPLETE"
-    assert llm.max_tokens_calls == [512, 1024]
+    assert llm.max_tokens_calls == [2048, 3072]
 
 
 async def test_builtin_tool_mode_none_fails_when_recovery_is_still_truncated(
@@ -288,7 +288,7 @@ async def test_builtin_tool_mode_none_fails_when_recovery_is_still_truncated(
     assert run.error == "model_incomplete_response_after_retry"
     assert "R3-CHAT-STILL-TRUNCATED" not in run.final_answer
     assert not any(event.kind == StepKind.final for event in run.events)
-    assert llm.max_tokens_calls == [512, 1024]
+    assert llm.max_tokens_calls == [2048, 3072]
 
 
 async def test_builtin_tool_mode_none_preserves_tenant_context_without_dev_hints(
@@ -1485,3 +1485,57 @@ async def test_streaming_parallel_tools_return_real_results(monkeypatch) -> None
         for message in llm.second_call_messages
         if message.role == "tool"
     } == {"call_a", "call_b"}
+
+
+class _DirectAnswerNativeLLM(LLMClient):
+    """auto 路径一次性给最终回答，捕获实际消息用于断言任务类型提示注入。"""
+
+    supports_tools = True
+
+    def __init__(self) -> None:
+        self.seen_messages: list[Message] = []
+
+    async def complete(self, messages: list[Message], **kw) -> LLMResponse:  # noqa: ARG002
+        self.seen_messages = list(messages)
+        return LLMResponse(content="最终总结：全部完成。已调用工具并取得结果。", model="test")
+
+    async def complete_with_tools(self, messages, tools, **kw) -> LLMResponse:  # noqa: ARG002
+        self.seen_messages = list(messages)
+        return LLMResponse(content="最终总结：全部完成。已调用工具并取得结果。", model="test")
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_auto_path_qa_goal_not_misclassified_as_coding(monkeypatch) -> None:
+    """问答型目标不得判为 coding——编码提示会让本地思考型模型纯思考零输出（P1）。"""
+    llm = _DirectAnswerNativeLLM()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+    principal = Principal(
+        user_id="cls-user", tenant_id="cls-tenant", roles=frozenset({"member"})
+    )
+
+    run = await run_agent_builtin("中国的首都是哪里", principal=principal)
+
+    assert run.status == "succeeded", run.error
+    joined = "\n".join(message.content or "" for message in llm.seen_messages)
+    assert "[任务类型: 代码开发]" not in joined
+
+
+async def test_auto_path_coding_goal_keeps_hint(monkeypatch) -> None:
+    """显式编码意图目标仍应注入编码提示（保留既有行为）。"""
+    llm = _DirectAnswerNativeLLM()
+    monkeypatch.setattr(
+        "xagent.core.orchestration.loop.get_llm_client", lambda: llm
+    )
+    principal = Principal(
+        user_id="cls-user", tenant_id="cls-tenant", roles=frozenset({"member"})
+    )
+
+    run = await run_agent_builtin("帮我实现一个数据处理脚本", principal=principal)
+
+    assert run.status == "succeeded", run.error
+    joined = "\n".join(message.content or "" for message in llm.seen_messages)
+    assert "[任务类型: 代码开发]" in joined

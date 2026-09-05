@@ -110,6 +110,7 @@ pip install -e ".[dev]"
 export XAGENT_LLM__OLLAMA_BASE_URL=http://localhost:11434
 export XAGENT_LLM__OLLAMA_MODEL=xagent-qwen3
 export XAGENT_LLM__DEFAULT_MODEL=xagent-qwen3
+export XAGENT_LLM__OLLAMA_NUM_CTX=16384   # MCP 满配时必调：默认 8192 会截断→空响应
 xagent serve                  # http://localhost:8000
 
 # 3. 前端
