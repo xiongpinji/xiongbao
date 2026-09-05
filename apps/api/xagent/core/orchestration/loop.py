@@ -1167,12 +1167,12 @@ async def run_agent(
     else:
         from xagent.core.orchestration.compaction import compact_history
 
-        result = await compact_history(
+        compact_result = await compact_history(
             history,
             budget_tokens=get_settings().llm.context_budget_tokens,
         )
-        history = result.messages
-        compacted = result.changed
+        history = compact_result.messages
+        compacted = compact_result.changed
         messages.extend(history)
     # ── 多轮对话上下文注入：历史较长时添加摘要提示（compaction 已摘要时跳过）──
     if resume_messages is None and not compacted and len(history) >= 6:
