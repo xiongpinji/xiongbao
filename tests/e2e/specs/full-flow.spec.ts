@@ -61,9 +61,9 @@ test.describe("X-Agent 核心流程", () => {
     test.setTimeout(150_000);  // 真实本地模型推理较慢
     await page.goto("/chat");
     await page.getByPlaceholder("描述一个任务...").fill("你好");
-    await page.getByTitle("运行 Agent").click();
+    await page.getByRole("button", { name: "发送" }).click();
     // v1.2.0：正常路径流式返回内容；done-only 兜底路径显示"查看运行详情"
-    const streamed = page.locator(".markdown-body, .prose").first();
+    const streamed = page.locator(".prose-agent").first();
     const fallback = page.getByText("查看运行详情");
     await expect(streamed.or(fallback)).toBeVisible({ timeout: 120_000 });
   });
@@ -78,11 +78,14 @@ test.describe("X-Agent 核心流程", () => {
   test("工作流页加载（专业模式画布）", async ({ page }) => {
     // v1.1.3 起 /workflows 重定向到 /professional?mode=workflow，画布异步执行
     await page.goto("/professional?mode=workflow");
-    await expect(page.getByRole("button", { name: "执行", exact: true })).toBeVisible({
+    await expect(page.getByText("工作流编排").first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole("button", { name: /应用模板/ }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /保存/, exact: false }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "执行", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "保存", exact: true })).toBeVisible();
+    // 节点面板核心节点类型可见
+    await expect(page.getByText("开始", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("结束", { exact: true }).first()).toBeVisible();
   });
 
   test("后台任务可进入 Run Console 并暴露 replay 指针", async ({ page }) => {
@@ -100,8 +103,11 @@ test.describe("X-Agent 核心流程", () => {
 
     await page.goto(`/runs/${encodeURIComponent(runId)}`, { waitUntil: "networkidle" });
 
-    await expect(page.getByText("Run Console", { exact: true })).toBeVisible();
-    await expect(page.getByText("验证 · 风险 · 恢复")).toBeVisible();
+    // v1.2.0：标题与实时状态徽标同节点渲染（如 "Run Console实时刷新中"），不能 exact
+    await expect(page.getByText("Run Console").first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("验证 · 风险 · 恢复").first()).toBeVisible();
   });
 
   test("短剧路由显示排除说明（v1.2.0 发布边界）", async ({ page }) => {
@@ -113,19 +119,23 @@ test.describe("X-Agent 核心流程", () => {
     await expect(page.getByRole("link", { name: "返回对话" })).toBeVisible();
   });
 
-  test("设置页索引库承接知识库与开源发现入口", async ({ page }) => {
-    await page.goto("/settings?section=index&tab=knowledge");
-    await expect(page.getByRole("heading", { name: "索引库" }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "知识库" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "开源发现" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "写入" })).toBeVisible();
-    await page.getByRole("button", { name: "开源发现" }).click();
-    await expect(page.getByRole("button", { name: "发现", exact: true })).toBeVisible();
+  test("设置页索引与知识库入口（v1.2.0 设置分区）", async ({ page }) => {
+    await page.goto("/settings");
+    // v1.2.0：知识库收敛到设置分区导航（索引 / 知识库）
+    await expect(page.getByText("索引", { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByText("索引", { exact: true }).first().click();
+    await expect(page.getByText("知识库", { exact: true }).first()).toBeVisible();
   });
 
   test("设置页加载", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "设置" })).toBeVisible();
+    // v1.2.0 设置分区导航（无独立 h1 标题，以分区项与保存按钮判定）
+    await expect(page.getByText("模型", { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("button", { name: "保存", exact: true }).first()).toBeVisible();
   });
 });
 
