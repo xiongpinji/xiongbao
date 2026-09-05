@@ -2,7 +2,7 @@
 
 > 面向企业的自主智能体框架 —— **编排内核 + 适配层 + 独有语义**，底座全部采用 MIT/Apache 开源组件。
 
-**当前 Web/API 版本：1.1.3**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
+**当前 Web/API 版本：1.2.0**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
 
 当前增强与发布验收范围仅为 **Web/API**。短剧由独立项目运行，稳定后按集成规格接入；Tauri 桌面端暂不纳入本阶段发布结论。仓库中保留的相关源码属于后续接入资产，不代表当前 Web/API 已发布能力。
 
@@ -90,6 +90,8 @@ X-Agent 默认按「最小权限」启动，所有放宽都必须显式配置：
 沙箱与 SSO 的下一阶段演进见 [`docs/rfc/RFC-001-sandbox-default-secure.md`](docs/rfc/RFC-001-sandbox-default-secure.md) 与 [`docs/rfc/RFC-002-sso-oidc.md`](docs/rfc/RFC-002-sso-oidc.md)。
 
 ## 快速开始（单机）
+
+> **环境一键重建**（venv 丢失/换机接手时）：`python scripts/bootstrap_dev_env.py`（需 [uv](https://docs.astral.sh/uv/)；`--check` 仅诊断，`--skip-web` 跳过前端）。LLM 配置被设置页覆盖、env 不生效时：`xagent config clear-override`。
 
 ### 方式 A：本地模型（零 API 费用，推荐）
 

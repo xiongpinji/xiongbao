@@ -11,6 +11,7 @@
     review      代码评审（对标 Codex：git diff + AGENTS.md 规则 → 分级 findings）
     warmup      预热 Ollama 模型
     migrate     运行数据库迁移
+    config      本地配置治理（clear-override 清除 LLM 覆盖文件）
 """
 
 from __future__ import annotations
@@ -80,6 +81,49 @@ def _cmd_migrate(_: argparse.Namespace) -> int:
         env={**os.environ},
     )
     return result.returncode
+
+
+# ─── config（本地配置治理）───
+
+
+def _cmd_config(args: argparse.Namespace) -> int:
+    """配置治理：查看/清除持久化 LLM 覆盖文件。"""
+    import json
+
+    from xagent.infra.paths import data_path
+
+    if args.config_cmd != "clear-override":
+        print(f"未知子命令: {args.config_cmd}", file=sys.stderr)
+        return 2
+
+    path = data_path("llm_config_overrides.json")
+    if not path.is_file():
+        print("未发现持久化 LLM 覆盖文件（无需清除）")
+        return 0
+
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+        fields = sorted(k for k in data) if isinstance(data, dict) else []
+    except json.JSONDecodeError:
+        fields = []
+        print("⚠ 覆盖文件已损坏（无法解析），仍将删除", file=sys.stderr)
+
+    if args.no_backup:
+        path.unlink()
+        backup = None
+    else:
+        backup = path.with_name(path.name + ".bak")
+        backup.write_text(raw, encoding="utf-8")
+        path.unlink()
+
+    print(f"✓ 已清除 LLM 覆盖文件: {path}")
+    if fields:
+        print(f"  移除字段: {', '.join(fields)}")
+    if backup:
+        print(f"  备份保留: {backup}")
+    print("环境变量 / .env 现在完全控制 LLM 配置；运行中的服务需重启后生效")
+    return 0
 
 
 # ─── Code Review（本地直调 domain 服务，无需 API 服务）───
@@ -383,6 +427,17 @@ def build_parser() -> argparse.ArgumentParser:
     # migrate
     p_migrate = sub.add_parser("migrate", help="运行数据库迁移")
     p_migrate.set_defaults(func=_cmd_migrate)
+
+    # config
+    p_config = sub.add_parser("config", help="本地配置治理")
+    config_sub = p_config.add_subparsers(dest="config_cmd", required=True)
+    p_clear = config_sub.add_parser(
+        "clear-override", help="清除持久化 LLM 覆盖文件（恢复环境变量/.env 控制）"
+    )
+    p_clear.add_argument(
+        "--no-backup", action="store_true", help="不保留 .bak 备份直接删除"
+    )
+    p_config.set_defaults(func=_cmd_config, config_cmd="clear-override")
 
     return parser
 

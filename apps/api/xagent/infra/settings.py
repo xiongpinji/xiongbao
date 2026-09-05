@@ -110,6 +110,9 @@ class LLMSettings(BaseModel):
     ollama_model: str = ""               # 例如 qwen3:4b（为空则用 default_model）
     ollama_num_ctx: int = Field(default=0, ge=0)  # 0 => 使用 Ollama 模型默认值
     request_timeout_seconds: int = 60
+    # 上下文压缩预算（对标 Codex compaction）：多轮历史估算超预算时摘要折叠旧消息；
+    # 0 = 关闭压缩。见 core/orchestration/compaction.py
+    context_budget_tokens: int = Field(default=24000, ge=0)
     warmup_enabled: bool = False
     warmup_prompt: str = "回复一个字：好"
     warmup_max_tokens: int = 8
