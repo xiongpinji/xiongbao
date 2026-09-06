@@ -109,7 +109,7 @@ export default function McpServersSettings() {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
+          className="rounded-md px-3 py-1.5 text-[12px] text-neutral-400 transition hover:bg-white/[0.05] hover:text-neutral-200"
         >
           {showForm ? "取消" : "+ 添加服务器"}
         </button>
@@ -119,7 +119,7 @@ export default function McpServersSettings() {
 
       {/* 添加表单 */}
       {showForm && (
-        <div className="space-y-3 rounded-lg border border-neutral-700 bg-neutral-900/80 p-5">
+        <div className="space-y-3 p-1">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
               <span className="text-xs text-neutral-400">名称 *</span>
@@ -127,7 +127,7 @@ export default function McpServersSettings() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="my-server"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
               />
             </label>
             <label className="space-y-1">
@@ -135,7 +135,7 @@ export default function McpServersSettings() {
               <select
                 value={form.transport}
                 onChange={(e) => setForm({ ...form, transport: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
               >
                 <option value="stdio">stdio</option>
                 <option value="sse">sse</option>
@@ -151,7 +151,7 @@ export default function McpServersSettings() {
                   value={form.command}
                   onChange={(e) => setForm({ ...form, command: e.target.value })}
                   placeholder="python / node / npx"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
+                  className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
                 />
               </label>
               <label className="space-y-1">
@@ -160,7 +160,7 @@ export default function McpServersSettings() {
                   value={form.args}
                   onChange={(e) => setForm({ ...form, args: e.target.value })}
                   placeholder="-m mcp_server --port 3001"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
+                  className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
                 />
               </label>
             </div>
@@ -171,7 +171,7 @@ export default function McpServersSettings() {
                 value={form.url}
                 onChange={(e) => setForm({ ...form, url: e.target.value })}
                 placeholder="http://localhost:3001/sse"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none focus:border-white/25"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
               />
             </label>
           )}
@@ -179,7 +179,7 @@ export default function McpServersSettings() {
             type="button"
             onClick={handleAdd}
             disabled={loading || !form.name.trim()}
-            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
+            className="rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-neutral-100 transition hover:bg-white/[0.14] disabled:opacity-40"
           >
             {loading ? "连接中..." : "添加并连接"}
           </button>

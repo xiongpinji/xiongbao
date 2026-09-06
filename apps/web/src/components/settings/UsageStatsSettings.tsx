@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listWorkflows, listProductions, listTimelines } from "../../api";
-import { SectionTitle } from "./GeneralSettings";
+import { StatLine, SectionHeader } from "./ui";
 
 interface Stats {
   workflows: number;
@@ -35,17 +35,10 @@ export default function UsageStatsSettings() {
   ];
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <SectionTitle title="使用统计" description="查看工作流、短剧产物与剪辑时间线的真实数量。" />
+    <div className="max-w-3xl">
+      <SectionHeader title="usage" desc="查看工作流、短剧产物与剪辑时间线的真实数量。" />
       {error && <div className="text-xs text-red-400">{error}</div>}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {items.map((item) => (
-          <div key={item.label} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-            <div className="text-xs text-neutral-500">{item.label}</div>
-            <div className="mt-2 font-mono text-2xl text-white">{item.value}</div>
-          </div>
-        ))}
-      </div>
+      <StatLine items={items.map((it) => ({ label: it.label, value: it.value }))} />
     </div>
   );
 }

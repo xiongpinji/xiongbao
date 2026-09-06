@@ -115,7 +115,7 @@ export default function WebhookSettings() {
         <h3 className="mb-3 flex items-center gap-2 text-lg font-medium text-white"><Shield size={18} className="text-neutral-400" /> 内容安全扫描</h3>
         <div className="flex gap-2">
           <textarea value={scanText} onChange={e => setScanText(e.target.value)} rows={3} className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="输入文本进行注入检测 + PII 扫描..." />
-          <button onClick={runScan} disabled={scanning || !scanText.trim()} className="self-start rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100 disabled:opacity-40">{scanning ? "扫描中…" : "扫描"}</button>
+          <button onClick={runScan} disabled={scanning || !scanText.trim()} className="self-start rounded-md px-3 py-1.5 text-[12px] text-neutral-400 transition hover:bg-white/[0.05] hover:text-neutral-200 disabled:opacity-40">{scanning ? "扫描中…" : "扫描"}</button>
         </div>
         {scanResult && (
           <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${scanResult.safe ? "border-green-500/30 bg-green-500/10 text-green-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
