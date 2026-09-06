@@ -60,9 +60,13 @@ test.describe("X-Agent 核心流程", () => {
   test("对话运行 agent", async ({ page }) => {
     test.setTimeout(150_000);  // 真实本地模型推理较慢
     await page.goto("/chat");
+    // v1.3.0：默认智能体模式（真实调用工具），可切换纯对话
+    await expect(
+      page.getByRole("button", { name: "智能体", exact: true })
+    ).toBeVisible();
     await page.getByPlaceholder("描述一个任务...").fill("你好");
     await page.getByRole("button", { name: "发送" }).click();
-    // v1.2.0：正常路径流式返回内容；done-only 兜底路径显示"查看运行详情"
+    // 正常路径流式返回内容；done-only 兜底路径显示"查看运行详情"
     const streamed = page.locator(".prose-agent").first();
     const fallback = page.getByText("查看运行详情");
     await expect(streamed.or(fallback)).toBeVisible({ timeout: 120_000 });

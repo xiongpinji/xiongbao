@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState, useCallback } from "react";
 import {
-  ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Copy, Loader2, RotateCw, Square, XCircle,
+  ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Copy, Loader2, MessageCircle, RotateCw, Square, XCircle, Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { runAgent, type AgentRun } from "../api";
@@ -88,6 +88,8 @@ export default function ChatPage() {
   const [model, setModel] = useState("");
   const [modelOptions, setModelOptions] = useState<LLMModelOption[]>([]);
   const [modelOpen, setModelOpen] = useState(false);
+  /** 交互模式：auto=智能体（默认，真实调用工具/写文件）| none=纯对话（不执行任何工具） */
+  const [toolMode, setToolMode] = useState<"auto" | "none">("auto");
   const [loadingHistory, setLoadingHistory] = useState(false); const [streamingConversationId, setStreamingConversationId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -246,9 +248,9 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, { role: "assistant", content: "（已停止）" }]);
       } else {
         try {
-          const nextRun = await runAgent({ goal: nextGoal, tool_mode: "none" });
-          // P2：fallback 路径同样是纯对话无工具
-          const noToolsHint = hasExecutionIntent(nextGoal);
+          const nextRun = await runAgent({ goal: nextGoal, tool_mode: toolMode });
+          // P2：纯对话模式下 goal 含执行意图且未调用工具时提示
+          const noToolsHint = toolMode === "none" && hasExecutionIntent(nextGoal);
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: nextRun.final_answer, runId: nextRun.run_id, run: nextRun, timestamp: Date.now(), noToolsHint },
@@ -262,7 +264,7 @@ export default function ChatPage() {
       setLoading(false); setStreamingText(""); setCompletedSegments([]);
       abortRef.current = null;
     }
-  }, [goal, loading, conversationId]);
+  }, [goal, loading, conversationId, toolMode]);
 
   async function runSSE(nextGoal: string): Promise<void> {
     const token = getToken();
@@ -272,7 +274,7 @@ export default function ChatPage() {
     const resp = await fetch(buildApiUrl("/api/v1/stream/agents/run"), {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined, tool_mode: "none" }),
+      body: JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined, tool_mode: toolMode }),
       signal: controller.signal,
     });
     if (!resp.ok || !resp.body) throw new Error(`SSE ${resp.status}`);
@@ -316,9 +318,9 @@ export default function ChatPage() {
       finalContent = `任务已执行完成（共 ${toolCallCount} 次工具调用），但模型未生成文字总结。`;
     }
     if (sseRunId || finalContent) {
-      // P2：纯对话模式下若 goal 有执行意图且全程未调用工具，标记提示
+      // P2：仅纯对话模式下，goal 有执行意图且全程未调用工具时标记提示
       const usedTools = collectedSteps.some((s) => s.kind === "tool_call");
-      const noToolsHint = hasExecutionIntent(nextGoal) && !usedTools;
+      const noToolsHint = toolMode === "none" && hasExecutionIntent(nextGoal) && !usedTools;
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: finalContent, runId: sseRunId, steps: [...collectedSteps], timestamp: Date.now(), noToolsHint },
@@ -365,6 +367,20 @@ export default function ChatPage() {
   const InputBox = (
     <div className="w-full">
       <div className="relative flex items-end gap-2 rounded-2xl border border-white/[0.1] bg-[#1a1a1a] px-4 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.3)] transition-colors focus-within:border-white/[0.18]">
+        {/* 模式切换 pill：智能体（默认，真实执行工具）/ 纯对话 */}
+        <button
+          type="button"
+          onClick={() => setToolMode(toolMode === "auto" ? "none" : "auto")}
+          title={toolMode === "auto" ? "智能体模式：真实调用工具（写文件/读文件/执行任务），过程与产物可见" : "纯对话模式：不调用任何工具，仅文字回答（执行类任务请切换回智能体）"}
+          className={`mb-0.5 flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] transition ${
+            toolMode === "auto"
+              ? "bg-green-500/10 text-green-400 hover:bg-green-500/15"
+              : "text-neutral-500 hover:bg-white/[0.06] hover:text-neutral-300"
+          }`}
+        >
+          {toolMode === "auto" ? <Zap size={11} /> : <MessageCircle size={11} />}
+          {toolMode === "auto" ? "智能体" : "纯对话"}
+        </button>
         {/* 模型选择器 pill */}
         <div className="relative" ref={modelRef}>
           <button

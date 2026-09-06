@@ -20,24 +20,53 @@ function readChatPageSource(): string {
     .readFileSync(`${process.cwd()}/src/pages/ChatPage.tsx`, "utf8");
 }
 
-describe("ChatPage no-tools request contract", () => {
-  it("uses tool_mode none for the SSE request", () => {
+describe("ChatPage agent-mode request contract", () => {
+  it("defaults to agent mode (tool_mode auto), pure chat is opt-out", () => {
+    const source = readChatPageSource();
+
+    assert(
+      source.includes('useState<"auto" | "none">("auto")'),
+      "ChatPage must default to toolMode auto (agent interaction, not chatbot)",
+    );
+  });
+
+  it("threads the mode toggle into the SSE request", () => {
     const source = readChatPageSource();
 
     assert(
       source.includes(
-        'JSON.stringify({ goal: nextGoal, conversation_id: conversationId || undefined, tool_mode: "none" })',
+        "tool_mode: toolMode })",
       ),
-      "ChatPage SSE request must explicitly send tool_mode none",
+      "ChatPage SSE request must send the active tool_mode (auto by default)",
     );
   });
 
-  it("uses tool_mode none for the direct fallback", () => {
+  it("threads the mode toggle into the direct fallback", () => {
     const source = readChatPageSource();
 
     assert(
-      source.includes('runAgent({ goal: nextGoal, tool_mode: "none" })'),
-      "ChatPage direct fallback must explicitly send tool_mode none",
+      source.includes("runAgent({ goal: nextGoal, tool_mode: toolMode })"),
+      "ChatPage direct fallback must send the active tool_mode",
+    );
+  });
+
+  it("gates the no-tools hint to pure-chat mode only", () => {
+    const source = readChatPageSource();
+
+    assert(
+      source.includes(
+        'toolMode === "none" && hasExecutionIntent(nextGoal)',
+      ),
+      "noToolsHint must only appear in pure-chat mode; agent mode executes tools",
+    );
+  });
+
+  it("renders a visible mode toggle with agent semantics", () => {
+    const source = readChatPageSource();
+
+    assert(
+      source.includes('"智能体"') && source.includes('"纯对话"'),
+      "ChatPage must expose an 智能体/纯对话 toggle",
     );
   });
 });
