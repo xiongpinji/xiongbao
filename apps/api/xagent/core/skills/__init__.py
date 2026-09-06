@@ -135,6 +135,9 @@ class Skill:
     history: list[dict[str, Any]] = field(default_factory=list)  # 版本历史
     tenant_id: str = ""             # 空值表示历史全局技能
     package_id: str = ""            # 完整 Skill Package 关联
+    # 蒸馏技能（auto/failure_distilled）默认 enabled=False：需人工启用才参与
+    # 匹配注入（2026-09-06 实测：自动入库即注入曾污染任务执行——技能反噬事故）
+    enabled: bool = True
 
     @property
     def success_rate(self) -> float:
@@ -142,7 +145,7 @@ class Skill:
 
     @property
     def is_active(self) -> bool:
-        return not self.retired
+        return self.enabled and not self.retired
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -206,6 +209,7 @@ class SkillStore:
         source_task: str = "",
         tenant_id: str = "",
         package_id: str = "",
+        enabled: bool = True,
     ) -> Skill:
         """从成功的任务中提炼新技能。"""
         skill = Skill(
@@ -220,6 +224,7 @@ class SkillStore:
             source_task=source_task,
             tenant_id=tenant_id,
             package_id=package_id,
+            enabled=enabled,
         )
         self._cache[skill.skill_id] = skill
         self._persist(skill)
@@ -227,11 +232,11 @@ class SkillStore:
         return skill
 
     def match(self, goal: str, tenant_id: str | None = None) -> list[Skill]:
-        """根据目标文本匹配可用技能（关键词匹配，排除已淘汰）。"""
+        """根据目标文本匹配可用技能（关键词匹配，排除未启用/已淘汰）。"""
         matches = []
         goal_lower = goal.lower()
         for skill in self._cache.values():
-            if skill.retired:
+            if skill.retired or not skill.enabled:
                 continue
             if tenant_id is not None and skill.tenant_id not in {"", tenant_id}:
                 continue
@@ -569,8 +574,9 @@ class SkillStore:
             tags=["auto_distilled"],
             source="auto_distilled",
             source_task=candidate["source_task"],
+            enabled=False,  # 蒸馏技能需人工启用才参与注入（防自动污染）
         )
-        logger.info("skill_auto_distilled", skill_id=skill.skill_id, name=skill.name)
+        logger.info("skill_auto_distilled_pending_enable", skill_id=skill.skill_id, name=skill.name)
         return skill
 
     # ─── 自进化：GEPA 式进化闭环（变体生成 → 评测打分 → 优胜入库） ───
@@ -1012,8 +1018,12 @@ class SkillStore:
             tags=["failure_distilled"],
             source="failure_distilled",
             source_task=candidate["source_task"],
+            enabled=False,  # 失败反思技能需人工启用才参与注入（防自动污染）
         )
-        logger.info("skill_failure_distilled", skill_id=skill.skill_id, name=skill.name)
+        logger.info(
+            "skill_failure_distilled_pending_enable",
+            skill_id=skill.skill_id, name=skill.name,
+        )
         return skill
 
     # ─── 自进化：淘汰机制 ───
@@ -1052,6 +1062,22 @@ class SkillStore:
         skill.retired = False
         skill.updated_at = time.time()
         self._persist(skill)
+        return True
+
+    def set_enabled(self, skill_id: str, enabled: bool) -> bool:
+        """启用/停用技能（蒸馏技能默认停用，人工启用后才参与匹配注入）。"""
+        skill = self._cache.get(skill_id)
+        if not skill or skill.retired:
+            return False
+        if skill.enabled == enabled:
+            return True
+        skill.enabled = enabled
+        skill.updated_at = time.time()
+        self._persist(skill)
+        logger.info(
+            "skill_enabled" if enabled else "skill_disabled",
+            skill_id=skill_id, name=skill.name,
+        )
         return True
 
     # ─── Prompt 注入 ───

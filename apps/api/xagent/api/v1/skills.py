@@ -282,6 +282,30 @@ async def restore_skill(
     return {"restored": ok, "skill_id": skill_id}
 
 
+@router.post("/{skill_id}/enable", summary="启用技能（蒸馏技能需人工启用才参与注入）")
+async def enable_skill(
+    skill_id: str,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    store = get_skill_store()
+    if not store.get_for_tenant(skill_id, principal.tenant_id):
+        raise HTTPException(404, f"skill '{skill_id}' not found")
+    ok = store.set_enabled(skill_id, True)
+    return {"enabled": ok, "skill_id": skill_id}
+
+
+@router.post("/{skill_id}/disable", summary="停用技能（保留技能但不参与匹配注入）")
+async def disable_skill(
+    skill_id: str,
+    principal: Principal = Depends(require_permission("system", "manage")),
+):
+    store = get_skill_store()
+    if not store.get_for_tenant(skill_id, principal.tenant_id):
+        raise HTTPException(404, f"skill '{skill_id}' not found")
+    ok = store.set_enabled(skill_id, False)
+    return {"disabled": ok, "skill_id": skill_id}
+
+
 @router.post("/retire-low-performers", summary="批量淘汰低效技能")
 async def retire_low_performers(
     principal: Principal = Depends(require_permission("system", "manage")),
