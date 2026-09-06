@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/ADMIN_DEPLOYMENT_MANUAL_V1/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent 管理员部署手册 v1 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u7ba1\u7406\u5458\u90e8\u7f72\u624b\u518c v1";
+        var mkdocs_page_input_path = "ADMIN_DEPLOYMENT_MANUAL_V1.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/ADMIN_DEPLOYMENT_MANUAL_V1/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 管理员部署手册 v1</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/ADMIN_DEPLOYMENT_MANUAL_V1.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-v1">X-Agent 管理员部署手册 v1</h1>
+<blockquote>
+<p>适用对象：客户侧管理员、交付负责人、实施负责人。</p>
+<p>适用范围：当前 <code>xagent</code> 单机 / Docker Compose <code>full</code> 模式部署。</p>
+<p>边界：本文档用于“管理员如何部署与交接”，<strong>不替代</strong> <code>docs/RELEASE_RUNBOOK_V1.md</code> 的发布 / 回滚执行证据，也<strong>不代表</strong> R4 目标环境演练已经完成。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 部署目标</h2>
+<p>当前候选支持的推荐交付形态是：</p>
+<ul>
+<li>单机 / Docker Compose <code>full</code> 模式；</li>
+<li>内部试点；</li>
+<li>受控私有部署；</li>
+<li>交付后由客户管理员或内部平台团队维护。</li>
+</ul>
+<p>当前不在本手册覆盖范围内：</p>
+<ul>
+<li>多实例 HA；</li>
+<li>蓝绿 / 金丝雀流量切换；</li>
+<li>K8s 生产级 secretRef 平台化；</li>
+<li>跨版本大规模数据迁移。</li>
+</ul>
+<hr />
+<h2 id="2">2. 部署前置条件</h2>
+<h2 id="21">2.1 基础软件</h2>
+<p>目标机器至少具备：</p>
+<ul>
+<li>Docker 24+</li>
+<li>Docker Compose v2</li>
+<li>Node.js 20+（用于构建 <code>apps/web/dist</code>）</li>
+<li>Git（用于固定候选版本）</li>
+</ul>
+<h2 id="22">2.2 端口需求</h2>
+<p>默认占用端口：</p>
+<ul>
+<li><code>3000</code>：前端入口</li>
+<li><code>3001</code>：Langfuse</li>
+<li><code>4000</code>：LiteLLM</li>
+<li><code>5432</code>：Postgres</li>
+<li><code>6379</code>：Redis</li>
+<li><code>6333</code> / <code>6334</code>：Qdrant</li>
+<li><code>8000</code>：X-Agent API</li>
+<li><code>8080</code>：ContextForge</li>
+<li><code>8081</code>：OpenFGA</li>
+</ul>
+<p>部署前应确认这些端口未与目标机器既有服务冲突。</p>
+<h2 id="23">2.3 候选版本固定</h2>
+<p>部署必须绑定到唯一候选 commit / 分支 / PR，不得直接使用脏工作树。</p>
+<p>至少记录：</p>
+<ul>
+<li>Release ID / 版本号</li>
+<li>Git branch</li>
+<li>Git commit SHA</li>
+<li>对应 PR</li>
+<li>对应 CI run URL</li>
+</ul>
+<p>若候选未冻结，部署不得进入正式交付签字。</p>
+<hr />
+<h2 id="3-secret">3. 必填配置与 secret</h2>
+<p>当前 <code>full</code> 模式部署至少要提供以下显式配置：</p>
+<ul>
+<li><code>XAGENT_SECURITY__JWT_SECRET</code></li>
+<li><code>XAGENT_CORS_ORIGINS</code></li>
+<li><code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li><code>LANGFUSE_SALT</code></li>
+<li><code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+<li>至少一条真实 LLM 路径：</li>
+<li><code>XAGENT_LLM__PROXY_URL</code> + <code>XAGENT_LLM__PROXY_API_KEY</code>，或</li>
+<li><code>XAGENT_LLM__OLLAMA_BASE_URL</code> + 模型可达，或</li>
+<li>provider key（OpenAI / DeepSeek）</li>
+<li><code>POSTGRES_PASSWORD</code>（若使用 compose 内置 Postgres）</li>
+</ul>
+<p>补充要求：</p>
+<ul>
+<li><code>full</code> / <code>enterprise</code> 不允许默认 <code>admin/admin</code>；</li>
+<li><code>XAGENT_CORS_ORIGINS</code> 不允许 <code>*</code>；</li>
+<li>JWT secret 必须是 32+ 字符随机值；</li>
+<li>staging / prod secret 不得写入 Git。</li>
+</ul>
+<p>变量口径与注入方式以 <a href="../ENVIRONMENT_BASELINE_V1/">ENVIRONMENT_BASELINE_V1.md</a> 为准。</p>
+<hr />
+<h2 id="4">4. 部署步骤（管理员视角）</h2>
+<h3 id="41">4.1 获取候选代码</h3>
+<ol>
+<li>拉取固定候选分支或 tag。</li>
+<li>核对 commit SHA 与交付单一致。</li>
+<li>核对该候选对应远端 CI 为绿色。</li>
+</ol>
+<h3 id="42">4.2 构建前端产物</h3>
+<p>在仓库根执行：</p>
+<pre><code class="language-powershell">cd apps\web
+npm ci
+npm run build
+</code></pre>
+<p>期望：</p>
+<ul>
+<li><code>apps/web/dist</code> 生成成功；</li>
+<li>无 lint/typecheck/build 阻断残留；</li>
+<li>构建失败则停止后续部署。</li>
+</ul>
+<h3 id="43-compose">4.3 准备 Compose 环境文件</h3>
+<pre><code class="language-powershell">cd ..\..\deploy\compose
+Copy-Item .env.example .env
+</code></pre>
+<p>然后在 <code>.env</code> 中填入真实 secret 与环境值。</p>
+<p>最少应核对：</p>
+<ul>
+<li>JWT secret 已填写；</li>
+<li>Langfuse 3 项 secret 已填写；</li>
+<li>LLM 路径可达；</li>
+<li>CORS 来源对齐真实前端域名；</li>
+<li>若使用 compose 内置数据库，<code>POSTGRES_PASSWORD</code> 已覆盖示例值。</li>
+</ul>
+<h3 id="44">4.4 做部署前配置校验</h3>
+<pre><code class="language-powershell">docker compose --env-file .env config --quiet
+</code></pre>
+<p>期望：</p>
+<ul>
+<li>缺少必填 secret 时直接失败；</li>
+<li>全部必填项齐全后退出码为 0。</li>
+</ul>
+<h3 id="45">4.5 启动服务</h3>
+<pre><code class="language-powershell">docker compose up -d --build postgres redis qdrant litellm langfuse
+docker compose up -d --build api worker web
+docker compose ps
+</code></pre>
+<p>期望：</p>
+<ul>
+<li><code>api</code> / <code>worker</code> / <code>web</code> 为 running；</li>
+<li><code>api</code> 启动阶段执行迁移；</li>
+<li><code>api</code> / <code>worker</code> 会尝试执行 warmup；</li>
+<li><code>web</code> 可通过 <code>http://&lt;host&gt;:3000</code> 访问。</li>
+</ul>
+<hr />
+<h2 id="5">5. 部署后最小验收</h2>
+<p>管理员至少完成：</p>
+<pre><code class="language-powershell">curl.exe -f http://localhost:8000/health
+curl.exe -f http://localhost:8000/ready
+curl.exe -f http://localhost:3000
+</code></pre>
+<p>并记录：</p>
+<ul>
+<li><code>/health</code> 结果</li>
+<li><code>/ready</code> 结果</li>
+<li><code>docker compose ps</code></li>
+<li><code>docker compose logs --tail=200 api worker web</code></li>
+</ul>
+<p>如果当前环境还没有 full-mode 显式账号，需要先按既定初始化流程创建账号；不得使用 <code>admin/admin</code> 作为 full-mode 验收凭据。</p>
+<hr />
+<h2 id="6">6. 交付给客户管理员时要说明的边界</h2>
+<p>必须明确说明：</p>
+<ol>
+<li>当前推荐交付形态是单机 / Compose <code>full</code> 模式；</li>
+<li><code>lite</code> 只用于本地开发 / demo，不作为正式环境；</li>
+<li>正式商用签发仍要求：</li>
+<li>候选冻结；</li>
+<li>对应远端 CI 绿色；</li>
+<li>目标环境 / staging 等价演练证据；</li>
+<li>发布 / 回滚归档；</li>
+<li>负责人签字；</li>
+<li>当前 Helm / K8s 平台化能力不应被口头包装成“已完成生产就绪”。</li>
+</ol>
+<hr />
+<h2 id="7">7. 交付归档建议</h2>
+<p>每次部署至少归档：</p>
+<ul>
+<li>Release ID / 版本号</li>
+<li>branch / commit / PR</li>
+<li>CI run URL</li>
+<li><code>.env</code> 来源说明（不要存真实 secret）</li>
+<li><code>docker compose config --quiet</code> 结果</li>
+<li><code>docker compose ps</code></li>
+<li><code>/health</code> / <code>/ready</code> / 前端入口结果</li>
+<li>登录验收结果</li>
+<li>Run Console 验收结果</li>
+<li>回滚负责人</li>
+</ul>
+<p>发布和回滚的严格执行步骤，统一以 <a href="../RELEASE_RUNBOOK_V1/">RELEASE_RUNBOOK_V1.md</a> 为准。</p>
+<hr />
+<h2 id="8">8. 当前结论</h2>
+<p>这份手册可用于指导当前候选的管理员部署与交付交接。</p>
+<p>但请注意：</p>
+<blockquote>
+<p><strong>“有手册”不等于“已经完成目标环境演练”。</strong></p>
+<p>正式交付结论仍取决于 <code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> 的 gate 是否真实通过。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

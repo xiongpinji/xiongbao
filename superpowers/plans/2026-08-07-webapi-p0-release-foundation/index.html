@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p0-release-foundation/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P0 发布可信基线实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P0 \u53d1\u5e03\u53ef\u4fe1\u57fa\u7ebf\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-07-webapi-p0-release-foundation.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p0-release-foundation/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P0 发布可信基线实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-07-webapi-p0-release-foundation.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p0">Web/API P0 发布可信基线实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 修复流式并发工具执行缺陷，建立不掩盖高风险错误的静态门禁，收紧 Web 发布范围，并保证 GitHub Release 只能在 Web/API 全部门禁成功后创建。</p>
+<p><strong>架构：</strong> 编排层以显式工具执行结果代替并发闭包修改计数器；CI 将关键 Ruff 规则设为硬门禁，并对完整 Ruff/mypy 建立只降不升的基线。Web 路由把短剧与剪辑入口统一映射为排除说明页，Release job 依赖全部 Web/API 验证任务。</p>
+<p><strong>技术栈：</strong> Python 3.11、FastAPI、pytest、Ruff、mypy、React 18、TypeScript、Node.js 20、GitHub Actions。</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<ul>
+<li>修改 <code>apps/api/xagent/core/orchestration/loop.py</code>：统一流式并发工具执行结果与统计聚合。</li>
+<li>修改 <code>apps/api/tests/test_orchestration.py</code>：增加流式双工具并发回归。</li>
+<li>创建 <code>.quality-baseline.json</code>：记录完整 Ruff/mypy 的最大允许存量。</li>
+<li>创建 <code>scripts/check_static_quality.py</code>：执行关键硬门禁和存量基线检查。</li>
+<li>创建 <code>apps/api/tests/test_static_quality_gate.py</code>：验证基线比较与输出解析。</li>
+<li>修改 <code>.github/workflows/ci.yml</code>：执行关键静态门禁、Web 全量单元测试和 tag 后发布。</li>
+<li>创建 <code>apps/web/scripts/run-all-tests.mjs</code>：默认发现并运行全部 Web 单元测试文件。</li>
+<li>修改 <code>apps/web/package.json</code>：默认 <code>npm test</code> 指向全量测试入口。</li>
+<li>修改 <code>apps/web/src/tests/shellNavigation.test.ts</code>：断言发布导航不包含短剧。</li>
+<li>创建 <code>apps/web/src/pages/ExcludedModulePage.tsx</code>：为排除模块提供诚实说明。</li>
+<li>修改 <code>apps/web/src/App.tsx</code>：短剧、画布和剪辑路由统一进入排除说明页。</li>
+<li>修改 <code>apps/web/src/pages/ProfessionalModePage.tsx</code>：专业模式只展示工作流。</li>
+<li>修改 <code>apps/web/src/shell/shellRoutes.ts</code>：移除短剧主导航 surface。</li>
+<li>创建 <code>scripts/verify_release_versions.py</code>：验证 API、Web、README 和 tag 版本一致。</li>
+<li>创建 <code>apps/api/tests/test_verify_release_versions.py</code>：验证版本解析和 tag 比较。</li>
+<li>修改 <code>README.md</code>：修正版本和 Web/API 发布范围口径。</li>
+<li>修改 <code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>：记录本阶段真实边界。</li>
+<li>修改 <code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>：逐包更新状态和证据。</li>
+</ul>
+<h2 id="1">任务 1：修复流式并发工具执行</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>修改：<code>apps/api/xagent/core/orchestration/loop.py:13-25,1451-1588</code></li>
+<li>
+<p>测试：<code>apps/api/tests/test_orchestration.py</code></p>
+</li>
+<li>
+<p>[x] <strong>步骤 1：编写流式双工具失败测试</strong></p>
+</li>
+</ul>
+<p>在 <code>test_orchestration.py</code> 增加一个 <code>LiteLLMClient</code> 测试替身。第一轮流返回两个 <code>echo</code> tool call，第二轮返回最终回答；工具注册表对两个调用分别返回 <code>a</code>、<code>b</code>。</p>
+<pre><code class="language-python">from xagent.adapters.llm.litellm_client import LiteLLMClient, StreamChunk
+from xagent.adapters.tools.base import ToolResult
+
+
+class _ParallelEchoRegistry:
+    def specs(self) -&gt; list[dict]:
+        return [{
+            &quot;type&quot;: &quot;function&quot;,
+            &quot;function&quot;: {
+                &quot;name&quot;: &quot;echo&quot;,
+                &quot;description&quot;: &quot;回显文本&quot;,
+                &quot;parameters&quot;: {
+                    &quot;type&quot;: &quot;object&quot;,
+                    &quot;properties&quot;: {&quot;text&quot;: {&quot;type&quot;: &quot;string&quot;}},
+                },
+            },
+        }]
+
+    async def call(self, name, args, ctx):  # noqa: ARG002
+        return ToolResult(ok=True, output=args[&quot;text&quot;])
+
+
+class _StreamingParallelLLM(LiteLLMClient):
+    def __init__(self) -&gt; None:
+        self.calls = 0
+        self.second_call_messages: list[Message] = []
+
+    async def stream_with_tools(self, messages, tools, **kwargs):
+        self.calls += 1
+        if self.calls == 1:
+            yield StreamChunk(
+                tool_call_deltas=[
+                    {&quot;index&quot;: 0, &quot;id&quot;: &quot;call_a&quot;, &quot;function&quot;: {&quot;name&quot;: &quot;echo&quot;, &quot;arguments&quot;: '{&quot;text&quot;:&quot;a&quot;}'}},
+                    {&quot;index&quot;: 1, &quot;id&quot;: &quot;call_b&quot;, &quot;function&quot;: {&quot;name&quot;: &quot;echo&quot;, &quot;arguments&quot;: '{&quot;text&quot;:&quot;b&quot;}'}},
+                ],
+                finished=True,
+            )
+            return
+        self.second_call_messages = list(messages)
+        yield StreamChunk(delta_content=&quot;并发工具执行完成。&quot;, finished=True)
+
+    async def complete(self, messages, **kwargs):
+        return LLMResponse(content=&quot;并发工具执行完成。&quot;, model=&quot;test&quot;)
+
+    async def complete_with_tools(self, messages, tools, **kwargs):
+        raise AssertionError(&quot;流式回归不得进入非流式路径&quot;)
+
+    async def health(self) -&gt; bool:
+        return True
+</code></pre>
+<p>测试断言如下：</p>
+<pre><code class="language-python">async def test_streaming_parallel_tools_return_real_results(monkeypatch) -&gt; None:
+    llm = _StreamingParallelLLM()
+    monkeypatch.setattr(&quot;xagent.core.orchestration.loop.get_llm_client&quot;, lambda: llm)
+    monkeypatch.setattr(&quot;xagent.core.orchestration.loop.get_tool_registry&quot;, lambda: _ParallelEchoRegistry())
+    principal = Principal(user_id=&quot;u&quot;, tenant_id=&quot;t1&quot;, roles=frozenset({&quot;member&quot;}))
+    run = await run_agent_builtin(&quot;并发调用两个 echo&quot;, principal=principal, role_name=&quot;general&quot;)
+    results = [event.content for event in run.events if event.kind == StepKind.tool_result]
+    assert results == [&quot;a&quot;, &quot;b&quot;]
+    assert all(&quot;UnboundLocalError&quot; not in str(value) for value in results)
+    assert {message.tool_call_id for message in llm.second_call_messages if message.role == &quot;tool&quot;} == {&quot;call_a&quot;, &quot;call_b&quot;}
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 2：运行测试验证正确失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$env:PYTHONPATH = (Resolve-Path apps/api)
+&amp; 'D:\AI编程库\项目库\进行中的项目\xiong bao\xagent\apps\api\.venv\Scripts\python.exe' -X utf8 -m pytest apps/api/tests/test_orchestration.py::test_streaming_parallel_tools_return_real_results -q
+</code></pre>
+<p>预期：FAIL；tool result 包含 <code>UnboundLocalError: cannot access local variable '_tool_success'</code>，证明覆盖真实缺陷。</p>
+<ul>
+<li>[x] <strong>步骤 3：增加显式执行结果模型</strong></li>
+</ul>
+<p>在 <code>loop.py</code> 增加：</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class _ToolExecutionOutcome:
+    name: str
+    call_id: str
+    text: str
+    executed: bool = False
+    succeeded: bool | None = None
+    elapsed_seconds: float | None = None
+</code></pre>
+<p><code>_exec_one_inner</code> 返回 <code>_ToolExecutionOutcome</code>，不再直接执行 <code>_tool_success += 1</code> 或 <code>_tool_fail += 1</code>。拒绝、参数错误和缓存命中使用 <code>executed=False</code>；真实工具调用使用 <code>executed=True</code> 并携带 <code>succeeded</code>、耗时和文本。</p>
+<ul>
+<li>[x] <strong>步骤 4：在聚合阶段更新统计</strong></li>
+</ul>
+<p><code>asyncio.gather</code> 返回后，在原始 call 顺序的聚合循环中统一更新：</p>
+<pre><code class="language-python">if isinstance(result, Exception):
+    _tool_fail += 1
+    _tool_fail_by_type[tool_name] = _tool_fail_by_type.get(tool_name, 0) + 1
+    result_text = f&quot;[错误] {type(result).__name__}: {result}&quot;
+else:
+    result_text = result.text
+    if result.executed and result.succeeded is True:
+        _tool_success += 1
+        _tool_success_by_type[tool_name] = _tool_success_by_type.get(tool_name, 0) + 1
+    elif result.executed and result.succeeded is False:
+        _tool_fail += 1
+        _tool_fail_by_type[tool_name] = _tool_fail_by_type.get(tool_name, 0) + 1
+    if result.elapsed_seconds is not None:
+        _tool_time_by_type.setdefault(tool_name, []).append(result.elapsed_seconds)
+</code></pre>
+<p>将 semaphore 作为 <code>_exec_one</code> 的显式参数传入，避免闭包捕获循环变量。</p>
+<ul>
+<li>[x] <strong>步骤 5：运行红绿与相关回归</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_orchestration.py -q
+ruff check apps/api/xagent/core/orchestration/loop.py apps/api/tests/test_orchestration.py --select F823
+</code></pre>
+<p>预期：编排测试全部通过；本任务直接触发的 <code>F823</code> 为 0。完整
+<code>F821,F822,F823,B023</code> 集合由任务 2 在修复两处模型降级闭包后统一清零。</p>
+<ul>
+<li>[x] <strong>步骤 6：提交 P0-A</strong></li>
+</ul>
+<pre><code class="language-powershell">git add apps/api/xagent/core/orchestration/loop.py apps/api/tests/test_orchestration.py docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;fix(编排): 修复流式并发工具结果统计&quot;
+</code></pre>
+<h2 id="2">任务 2：建立关键静态门禁和存量基线</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>.quality-baseline.json</code></li>
+<li>创建：<code>scripts/check_static_quality.py</code></li>
+<li>创建：<code>apps/api/tests/test_static_quality_gate.py</code></li>
+<li>修改：<code>.github/workflows/ci.yml:28-35</code></li>
+<li>
+<p>修改：<code>apps/api/xagent/core/orchestration/loop.py:1834,2054</code></p>
+</li>
+<li>
+<p>[x] <strong>步骤 1：编写基线比较失败测试</strong></p>
+</li>
+</ul>
+<p>脚本暴露纯函数：</p>
+<pre><code class="language-python">def parse_ruff_count(output: str) -&gt; int:
+    return len(json.loads(output))
+
+def parse_mypy_count(output: str) -&gt; int:
+    return sum(1 for line in output.splitlines() if &quot;: error:&quot; in line)
+
+def exceeded(current: dict[str, int], baseline: dict[str, int]) -&gt; dict[str, tuple[int, int]]:
+    return {name: (current[name], limit) for name, limit in baseline.items() if current[name] &gt; limit}
+</code></pre>
+<p>测试断言 Ruff JSON 可计数、mypy error 行可计数，且 <code>ruff=287</code> 相对基线 <code>286</code> 被拒绝。</p>
+<p>测试通过 <code>importlib.util.spec_from_file_location</code> 从仓库根的 <code>scripts/check_static_quality.py</code> 加载模块；仓库根由 <code>Path(__file__).resolve().parents[3]</code> 确定，不要求把 <code>scripts/</code> 变成运行时 Python 包。</p>
+<ul>
+<li>[x] <strong>步骤 2：运行测试验证脚本尚不存在</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_static_quality_gate.py -q
+</code></pre>
+<p>预期：FAIL，<code>ModuleNotFoundError</code> 或导入目标不存在。</p>
+<ul>
+<li>[x] <strong>步骤 3：实现静态质量脚本与基线</strong></li>
+</ul>
+<p><code>.quality-baseline.json</code> 固定当前新鲜基线：</p>
+<pre><code class="language-json">{
+  &quot;ruff&quot;: 286,
+  &quot;mypy&quot;: 74
+}
+</code></pre>
+<p>脚本从仓库根定位 <code>apps/api</code>，分别运行 Ruff JSON 输出和 mypy 文本输出；任一当前计数超过基线时退出 1。命令本身缺失或输出不可解析时同样退出 1，禁止误报通过。</p>
+<ul>
+<li>[x] <strong>步骤 4：修复剩余关键 B023</strong></li>
+</ul>
+<p>将两处循环内 lambda 显式绑定模型：</p>
+<pre><code class="language-python">lambda selected_model=target_model: llm.complete_with_tools(
+    state.messages, specs, model=selected_model
+)
+</code></pre>
+<p>提示工程路径使用同样绑定方式。运行关键 Ruff 集合，预期 0。</p>
+<ul>
+<li>[x] <strong>步骤 5：修改 CI</strong></li>
+</ul>
+<p>后端 job 使用：</p>
+<pre><code class="language-yaml">- name: Critical lint gate
+  run: ruff check xagent tests --select F821,F822,F823,B023
+
+- name: Static quality baseline
+  working-directory: ../..
+  run: python scripts/check_static_quality.py
+</code></pre>
+<p>删除 Ruff/mypy 的 <code>|| true</code>。完整检查由基线脚本执行并阻止新增，不把 286/74 写成零错误。</p>
+<ul>
+<li>[x] <strong>步骤 6：验证并提交 P0-B</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_static_quality_gate.py apps/api/tests/test_orchestration.py -q
+python scripts/check_static_quality.py
+ruff check apps/api/xagent apps/api/tests --select F821,F822,F823,B023
+</code></pre>
+<p>预期：全部退出 0，脚本报告 <code>ruff &lt;= 286</code>、<code>mypy &lt;= 74</code>。</p>
+<p>提交：</p>
+<pre><code class="language-powershell">git add .quality-baseline.json scripts/check_static_quality.py apps/api/tests/test_static_quality_gate.py apps/api/xagent/core/orchestration/loop.py .github/workflows/ci.yml docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;ci(质量): 阻断关键静态错误并固定基线&quot;
+</code></pre>
+<h2 id="3-web">任务 3：让 Web 测试覆盖真实发布范围</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>apps/web/scripts/run-all-tests.mjs</code></li>
+<li>修改：<code>apps/web/package.json</code></li>
+<li>修改：<code>apps/web/src/tests/shellNavigation.test.ts</code></li>
+<li>创建：<code>apps/web/src/pages/ExcludedModulePage.tsx</code></li>
+<li>修改：<code>apps/web/src/App.tsx</code></li>
+<li>修改：<code>apps/web/src/pages/ProfessionalModePage.tsx</code></li>
+<li>修改：<code>apps/web/src/shell/shellRoutes.ts</code></li>
+<li>
+<p>修改：<code>.github/workflows/ci.yml</code></p>
+</li>
+<li>
+<p>[x] <strong>步骤 1：增加发布导航失败测试</strong></p>
+</li>
+</ul>
+<p>在 <code>shellNavigation.test.ts</code> 增加：</p>
+<pre><code class="language-typescript">it(&quot;excludes creative studio from the Web API release navigation&quot;, () =&gt; {
+  assert(
+    PRIMARY_SHELL_SURFACES.every((surface) =&gt; surface.taskId !== &quot;creative&quot;),
+    &quot;Creative studio must not appear in the Web/API release navigation&quot;,
+  );
+});
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">npm test -- shellNavigation.test.ts
+</code></pre>
+<p>预期：FAIL，当前 <code>PRIMARY_SHELL_SURFACES</code> 包含 <code>taskId=creative</code>。</p>
+<ul>
+<li>[x] <strong>步骤 3：实现全量 Web 测试入口</strong></li>
+</ul>
+<p><code>run-all-tests.mjs</code> 枚举 <code>src/tests</code> 下所有 <code>.test.ts</code> 和 <code>.test.tsx</code>，逐个调用现有 <code>run-tests.mjs</code>；任一文件失败即退出非零。<code>package.json</code> 调整为：</p>
+<pre><code class="language-javascript">import { readdirSync } from &quot;node:fs&quot;;
+import { spawnSync } from &quot;node:child_process&quot;;
+import path from &quot;node:path&quot;;
+import { fileURLToPath } from &quot;node:url&quot;;
+
+const projectRoot = fileURLToPath(new URL(&quot;..&quot;, import.meta.url));
+const testsDir = path.join(projectRoot, &quot;src&quot;, &quot;tests&quot;);
+const runner = path.join(projectRoot, &quot;scripts&quot;, &quot;run-tests.mjs&quot;);
+const testFiles = readdirSync(testsDir)
+  .filter((name) =&gt; /\.test\.tsx?$/.test(name))
+  .sort();
+
+if (testFiles.length === 0) {
+  console.error(&quot;No Web unit test files found&quot;);
+  process.exit(1);
+}
+
+for (const testFile of testFiles) {
+  const result = spawnSync(process.execPath, [runner, testFile], {
+    cwd: projectRoot,
+    stdio: &quot;inherit&quot;,
+  });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;node ./scripts/run-all-tests.mjs&quot;,
+    &quot;test:file&quot;: &quot;node ./scripts/run-tests.mjs&quot;
+  }
+}
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 4：收紧 Web 路由和导航</strong></li>
+</ul>
+<p><code>ExcludedModulePage</code> 固定显示：</p>
+<pre><code class="language-tsx">import { Link } from &quot;react-router-dom&quot;;
+
+export default function ExcludedModulePage() {
+  return (
+    &lt;div className=&quot;flex h-full flex-col items-center justify-center gap-4 text-center&quot;&gt;
+      &lt;h1 className=&quot;text-xl font-semibold text-white&quot;&gt;当前 Web/API 发布不包含此模块&lt;/h1&gt;
+      &lt;p className=&quot;max-w-xl text-sm text-neutral-400&quot;&gt;短剧能力由独立项目运行，稳定后再按集成规格接入 X-Agent。&lt;/p&gt;
+      &lt;Link className=&quot;rounded-lg bg-white px-4 py-2 text-sm font-medium text-black&quot; to=&quot;/chat&quot;&gt;
+        返回对话
+      &lt;/Link&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<p>在 <code>App.tsx</code> 将 <code>/creative</code>、<code>/creative/canvas</code>、<code>/canvas</code>、<code>/editor</code> 映射到此页，并删除 Creative/Editor 的 lazy import 与全屏分支。<code>shellRoutes.ts</code> 删除 creative 主 surface。<code>ProfessionalModePage</code> 只保留 workflow 模式和 <code>WorkflowsPage</code>，不保留短剧 tab 或剪辑链接。</p>
+<ul>
+<li>[x] <strong>步骤 5：把 Web test 加入 CI</strong></li>
+</ul>
+<p>在 frontend job 的 typecheck 前增加：</p>
+<pre><code class="language-yaml">- name: Unit test
+  run: npm test
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 6：验证并提交 P0-C</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">npm test
+npm run lint
+npm run typecheck
+npm run build
+</code></pre>
+<p>预期：2 个测试文件全部执行并通过；lint 仍为 0 error，warning 不得超过基线 100；typecheck/build 退出 0；build 产物不再包含 <code>CreativeStudioPage</code> 和 <code>EditorPage</code> chunk。</p>
+<p>提交：</p>
+<pre><code class="language-powershell">git add apps/web .github/workflows/ci.yml docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;feat(Web): 收紧 Web API 发布入口与测试范围&quot;
+</code></pre>
+<h2 id="4-ci">任务 4：统一版本事实源并建立 CI 后发布</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>scripts/verify_release_versions.py</code></li>
+<li>创建：<code>apps/api/tests/test_verify_release_versions.py</code></li>
+<li>修改：<code>README.md</code></li>
+<li>修改：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li>
+<p>修改：<code>.github/workflows/ci.yml</code></p>
+</li>
+<li>
+<p>[x] <strong>步骤 1：编写版本校验失败测试</strong></p>
+</li>
+</ul>
+<p>测试在临时目录写入 API <code>pyproject.toml</code>、Web <code>package.json</code> 和 README，通过纯函数验证：</p>
+<pre><code class="language-python">assert verify_versions(root, tag=&quot;v1.0.0&quot;) == []
+(root / &quot;README.md&quot;).write_text(&quot;**当前 Web/API 版本：0.1.0**&quot;, encoding=&quot;utf-8&quot;)
+assert &quot;README&quot; in &quot;\n&quot;.join(verify_versions(root, tag=&quot;v1.0.0&quot;))
+assert &quot;tag&quot; in &quot;\n&quot;.join(verify_versions(root, tag=&quot;v1.0.1&quot;))
+</code></pre>
+<p>测试同样通过 <code>importlib.util.spec_from_file_location</code> 加载仓库根的 <code>scripts/verify_release_versions.py</code>，避免改变应用包结构。</p>
+<ul>
+<li>[x] <strong>步骤 2：运行测试验证脚本尚不存在</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_verify_release_versions.py -q
+</code></pre>
+<p>预期：FAIL，版本校验模块不存在。</p>
+<ul>
+<li>[x] <strong>步骤 3：实现版本校验脚本</strong></li>
+</ul>
+<p>脚本使用 <code>tomllib</code> 读取 API 版本、<code>json</code> 读取 Web 版本、正则读取 README <code>当前 Web/API 版本</code>。传入 <code>--tag</code> 时去掉 <code>v</code> 后比较。任一不一致打印逐项错误并退出 1。</p>
+<ul>
+<li>[x] <strong>步骤 4：修正文档口径</strong></li>
+</ul>
+<p>README 顶部改为：</p>
+<pre><code class="language-markdown">**当前 Web/API 版本：1.0.0**（API `pyproject.toml` 为版本事实源；Web package 与发布 tag 必须通过 CI 一致性检查）
+</code></pre>
+<p>状态事实源明确：当前增强阶段只验收 Web/API；短剧与桌面端不构成本阶段发布结论。</p>
+<ul>
+<li>[x] <strong>步骤 5：增加 tag 版本 job 与 Release job</strong></li>
+</ul>
+<p>新增 <code>release-version</code> job，仅 tag push 执行：</p>
+<pre><code class="language-yaml">release-version:
+  if: startsWith(github.ref, 'refs/tags/v')
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: python scripts/verify_release_versions.py --tag &quot;${GITHUB_REF_NAME}&quot;
+</code></pre>
+<p>新增 <code>release</code> job：</p>
+<pre><code class="language-yaml">release:
+  needs: [backend, frontend, license-gate, config-governance, docker-build, e2e-api, load-test, promptfoo-eval, release-version]
+  if: startsWith(github.ref, 'refs/tags/v')
+  permissions:
+    contents: write
+  steps:
+    - uses: actions/checkout@v4
+    - run: gh release create &quot;${GITHUB_REF_NAME}&quot; --verify-tag --generate-notes
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 6：验证并提交 P0-D</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_verify_release_versions.py -q
+python scripts/verify_release_versions.py --tag v1.0.0
+python -c &quot;import pathlib, yaml; yaml.safe_load(pathlib.Path('.github/workflows/ci.yml').read_text(encoding='utf-8'))&quot;
+</code></pre>
+<p>预期：版本测试和当前 v1.0.0 校验通过；workflow YAML 可解析；release <code>needs</code> 覆盖全部 Web/API gate。</p>
+<p>提交：</p>
+<pre><code class="language-powershell">git add scripts/verify_release_versions.py apps/api/tests/test_verify_release_versions.py README.md docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md .github/workflows/ci.yml docs/coordination/WEB_API_RELEASE_TASK_BOARD.md
+git commit -m &quot;ci(发布): 统一 Web API 版本并门禁 Release&quot;
+</code></pre>
+<h2 id="5p0">任务 5：P0 完成审计</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></li>
+<li>
+<p>创建：<code>docs/coordination/reports/WEB_API_P0_RELEASE_FOUNDATION_EVIDENCE.md</code></p>
+</li>
+<li>
+<p>[x] <strong>步骤 1：运行后端 P0 验证</strong></p>
+</li>
+</ul>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_orchestration.py apps/api/tests/test_static_quality_gate.py apps/api/tests/test_verify_release_versions.py -q
+ruff check apps/api/xagent apps/api/tests --select F821,F822,F823,B023
+python scripts/check_static_quality.py
+python scripts/verify_release_versions.py --tag v1.0.0
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 2：运行前端 P0 验证</strong></li>
+</ul>
+<pre><code class="language-powershell">Set-Location apps/web
+npm test
+npm run lint
+npm run typecheck
+npm run build
+</code></pre>
+<ul>
+<li>[x] <strong>步骤 3：运行仓库一致性检查</strong></li>
+</ul>
+<pre><code class="language-powershell">git diff --check HEAD~4..HEAD
+git status --short
+rg -n &quot;ruff check.*\|\| true|mypy.*\|\| true&quot; .github/workflows/ci.yml
+rg -n &quot;CreativeStudioPage|EditorPage&quot; apps/web/dist/assets
+</code></pre>
+<p>预期：diff check 退出 0；工作树无未提交改动；CI 不含 Ruff/mypy <code>|| true</code>；production assets 不含排除页面 chunk。</p>
+<ul>
+<li>[x] <strong>步骤 4：写证据报告并更新任务板</strong></li>
+</ul>
+<p>证据报告逐命令记录退出码、通过数、静态错误基线、Web warning 数和剩余风险。P0-A 至 P0-E 全部有证据后转 DONE；P1-A 转 READY。</p>
+<ul>
+<li>[x] <strong>步骤 5：提交 P0 证据</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/coordination/WEB_API_RELEASE_TASK_BOARD.md docs/coordination/reports/WEB_API_P0_RELEASE_FOUNDATION_EVIDENCE.md
+git commit -m &quot;docs(验收): 归档 Web API P0 发布基线证据&quot;
+</code></pre>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

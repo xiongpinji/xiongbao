@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-23-xagent-ga-readiness-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 正式商用 GA 收口实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u6b63\u5f0f\u5546\u7528 GA \u6536\u53e3\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-23-xagent-ga-readiness-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-23-xagent-ga-readiness-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 正式商用 GA 收口实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-23-xagent-ga-readiness-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-ga">X-Agent 正式商用 GA 收口实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 <code>superpowers:subagent-driven-development</code>（推荐）或 <code>superpowers:executing-plans</code> 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 将 X-Agent 从当前可内部试点 / 受控私有部署状态收口为正式商用 GA，首发范围限定为 Web 工作台、短剧自由画布、企业鉴权与单实例 Docker Compose <code>full</code> 部署。</p>
+<p><strong>架构：</strong> 先处理密钥和候选范围，再修复质量门禁与可复现入口；随后在隔离 staging 环境验证完整 Compose 依赖链、真实 provider、E2E、安全、恢复、升级回滚和 50 并发容量；最后以版本 tag、证据包和四类角色签字作为 GA 出口。Helm/Kubernetes、Tauri、多实例 HA 和跨历史版本升级不进入本计划门禁。</p>
+<p><strong>技术栈：</strong> Python 3.11、FastAPI、pytest、Ruff、mypy、Docker Compose、Postgres、Redis、Qdrant、Langfuse、LiteLLM、React 18、Vite、TypeScript、ESLint、Playwright、Locust、GitHub Actions。</p>
+<hr />
+<h2 id="_1">文件与证据结构</h2>
+<h3 id="_2">将修改的代码与配置</h3>
+<ul>
+<li>修改：<code>.github/workflows/ci.yml</code> —— 让 mypy 失败阻断 CI，并统一可复现检查入口。</li>
+<li>修改：<code>apps/api/pyproject.toml</code> —— 修复包/测试入口配置，保持 pytest 可从文档指定目录直接执行。</li>
+<li>修改：<code>apps/api/xagent/enterprise/authz/openfga.py</code> —— 消除 OpenFGA 可选客户端的类型错误。</li>
+<li>修改：<code>apps/api/xagent/adapters/tools/composio_provider.py</code> —— 修正工具列表类型协变问题。</li>
+<li>修改：<code>apps/api/xagent/adapters/knowledge/__init__.py</code> —— 明确知识库可选适配器的空值分支。</li>
+<li>修改：<code>apps/api/xagent/infra/cache.py</code> —— 统一 Redis bytes/string 返回类型。</li>
+<li>修改：<code>apps/api/xagent/domains/creative_studio/media/video_providers.py</code> —— 修正 provider 配置映射类型。</li>
+<li>修改：<code>apps/api/xagent/domains/open_source_discovery/engine.py</code> —— 修正候选索引类型。</li>
+<li>修改：<code>apps/api/xagent/scripts/ollama_warmup.py</code> —— 修正 completion 参数及计数类型。</li>
+<li>修改：<code>apps/api/xagent/api/v1/creative_studio.py</code> —— 增加返回结构的显式类型。</li>
+<li>修改：<code>apps/api/xagent/core/workflow/engine.py</code> —— 对并发结果的异常分支做类型收窄。</li>
+<li>修改：<code>apps/api/xagent/api/v1/tasks.py</code> —— 处理可选结果赋值。</li>
+<li>修改：<code>apps/api/xagent/api/v1/agents.py</code> —— 增加验证摘要类型。</li>
+<li>修改：<code>apps/api/tests/conftest.py</code> 或 <code>apps/api/pyproject.toml</code> —— 让 <code>pytest -q</code> 从 <code>apps/api</code> 目录直接可运行。</li>
+</ul>
+<h3 id="_3">将创建的测试与验证材料</h3>
+<ul>
+<li>创建或修改：<code>apps/api/tests/test_type_contracts.py</code> —— 覆盖本次修复的关键静态类型边界。</li>
+<li>修改：<code>tests/e2e/playwright.config.*</code> 及关键 spec —— 支持 staging API/Web 地址与显式账号，不写入 secret。</li>
+<li>修改：<code>tests/security/scan.py</code> —— 支持 <code>--host</code>、staging 租户/账号输入和证据输出路径。</li>
+<li>修改：<code>tests/load/locustfile.py</code> —— 固化 50 并发测试参数、结果 CSV 和关键指标输出。</li>
+<li>创建：<code>docs/ga/evidence/</code> 下的 staging、恢复、容量、发布证据索引文件。</li>
+<li>创建：<code>docs/ga/GA_RELEASE_MANIFEST.md</code> —— GA 版本、范围、兼容性、已知限制和证据索引。</li>
+<li>创建：<code>docs/ga/GA_SIGNOFF.md</code> —— TL、QA、DevOps、Owner 签字表。</li>
+</ul>
+<h3 id="_4">将更新的发布文档</h3>
+<ul>
+<li>修改：<code>README.md</code> —— 与 GA 实际状态一致，保留明确不纳入范围。</li>
+<li>修改：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code> —— 仅在全部门禁真实通过后更新 GA 结论。</li>
+<li>修改：<code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> —— 绑定本次候选证据和四类签字。</li>
+<li>修改：<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code> —— 从试点口径更新为 GA 后不承诺范围。</li>
+<li>修改或创建：<code>docs/RELEASE_RUNBOOK_V1.md</code> —— 增加 staging 验收、相邻版本升级、回滚、smoke 和支持路径。</li>
+<li>修改：<code>docs/ENVIRONMENT_BASELINE_V1.md</code> —— 明确 staging Compose 是唯一 GA 证据环境。</li>
+</ul>
+<hr />
+<h2 id="1-ga">任务 1：建立 GA 候选边界并执行密钥止血</h2>
+<p><strong>依赖：</strong> 无。必须最先完成。</p>
+<p><strong>文件：</strong>
+- 检查：<code>xagent/.env</code>、<code>xagent/deploy/compose/.env</code>、<code>xagent/deploy/compose/.env.*</code>
+- 检查：<code>.gitignore</code>、<code>git ls-files</code>
+- 修改：<code>docs/ga/GA_RELEASE_MANIFEST.md</code>
+- 修改：<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：盘点并撤销暴露的 provider key</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">rg -n &quot;sk-[A-Za-z0-9]|ark-[A-Za-z0-9]|API_KEY=&quot; . --glob '!node_modules/**' --glob '!dist/**'
+</code></pre>
+<p>在 provider 控制台撤销 <code>xagent/.env</code> 中出现过的 DeepSeek、图像和视频 key，生成新的 staging key，并确认旧 key 返回无权限。不得把新 key 写入仓库文件。</p>
+<ul>
+<li>[ ] <strong>步骤 2：确认敏感文件不在版本控制中</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">git ls-files -- .env* deploy/compose/.env*
+git check-ignore -v .env .env.hybrid .env.rehearsal deploy/compose/.env
+</code></pre>
+<p>预期：只列出 <code>.env.example</code> 文件；所有真实环境文件均被忽略。</p>
+<ul>
+<li>[ ] <strong>步骤 3：建立首发范围清单</strong></li>
+</ul>
+<p>在 <code>docs/ga/GA_RELEASE_MANIFEST.md</code> 记录纳入的 Web 页面、API/worker/web Compose 形态、短剧画布、企业鉴权/租户/审计、真实 provider 要求，以及不纳入的 Helm、Tauri、HA、跨历史版本升级。</p>
+<ul>
+<li>[ ] <strong>步骤 4：检查候选工作区并隔离无关改动</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">git status --short --branch
+git diff --stat
+git ls-files --others --exclude-standard
+</code></pre>
+<p>将无关实验产物移出 GA 候选或明确在 manifest 中排除；不得删除用户未授权的工作。</p>
+<ul>
+<li>[ ] <strong>步骤 5：Commit</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/ga/GA_RELEASE_MANIFEST.md docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md
+git commit -m &quot;docs: define xagent GA release boundary&quot;
+</code></pre>
+<hr />
+<h2 id="2">任务 2：修复后端类型门禁并使测试入口可复现</h2>
+<p><strong>依赖：</strong> 任务 1 的范围确认；密钥不参与本任务测试。</p>
+<p><strong>文件：</strong> 见“将修改的代码与配置”中的后端文件；测试：<code>apps/api/tests/test_type_contracts.py</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 1：记录当前失败基线</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">mypy xagent --ignore-missing-imports
+</code></pre>
+<p>预期：当前基线为 16 个错误；将完整输出保存到任务证据，不修改代码以掩盖错误。</p>
+<ul>
+<li>[ ] <strong>步骤 2：为关键可选适配器和 provider 边界写失败测试</strong></li>
+</ul>
+<p>在 <code>apps/api/tests/test_type_contracts.py</code> 覆盖：无 OpenFGA 客户端时返回安全拒绝/明确降级；无知识库客户端时返回既定空结果；Redis 缓存字符串边界返回 <code>str | None</code>；provider 配置输出符合声明类型。测试必须使用现有 fixture 和 mock，不调用真实 provider。</p>
+<ul>
+<li>[ ] <strong>步骤 3：逐文件修复类型错误</strong></li>
+</ul>
+<p>按 mypy 输出修复 <code>openfga.py</code>、<code>composio_provider.py</code>、<code>knowledge/__init__.py</code>、<code>cache.py</code>、<code>video_providers.py</code>、<code>open_source_discovery/engine.py</code>、<code>ollama_warmup.py</code>、<code>creative_studio.py</code>、<code>workflow/engine.py</code>、<code>tasks.py</code>、<code>agents.py</code>。保持运行时行为不变：只增加类型收窄、显式注解、bytes 解码和异常分支处理，不引入新依赖。</p>
+<ul>
+<li>[ ] <strong>步骤 4：移除 CI 的类型错误吞没</strong></li>
+</ul>
+<p>修改 <code>.github/workflows/ci.yml</code>，将：</p>
+<pre><code class="language-yaml">run: mypy xagent --ignore-missing-imports || true
+</code></pre>
+<p>改为：</p>
+<pre><code class="language-yaml">run: mypy xagent --ignore-missing-imports
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：修复 pytest 入口</strong></li>
+</ul>
+<p>优先在 <code>apps/api/pyproject.toml</code> 配置测试运行时的 import 路径；若项目工具链不支持该配置，则在 <code>apps/api/tests/conftest.py</code> 使用标准路径注入方式。目标是从 <code>apps/api</code> 目录直接运行 <code>pytest -q</code>，不依赖临时设置 <code>PYTHONPATH</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 6：运行后端门禁</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">ruff check xagent tests
+mypy xagent --ignore-missing-imports
+pytest -q
+</code></pre>
+<p>预期：三条命令均退出码 0；pytest 无收集错误、无失败、无超时。</p>
+<ul>
+<li>[ ] <strong>步骤 7：Commit</strong></li>
+</ul>
+<pre><code class="language-powershell">git add .github/workflows/ci.yml apps/api/pyproject.toml apps/api/xagent apps/api/tests
+git commit -m &quot;fix: enforce backend GA quality gates&quot;
+</code></pre>
+<hr />
+<h2 id="3e2e">任务 3：固化前端、E2E 与安全扫描门禁</h2>
+<p><strong>依赖：</strong> 任务 2。</p>
+<p><strong>文件：</strong>
+- 修改：<code>tests/e2e/playwright.config.*</code>、关键 <code>tests/e2e/specs/*</code>
+- 修改：<code>tests/security/scan.py</code>
+- 修改：<code>.github/workflows/ci.yml</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：确认当前前端门禁基线</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev --audit-level=high
+</code></pre>
+<p>预期：全部通过；若全量 audit 的 dev/build 工具链仍有告警，记录版本、影响和 GA 处置结论，不把生产依赖结果冒充全量无风险。</p>
+<ul>
+<li>[ ] <strong>步骤 2：参数化 Playwright 环境</strong></li>
+</ul>
+<p>使 E2E 使用 <code>E2E_BASE_URL</code>、<code>XAGENT_DEV_API_TARGET</code>、<code>E2E_USERNAME</code>、<code>E2E_PASSWORD</code>，默认值仅用于本地；staging 运行时从 CI secret 注入账号，测试输出不得打印密码或 token。</p>
+<ul>
+<li>[ ] <strong>步骤 3：覆盖 GA 关键链路</strong></li>
+</ul>
+<p>确保关键 spec 覆盖登录、对话/SSE、运行详情、工作流、短剧自由画布、设置、失败态与重试；每个场景使用唯一测试数据并在 teardown 清理可清理资源。</p>
+<ul>
+<li>[ ] <strong>步骤 4：参数化安全扫描</strong></li>
+</ul>
+<p>使 <code>tests/security/scan.py</code> 支持 staging host、显式测试账号和结果文件；验证健康探针例外、业务端点鉴权、跨租户头注入、租户记忆隔离、SQL 注入、限流和安全响应头。</p>
+<ul>
+<li>[ ] <strong>步骤 5：运行本地集成门禁</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python tests/security/scan.py --host http://localhost:8000
+cd tests/e2e
+npm ci
+npx playwright test --project=chromium
+</code></pre>
+<p>预期：安全扫描全部 PASS；关键 E2E 无失败。未运行服务时必须报告环境阻断，不得伪造通过。</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-powershell">git add tests/e2e tests/security .github/workflows/ci.yml
+ git commit -m &quot;test: harden GA integration and security gates&quot;
+</code></pre>
+<hr />
+<h2 id="4-staging-compose-full">任务 4：准备并执行 staging Compose full 演练</h2>
+<p><strong>依赖：</strong> 任务 3；需要 staging 主机、域名/TLS 终止方案、secret manager/CI secrets、真实三类 provider。</p>
+<p><strong>文件：</strong>
+- 检查：<code>deploy/compose/docker-compose.yml</code>、<code>deploy/compose/.env.example</code>
+- 修改：<code>docs/ENVIRONMENT_BASELINE_V1.md</code>、<code>docs/RELEASE_RUNBOOK_V1.md</code>
+- 创建：<code>docs/ga/evidence/staging-full-rehearsal.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：校验 staging 配置</strong></li>
+</ul>
+<p>使用 secret manager 注入环境变量，运行：</p>
+<pre><code class="language-powershell">cd deploy/compose
+docker compose --env-file .env config --quiet
+</code></pre>
+<p>预期：退出码 0；不在命令输出中打印 secret。</p>
+<ul>
+<li>[ ] <strong>步骤 2：从零启动 Compose full</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">docker compose --env-file .env down --volumes --remove-orphans
+docker compose --env-file .env up -d --build
+docker compose --env-file .env ps
+</code></pre>
+<p>预期：api、worker、web、Postgres、Redis、Qdrant、Langfuse、LiteLLM 均达到预期健康状态；记录镜像 digest、版本、启动耗时和异常日志。</p>
+<ul>
+<li>[ ] <strong>步骤 3：执行 staging 核心验收</strong></li>
+</ul>
+<p>验证 <code>/health</code>、<code>/ready</code>、显式账号登录、文本主链、工作流、Run Console、短剧画布、失败重试恢复、真实 LLM/图像/视频 provider。将命令、时间、结果、截图和脱敏日志写入 <code>docs/ga/evidence/staging-full-rehearsal.md</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：执行 staging E2E 与安全扫描</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python tests/security/scan.py --host https://&lt;staging-api&gt;
+cd tests/e2e
+$env:E2E_BASE_URL='https://&lt;staging-web&gt;'
+npx playwright test --project=chromium
+</code></pre>
+<p>预期：全部通过；证据文件不包含 secret、token 或用户密码。</p>
+<ul>
+<li>[ ] <strong>步骤 5：补齐发布与回滚 Runbook</strong></li>
+</ul>
+<p>在 <code>docs/RELEASE_RUNBOOK_V1.md</code> 固化 Compose 配置校验、部署、数据库迁移、smoke、停止、回滚、日志导出和失败升级路径，并明确相邻 GA 版本限制。</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit 演练材料</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/ENVIRONMENT_BASELINE_V1.md docs/RELEASE_RUNBOOK_V1.md docs/ga/evidence/staging-full-rehearsal.md
+git commit -m &quot;docs: record staging full GA rehearsal&quot;
+</code></pre>
+<p>只提交脱敏证据和文档，不提交 <code>.env</code>、日志中的 token 或导出的数据库。</p>
+<hr />
+<h2 id="5">任务 5：验证备份恢复、相邻版本升级与回滚</h2>
+<p><strong>依赖：</strong> 任务 4 的 staging full 数据。</p>
+<p><strong>文件：</strong>
+- 检查/修改：<code>scripts/backup.py</code>、数据库迁移文件、<code>docs/RELEASE_RUNBOOK_V1.md</code>
+- 创建：<code>docs/ga/evidence/recovery-upgrade-rollback.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：执行 Postgres/Qdrant/审计数据备份</strong></li>
+</ul>
+<p>使用项目现有 <code>scripts/backup.py</code> 和数据库/Qdrant 官方备份命令，生成带时间戳的备份；记录备份大小、完成时间和校验摘要，脱敏后保存证据。</p>
+<ul>
+<li>[ ] <strong>步骤 2：在隔离恢复目标执行恢复</strong></li>
+</ul>
+<p>恢复到隔离 Compose 环境，验证用户/租户、工作流、运行记录、Qdrant 记忆和审计链数据完整性。记录恢复开始/结束时间，计算 RTO；以最近可恢复备份时间计算 RPO。</p>
+<ul>
+<li>[ ] <strong>步骤 3：执行相邻 GA 版本升级</strong></li>
+</ul>
+<p>从上一 GA tag 启动 staging，先备份，再切换当前候选镜像，执行 Alembic migration，验证核心链路和数据完整性。不得跳过 migration 输出。</p>
+<ul>
+<li>[ ] <strong>步骤 4：执行失败回滚</strong></li>
+</ul>
+<p>在隔离环境模拟升级后 smoke 失败，按 Runbook 恢复备份并回退上一 GA 镜像；验证系统可用、数据未丢失、审计链可追溯。</p>
+<ul>
+<li>[ ] <strong>步骤 5：确认基线</strong></li>
+</ul>
+<p>必须达到 RPO ≤24 小时、RTO ≤4 小时；否则阻断 GA，不通过降低口径解决。将步骤、耗时、数据校验、失败点和责任人写入证据文件。</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-powershell">git add docs/RELEASE_RUNBOOK_V1.md docs/ga/evidence/recovery-upgrade-rollback.md scripts/backup.py
+ git commit -m &quot;docs: verify GA recovery and rollback baseline&quot;
+</code></pre>
+<hr />
+<h2 id="6-50">任务 6：执行 50 并发容量基线</h2>
+<p><strong>依赖：</strong> 任务 4 staging full 已稳定，任务 5 不得存在未解释的数据风险。</p>
+<p><strong>文件：</strong>
+- 修改：<code>tests/load/locustfile.py</code>
+- 创建：<code>docs/ga/evidence/capacity-50-concurrency.md</code>
+- 修改：<code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：固化负载参数和指标出口</strong></li>
+</ul>
+<p>Locust 场景固定覆盖登录、角色列表、agent 运行、记忆检索、开源发现和短剧草稿；支持 <code>USERS=50</code>、<code>SPAWN_RATE=5</code>、<code>DURATION=60s</code>，输出 CSV 和 JSON 摘要，不输出 token。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行 50 并发测试</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">locust -f tests/load/locustfile.py --host https://&lt;staging-api&gt; --headless -u 50 -r 5 -t 60s --csv docs/ga/evidence/capacity-50-concurrency
+</code></pre>
+<p>记录 API P95、错误率、429 比例/阈值、worker backlog、任务耗时/失败率以及 DB/Redis/Qdrant/LLM 资源瓶颈。</p>
+<ul>
+<li>[ ] <strong>步骤 3：形成容量边界</strong></li>
+</ul>
+<p>在证据文档中明确 50 并发是否通过、超出基线时的行为、限流方式、扩容建议和不承诺超过 50 并发固定 SLA。任何未解释错误均阻断 GA。</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-powershell">git add tests/load/locustfile.py docs/ga/evidence/capacity-50-concurrency.md docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md
+git commit -m &quot;test: establish GA capacity baseline&quot;
+</code></pre>
+<hr />
+<h2 id="7">任务 7：组装发布证据、签字并发布候选</h2>
+<p><strong>依赖：</strong> 任务 1-6 全部通过。</p>
+<p><strong>文件：</strong>
+- 创建：<code>docs/ga/GA_RELEASE_MANIFEST.md</code>
+- 创建：<code>docs/ga/GA_SIGNOFF.md</code>
+- 修改：<code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>
+- 修改：<code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>
+- 修改：<code>README.md</code>
+- 修改：<code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：建立证据矩阵</strong></li>
+</ul>
+<p>为每个 P0-A 至 P0-G 填写证据文件、候选 commit/tag、执行时间、执行人、结果和复核人；<code>REVIEW</code> 或 <code>READY</code> 不得标记为通过。</p>
+<ul>
+<li>[ ] <strong>步骤 2：生成版本 manifest</strong></li>
+</ul>
+<p>记录版本号、Git tag、候选 commit、数据库迁移 head、部署镜像、首发范围、不支持范围、provider 验收结果、兼容性和回滚限制。</p>
+<ul>
+<li>[ ] <strong>步骤 3：执行候选全量验证</strong></li>
+</ul>
+<p>在候选 tag 上重新运行：</p>
+<pre><code class="language-powershell">ruff check apps/api/xagent apps/api/tests
+cd apps/api; pytest -q; mypy xagent --ignore-missing-imports
+cd ../web; npm ci; npm run lint; npm run typecheck; npm run build
+cd ../..; python scripts/license_check.py
+</code></pre>
+<p>预期：全部退出码 0，输出和候选 tag 一致。</p>
+<ul>
+<li>[ ] <strong>步骤 4：完成四类角色签字</strong></li>
+</ul>
+<p>在 <code>docs/ga/GA_SIGNOFF.md</code> 由 TL、QA、DevOps、Owner 分别确认范围、质量、安全、环境、恢复、容量和支持承诺；任何角色拒签都阻断发布。</p>
+<ul>
+<li>[ ] <strong>步骤 5：更新公开状态口径</strong></li>
+</ul>
+<p>只有签字完成后，才将事实源、README、发布检查表和交付索引更新为 GA；否则保持“内部试点/受控私有部署候选”。</p>
+<ul>
+<li>[ ] <strong>步骤 6：创建 GA tag 并执行发布后 smoke</strong></li>
+</ul>
+<pre><code class="language-powershell">git tag -a v&lt;GA_VERSION&gt; -m &quot;release: xagent GA &lt;GA_VERSION&gt;&quot;
+git show --stat --oneline v&lt;GA_VERSION&gt;
+</code></pre>
+<p>发布后重新验证 <code>/health</code>、<code>/ready</code>、登录、文本主链、Run Console、画布和 metrics，进入既定观察窗口。</p>
+<hr />
+<h2 id="_5">总体验证命令</h2>
+<p>在声称 GA 前，必须取得本次候选的新鲜输出：</p>
+<pre><code class="language-powershell">cd apps/api
+ruff check xagent tests
+mypy xagent --ignore-missing-imports
+pytest -q
+
+cd ../web
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+
+cd ../..
+python scripts/license_check.py
+python tests/security/scan.py --host https://&lt;staging-api&gt;
+cd tests/e2e
+npx playwright test --project=chromium
+</code></pre>
+<p>另须存在脱敏且可复核的 staging full、恢复/回滚、升级和 50 并发证据。任何命令未执行、环境未达到、结果未归档或角色未签字，都只能报告为 GA 准备中。</p>
+<h2 id="_6">计划自检</h2>
+<ul>
+<li>规格范围映射：首发范围/排除项由任务 1、4、7 覆盖；安全由任务 1、3、4 覆盖；类型与测试由任务 2、3、7 覆盖；staging full 由任务 4 覆盖；恢复/RPO/RTO/相邻升级由任务 5 覆盖；50 并发由任务 6 覆盖；支持/签字/发布由任务 7 覆盖。</li>
+<li>依赖完整：任务 1 无依赖；任务 2 依赖 1；任务 3 依赖 2；任务 4 依赖 3；任务 5/6 依赖 4；任务 7 依赖全部前置任务。</li>
+<li>占位符检查：<code>&lt;staging-api&gt;</code>、<code>&lt;staging-web&gt;</code>、<code>&lt;GA_VERSION&gt;</code> 是执行时从 staging 和版本决策得到的具体参数，不是代码实现占位；执行前必须替换并记录实际值。</li>
+<li>安全检查：所有真实 secret 只通过控制台/secret manager 注入，不进入计划证据、Git、日志或截图。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

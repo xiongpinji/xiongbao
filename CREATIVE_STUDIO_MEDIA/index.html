@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/CREATIVE_STUDIO_MEDIA/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>短剧工厂媒体设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u77ed\u5267\u5de5\u5382\u5a92\u4f53\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "CREATIVE_STUDIO_MEDIA.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/CREATIVE_STUDIO_MEDIA/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">短剧工厂媒体设计</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_2">一、能力矩阵</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mediabasepy">二、抽象接口（media/base.py）</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#provider">三、provider 实现</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#settings-mediasettings-xagent_media__">四、配置（settings MediaSettings，环境变量前缀 XAGENT_MEDIA__）</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#api">五、API 端点</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">六、与短剧工作流衔接</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">短剧工厂媒体设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/CREATIVE_STUDIO_MEDIA.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="_1">短剧工厂 · 媒体生成设计（多模型可插拔）</h1>
+<blockquote>
+<p>决策：媒体（图像 / 视频）生成采用<strong>多模型可插拔 provider 架构</strong>，不绑定单一平台 key。
+预留通用接口对接：图像 = gpt-image-2 / DALL·E（OpenAI 兼容）；视频 = 可灵 Kling / 即梦 Jimeng / 通用任务式 HTTP。
+未配 key 时 NullProvider 占位，流程不中断（lite/CI 零配置可跑）。</p>
+</blockquote>
+<h2 id="_2">一、能力矩阵</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>模式（GenerationMode）</th>
+<th>provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文生图</td>
+<td>text_to_image</td>
+<td>OpenAI(gpt-image-2/dall-e-3)、Null</td>
+</tr>
+<tr>
+<td>图生图</td>
+<td>image_to_image</td>
+<td>OpenAI(images/edits)、Null</td>
+</tr>
+<tr>
+<td>文生视频</td>
+<td>text_to_video</td>
+<td>Kling、Jimeng、Generic、Null</td>
+</tr>
+<tr>
+<td>图生视频</td>
+<td>image_to_video</td>
+<td>Kling、Jimeng、Generic、Null</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mediabasepy">二、抽象接口（<code>media/base.py</code>）</h2>
+<pre><code class="language-python">class MediaKind(Enum): image / video / audio
+class GenerationMode(Enum): text_to_image / image_to_image / text_to_video / image_to_video / text_to_speech
+
+@dataclass
+class GenerationRequest:
+    kind, prompt, mode, model_id, negative_prompt,
+    loras, reference_images,           # 图生图/图生视频输入
+    duration_seconds, fps, resolution, seed, params
+
+@dataclass
+class GenerationTask:
+    task_id, provider, status, outputs, error, raw
+
+class MediaProvider(Protocol):
+    async def submit(req) -&gt; GenerationTask      # 提交任务
+    async def poll(task_id) -&gt; GenerationTask    # 轮询状态
+    def list_models(kind) -&gt; list[ModelCard]     # 可用模型
+</code></pre>
+<h2 id="provider">三、provider 实现</h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>文件</th>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OpenAIImageProvider</code></td>
+<td>image_providers.py</td>
+<td>文生图/图生图</td>
+<td>gpt-image-2 / dall-e-3，OpenAI 兼容端点（可指向官方或代理），同步返回</td>
+</tr>
+<tr>
+<td><code>KlingProvider</code></td>
+<td>video_providers.py</td>
+<td>文/图生视频</td>
+<td>可灵 Kling（预留，任务式 submit+poll）</td>
+</tr>
+<tr>
+<td><code>JimengProvider</code></td>
+<td>video_providers.py</td>
+<td>文/图生视频</td>
+<td>即梦 Jimeng（预留）</td>
+</tr>
+<tr>
+<td><code>GenericVideoProvider</code></td>
+<td>video_providers.py</td>
+<td>文/图生视频</td>
+<td>通用任务式，配 submit_url/poll_url 即可对接任意视频 API（Runway/Pika 等）</td>
+</tr>
+<tr>
+<td><code>NullProvider</code></td>
+<td>base.py</td>
+<td>全部</td>
+<td>占位降级，无需 key</td>
+</tr>
+</tbody>
+</table>
+<h2 id="settings-mediasettings-xagent_media__">四、配置（settings <code>MediaSettings</code>，环境变量前缀 <code>XAGENT_MEDIA__</code>）</h2>
+<pre><code class="language-bash"># provider 选择
+XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER=openai     # null | openai
+XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER=kling      # null | kling | jimeng | generic
+
+# 图像（OpenAI 兼容：gpt-image-2 / dall-e-3）
+XAGENT_MEDIA__OPENAI_IMAGE_API_KEY=...
+XAGENT_MEDIA__OPENAI_IMAGE_BASE_URL=https://api.openai.com/v1
+XAGENT_MEDIA__OPENAI_IMAGE_MODEL=gpt-image-2
+
+# 视频（可灵）
+XAGENT_MEDIA__KLING_API_KEY=...
+XAGENT_MEDIA__KLING_SUBMIT_URL=...
+XAGENT_MEDIA__KLING_POLL_URL=.../{task_id}
+
+# 视频（即梦）
+XAGENT_MEDIA__JIMENG_API_KEY=...
+XAGENT_MEDIA__JIMENG_SUBMIT_URL=...
+XAGENT_MEDIA__JIMENG_POLL_URL=.../{task_id}
+
+# 视频（通用任务式，对接任意 API）
+XAGENT_MEDIA__GENERIC_VIDEO_SUBMIT_URL=...
+XAGENT_MEDIA__GENERIC_VIDEO_POLL_URL=.../{task_id}
+XAGENT_MEDIA__GENERIC_VIDEO_API_KEY=...
+XAGENT_MEDIA__GENERIC_VIDEO_MODEL=...
+
+XAGENT_MEDIA__POLL_INTERVAL_SECONDS=3
+XAGENT_MEDIA__TASK_TIMEOUT_SECONDS=600
+</code></pre>
+<h2 id="api">五、API 端点</h2>
+<table>
+<thead>
+<tr>
+<th>端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/v1/creative-studio/media/models?kind=image\|video</code></td>
+<td>列出可用媒体模型</td>
+</tr>
+<tr>
+<td><code>POST /api/v1/creative-studio/media/generate</code></td>
+<td>媒体生成（kind/prompt/mode/model_id/reference_images/wait）</td>
+</tr>
+</tbody>
+</table>
+<p>强鉴权 + RBAC（read 列模型 / execute 生成）+ 审计。</p>
+<h2 id="_3">六、与短剧工作流衔接</h2>
+<p>节点链：需求解析 → 钩子结构 → 分镜 → 角色一致性 → 关键帧(image provider) → 视频(video provider) → 人工审核导出。</p>
+<ul>
+<li>关键帧节点：<code>MediaKind.image</code> + <code>text_to_image</code> / <code>image_to_image</code>（角色一致性用 reference_images + 固定 seed）</li>
+<li>视频节点：<code>MediaKind.video</code> + <code>text_to_video</code> / <code>image_to_video</code>（关键帧图驱动）</li>
+<li>异步任务进度回写 workflow timeline（Temporal 事件桥接）</li>
+</ul>
+<blockquote>
+<p>lite 默认 NullProvider，无需任何 key 即可走完短剧工作流草稿（产物为占位）。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../VIDEO_EDITOR_DESIGN/" class="btn btn-neutral float-left" title="视频剪辑引擎设计"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../EXEC_AGENTS_GUIDE/" class="btn btn-neutral float-right" title="执行 Agent 接入">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../VIDEO_EDITOR_DESIGN/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../EXEC_AGENTS_GUIDE/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

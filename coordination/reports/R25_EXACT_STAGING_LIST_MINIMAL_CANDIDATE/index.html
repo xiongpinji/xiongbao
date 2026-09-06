@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R25_EXACT_STAGING_LIST_MINIMAL_CANDIDATE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R25 Exact Staging List For Minimal Send-Review Candidate - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R25 Exact Staging List For Minimal Send-Review Candidate";
+        var mkdocs_page_input_path = "coordination/reports/R25_EXACT_STAGING_LIST_MINIMAL_CANDIDATE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R25_EXACT_STAGING_LIST_MINIMAL_CANDIDATE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R25 Exact Staging List For Minimal Send-Review Candidate</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R25_EXACT_STAGING_LIST_MINIMAL_CANDIDATE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r25-exact-staging-list-for-minimal-send-review-candidate">R25 Exact Staging List For Minimal Send-Review Candidate</h1>
+<blockquote>
+<p>日期：2026-07-07
+Owner：Claude Code
+范围：给出当前“最小可送审候选”的<strong>精确暂存文件列表</strong>。
+边界：本文件只列出建议暂存范围，不实际执行 <code>git add</code>。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 使用方法</h2>
+<p>R25 是给“真正冻结前的手工或半自动暂存”使用的。</p>
+<p>建议执行顺序：</p>
+<ol>
+<li>先确认 R24 的默认拍板建议仍成立；</li>
+<li>再按本文件的 <strong>A / B 两组</strong> 去暂存；</li>
+<li>暂存后检查 staged file list；</li>
+<li>若无误，再形成候选 commit。</li>
+</ol>
+<hr />
+<h2 id="2-a">2. A 组：代码 / 测试 / 运行配置</h2>
+<h3 id="ci">根目录与 CI</h3>
+<ul>
+<li><code>.github/workflows/ci.yml</code></li>
+<li><code>README.md</code></li>
+</ul>
+<h3 id="_1">后端源码</h3>
+<ul>
+<li><code>apps/api/xagent/api/v1/agents.py</code></li>
+<li><code>apps/api/xagent/api/v1/canvas.py</code></li>
+<li><code>apps/api/xagent/api/v1/creative_studio.py</code></li>
+<li><code>apps/api/xagent/api/v1/workflows.py</code></li>
+<li><code>apps/api/xagent/core/orchestration/loop.py</code></li>
+<li><code>apps/api/xagent/core/runtime/service.py</code></li>
+<li><code>apps/api/xagent/enterprise/auth/users.py</code></li>
+<li><code>apps/api/xagent/infra/repos/workflow.py</code></li>
+<li><code>apps/api/xagent/infra/settings.py</code></li>
+</ul>
+<h3 id="_2">后端测试</h3>
+<ul>
+<li><code>apps/api/tests/test_creative_studio.py</code></li>
+<li><code>apps/api/tests/test_orchestration.py</code></li>
+<li><code>apps/api/tests/test_runtime_runs.py</code></li>
+<li><code>apps/api/tests/test_settings.py</code></li>
+<li><code>apps/api/tests/test_workflow.py</code></li>
+</ul>
+<h3 id="_3">前端源码</h3>
+<ul>
+<li><code>apps/web/src/App.tsx</code></li>
+<li><code>apps/web/src/index.css</code></li>
+<li><code>apps/web/src/api/runtime.ts</code></li>
+<li><code>apps/web/src/api/chatStream.ts</code></li>
+<li><code>apps/web/src/components/chat/ConversationalCommand.tsx</code></li>
+<li><code>apps/web/src/components/effects/AmbientAurora.tsx</code></li>
+<li><code>apps/web/src/components/layout/AppShell.tsx</code></li>
+<li><code>apps/web/src/components/layout/CollapsedRail.tsx</code></li>
+<li><code>apps/web/src/components/layout/TopBar.tsx</code></li>
+<li><code>apps/web/src/components/layout/WorkspaceSidebar.tsx</code></li>
+<li><code>apps/web/src/components/layout/ShellContextPanel.tsx</code></li>
+<li><code>apps/web/src/components/runs/RunConsole.tsx</code></li>
+<li><code>apps/web/src/components/runs/RunValidationPanel.tsx</code></li>
+<li><code>apps/web/src/components/settings/GeneralSettings.tsx</code></li>
+<li><code>apps/web/src/components/settings/SettingsLayout.tsx</code></li>
+<li><code>apps/web/src/pages/AgentsPage.tsx</code></li>
+<li><code>apps/web/src/pages/ChatPage.tsx</code></li>
+<li><code>apps/web/src/pages/CreativeStudioPage.tsx</code></li>
+<li><code>apps/web/src/pages/EditorPage.tsx</code></li>
+<li><code>apps/web/src/pages/LoginPage.tsx</code></li>
+<li><code>apps/web/src/pages/MemoryPage.tsx</code></li>
+<li><code>apps/web/src/pages/OpenSourcePage.tsx</code></li>
+<li><code>apps/web/src/pages/ProfessionalModePage.tsx</code></li>
+<li><code>apps/web/src/pages/RunPage.tsx</code></li>
+<li><code>apps/web/src/pages/WorkflowsPage.tsx</code></li>
+<li><code>apps/web/src/shell/shellRoutes.ts</code></li>
+<li><code>apps/web/src/shell/useShellStore.tsx</code></li>
+<li><code>apps/web/src/shell/workspaceStorage.ts</code></li>
+</ul>
+<h3 id="_4">前端测试</h3>
+<ul>
+<li><code>apps/web/tests/runConsoleViews.test.mjs</code></li>
+<li><code>apps/web/tests/runtimeApi.test.mjs</code></li>
+<li><code>apps/web/tests/workspaceCatalog.test.mjs</code></li>
+<li><code>apps/web/tests/chatStream.test.mjs</code></li>
+</ul>
+<h3 id="_5">前端静态资源</h3>
+<ul>
+<li><code>apps/web/public/assets/xiongbao-logo.png</code></li>
+<li><code>apps/web/public/assets/xiongbao-mascot.png</code></li>
+</ul>
+<h3 id="e2e">E2E</h3>
+<ul>
+<li><code>tests/e2e/specs/creative-smoke.spec.ts</code></li>
+<li><code>tests/e2e/specs/full-flow.spec.ts</code></li>
+</ul>
+<h3 id="_6">运行 / 部署配置</h3>
+<ul>
+<li><code>deploy/compose/.env.example</code></li>
+<li><code>deploy/compose/docker-compose.yml</code></li>
+<li><code>deploy/helm/templates/worker-web.yaml</code></li>
+</ul>
+<hr />
+<h2 id="3-b-releasereadiness">3. B 组：最小 release/readiness 文档主干</h2>
+<h3 id="_7">核心发布与状态文档</h3>
+<ul>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></li>
+<li><code>docs/ROADMAP.md</code></li>
+<li><code>docs/DEPLOYMENT_RUNBOOK.md</code></li>
+<li><code>docs/INTEGRATION_GUIDE.md</code></li>
+<li><code>docs/项目总览与开发指南.md</code></li>
+<li><code>docs/XIONG_BAO_接手与启动说明_2026-07-03.md</code></li>
+</ul>
+<h3 id="_8">当前候选与交付主索引</h3>
+<ul>
+<li><code>docs/coordination/TASK_BOARD.md</code></li>
+<li><code>docs/coordination/reports/delivery-report.md</code></li>
+<li><code>docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md</code></li>
+<li><code>docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md</code></li>
+<li><code>docs/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST.md</code></li>
+<li><code>docs/coordination/reports/R22_CANDIDATE_INCLUSION_LIST.md</code></li>
+<li><code>docs/coordination/reports/R23_MINIMAL_SEND_REVIEW_CANDIDATE_FILESET.md</code></li>
+<li><code>docs/coordination/reports/R24_CANDIDATE_FREEZE_EXECUTION_SHEET.md</code></li>
+</ul>
+<hr />
+<h2 id="4">4. 本轮不要暂存的文件</h2>
+<h3 id="_9">明确不要进候选</h3>
+<ul>
+<li><code>apps/api/api-8000.err.log</code></li>
+<li><code>apps/api/api-8000.log</code></li>
+<li><code>apps/api/r3-api-8000.err.log</code></li>
+<li><code>apps/api/r3-api-8000.log</code></li>
+<li><code>apps/api/r3-canvas-snapshot.json</code></li>
+<li><code>apps/web/frontend-3000-20260702-201604.err.log</code></li>
+<li><code>apps/web/frontend-3000-20260702-201604.log</code></li>
+<li><code>apps/web/frontend-3000-20260703-123118.err.log</code></li>
+<li><code>apps/web/frontend-3000-20260703-123118.log</code></li>
+<li><code>apps/web/r3-web-3100.err.log</code></li>
+<li><code>apps/web/r3-web-3100.log</code></li>
+<li><code>apps/web/08_diff_fix/codex-ui-1to1-audit-20260705.md</code></li>
+<li><code>docs/FRONTEND_未提交改动收口清单_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_演示态标识方案_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_演示态标识逐文件改动清单_2026-07-03.md</code></li>
+<li><code>docs/FRONTEND_页面验收执行版_2026-07-03.md</code></li>
+<li><code>docs/coordination/EXECUTION_LIVE_OUTPUT_PROTOCOL.md</code></li>
+<li><code>docs/coordination/README.md</code></li>
+<li><code>docs/coordination/TASK_PACKAGE_PROTOCOL.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-03-frontend-preview-boundaries.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-05-commercial-readiness-execution-plan.md</code></li>
+</ul>
+<h3 id="_10">本轮先不纳入，待拍板</h3>
+<ul>
+<li><code>deploy/helm/templates/deployment.yaml</code></li>
+<li><code>deploy/helm/values.yaml</code></li>
+<li><code>deploy/keycloak/xagent-realm.json</code></li>
+<li><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></li>
+<li><code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li><code>docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md</code></li>
+<li><code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/01-login.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/02-chat-workbench.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/03-workflow.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/04-run-console.png</code></li>
+<li><code>docs/coordination/reports/evidence/r9-key-pages/05-settings-index.png</code></li>
+<li><code>tests/e2e/specs/r9-visual-evidence.spec.ts</code></li>
+</ul>
+<hr />
+<h2 id="5-4">5. 暂存后必须检查的 4 件事</h2>
+<p>在真正形成候选 commit 前，必须检查：</p>
+<ol>
+<li>staged 文件列表里<strong>没有</strong> <code>.log</code>、snapshot、audit 记录；</li>
+<li>staged 文件列表里<strong>没有</strong> Helm / Keycloak / 扩展证据包（除非已拍板同意）；</li>
+<li>staged 文件列表里<strong>包含</strong> A 组与 B 组的核心文件；</li>
+<li>staged diff 对应的验证口径仍然成立：</li>
+<li>前端 <code>lint/typecheck/build</code> 通过</li>
+<li>后端 <code>ruff/pytest</code> 通过</li>
+<li>许可证门禁通过</li>
+</ol>
+<hr />
+<h2 id="6">6. 一句话结论</h2>
+<blockquote>
+<p>如果现在就要开始真正冻结，这份 R25 就是“默认应暂存哪些文件”的精确清单；先按它形成 staged candidate，再决定拍板项，最后才进入 branch / commit / CI 绑定。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

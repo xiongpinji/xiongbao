@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/roadmap-v2-ops-automation-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Roadmap v2 B 自动化运营增强包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Roadmap v2 B \u81ea\u52a8\u5316\u8fd0\u8425\u589e\u5f3a\u5305";
+        var mkdocs_page_input_path = "coordination/reports/roadmap-v2-ops-automation-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/roadmap-v2-ops-automation-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Roadmap v2 B 自动化运营增强包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/roadmap-v2-ops-automation-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="roadmap-v2-b">Roadmap v2 B 自动化运营增强包</h1>
+<blockquote>
+<p>适用阶段：Roadmap v2</p>
+<p>用途：在当前商用交付标准已达成的前提下，把自动化运营增强方向冻结成一份执行包，为后续告警联动、自动恢复、自动证据归档与自动运行态汇总提供统一入口。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>B 自动化运营增强包的目标是：</p>
+<blockquote>
+<p><strong>把 <code>xagent</code> 从“已有人工值守与恢复能力”继续推进到“更多依赖系统自动发现、自动归档、自动恢复与自动汇总”的运营形态。</strong></p>
+</blockquote>
+<p>这一步不要求立刻完成全自动运营，但必须明确：</p>
+<ul>
+<li>哪些运营动作仍依赖人工；</li>
+<li>哪些可以优先自动化；</li>
+<li>自动化增强后要减少什么人工成本；</li>
+<li>自动化的最小输出物是什么。</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前已有基础</h2>
+<p>当前已经具备：</p>
+<ul>
+<li>运维手册与最小排障路径；</li>
+<li>稳定性 / 恢复包与演练记录；</li>
+<li>可观测 / 告警方向包；</li>
+<li>发布 / 回滚与签字证据包；</li>
+<li>支持升级路径与分层支持模型。</li>
+</ul>
+<p>当前可直接复用的材料：</p>
+<ul>
+<li><code>docs/OPERATIONS_MANUAL_V1.md</code></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/SUPPORT_ESCALATION_PATH_V1.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g1-a2-stability-package.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g1-stability-rehearsal.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g3-c2-observability-package.md</code></li>
+</ul>
+<hr />
+<h2 id="3">3. 当前缺口</h2>
+<h3 id="31">3.1 告警联动缺口</h3>
+<ul>
+<li>当前知道哪些信号危险，但仍多靠人工发现与人工聚合；</li>
+<li>尚未形成自动告警升级与自动通知的统一设计入口。</li>
+</ul>
+<h3 id="32">3.2 自动恢复缺口</h3>
+<ul>
+<li>当前恢复路径可执行，但仍以人工判断与人工执行为主；</li>
+<li>还没有把可自动恢复的动作正式抽象出来。</li>
+</ul>
+<h3 id="33">3.3 自动证据归档缺口</h3>
+<ul>
+<li>当前证据需要人工记录、人工归档、人工回填文档；</li>
+<li>后续应明确哪些证据可以自动抓取和自动归档。</li>
+</ul>
+<h3 id="34">3.4 自动运行态汇总缺口</h3>
+<ul>
+<li>当前 Goal / Run / Workflow / Release 的结果可以查看，但还没有统一自动汇总入口；</li>
+<li>需要继续减少“看多份材料才能拼出全貌”的成本。</li>
+</ul>
+<hr />
+<h2 id="4">4. 下一步输出物</h2>
+<p>自动化运营增强包后续应产出：</p>
+<ul>
+<li>自动告警联动方向说明</li>
+<li>自动恢复动作清单</li>
+<li>自动证据归档入口</li>
+<li>自动运行态汇总入口</li>
+<li>自动化运营验证包</li>
+</ul>
+<hr />
+<h2 id="5">5. 当前结论</h2>
+<p>B 自动化运营增强包的作用不是立刻把运维变成全自动，而是：</p>
+<blockquote>
+<p><strong>把自动化运营正式拉成一条新主线，并给后续真实实现与验证提供统一入口。</strong></p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

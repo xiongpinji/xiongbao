@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R19 Full-Mode Secret Handoff Template - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R19 Full-Mode Secret Handoff Template";
+        var mkdocs_page_input_path = "coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R19 Full-Mode Secret Handoff Template</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r19-full-mode-secret-handoff-template">R19 Full-Mode Secret Handoff Template</h1>
+<blockquote>
+<p>Date: 2026-07-07
+Owner: Codex
+Scope: no-secret handoff template for R4 full-mode rehearsal recovery.</p>
+</blockquote>
+<h2 id="purpose">Purpose</h2>
+<p>This template gives the environment / release owner one place to provide full-mode configuration readiness evidence without exposing secret values in Git, chat, screenshots, or delivery reports.</p>
+<p>It is an input to R4. It is not proof that R4 target-environment rehearsal has completed.</p>
+<h2 id="boundaries">Boundaries</h2>
+<ul>
+<li>Do not paste real secret values into this file.</li>
+<li>Do not commit <code>.env</code>, <code>.env.rehearsal</code>, provider keys, passwords, private URLs, or token screenshots.</li>
+<li>Do not use lite/dev default accounts as full-mode rehearsal evidence.</li>
+<li>Do not mark R4, R5, R16, U2, or R19 as release-complete from this template alone.</li>
+</ul>
+<h2 id="candidate-binding">Candidate Binding</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required value / evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Candidate branch</td>
+<td><code>&lt;branch name&gt;</code></td>
+</tr>
+<tr>
+<td>Candidate commit</td>
+<td><code>&lt;commit sha&gt;</code></td>
+</tr>
+<tr>
+<td>Remote CI run</td>
+<td><code>&lt;CI run URL or run id&gt;</code></td>
+</tr>
+<tr>
+<td>Web build artifact</td>
+<td><code>&lt;apps/web/dist build timestamp and command output&gt;</code></td>
+</tr>
+<tr>
+<td>R18 freshness decision</td>
+<td><code>&lt;new candidate required / PR #6 d59faa3 only / other&gt;</code></td>
+</tr>
+<tr>
+<td>Handoff owner</td>
+<td><code>&lt;name or role&gt;</code></td>
+</tr>
+<tr>
+<td>Handoff timestamp</td>
+<td><code>&lt;ISO timestamp&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="secret-and-config-handoff">Secret And Config Handoff</h2>
+<p>Use secret-store references or ticket IDs, not values.</p>
+<table>
+<thead>
+<tr>
+<th>Variable / item</th>
+<th>Required for full mode</th>
+<th>Source reference, not value</th>
+<th>Validation evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>XAGENT_MODE</code></td>
+<td><code>full</code></td>
+<td><code>deploy/compose/.env.rehearsal</code> or platform env</td>
+<td>Config dump shows <code>full</code> without exposing secrets</td>
+</tr>
+<tr>
+<td><code>XAGENT_CORS_ORIGINS</code></td>
+<td>Target web origin only; no wildcard</td>
+<td>Config/ticket reference</td>
+<td>Reviewer confirms allowed origin list</td>
+</tr>
+<tr>
+<td><code>XAGENT_SECURITY__JWT_SECRET</code></td>
+<td>32+ chars random secret</td>
+<td>Secret manager path / CI secret name</td>
+<td><code>docker compose --env-file .env.rehearsal config --quiet</code> exits 0</td>
+</tr>
+<tr>
+<td><code>XAGENT_SECURITY__REQUIRE_AUTH</code></td>
+<td><code>true</code></td>
+<td>Config/ticket reference</td>
+<td>Runtime config review confirms auth required</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_NEXTAUTH_SECRET</code></td>
+<td>Random secret</td>
+<td>Secret manager path / CI secret name</td>
+<td>Compose config exits 0</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_SALT</code></td>
+<td>Random secret</td>
+<td>Secret manager path / CI secret name</td>
+<td>Compose config exits 0</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_INIT_USER_PASSWORD</code></td>
+<td>Strong one-time bootstrap password</td>
+<td>Secret manager path / bootstrap ticket</td>
+<td>Langfuse bootstrap/login evidence path</td>
+</tr>
+<tr>
+<td><code>POSTGRES_PASSWORD</code></td>
+<td>Strong password or managed DB credential</td>
+<td>Secret manager path / DB credential ref</td>
+<td>DB connection check evidence</td>
+</tr>
+<tr>
+<td><code>XAGENT_DB__URL</code></td>
+<td>Target Postgres URL</td>
+<td>Secret/config reference</td>
+<td><code>/ready</code> DB component is healthy</td>
+</tr>
+<tr>
+<td><code>XAGENT_CACHE__REDIS_URL</code></td>
+<td>Target Redis URL</td>
+<td>Secret/config reference</td>
+<td><code>/ready</code> cache component is healthy</td>
+</tr>
+<tr>
+<td><code>XAGENT_MEMORY__QDRANT_URL</code></td>
+<td>Target Qdrant URL</td>
+<td>Config reference</td>
+<td><code>/ready</code> vector-store component is healthy</td>
+</tr>
+<tr>
+<td><code>XAGENT_OBSERVABILITY__LANGFUSE_PUBLIC_KEY</code></td>
+<td>Langfuse project public key if tracing enabled</td>
+<td>Secret/config reference</td>
+<td>Trace appears in Langfuse or explicit disabled decision</td>
+</tr>
+<tr>
+<td><code>XAGENT_OBSERVABILITY__LANGFUSE_SECRET_KEY</code></td>
+<td>Langfuse project secret key if tracing enabled</td>
+<td>Secret manager path / CI secret name</td>
+<td>Trace appears in Langfuse or explicit disabled decision</td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__PROXY_URL</code></td>
+<td>Required if using LiteLLM path</td>
+<td>Config reference</td>
+<td>Test prompt or health evidence</td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__PROXY_API_KEY</code></td>
+<td>Required if LiteLLM proxy auth is enabled</td>
+<td>Secret manager path / CI secret name</td>
+<td>Test prompt succeeds</td>
+</tr>
+<tr>
+<td><code>XAGENT_LLM__OLLAMA_BASE_URL</code> / <code>XAGENT_LLM__OLLAMA_MODEL</code></td>
+<td>Required if using Ollama path</td>
+<td>Host/network evidence</td>
+<td>Model availability evidence</td>
+</tr>
+<tr>
+<td>Provider API key such as <code>XAGENT_LLM__OPENAI_API_KEY</code> or <code>XAGENT_LLM__DEEPSEEK_API_KEY</code></td>
+<td>Required if using direct provider path</td>
+<td>Secret manager path / provider vault ref</td>
+<td>Test prompt succeeds; no key in logs</td>
+</tr>
+<tr>
+<td><code>E2E_USERNAME</code> / <code>E2E_PASSWORD</code></td>
+<td>Full-mode test account</td>
+<td>Account source ticket + secret reference</td>
+<td>Login and Playwright evidence</td>
+</tr>
+</tbody>
+</table>
+<h2 id="full-mode-account-source">Full-Mode Account Source</h2>
+<p>Choose one and attach proof path:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Owner-filled evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Keycloak / OIDC user source</td>
+<td><code>&lt;realm/client/user setup evidence path&gt;</code></td>
+</tr>
+<tr>
+<td>DB / explicit initialization flow</td>
+<td><code>&lt;migration/init command and result path&gt;</code></td>
+</tr>
+<tr>
+<td>Existing staging user</td>
+<td><code>&lt;user approval and rotation evidence path&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p>Required account evidence:</p>
+<ul>
+<li>Account is not a lite/dev fallback.</li>
+<li>Account has the role needed for Run Console, workflows, settings, and the R4 smoke path.</li>
+<li>Password or login token is only referenced through a secret manager path.</li>
+<li><code>E2E_USERNAME</code> and <code>E2E_PASSWORD</code> map to the same full-mode account source.</li>
+</ul>
+<h2 id="port-and-dependency-handoff">Port And Dependency Handoff</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th style="text-align: right;">Default port</th>
+<th>Owner-filled status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres</td>
+<td style="text-align: right;">5432</td>
+<td><code>&lt;free / remapped to ... / managed&gt;</code></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td style="text-align: right;">6379</td>
+<td><code>&lt;free / remapped to ... / managed&gt;</code></td>
+</tr>
+<tr>
+<td>Qdrant HTTP</td>
+<td style="text-align: right;">6333</td>
+<td><code>&lt;free / remapped to ... / managed&gt;</code></td>
+</tr>
+<tr>
+<td>Qdrant gRPC</td>
+<td style="text-align: right;">6334</td>
+<td><code>&lt;free / remapped to ... / managed&gt;</code></td>
+</tr>
+<tr>
+<td>Langfuse</td>
+<td style="text-align: right;">3001</td>
+<td><code>&lt;free / remapped to ... / disabled with reason&gt;</code></td>
+</tr>
+<tr>
+<td>LiteLLM</td>
+<td style="text-align: right;">4000</td>
+<td><code>&lt;free / remapped to ... / not used&gt;</code></td>
+</tr>
+<tr>
+<td>ContextForge</td>
+<td style="text-align: right;">8080</td>
+<td><code>&lt;free / remapped to ... / not used&gt;</code></td>
+</tr>
+<tr>
+<td>OpenFGA</td>
+<td style="text-align: right;">8081</td>
+<td><code>&lt;free / remapped to ... / not used&gt;</code></td>
+</tr>
+<tr>
+<td>API</td>
+<td style="text-align: right;">8000</td>
+<td><code>&lt;free / remapped to ...&gt;</code></td>
+</tr>
+<tr>
+<td>Web</td>
+<td style="text-align: right;">3000</td>
+<td><code>&lt;free / remapped to ...&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p>Port preflight command:</p>
+<pre><code class="language-powershell">Get-NetTCPConnection -LocalPort 5432,6379,6333,6334,3001,4000,8080,8081,8000,3000 -ErrorAction SilentlyContinue
+</code></pre>
+<h2 id="r4-recovery-evidence-checklist">R4 Recovery Evidence Checklist</h2>
+<p>The R4 executor should attach command output paths for each item.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Evidence required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Candidate freeze</td>
+<td>Branch/commit and R18 freshness decision</td>
+</tr>
+<tr>
+<td>Env generation</td>
+<td><code>.env.rehearsal</code> generated from <code>.env.example</code>; values not printed</td>
+</tr>
+<tr>
+<td>Compose config</td>
+<td><code>docker compose --env-file .env.rehearsal config --quiet</code> exits 0</td>
+</tr>
+<tr>
+<td>Web build</td>
+<td><code>npm ci</code> and <code>npm run build</code> outputs for current candidate</td>
+</tr>
+<tr>
+<td>Dependency startup</td>
+<td><code>docker compose --env-file .env.rehearsal up -d --build postgres redis qdrant litellm langfuse contextforge openfga</code> and <code>ps</code> output</td>
+</tr>
+<tr>
+<td>App startup</td>
+<td><code>docker compose --env-file .env.rehearsal up -d --build api worker web</code> and <code>ps</code> output</td>
+</tr>
+<tr>
+<td>Logs</td>
+<td><code>api</code>, <code>worker</code>, <code>web</code>, and dependency logs paths</td>
+</tr>
+<tr>
+<td>Health</td>
+<td><code>/health</code>, <code>/ready</code>, and web root smoke outputs</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>Full-mode login proof for the explicit account</td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>One successful LLM path proof, or explicit release-owner waiver</td>
+</tr>
+<tr>
+<td>E2E</td>
+<td><code>creative-smoke</code> and optional <code>full-flow</code> output paths</td>
+</tr>
+<tr>
+<td>Backup / migration</td>
+<td>Alembic current/upgrade output and DB backup path if applicable</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reviewer-checklist">Reviewer Checklist</h2>
+<ul>
+<li>The handoff contains no secret values.</li>
+<li>Every required secret has a source reference and validation evidence field.</li>
+<li>Full-mode account source is explicit.</li>
+<li>At least one LLM path is selected and testable.</li>
+<li>Ports are either free, remapped with evidence, or replaced by managed services.</li>
+<li>R4 remains BLOCKED until these fields are filled and the rehearsal commands actually run.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

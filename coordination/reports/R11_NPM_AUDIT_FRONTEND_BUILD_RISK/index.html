@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R11 npm audit 与前端构建风险处置 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R11 npm audit \u4e0e\u524d\u7aef\u6784\u5efa\u98ce\u9669\u5904\u7f6e";
+        var mkdocs_page_input_path = "coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R11 npm audit 与前端构建风险处置</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r11-npm-audit">R11 npm audit 与前端构建风险处置</h1>
+<ul>
+<li>任务包：R11 npm audit 与前端构建风险处置包</li>
+<li>交付人：Codex</li>
+<li>日期：2026-07-06</li>
+<li>工作树：<code>D:\AI编程库\项目库\进行中的项目\xiong bao\xagent</code></li>
+<li>范围：<code>apps/web</code> 依赖审计、生产构建输出、Vite chunk warning 风险判定。</li>
+</ul>
+<h2 id="_1">结论</h2>
+<ul>
+<li><code>npm run build</code> 当前通过，Vite chunk size warning 不构成构建门禁失败。</li>
+<li><code>npm audit --omit=dev</code> 为 0，当前生产依赖安装面没有 audit 漏洞。</li>
+<li><code>npm audit</code> 全量仍有 1 moderate / 1 high，均来自 dev/build 工具链：<code>vite@5.4.21</code> 及其传递依赖 <code>esbuild@0.21.5</code>。</li>
+<li><code>npm audit</code> 给出的自动修复目标是 <code>vite@8.1.3</code>，属于 semver-major 升级；R11 不在本包内执行大版本升级。</li>
+<li>当前不能宣称“前端依赖安全风险已清零”；可以宣称“生产依赖面 audit 为 0，dev/build 工具链风险已识别并需在后续依赖升级包中处理”。</li>
+</ul>
+<h2 id="_2">验证命令与结果</h2>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm audit --json</code></td>
+<td>exit=1；metadata：1 moderate / 1 high / total 2</td>
+</tr>
+<tr>
+<td><code>npm audit --omit=dev --json</code></td>
+<td>exit=0；metadata：0 vulnerabilities</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>exit=0；<code>tsc -b &amp;&amp; vite build</code> 通过</td>
+</tr>
+<tr>
+<td><code>npm ls vite esbuild --all</code></td>
+<td><code>vite@5.4.21</code>，<code>esbuild@0.21.5</code></td>
+</tr>
+<tr>
+<td><code>npm outdated vite esbuild --long</code></td>
+<td><code>vite</code> latest <code>8.1.3</code>，direct wanted 保持 <code>5.4.21</code>；<code>esbuild</code> latest <code>0.28.1</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="audit">audit 风险拆解</h2>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>来源</th>
+<th>严重级别</th>
+<th>影响面</th>
+<th>当前处置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vite@5.4.21</code></td>
+<td>直接 devDependency</td>
+<td>high</td>
+<td>Vite dev/preview/build 工具链，主要涉及 dev server path traversal / Windows path deny bypass / UNC path handling 类风险</td>
+<td>不在 R11 做 major 升级；发布前需决定是否接受 dev 工具链风险或拆依赖升级包</td>
+</tr>
+<tr>
+<td><code>esbuild@0.21.5</code></td>
+<td><code>vite</code> 传递依赖</td>
+<td>moderate</td>
+<td>Vite dev server 场景，audit 指向 dev server 请求读取风险</td>
+<td>随 Vite 升级处理；生产依赖面未暴露</td>
+</tr>
+</tbody>
+</table>
+<p><code>npm audit --omit=dev</code> 为 0 的含义：如果目标环境只部署静态构建产物或生产依赖安装面，不包含 Vite devDependency，则 audit 漏洞不进入生产运行依赖面。但 CI、开发机、预览服务若运行 Vite dev/preview，仍应按工具链风险管理。</p>
+<h2 id="chunk-warning">构建与 chunk warning</h2>
+<p><code>npm run build</code> 输出：</p>
+<ul>
+<li><code>dist/index.html</code>：0.41 kB / gzip 0.28 kB</li>
+<li><code>dist/assets/index-CJndI0Kf.css</code>：57.98 kB / gzip 11.10 kB</li>
+<li><code>dist/assets/index-6Wsh-hMh.js</code>：606.20 kB / gzip 189.09 kB / sourcemap 2,289.88 kB</li>
+</ul>
+<p>Vite warning：</p>
+<ul>
+<li><code>Some chunks are larger than 500 kB after minification</code></li>
+</ul>
+<p>判定：</p>
+<ul>
+<li>该 warning 不改变退出码，当前不是 build gate 阻断。</li>
+<li>风险性质是首屏加载 / 缓存粒度 / sourcemap 体积和 reviewer 关注点，不是功能正确性失败。</li>
+<li>当前 <code>vite.config.ts</code> 未配置 <code>manualChunks</code>；<code>reactflow</code> 在工作流、画布、短剧工厂等多个页面被静态引入，可能是主 bundle 较大的主要来源之一。</li>
+</ul>
+<h2 id="_3">是否构成发布阻断</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>发布阻断判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm run build</code></td>
+<td>不阻断：退出码 0</td>
+</tr>
+<tr>
+<td>Vite chunk warning</td>
+<td>不阻断：性能/拆包优化风险，需进入 reviewer 关注点</td>
+</tr>
+<tr>
+<td><code>npm audit --omit=dev</code></td>
+<td>不阻断：生产依赖面 0 漏洞</td>
+</tr>
+<tr>
+<td>全量 <code>npm audit</code></td>
+<td>阻断“安全风险清零”表述；是否阻断发布取决于本次交付是否包含 Vite dev/preview 服务或要求 devDependency audit 全绿</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">建议处置</h2>
+<ol>
+<li>PR 审查包中明确列出：前端生产依赖 audit 为 0，但 dev/build 工具链仍有 Vite/esbuild audit 风险。</li>
+<li>若发布要求 <code>npm audit</code> 全量为 0，拆独立依赖升级包：升级 Vite 到当前安全主版本，并同步验证 <code>@vitejs/plugin-react</code>、TypeScript、Playwright、本地 build 和 CI。</li>
+<li>若当前版本只交付静态 bundle，不交付 Vite dev/preview 服务，可将全量 audit 风险作为非生产依赖风险接受，但需由发布负责人显式签字。</li>
+<li>chunk warning 不建议通过提高 <code>build.chunkSizeWarningLimit</code> 掩盖；后续应优先评估路由级 lazy import、ReactFlow/画布模块拆包或 manualChunks。</li>
+</ol>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

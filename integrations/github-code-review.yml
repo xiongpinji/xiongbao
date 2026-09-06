@@ -1,0 +1,60 @@
+# X-Agent Code Review — GitHub Action 模板（对标 OpenAI Codex Code Review）
+#
+# 用法：复制到被审仓库的 .github/workflows/code-review.yml
+#
+# 行为：
+#   1. PR 打开/更新时 checkout 仓库（fetch-depth: 0 以便跑 git diff base..head）
+#   2. 安装 xagent CLI
+#   3. xagent review 对 PR 的 base..head diff 做多维度评审
+#      —— 评审自动读取被审仓库的 AGENTS.md 自定义规则（分层：用户级 < 仓库根 < 子目录级），
+#         standards 维度的 finding 会引用被违反的规则原文
+#   4. 生成 Markdown 报告并以 gh pr comment 评论到 PR
+#
+# 前置条件：
+#   - LLM 密钥（任一）：XAGENT_LLM__OPENAI_API_KEY / XAGENT_LLM__ANTHROPIC_API_KEY /
+#     XAGENT_LLM__DEEPSEEK_API_KEY，存入仓库 Secrets
+#   - GITHUB_TOKEN 由 Actions 自动提供（需 pull-requests: write 权限）
+
+name: X-Agent Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史以计算 base..head diff
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 安装 xagent CLI（xagent = apps/api 包的 console script）
+      # 发布到 PyPI 后可简化为：pip install xagent
+      - name: Install xagent
+        run: pip install "git+https://github.com/<your-org>/xagent.git#subdirectory=apps/api"
+
+      - name: Run code review
+        env:
+          # 按所用 provider 配置其一
+          XAGENT_LLM__OPENAI_API_KEY: ${{ secrets.XAGENT_LLM__OPENAI_API_KEY }}
+          XAGENT_LLM__DEFAULT_MODEL: ${{ vars.XAGENT_LLM__DEFAULT_MODEL || 'gpt-4o-mini' }}
+        run: |
+          xagent review \
+            --repo . \
+            --base ${{ github.event.pull_request.base.sha }} \
+            --head ${{ github.event.pull_request.head.sha }} \
+            --output review.md
+
+      - name: Comment PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file review.md

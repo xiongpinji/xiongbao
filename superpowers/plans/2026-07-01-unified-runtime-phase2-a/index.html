@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-01-unified-runtime-phase2-a/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Unified Runtime Phase2-A 实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Unified Runtime Phase2-A \u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-01-unified-runtime-phase2-a.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-01-unified-runtime-phase2-a/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Unified Runtime Phase2-A 实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="unified-runtime-phase2-a">Unified Runtime Phase2-A 实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 把当前 unified runtime 从“主链可用”升级到“状态单调、失败可追踪、详情精确可读、前端失败态可操作”的 Phase2-A 版本。</p>
+<p><strong>架构：</strong> 本阶段不扩新产品面，只围绕一致性与失败态闭环做加固。后端继续以 <code>agent_tasks</code>、<code>evidence_records</code>、<code>workflow_runs</code> 为事实源：direct/stream 成功与失败主链都做单调状态持久化与失败 bundle；workflow detail 从列表扫描切到单条查询；前端继续复用现有 Run Console，只补失败态卡片与类型约束。所有改动优先复用现有 helper，不引入第二套 runtime persistence 模型。</p>
+<p><strong>技术栈：</strong> FastAPI、SQLAlchemy AsyncSession、Alembic、Celery、React 18、TypeScript、pytest、node:test</p>
+<hr />
+<h2 id="_1">文件结构与职责边界</h2>
+<h3 id="_2">核心修改文件</h3>
+<ul>
+<li><code>apps/api/xagent/api/v1/agents.py</code></li>
+<li>direct run 成功/失败的统一持久化入口。</li>
+<li><code>apps/api/xagent/api/v1/stream.py</code></li>
+<li>stream run 成功/失败的统一持久化入口。</li>
+<li><code>apps/api/xagent/api/v1/tasks.py</code></li>
+<li>task 列表/详情对 Celery 非终态的 read-repair 逻辑。</li>
+<li><code>apps/api/xagent/worker/celery_app.py</code></li>
+<li><code>agent_tasks</code> 状态机单调化与 read-repair helper。</li>
+<li><code>apps/api/xagent/core/runtime/service.py</code></li>
+<li><code>/runs/{run_id}</code> 聚合、workflow 精确读取、失败 bundle 合并。</li>
+<li><code>apps/api/xagent/infra/repos/workflow.py</code></li>
+<li>workflow run 单条查询接口。</li>
+<li><code>apps/api/tests/test_worker.py</code></li>
+<li>Celery 状态机、read-repair、失败回写测试。</li>
+<li><code>apps/api/tests/test_runtime_runs.py</code></li>
+<li><code>/runs/{run_id}</code> success/failure bundle、workflow 精确读取测试。</li>
+<li><code>apps/api/tests/test_workflow.py</code></li>
+<li>workflow failed / rolled_back / cancelled bundle 测试。</li>
+<li><code>apps/api/tests/test_creative_studio.py</code></li>
+<li>creative partial/failed delivery bundle 测试。</li>
+<li><code>apps/web/src/api/runtime.ts</code></li>
+<li><code>delivery.failure</code> 类型收口。</li>
+<li><code>apps/web/src/components/runs/RunValidationPanel.tsx</code></li>
+<li>失败态卡片与推荐动作展示。</li>
+<li><code>apps/web/src/components/runs/RunConsole.tsx</code></li>
+<li>失败态 banner / 顶部摘要增强。</li>
+<li><code>apps/web/tests/runtimeApi.test.mjs</code></li>
+<li><code>delivery.failure</code> DTO 测试。</li>
+<li><code>apps/web/tests/runConsoleViews.test.mjs</code></li>
+<li>失败态 UI 接线测试。</li>
+</ul>
+<h3 id="_3">可选新增文件（仅当现有文件过重时创建）</h3>
+<ul>
+<li><code>apps/api/xagent/core/runtime/failure_bundle.py</code></li>
+<li>集中 direct / stream / workflow / creative 的失败 bundle 构造逻辑。</li>
+<li>只有当 <code>runtime/service.py</code> 或 <code>creative_studio.py</code> 变得过重时才创建；默认优先不新增。</li>
+</ul>
+<hr />
+<h2 id="1direct-stream">任务 1：direct / stream 成功态原子化、失败态可追踪</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/xagent/api/v1/agents.py</code>
+- 修改：<code>apps/api/xagent/api/v1/stream.py</code>
+- 修改：<code>apps/api/xagent/worker/celery_app.py</code>
+- 测试：<code>apps/api/tests/test_runtime_runs.py</code>
+- 测试：<code>apps/api/tests/test_worker.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：补 direct / stream 失败闭环的失败测试</strong></li>
+</ul>
+<pre><code class="language-python">async def test_runs_api_direct_agent_failure_persists_failed_task_and_failure_bundle(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -&gt; None:
+    from xagent.api.v1 import agents as agents_api
+
+    async def _boom_run_agent(*args, **kwargs):
+        raise RuntimeError(&quot;direct run exploded&quot;)
+
+    monkeypatch.setattr(agents_api, &quot;run_agent&quot;, _boom_run_agent)
+    token = create_access_token(user_id=&quot;direct-fail&quot;, tenant_id=&quot;tenant-1&quot;, roles=[&quot;member&quot;])
+
+    resp = await client.post(
+        &quot;/api/v1/agents/run&quot;,
+        json={&quot;goal&quot;: &quot;direct failure evidence&quot;},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 500
+    run_id = resp.json()[&quot;run_id&quot;]
+
+    detail = await client.get(f&quot;/api/v1/runs/{run_id}&quot;, headers=_auth(token))
+    assert detail.status_code == 200
+    assert detail.json()[&quot;task&quot;][&quot;status&quot;] == &quot;failed&quot;
+    assert detail.json()[&quot;delivery&quot;][&quot;status&quot;] == &quot;blocked&quot;
+    assert detail.json()[&quot;delivery&quot;][&quot;failure&quot;][&quot;reason&quot;] == &quot;direct run exploded&quot;
+    assert [row[&quot;kind&quot;] for row in detail.json()[&quot;evidence&quot;]] == [
+        &quot;request.input&quot;,
+        &quot;result.failed&quot;,
+        &quot;delivery.generated&quot;,
+    ]
+</code></pre>
+<pre><code class="language-python">async def test_runs_api_stream_failure_before_result_still_persists_failed_bundle(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -&gt; None:
+    from xagent.api.v1 import stream as stream_api
+
+    async def _boom_run_agent(*args, **kwargs):
+        raise RuntimeError(&quot;stream run exploded&quot;)
+
+    monkeypatch.setattr(stream_api, &quot;run_agent&quot;, _boom_run_agent)
+    token = create_access_token(user_id=&quot;stream-fail&quot;, tenant_id=&quot;tenant-1&quot;, roles=[&quot;member&quot;])
+
+    resp = await client.post(
+        &quot;/api/v1/stream/agents/run&quot;,
+        json={&quot;goal&quot;: &quot;stream failure evidence&quot;},
+        headers={**_auth(token), &quot;Accept&quot;: &quot;text/event-stream&quot;},
+    )
+
+    assert resp.status_code == 200
+    assert &quot;event: error&quot; in resp.text
+    error_payload = _extract_sse_payload(resp.text, &quot;error&quot;)
+    run_id = error_payload[&quot;run_id&quot;]
+
+    detail = await client.get(f&quot;/api/v1/runs/{run_id}&quot;, headers=_auth(token))
+    assert detail.status_code == 200
+    assert detail.json()[&quot;task&quot;][&quot;status&quot;] == &quot;failed&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认当前实现仍有失败态闭环缺口</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py -k &quot;direct_agent_failure or stream_failure_before_result&quot; -q
+</code></pre>
+<p>预期：FAIL，表现为 <code>/runs/{run_id}</code> 404、evidence 缺失或 failure bundle 字段缺失。</p>
+<ul>
+<li>[ ] <strong>步骤 3：收敛 direct / stream 成功/失败持久化入口</strong></li>
+</ul>
+<p><code>apps/api/xagent/worker/celery_app.py</code></p>
+<pre><code class="language-python">async def persist_agent_run_bundle_in_session(
+    session: AsyncSession,
+    *,
+    task_id: str,
+    run_id: str,
+    tenant_id: str,
+    owner_id: str,
+    kind: str,
+    backend: str,
+    status: str,
+    input_payload: dict[str, Any],
+    result_payload: dict[str, Any],
+    error: str,
+    started_at: datetime | None,
+    finished_at: datetime | None,
+    validation_summary: dict[str, Any],
+    delivery_summary: dict[str, Any],
+    preview_summary: dict[str, Any],
+    evidence_records: list[dict[str, Any]],
+) -&gt; None:
+    await persist_agent_task_record_in_session(
+        session,
+        task_id=task_id,
+        run_id=run_id,
+        tenant_id=tenant_id,
+        owner_id=owner_id,
+        kind=kind,
+        backend=backend,
+        status=status,
+        input_payload=input_payload,
+        result_payload=result_payload,
+        error=error,
+        started_at=started_at,
+        finished_at=finished_at,
+        validation_summary=validation_summary,
+        delivery_summary=delivery_summary,
+        preview_summary=preview_summary,
+    )
+    await persist_evidence_bundle(
+        session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        task_id=task_id,
+        records=evidence_records,
+    )
+</code></pre>
+<p><code>apps/api/xagent/api/v1/agents.py</code></p>
+<pre><code class="language-python">run_id = uuid.uuid4().hex
+started_at = datetime.now(UTC)
+try:
+    result = await run_agent(..., run_id=run_id, session=session)
+    result_payload = result.to_dict()
+    delivery_summary = _build_success_delivery_summary(result_payload)
+    await persist_agent_run_bundle_in_session(...)
+    await session.commit()
+except Exception as exc:
+    failed_result = _build_failure_result_summary(run_id=run_id, error=str(exc), role=body.role)
+    failed_delivery = _build_failure_delivery_summary(run_id=run_id, result_summary=failed_result)
+    await persist_agent_run_bundle_in_session(...)
+    await session.commit()
+    raise HTTPException(status_code=500, detail={&quot;run_id&quot;: run_id, &quot;error&quot;: str(exc)})
+</code></pre>
+<p><code>apps/api/xagent/api/v1/stream.py</code></p>
+<pre><code class="language-python">result = None
+run_id = uuid.uuid4().hex
+started_at = datetime.now(UTC)
+...
+if result is not None and _is_runtime_persistence_schema_mismatch(exc):
+    await queue.put(_sse(&quot;done&quot;, {&quot;steps&quot;: result.steps, &quot;run_id&quot;: result.run_id}))
+else:
+    failed_result = _build_failure_result_summary(...)
+    failed_delivery = _build_failure_delivery_summary(...)
+    async with get_sessionmaker()() as session:
+        await persist_agent_run_bundle_in_session(...)
+        await session.commit()
+    await queue.put(_sse(&quot;error&quot;, {&quot;error&quot;: failure_error, &quot;run_id&quot;: run_id}))
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：运行 direct / stream 相关测试验证通过</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py -k &quot;direct_agent or stream_agent&quot; -q
+</code></pre>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/agents.py apps/api/xagent/api/v1/stream.py apps/api/xagent/worker/celery_app.py apps/api/tests/test_runtime_runs.py apps/api/tests/test_worker.py
+git commit -m &quot;fix: make direct and stream runtime persistence atomic&quot;
+</code></pre>
+<hr />
+<h2 id="2-workflow-limit200-scan">任务 2：把 workflow 详情读取从 <code>limit=200 + scan</code> 改成精确查询</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/xagent/infra/repos/workflow.py</code>
+- 修改：<code>apps/api/xagent/core/runtime/service.py</code>
+- 测试：<code>apps/api/tests/test_runtime_runs.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先写精确读取失败测试</strong></li>
+</ul>
+<pre><code class="language-python">async def test_runs_api_reads_workflow_by_run_id_without_recent_limit(
+    client: AsyncClient,
+    migrated_db,
+) -&gt; None:
+    token = create_access_token(user_id=&quot;wf-user&quot;, tenant_id=&quot;tenant-1&quot;, roles=[&quot;member&quot;])
+    async with get_sessionmaker()() as session:
+        for index in range(205):
+            await persist_workflow_run(
+                session,
+                {
+                    &quot;run_id&quot;: f&quot;wf-{index}&quot;,
+                    &quot;tenant_id&quot;: &quot;tenant-1&quot;,
+                    &quot;spec_name&quot;: f&quot;wf-{index}&quot;,
+                    &quot;status&quot;: &quot;completed&quot;,
+                    &quot;steps&quot;: [],
+                    &quot;timeline&quot;: [],
+                },
+            )
+            await session.commit()
+
+    resp = await client.get(&quot;/api/v1/runs/wf-0&quot;, headers=_auth(token))
+    assert resp.status_code == 200
+    assert resp.json()[&quot;workflow&quot;][&quot;run_id&quot;] == &quot;wf-0&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认当前 <code>limit=200 + scan</code> 失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py -k &quot;without_recent_limit&quot; -q
+</code></pre>
+<p>预期：FAIL。</p>
+<ul>
+<li>[ ] <strong>步骤 3：新增 workflow repo 单条读取接口并替换 runtime service</strong></li>
+</ul>
+<p><code>apps/api/xagent/infra/repos/workflow.py</code></p>
+<pre><code class="language-python">async def load_workflow_run_by_id(
+    session: AsyncSession,
+    tenant_id: str,
+    run_id: str,
+) -&gt; dict | None:
+    row = await session.get(WorkflowRunORM, run_id)
+    if row is None or row.tenant_id != tenant_id:
+        return None
+    return {
+        &quot;run_id&quot;: row.run_id,
+        &quot;tenant_id&quot;: row.tenant_id,
+        &quot;spec_name&quot;: row.spec_name,
+        &quot;status&quot;: row.status,
+        &quot;steps&quot;: json.loads(row.view).get(&quot;steps&quot;, []) if row.view else [],
+        &quot;timeline&quot;: json.loads(row.timeline_events) if row.timeline_events else [],
+    }
+</code></pre>
+<p><code>apps/api/xagent/core/runtime/service.py</code></p>
+<pre><code class="language-python">async def _load_workflow_view(...):
+    return await load_workflow_run_by_id(session, tenant_id, run_id)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：运行测试验证 workflow 精确读取通过</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py -k &quot;without_recent_limit&quot; -q
+</code></pre>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/infra/repos/workflow.py apps/api/xagent/core/runtime/service.py apps/api/tests/test_runtime_runs.py
+git commit -m &quot;fix: load workflow runtime detail by run id&quot;
+</code></pre>
+<hr />
+<h2 id="3-delivery-bundle">任务 3：补失败态 Delivery Bundle 的结构化字段与前端展示</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/xagent/core/runtime/service.py</code>
+- 修改：<code>apps/api/xagent/api/v1/workflows.py</code>
+- 修改：<code>apps/api/xagent/api/v1/creative_studio.py</code>
+- 修改：<code>apps/web/src/api/runtime.ts</code>
+- 修改：<code>apps/web/src/components/runs/RunValidationPanel.tsx</code>
+- 修改：<code>apps/web/src/components/runs/RunConsole.tsx</code>
+- 测试：<code>apps/api/tests/test_runtime_runs.py</code>
+- 测试：<code>apps/api/tests/test_creative_studio.py</code>
+- 测试：<code>apps/web/tests/runtimeApi.test.mjs</code>
+- 测试：<code>apps/web/tests/runConsoleViews.test.mjs</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先写 workflow / creative failed bundle 测试</strong></li>
+</ul>
+<pre><code class="language-python">async def test_runs_api_workflow_failed_bundle_has_structured_failure_fields(...) -&gt; None:
+    ...
+    assert body[&quot;delivery&quot;][&quot;failure&quot;] == {
+        &quot;state&quot;: &quot;failed&quot;,
+        &quot;source&quot;: &quot;workflow&quot;,
+        &quot;reason&quot;: &quot;synthetic workflow failure&quot;,
+        &quot;step_id&quot;: &quot;s1&quot;,
+        &quot;retryable&quot;: False,
+        &quot;recommended_action&quot;: &quot;检查失败步骤并重新运行&quot;,
+    }
+</code></pre>
+<pre><code class="language-python">async def test_runs_api_creative_partial_bundle_has_structured_failure_fields(...) -&gt; None:
+    ...
+    assert body[&quot;delivery&quot;][&quot;failure&quot;][&quot;state&quot;] == &quot;blocked&quot;
+    assert body[&quot;delivery&quot;][&quot;failure&quot;][&quot;source&quot;] == &quot;creative&quot;
+    assert body[&quot;delivery&quot;][&quot;failure&quot;][&quot;reason&quot;]
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认缺少 <code>delivery.failure</code> 而失败</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py tests/test_creative_studio.py -k &quot;structured_failure_fields&quot; -q
+</code></pre>
+<p>预期：FAIL。</p>
+<ul>
+<li>[ ] <strong>步骤 3：后端补 <code>delivery.failure</code> 字段</strong></li>
+</ul>
+<p><code>apps/api/xagent/api/v1/workflows.py</code></p>
+<pre><code class="language-python">def _build_workflow_failure_bundle(run_view: dict) -&gt; dict[str, Any] | None:
+    status = str(run_view.get(&quot;status&quot;) or &quot;&quot;)
+    if status not in {&quot;failed&quot;, &quot;rolled_back&quot;, &quot;cancelled&quot;}:
+        return None
+    failed_step = next(
+        (step for step in run_view.get(&quot;steps&quot;) or [] if step.get(&quot;status&quot;) in {&quot;failed&quot;, &quot;rolled_back&quot;}),
+        None,
+    )
+    return {
+        &quot;state&quot;: &quot;blocked&quot; if status == &quot;rolled_back&quot; else status,
+        &quot;source&quot;: &quot;workflow&quot;,
+        &quot;reason&quot;: str((failed_step or {}).get(&quot;error&quot;) or status),
+        &quot;step_id&quot;: (failed_step or {}).get(&quot;id&quot;),
+        &quot;step_name&quot;: (failed_step or {}).get(&quot;name&quot;),
+        &quot;retryable&quot;: False,
+        &quot;recommended_action&quot;: &quot;检查失败步骤并重新运行&quot;,
+    }
+</code></pre>
+<p><code>apps/api/xagent/api/v1/creative_studio.py</code></p>
+<pre><code class="language-python">def _build_production_failure_bundle(result: dict[str, Any]) -&gt; dict[str, Any] | None:
+    status = str(result.get(&quot;status&quot;) or &quot;&quot;)
+    if status not in {&quot;partial&quot;, &quot;failed&quot;}:
+        return None
+    failed_shot = next(
+        (
+            shot for shot in result.get(&quot;shots&quot;) or []
+            if shot.get(&quot;image_error&quot;) or shot.get(&quot;video_error&quot;)
+        ),
+        None,
+    )
+    return {
+        &quot;state&quot;: &quot;blocked&quot; if status == &quot;partial&quot; else &quot;failed&quot;,
+        &quot;source&quot;: &quot;creative&quot;,
+        &quot;reason&quot;: str((failed_shot or {}).get(&quot;video_error&quot;) or (failed_shot or {}).get(&quot;image_error&quot;) or status),
+        &quot;step_id&quot;: (failed_shot or {}).get(&quot;shot_id&quot;),
+        &quot;step_name&quot;: (failed_shot or {}).get(&quot;scene&quot;),
+        &quot;retryable&quot;: True,
+        &quot;recommended_action&quot;: &quot;检查失败镜头后重新生成&quot;,
+    }
+</code></pre>
+<p><code>apps/api/xagent/core/runtime/service.py</code></p>
+<pre><code class="language-python">failure = delivery.get(&quot;failure&quot;) if isinstance(delivery.get(&quot;failure&quot;), dict) else None
+if failure is None and workflow_view is not None:
+    failure = _build_workflow_failure_bundle(workflow_view)
+if failure is None and creative_view is not None:
+    failure = deepcopy((creative_view.get(&quot;delivery&quot;) or {}).get(&quot;failure&quot;))
+if failure is not None:
+    delivery[&quot;failure&quot;] = failure
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：前端显示失败态卡片</strong></li>
+</ul>
+<p><code>apps/web/src/api/runtime.ts</code></p>
+<pre><code class="language-ts">export interface RuntimeFailureSummary {
+  state: string;
+  source: string;
+  reason: string;
+  step_id?: string | null;
+  step_name?: string | null;
+  retryable?: boolean;
+  recommended_action?: string | null;
+}
+
+export interface RuntimeDeliverySummary extends Record&lt;string, unknown&gt; {
+  replay?: Record&lt;string, unknown&gt; | null;
+  resume?: Record&lt;string, unknown&gt; | null;
+  risks?: string[];
+  failure?: RuntimeFailureSummary | null;
+}
+</code></pre>
+<p><code>apps/web/src/components/runs/RunValidationPanel.tsx</code></p>
+<pre><code class="language-tsx">function renderFailureCard(failure: RuntimeFailureSummary | null | undefined) {
+  if (!failure) return null;
+  return (
+    &lt;section className=&quot;rounded-2xl border border-red-500/20 bg-red-500/5 p-4&quot;&gt;
+      &lt;div className=&quot;text-sm font-medium text-red-200&quot;&gt;失败态摘要&lt;/div&gt;
+      &lt;div className=&quot;mt-2 text-sm text-red-100&quot;&gt;{failure.reason}&lt;/div&gt;
+      &lt;div className=&quot;mt-2 text-xs text-red-200/80&quot;&gt;
+        来源：{failure.source} · 状态：{failure.state}
+      &lt;/div&gt;
+      {failure.step_name ? &lt;div className=&quot;mt-1 text-xs text-red-200/80&quot;&gt;位置：{failure.step_name}&lt;/div&gt; : null}
+      {failure.recommended_action ? &lt;div className=&quot;mt-2 text-xs text-red-100&quot;&gt;建议：{failure.recommended_action}&lt;/div&gt; : null}
+    &lt;/section&gt;
+  );
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行后端与前端失败 bundle 测试通过</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_runtime_runs.py tests/test_creative_studio.py -k &quot;structured_failure_fields&quot; -q
+cd ../web &amp;&amp; npm run typecheck &amp;&amp; node --test tests/runtimeApi.test.mjs tests/runConsoleViews.test.mjs
+</code></pre>
+<p>预期：全部 PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/core/runtime/service.py apps/api/xagent/api/v1/workflows.py apps/api/xagent/api/v1/creative_studio.py apps/web/src/api/runtime.ts apps/web/src/components/runs/RunValidationPanel.tsx apps/web/src/components/runs/RunConsole.tsx apps/api/tests/test_runtime_runs.py apps/api/tests/test_creative_studio.py apps/web/tests/runtimeApi.test.mjs apps/web/tests/runConsoleViews.test.mjs
+git commit -m &quot;feat: add structured failure bundles to runtime console&quot;
+</code></pre>
+<hr />
+<h2 id="_4">收口回归</h2>
+<ul>
+<li>[ ] <strong>步骤 1：运行后端核心套件</strong></li>
+</ul>
+<pre><code class="language-bash">cd apps/api &amp;&amp; pytest tests/test_worker.py tests/test_runtime_runs.py tests/test_creative_studio.py tests/test_workflow.py tests/test_task_contract.py tests/test_evidence_delivery.py -q
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行前端核心套件</strong></li>
+</ul>
+<pre><code class="language-bash">cd apps/web &amp;&amp; npm run typecheck &amp;&amp; node --test tests/runtimeApi.test.mjs tests/runConsoleViews.test.mjs
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：记录剩余非阻断项并停手</strong></li>
+</ul>
+<pre><code class="language-markdown">- workflow detail 当前仍是 limit=200 + scan（可列入 phase2-B）
+- direct/stream 的更强事务原子性仍可继续增强
+</code></pre>
+<hr />
+<h2 id="_5">自检</h2>
+<h3 id="_6">规格覆盖度</h3>
+<ul>
+<li>direct / stream 原子持久化与失败闭环：任务 1</li>
+<li>workflow 精确读取：任务 2</li>
+<li>workflow / creative 失败 bundle + 前端失败态：任务 3</li>
+<li>收口回归：最后回归</li>
+</ul>
+<h3 id="_7">占位符扫描</h3>
+<ul>
+<li>无 TODO / 待定 / 后续实现 占位。</li>
+</ul>
+<h3 id="_8">类型一致性</h3>
+<ul>
+<li>后端统一使用 <code>task/run/evidence/delivery/validation/failure</code></li>
+<li>前端统一使用 <code>RuntimeFailureSummary</code> 与 <code>delivery.failure</code></li>
+<li>所有入口继续以 <code>run_id</code> 为统一读取主键</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

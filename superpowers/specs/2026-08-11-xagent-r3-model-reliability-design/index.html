@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Web/API R3-A 真实模型可靠性基线设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Web/API R3-A \u771f\u5b9e\u6a21\u578b\u53ef\u9760\u6027\u57fa\u7ebf\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Web/API R3-A 真实模型可靠性基线设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-08-11-xagent-r3-model-reliability-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-webapi-r3-a">X-Agent Web/API R3-A 真实模型可靠性基线设计</h1>
+<blockquote>
+<p>日期：2026-08-11</p>
+<p>状态：Owner 已批准 50 次方案，待书面规格复核后进入实施</p>
+<p>基线：<code>feature/webapi-r2-staging-readiness</code> / <code>3d2403a</code></p>
+</blockquote>
+<h2 id="1">1. 目标</h2>
+<p>为 R2 已完成的 Web/API 本地发布候选建立第一版真实 Ollama 可靠性基线和服务等级目标（Service Level Objective，SLO）门禁。</p>
+<p>R3-A 不增加业务功能。它回答以下问题：</p>
+<ol>
+<li><code>qwen3:4b</code> 在真实产品入口中的成功率和延迟是多少；</li>
+<li>Chat、Scheduler、file_write 三类任务是否存在假成功；</li>
+<li>模型失败时，状态、错误和产物是否保持 fail-closed；</li>
+<li>同一批次结果能否重复执行、自动汇总并用于后续发布判断。</li>
+</ol>
+<h2 id="2">2. 范围边界</h2>
+<h3 id="21">2.1 本阶段包含</h3>
+<ul>
+<li>当前 <code>xagent-r2</code> 本地 Full Compose 环境。</li>
+<li>宿主机 Ollama <code>qwen3:4b</code>，不使用 MockLLM 或付费 provider。</li>
+<li>30 次无工具 Chat、10 次 Scheduler、10 次隔离 file_write，共 50 个统计样本。</li>
+<li>产品 API、数据库终态、checkpoint、Scheduler run、Git worktree、commit 和 patch 的真实链路。</li>
+<li>每样本原始结果、批次汇总、日志审计和脱敏 Markdown 报告。</li>
+<li>自动化合同、静态门和现有 R2 回归。</li>
+</ul>
+<h3 id="22">2.2 本阶段不包含</h3>
+<ul>
+<li>短剧、媒体生成、画布、剪辑和供应商链路。</li>
+<li>Tauri 桌面端、多机 HA、E2B 或客户现场演练。</li>
+<li>新模型下载、模型切换、隐藏 fallback 或付费 provider。</li>
+<li>远程 CI、push、tag、GitHub Release 或生产部署。</li>
+<li>通过额外补跑覆盖失败样本。</li>
+</ul>
+<h2 id="3">3. 当前缺口</h2>
+<p>R2 已具备以下基础：</p>
+<ul>
+<li>普通 Chat 使用 <code>tool_mode=none</code> / <code>route=chat_no_tools</code>；</li>
+<li>空响应在一次产品内恢复后仍为空时返回 <code>model_empty_response_after_retry</code>；</li>
+<li>API、SSE、Celery 和开发任务会拒绝非成功终态；</li>
+<li>Prometheus 已记录通用 HTTP、LLM 和 Agent 计数；</li>
+<li>R2 同轮浏览器和备份恢复均有真实 <code>qwen3:4b</code> 成功证据。</li>
+</ul>
+<p>但当前没有固定样本矩阵、不可变批次、按任务类型统计的成功率、P95 延迟、假成功计数或自动 SLO 判定。已有指标也不能单独证明答案精确、Scheduler result 正确或 patch 可下载。</p>
+<h2 id="4">4. 方案选择</h2>
+<h3 id="41-a-api">4.1 方案 A：产品 API 黑盒基线（选定）</h3>
+<p>通过正常注册、SSE Chat、Scheduler API 和 parallel development task API 执行完整产品链。优点是能覆盖鉴权、编排、模型、持久化和产物；代价是执行时间较长，provider 内部字段只记录产品实际暴露的部分。</p>
+<h3 id="42-b-litellmollama">4.2 方案 B：直接调用 LiteLLM/Ollama</h3>
+<p>直接调用 provider 能更快获得 token 和响应元数据，但绕过状态回写、Scheduler、worktree 和租户边界，不能作为产品 SLO。它只允许在基线失败后用于限定诊断，且诊断请求不能并入 50 个正式样本。</p>
+<h3 id="43-c">4.3 方案 C：先扩展产品观测</h3>
+<p>先修改产品以持久化 finish reason、恢复次数和 reasoning 长度，数据最完整，但会把观测改造和基线测量耦合。本轮不先扩大生产代码；产品未暴露的字段在报告中记为 <code>unknown</code>，不得推断。</p>
+<h2 id="5">5. 批次模型</h2>
+<p>一次执行生成唯一 <code>batch_id</code>，格式为 UTC 时间戳加随机后缀。批次包含固定的 50 个样本：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th style="text-align: right;">数量</th>
+<th style="text-align: right;">并发</th>
+<th style="text-align: right;">单样本产品请求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chat</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1 次 SSE run</td>
+</tr>
+<tr>
+<td>Scheduler</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1 次创建 + 1 次 run-now</td>
+</tr>
+<tr>
+<td>file_write</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1 次 parallel-run</td>
+</tr>
+</tbody>
+</table>
+<p>执行顺序固定为 Chat → Scheduler → file_write。全批次严格串行，避免本机 CPU、内存和显存竞争改变统计口径。</p>
+<p>每个样本只允许一次业务提交。状态轮询、读取详情、下载 patch 和 reject 清理不算业务重试。产品内部已有的有界恢复属于同一个样本，不能被测试工具再次提交来替代。</p>
+<p>50 个样本之外，批次末尾固定执行 1 次无模型租户隔离探针：创建第二 tenant，读取第一 tenant 的 Chat run、checkpoint 和 development task，三项均必须返回 403/404。运行前后还要执行 deep health、Worker pong、受保护容器身份和日志审计；这些检查不进入成功率或延迟样本。</p>
+<h3 id="51">5.1 批次中断</h3>
+<ul>
+<li>预检在样本 1 前失败：不创建正式批次结果。</li>
+<li>样本 1 开始后发生工具崩溃、Docker 中断或人工终止：批次标记 <code>aborted</code>。</li>
+<li><code>aborted</code> 批次不得与后续批次拼接，也不得进入 SLO 通过判定。</li>
+<li>修复测试工具后必须生成新的完整 50 样本批次；旧批次和失败原因保留。</li>
+</ul>
+<h2 id="6">6. 样本合同</h2>
+<h3 id="61-chat">6.1 Chat</h3>
+<p>每次使用唯一公开 marker：<code>R3-CHAT-&lt;batch&gt;-&lt;index&gt;</code>。</p>
+<p>必须满足：</p>
+<ul>
+<li>请求显式使用 <code>tool_mode=none</code>；</li>
+<li>started/input 记录 <code>route=chat_no_tools</code>；</li>
+<li>最终状态为 <code>succeeded</code>；</li>
+<li>final 和持久化 assistant message 均与 marker 精确相等；</li>
+<li>tool call、tool result 和 MockLLM 均为 0；</li>
+<li>错误响应不得发送 done 或伪造 final。</li>
+</ul>
+<h3 id="62-scheduler">6.2 Scheduler</h3>
+<p>每次创建唯一且默认启用的 interval job，<code>interval_seconds=86400</code>，goal 只要求回复唯一 marker：<code>R3-SCHEDULER-&lt;batch&gt;-&lt;index&gt;</code>。创建后立即 run-now，等待 attempt 1 终态。</p>
+<p>必须满足：</p>
+<ul>
+<li>attempt 1 为 <code>succeeded</code>；</li>
+<li>result 与 marker 精确相等；</li>
+<li>error 为空；</li>
+<li>agent run 有真实模型证据；</li>
+<li>样本结束后 job 被暂停，避免后续自动执行。</li>
+</ul>
+<h3 id="63-file_write">6.3 file_write</h3>
+<p>每次通过 <code>parallel-run</code> 提交单个隔离任务，要求 <code>file_write</code> 创建唯一文件 <code>R3_RELIABILITY_&lt;batch&gt;_&lt;index&gt;.md</code>，正文为唯一 marker。</p>
+<p>必须满足：</p>
+<ul>
+<li>capability 仅为 <code>file_write</code>；</li>
+<li>sub run 为 <code>succeeded</code>，且 <code>isolated=true</code>；</li>
+<li>development task 为 <code>awaiting_review</code>；</li>
+<li>worktree、result commit、diff 和 patch 均存在；</li>
+<li>patch 同时包含目标文件名和 marker；</li>
+<li>下载 patch 后记录 SHA-256；</li>
+<li>验证完成后调用 reject，清理 worktree 和分支；数据库审计记录保留。</li>
+</ul>
+<h2 id="7">7. 结果数据</h2>
+<p>每个样本写入一行 JSONL，至少包含：</p>
+<ul>
+<li><code>batch_id</code>、<code>sample_id</code>、<code>kind</code>、<code>index</code>；</li>
+<li><code>started_at</code>、<code>finished_at</code>、<code>duration_seconds</code>；</li>
+<li><code>http_status</code>、<code>terminal_status</code>、<code>success</code>；</li>
+<li><code>marker</code>、<code>exact_match</code>、<code>false_success</code>；</li>
+<li><code>model</code>、<code>route</code>、<code>tool_mode</code>；</li>
+<li><code>run_id</code>、<code>task_id</code>、<code>checkpoint_id</code>、<code>job_id</code>、<code>development_task_id</code>；</li>
+<li><code>error_code</code>、<code>finish_reason</code>；</li>
+<li><code>tool_call_count</code>、<code>artifact_count</code>、<code>patch_sha256</code>；</li>
+<li><code>mock_detected</code>、<code>forbidden_route_detected</code>。</li>
+</ul>
+<p><code>finish_reason</code> 只读取产品真实暴露值；缺失时必须写 <code>unknown</code>。JSONL 不记录密码、token、Authorization header、完整 reasoning 或系统 prompt。</p>
+<p>批次结束后生成：</p>
+<pre><code class="language-text">output/reliability/&lt;batch_id&gt;/samples.jsonl
+output/reliability/&lt;batch_id&gt;/summary.json
+output/reliability/&lt;batch_id&gt;/logs-audit.json
+docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md
+</code></pre>
+<p><code>output/reliability</code> 保存本机原始证据，不默认加入 Git。提交范围只包含脱敏报告、测试、工具、规格和任务板。</p>
+<h2 id="8-slo">8. SLO 门禁</h2>
+<p>完整批次只有同时满足以下条件才能判定 <code>passed</code>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align: right;">门槛</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chat 精确成功</td>
+<td style="text-align: right;">至少 29/30</td>
+</tr>
+<tr>
+<td>Scheduler 精确成功</td>
+<td style="text-align: right;">至少 9/10</td>
+</tr>
+<tr>
+<td>file_write 完整产物成功</td>
+<td style="text-align: right;">至少 9/10</td>
+</tr>
+<tr>
+<td>假成功</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>非成功样本明确 fail-closed</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>MockLLM</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>短剧/媒体 forbidden route</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>跨租户读取</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Chat P95</td>
+<td style="text-align: right;">不高于 120 秒</td>
+</tr>
+<tr>
+<td>Scheduler P95</td>
+<td style="text-align: right;">不高于 180 秒</td>
+</tr>
+<tr>
+<td>file_write P95</td>
+<td style="text-align: right;">不高于 240 秒</td>
+</tr>
+</tbody>
+</table>
+<p>P95 使用 nearest-rank：将同类持续时间升序排列，取 <code>ceil(0.95 × n)</code> 对应的值。数量和公式固定，不能在运行后更改。</p>
+<p>若一个批次没有非成功样本，fail-closed 指标记为 <code>not_applicable</code> 并视为通过；一旦存在非成功样本，其明确失败终态覆盖率必须为 100%。</p>
+<p>任何假成功、MockLLM、短剧/媒体请求或跨租户读取都属于硬失败，不受成功率门槛抵消。</p>
+<h2 id="9">9. 失败分类</h2>
+<p>失败必须归入以下一种，不允许只记录自由文本：</p>
+<ul>
+<li><code>http_error</code></li>
+<li><code>timeout</code></li>
+<li><code>model_empty_response</code></li>
+<li><code>wrong_final</code></li>
+<li><code>false_success</code></li>
+<li><code>missing_persistence</code></li>
+<li><code>missing_checkpoint</code></li>
+<li><code>scheduler_terminal_error</code></li>
+<li><code>missing_artifact</code></li>
+<li><code>patch_mismatch</code></li>
+<li><code>cleanup_failed</code></li>
+<li><code>mock_detected</code></li>
+<li><code>forbidden_route</code></li>
+<li><code>tenant_isolation_breach</code></li>
+<li><code>harness_error</code></li>
+</ul>
+<p>产品返回失败且状态、error 和产物均一致时，记为真实失败并视为 fail-closed；它仍计入成功率分母。产品状态为 succeeded 但答案或产物错误时，必须同时标记 <code>false_success</code>，整个批次失败。</p>
+<h2 id="10">10. 安全与清理</h2>
+<ul>
+<li>通过正常注册创建唯一 <code>r3-reliability-&lt;batch&gt;</code> 用户和 tenant。</li>
+<li>随机密码与 token 只保存在进程内，不接受命令行明文密码参数。</li>
+<li>输出只保留公开 marker、资源 ID、状态、耗时、错误码和哈希。</li>
+<li>Scheduler 样本完成后全部暂停。</li>
+<li>file_write 样本下载并验证 patch 后全部 reject；cleanup 失败单独计入结果。</li>
+<li>不删除数据库历史、不执行 <code>down -v</code>、不清理其他项目容器或卷。</li>
+<li>运行前后核对受保护的 <code>aicg-minio</code> 和 <code>aicg-postgres</code> 容器身份与健康。</li>
+</ul>
+<h2 id="11">11. 实现边界</h2>
+<p>第一版只增加一个专用测试工具及合同测试，不修改模型路由、恢复策略、数据库 schema 或生产 API。</p>
+<p>建议文件边界：</p>
+<ul>
+<li><code>scripts/run_r3_model_reliability.py</code>：CLI、预检、批次编排和退出码。</li>
+<li><code>scripts/r3_model_reliability.py</code>：结果类型、样本执行、统计和报告生成。</li>
+<li><code>tests/release/test_r3_model_reliability.py</code>：纯逻辑与 fake HTTP 边界合同。</li>
+<li><code>.gitignore</code>：忽略 <code>output/reliability/</code> 原始批次目录。</li>
+<li><code>docs/coordination/reports/WEB_API_R3_MODEL_RELIABILITY_BASELINE.md</code>：真实批次脱敏报告。</li>
+<li><code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code>：R3-A 状态与证据。</li>
+</ul>
+<p>工具使用项目现有 Python/httpx 依赖，不新增依赖或锁文件。</p>
+<h2 id="12-tdd">12. TDD 与验证</h2>
+<p>实现必须先建立以下红灯：</p>
+<ol>
+<li>固定生成 30/10/10 样本计划；</li>
+<li>Chat 精确匹配与错误 final 分类；</li>
+<li>succeeded + 错误答案/产物触发 <code>false_success</code>；</li>
+<li>失败状态满足 fail-closed；</li>
+<li>nearest-rank P95 和三类阈值判定；</li>
+<li>测试工具不自动重提业务请求；</li>
+<li>Scheduler 暂停和 development task reject 清理；</li>
+<li>token、密码和 reasoning 不进入结果；</li>
+<li>中断批次不能与其他批次拼接；</li>
+<li>第二 tenant 不能读取第一 tenant 的三类资源；</li>
+<li>CLI 根据 <code>passed</code>、<code>failed</code>、<code>aborted</code> 返回不同退出码。</li>
+</ol>
+<p>绿灯后必须运行：</p>
+<ul>
+<li>R3-A 定向合同；</li>
+<li>R2 release contracts；</li>
+<li>Web/API 后端发布范围；</li>
+<li>Ruff、format、静态质量和 <code>git diff --check</code>；</li>
+<li>当前 Compose preflight、deep health、worker pong、MCP/Prometheus/Grafana 健康；</li>
+<li>唯一一次正式 50 样本批次。</li>
+</ul>
+<h2 id="13">13. 状态规则</h2>
+<ul>
+<li>规格和计划通过：R3-A 进入 <code>READY</code>。</li>
+<li>工具和离线门通过、真实批次未开始：<code>CLAIMED</code>。</li>
+<li>正式批次满足全部 SLO：<code>REVIEW</code>。</li>
+<li>正式批次完成但未满足 SLO：<code>PARTIAL</code>，报告精确失败分布。</li>
+<li>正式批次因产品故障无法继续：<code>BLOCKED</code>，不得补跑掩盖。</li>
+<li>只有独立复审、证据与工作树收口完成后才能转 <code>DONE</code>。</li>
+</ul>
+<h2 id="14">14. 完成标准</h2>
+<p>R3-A 只有同时满足以下条件才能进入 <code>REVIEW</code>：</p>
+<ol>
+<li>50 个样本来自一个未中断的不可变批次；</li>
+<li>三类成功率和 P95 均满足第 8 节门槛；</li>
+<li>假成功、MockLLM、forbidden route 和租户泄漏均为 0；</li>
+<li>所有非成功样本具有一致的失败终态和错误；</li>
+<li>Scheduler 与 file_write 清理合同通过；</li>
+<li>原始 JSONL、汇总、日志审计和脱敏报告一致；</li>
+<li>当前 R2 回归、静态门、Compose 健康和工作树审计通过；</li>
+<li>报告明确本机单实例边界、失败样本和未验证范围；</li>
+<li>未执行 push、tag、远程发布或生产动作。</li>
+</ol>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

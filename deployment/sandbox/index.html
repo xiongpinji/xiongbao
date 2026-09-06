@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/deployment/sandbox/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>沙箱部署指南（RFC-001 分级执行隔离） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u6c99\u7bb1\u90e8\u7f72\u6307\u5357\uff08RFC-001 \u5206\u7ea7\u6267\u884c\u9694\u79bb\uff09";
+        var mkdocs_page_input_path = "deployment/sandbox.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/deployment/sandbox/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">沙箱部署指南（RFC-001 分级执行隔离）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/deployment/sandbox.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="rfc-001">沙箱部署指南（RFC-001 分级执行隔离）</h1>
+<blockquote>
+<p>适用场景：开启 shell / python 执行类工具（<code>XAGENT_TOOLS__ENABLE_SHELL</code> /
+<code>XAGENT_TOOLS__ENABLE_PYTHON_EXEC</code>）时，为不可信代码选择隔离后端。
+默认 <code>disabled</code>：不执行任何不可信代码，绝不在宿主机裸跑。</p>
+<p>注意（2026-08-03 起）：<code>python_exec</code> 在 <code>backend=disabled</code> 或沙箱不可用/执行失败时<strong>一律 fail-closed 拒绝执行</strong>，不再回退宿主机子进程；启用 <code>XAGENT_TOOLS__ENABLE_PYTHON_EXEC=true</code> 必须同时配置 docker/e2b 沙箱后端。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 分级对照</h2>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>后端</th>
+<th>隔离边界</th>
+<th>网络</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td><code>disabled</code></td>
+<td>不执行</td>
+<td>—</td>
+<td>lite 默认 / 本地演示 / 只读型 agent</td>
+</tr>
+<tr>
+<td>L1</td>
+<td><code>docker</code></td>
+<td>容器（namespace/cgroup）</td>
+<td><strong>默认禁网</strong>（<code>--network=none</code>）</td>
+<td>私有化主力 / 单机生产</td>
+</tr>
+<tr>
+<td>L2</td>
+<td><code>e2b</code></td>
+<td>firecracker microVM（每任务独立 VM）</td>
+<td><strong>模板默认有网</strong>（见 §4 警告）</td>
+<td>云 / SaaS 多租户 / 高并发</td>
+</tr>
+</tbody>
+</table>
+<p>生产模式（<code>XAGENT_MODE=full</code>）开启执行类工具时，启动校验强制要求
+<code>XAGENT_SANDBOX__BACKEND=docker</code>（或 <code>e2b</code>），否则拒绝启动。</p>
+<hr />
+<h2 id="2-l1docker">2. L1：Docker（私有化默认）</h2>
+<pre><code class="language-bash">XAGENT_SANDBOX__BACKEND=docker
+XAGENT_SANDBOX__DOCKER_IMAGE=python:3.11-slim   # 建议预构建最小镜像
+XAGENT_SANDBOX__MEM_LIMIT=512m
+XAGENT_SANDBOX__CPU_QUOTA=100000                # 100000 = 1 CPU
+XAGENT_SANDBOX__NETWORK_DISABLED=true           # 默认 --network=none
+XAGENT_SANDBOX__READONLY_ROOTFS=true            # 默认 --read-only
+XAGENT_SANDBOX__TIMEOUT_SECONDS=30
+</code></pre>
+<ul>
+<li>依赖：宿主机 Docker daemon（Windows 需 Docker Desktop，走 npipe）。</li>
+<li>安全语义：一次性容器（create → start → wait → logs → remove --force）、
+  默认禁网、资源限额、只读根 fs、超时 kill、输出 64K 截断、
+  工作区只读挂载 <code>/work</code>。</li>
+<li>选型：私有化 / 内网 / 单机生产的首选，零外部依赖、零按量成本。</li>
+</ul>
+<h2 id="3-l2e2b">3. L2：E2B（云 / 企业场景）</h2>
+<pre><code class="language-bash">XAGENT_SANDBOX__BACKEND=e2b
+XAGENT_SANDBOX__E2B_API_KEY=e2b_***             # 也可读 E2B_API_KEY 环境变量
+XAGENT_SANDBOX__E2B_TEMPLATE=code-interpreter   # 默认值
+XAGENT_SANDBOX__E2B_BASE_URL=https://api.e2b.dev  # 官方云，可指自托管网关
+XAGENT_SANDBOX__TIMEOUT_SECONDS=30
+</code></pre>
+<ul>
+<li>依赖：<code>pip install e2b-code-interpreter</code>（官方 SDK，优先）；
+  未安装时自动退化到 E2B REST API（httpx：POST /sandboxes 创建 →
+  POST /sandboxes/{id}/code 执行 → DELETE 销毁）。两者都不可用 → 明确中文报错，
+  绝不静默降级到宿主机。</li>
+<li>安全语义（与 L1 对齐）：一次性 sandbox（用后 kill/DELETE 销毁）、
+  执行超时透传并销毁、输出 64K 截断、无 key 明确报错。</li>
+<li>选型：SaaS 化 / 多租户高并发 / 不可信代码占比高的场景。每任务独立
+  microVM，串扰面收敛到 E2B 平台；不占用宿主机 Docker 容量，天然水平扩展。</li>
+</ul>
+<h2 id="4-l1-vs-l2">4. ⚠️ 网络隔离差异（L1 vs L2 的重要区别）</h2>
+<ul>
+<li><strong>L1 docker 默认 <code>--network=none</code></strong>：容器无任何网络，防数据外泄。</li>
+<li><strong>L2 E2B 官方模板（含默认 <code>code-interpreter</code>）默认有外网访问</strong>。
+  需要禁网 / 出口白名单时，必须自建 E2B 模板（自定义 Dockerfile +
+  防火墙规则），并用 <code>XAGENT_SANDBOX__E2B_TEMPLATE</code> 指向自建模板。</li>
+<li>处理敏感数据的私有化部署：优先 L1；或 L2 + 自建禁网模板。</li>
+</ul>
+<h2 id="5">5. 选型速查</h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本地演示 / 试点（不执行代码）</td>
+<td>L0 disabled（默认，零配置）</td>
+</tr>
+<tr>
+<td>私有化 / 内网生产，需执行代码</td>
+<td>L1 docker</td>
+</tr>
+<tr>
+<td>云 SaaS / 多租户高并发</td>
+<td>L2 e2b（官方云）</td>
+</tr>
+<tr>
+<td>企业自托管云沙箱</td>
+<td>L2 e2b + <code>E2B_BASE_URL</code> 指自托管网关 + 自建模板</td>
+</tr>
+<tr>
+<td>敏感数据 + 云部署</td>
+<td>L2 e2b + 自建禁网/白名单模板</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

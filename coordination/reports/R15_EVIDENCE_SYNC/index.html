@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R15_EVIDENCE_SYNC/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R15 Evidence Sync - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R15 Evidence Sync";
+        var mkdocs_page_input_path = "coordination/reports/R15_EVIDENCE_SYNC.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R15_EVIDENCE_SYNC/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R15 Evidence Sync</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R15_EVIDENCE_SYNC.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r15-evidence-sync">R15 Evidence Sync</h1>
+<blockquote>
+<p>Date: 2026-07-06
+Owner: Codex
+Scope: TASK_BOARD, delivery-report, R8 consistency audit, and the directly related ROADMAP status table.</p>
+</blockquote>
+<h2 id="summary">Summary</h2>
+<p>R15 resolves status and evidence drift across the coordination documents. The key correction is that R8 already has delivery evidence and its own audit says it was resubmitted for REVIEW, while TASK_BOARD still listed R8 as IN_PROGRESS. R15 moves R8 to REVIEW and updates stale R8 text that still described R10/R11/R12 as READY.</p>
+<p>2026-07-07 recovery refresh: R15 rechecks the live board before continuing the fixed R8 -&gt; R15 -&gt; R17 recovery chain. R8/R15/R17 remain REVIEW, R5 is now correctly blocked by R4 and R8, and R18/R19 are visible as Codex READY follow-up candidates but still need dependency-label review before claim.</p>
+<h2 id="current-state-matrix">Current State Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Status after R15/R17 closure sync</th>
+<th>Evidence source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0-A to P0-E</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md</code></td>
+</tr>
+<tr>
+<td>R1</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r1-远端-ci-全绿收口与失败项清零</code></td>
+</tr>
+<tr>
+<td>R2</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r2-frontend-build-可复现验证与构建门禁补齐</code></td>
+</tr>
+<tr>
+<td>R3</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r3-关键-e2e-冒烟包补齐并跑通</code></td>
+</tr>
+<tr>
+<td>R4</td>
+<td>BLOCKED</td>
+<td><code>docs/coordination/reports/delivery-report.md#r4-目标环境演练与发布证据归档</code></td>
+</tr>
+<tr>
+<td>R5</td>
+<td>BLOCKED</td>
+<td>TASK_BOARD; gated by R4 BLOCKED and R8 REVIEW</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r6-发布回滚-runbook-v1-补齐</code></td>
+</tr>
+<tr>
+<td>R7</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r7-环境基线与-secret-注入说明补齐</code></td>
+</tr>
+<tr>
+<td>R8</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/delivery-report.md#r8-对外口径一致性终检包</code>; <code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></td>
+</tr>
+<tr>
+<td>R9</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/delivery-report.md#r9-关键页面截图验收记录补齐</code></td>
+</tr>
+<tr>
+<td>R10</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R10_FULL_FLOW_E2E_TRIAGE.md</code></td>
+</tr>
+<tr>
+<td>R11</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R11_NPM_AUDIT_FRONTEND_BUILD_RISK.md</code></td>
+</tr>
+<tr>
+<td>R12</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></td>
+</tr>
+<tr>
+<td>R13</td>
+<td>DONE</td>
+<td><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></td>
+</tr>
+<tr>
+<td>R14</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R14_VITE_CHUNK_SPLIT.md</code></td>
+</tr>
+<tr>
+<td>R15</td>
+<td>REVIEW</td>
+<td>this report and delivery-report R15 section</td>
+</tr>
+<tr>
+<td>R16</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></td>
+</tr>
+<tr>
+<td>R17</td>
+<td>REVIEW</td>
+<td><code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code>; waits for scheduler/reviewer acceptance</td>
+</tr>
+<tr>
+<td>R18</td>
+<td>READY</td>
+<td>TASK_BOARD; Codex candidate-freshness package; dependency label currently says R17(DONE) while live R17 remains REVIEW, so claim needs reviewer/scheduler confirmation</td>
+</tr>
+<tr>
+<td>R19</td>
+<td>READY</td>
+<td>TASK_BOARD; Codex env-handoff package; dependency label currently says R16(DONE),U2(DONE) while live R16 remains REVIEW and U2 appears as delivery evidence, so claim needs reviewer/scheduler confirmation</td>
+</tr>
+<tr>
+<td>U2</td>
+<td>Evidence present / scheduler-owned status drift</td>
+<td><code>docs/coordination/reports/delivery-report.md#u2-r4-full-mode-环境恢复执行包</code>; not claimed or reclassified by R15</td>
+</tr>
+</tbody>
+</table>
+<h2 id="corrections-made">Corrections Made</h2>
+<ul>
+<li>TASK_BOARD: R8 moved from IN_PROGRESS to REVIEW because R8 delivery evidence already exists; stale U-CODEX waiting record removed after R15 resumed work.</li>
+<li>TASK_BOARD: R15 moved through CLAIMED and IN_PROGRESS, then to REVIEW with evidence.</li>
+<li>delivery-report: added R15 evidence section and updated R8 section so R10/R11/R12 are no longer described as READY.</li>
+<li>R8 audit: refreshed the unified status and unfinished-item list for R1/R10/R11/R12/R13/R14/R15/R16/R17.</li>
+<li>ROADMAP: fixed the R13 status from REVIEW to DONE and added current R15/R17 state.</li>
+<li>R8/R15/R17 closure refresh: R17 is now REVIEW, and the evidence chain no longer describes it as the next Codex claimable task.</li>
+<li>2026-07-07 recovery refresh: corrected the R5/U2 status matrix entries, recorded the R18/R19 dependency-label drift, and refreshed the U-CODEX live handoff text so it no longer says there are no Codex READY packages.</li>
+</ul>
+<h2 id="boundaries">Boundaries</h2>
+<ul>
+<li>R15 does not mark R4 complete.</li>
+<li>R15 does not assemble the final R5 PR package.</li>
+<li>R15 does not convert REVIEW packages into DONE.</li>
+<li>R15 does not mark R17's source-data package as the final PR review package.</li>
+<li>R15 does not claim formal commercial GA or release readiness.</li>
+<li>R15 does not claim R18/R19 or rewrite Claude Code-owned U2/R4/R5 gates.</li>
+</ul>
+<h2 id="2026-07-07-verification">2026-07-07 Verification</h2>
+<ul>
+<li>Drift scan command: <code>rg -n "U2 \| READY|当前已无可领取的 Codex READY 包|R18.*R17\(DONE\)|R5 \| READY \| TASK_BOARD; still gated by R4 and R8 review|R8/R14/R15/R16 are REVIEW" docs\coordination\reports\R15_EVIDENCE_SYNC.md docs\coordination\TASK_BOARD.md docs\coordination\reports\R17_PR_EVIDENCE_MATRIX_SOURCE.md docs\coordination\reports\delivery-report.md</code></li>
+<li>Result before refresh: found stale R5/U2 rows in this report, stale U-CODEX no-ready wording in TASK_BOARD, R18 dependency-label drift, and an R17 matrix line that omitted R17 from the REVIEW list.</li>
+<li>Result after refresh: R15 report no longer lists R5 or U2 as READY; R18/R19 dependency-label drift is explicit remaining risk for follow-up claim/review instead of being hidden.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

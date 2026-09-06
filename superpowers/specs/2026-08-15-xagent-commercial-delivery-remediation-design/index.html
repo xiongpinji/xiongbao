@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-08-15-xagent-commercial-delivery-remediation-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 全量商用交付整改设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5168\u91cf\u5546\u7528\u4ea4\u4ed8\u6574\u6539\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-08-15-xagent-commercial-delivery-remediation-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-08-15-xagent-commercial-delivery-remediation-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 全量商用交付整改设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-08-15-xagent-commercial-delivery-remediation-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 全量商用交付整改设计</h1>
+<ul>
+<li>日期：2026-08-15</li>
+<li>批准状态：用户已批准「三门独立、总目标统一」方案</li>
+<li>整改工作树：<code>.worktrees/commercial-delivery-20260815</code></li>
+<li>整改分支：<code>codex/commercial-delivery-20260815</code></li>
+<li>基线提交：<code>c87aab2b706c443bc4b92fb00aba8d65c986bd0f</code></li>
+<li>正式发布基线：<code>v1.1.3</code>，目标提交 <code>c8898ca16ea2cc1ac0f88d6b1948f8f9755cc48d</code></li>
+</ul>
+<h2 id="1">1. 目标</h2>
+<p>将当前仓库整改到可验证的商用交付标准。整改完成必须同时满足：</p>
+<ol>
+<li>Web/API、短剧、Tauri 桌面端分别通过独立交付门禁。</li>
+<li>版本、安全、依赖、镜像、CI 与证据治理使用同一套共享门禁。</li>
+<li>同一候选 SHA 上完成源码检查、测试、构建、隔离运行时、真实本地模型、浏览器、制品、备份恢复与回滚验证。</li>
+<li>本地候选、正式 GitHub Release 与客户生产验收始终保持不同状态，不互相替代。</li>
+<li>任何必需门禁失败、跳过、重试后通过或缺少外部条件时，不得宣称全量商用交付完成。</li>
+</ol>
+<h2 id="2">2. 当前基线与问题定义</h2>
+<p>整改以现场复现为准，不沿用历史「已完成」自述：</p>
+<ul>
+<li>API <code>pyproject.toml</code>、Web 与 README 报告 <code>1.1.3</code>，但运行时和 Helm 报告 <code>1.0.0</code>；当前版本检查器没有覆盖运行时、Helm 和桌面端。</li>
+<li>Windows <code>init-env</code> 因 <code>whoami.exe</code> 输出编码与 OEM 代码页假设不一致而失败；隔离 worktree 基线中 <code>tests.release.test_r2_preflight</code> 为 18 项中 3 项错误。</li>
+<li>LLM 配置 API 会把 provider key 写入明文 JSON，绕开已有 <code>SECRETREF:file:</code> / <code>SECRETREF:env:</code> 能力。</li>
+<li>安全扫描的限流检查请求数低于默认阈值，且失败不计入退出码；扫描可在实际检查失败时错误返回成功。</li>
+<li>API 生产镜像安装 <code>.[dev]</code>、默认以 root 运行，并包含已知易受攻击的构建依赖。</li>
+<li>整仓后端测试至少有 10 个短剧/创意工作室失败；当前 CI 只运行 Web/API 窄化范围。</li>
+<li>完整 Compose 浏览器链路中的开发任务首次 240 秒超时，依赖重试才通过。</li>
+<li>Tauri 当前只有源码和 <code>cargo check</code> 级证据，没有安装制品、启动、连接、签名边界和发布证据。</li>
+<li>2026-08-16 首轮安装包可视验收发现：诊断命令可以连接 loopback API，但打包后的 React 主链仍把 <code>/api/v1</code> 发到 <code>http://tauri.localhost</code> 资源域，真实登录未进入后端；桌面门必须同时验证 GUI 主链请求路由，而不是只验证无界面诊断。</li>
+<li>当前正式发布明确排除短剧和桌面端，因此正式 <code>v1.1.3</code> 不能证明整仓交付。</li>
+</ul>
+<h2 id="3">3. 范围与交付模型</h2>
+<h3 id="31">3.1 总目标与三个组件门</h3>
+<p>总目标包含三个组件门：</p>
+<ol>
+<li><strong>Web/API 门</strong>：Web 工作台、API、worker、Postgres、Redis、Qdrant、租户、鉴权、审计、调度、工作流、Run Console 与本地 LLM。</li>
+<li><strong>短剧门</strong>：脚本/分镜、媒体任务、配音、时间线、产物持久化、失败状态、下载与审计。真实外部图像/视频 provider 属于需要单独授权的外部门禁。</li>
+<li><strong>桌面门</strong>：Tauri 编译、应用版本、安装制品、启动、Web/API 连接、升级/回滚边界。正式代码签名需要证书，属于外部门禁。</li>
+</ol>
+<p>三个门可以分阶段实现和验证，但只有三者都达到各自定义的出口条件，总目标才允许标记完成。</p>
+<h3 id="32">3.2 不允许的范围缩减</h3>
+<ul>
+<li>不得用 Web/API 发布范围通过替代整仓测试通过。</li>
+<li>不得把短剧源码存在、Null provider 或测试 fixture 当成真实媒体交付证据。</li>
+<li>不得把 <code>cargo check</code> 当成桌面安装包和启动验证。</li>
+<li>不得把本机 Compose 当成客户生产验收。</li>
+<li>不得因外部 provider、签名证书或生产环境暂不可用而删除相应门禁。</li>
+</ul>
+<h3 id="33">3.3 授权边界</h3>
+<p>本地代码、测试、构建、隔离容器、真实本地 Ollama 和本地制品验证属于当前授权范围。下列动作仍需在执行前单独确认：</p>
+<ul>
+<li>调用付费或计费型 LLM、图像、视频 provider。</li>
+<li>推送分支、创建 PR、合并、创建或移动 tag、发布 GitHub Release。</li>
+<li>生产或客户环境部署、数据库写入、迁移、恢复、流量切换。</li>
+<li>使用正式代码签名证书或代表客户/发布角色签字。</li>
+</ul>
+<h2 id="4">4. 共享商用交付内核</h2>
+<h3 id="41">4.1 版本与发布身份</h3>
+<p><code>apps/api/pyproject.toml</code> 继续作为产品版本事实源，避免引入第二个版本配置中心。</p>
+<p>以下位置必须与产品版本一致：</p>
+<ul>
+<li>API project version。</li>
+<li>Web package version。</li>
+<li><code>xagent.__version__</code> 与 <code>/health</code> 返回版本。</li>
+<li>Helm <code>version</code> 与 <code>appVersion</code>。</li>
+<li>Tauri/Cargo 应用版本。</li>
+<li>README 当前版本和候选 tag（提供 tag 时）。</li>
+</ul>
+<p>TS SDK 保留独立 SemVer，但其版本、包摘要和兼容产品版本必须写入候选 manifest。版本检查器必须读取所有上述位置，并用回归测试证明任何一个位置漂移都会失败。</p>
+<p>整改分支先把当前漂移统一到 <code>1.1.3</code>。是否产生下一正式版本，只能在候选门禁全部关闭并获得发布授权后决定；整改本身不创建 tag。</p>
+<h3 id="42-windows">4.2 Windows 初始化与权限</h3>
+<p>Windows 身份获取不再依赖对 <code>whoami.exe</code> 字节流代码页的猜测。优先通过 Unicode Windows API 获取 <code>DOMAIN\\user</code> 形式的当前身份；仅在 API 不可用时使用可验证的安全回退。</p>
+<p>权限流程必须保持：</p>
+<ol>
+<li>以 exclusive create 创建环境文件。</li>
+<li>写入过程中不覆盖已有文件。</li>
+<li>获取当前 Windows 身份。</li>
+<li>使用 System32 下的 <code>icacls.exe</code> 设置仅当前身份可访问的 ACL。</li>
+<li>任一步失败时删除本次创建的残缺文件并返回非零状态。</li>
+</ol>
+<p>测试必须覆盖 Unicode 机器名/用户名、API 失败回退、危险身份拒绝、ACL 失败清理和 CLI 证据输出脱敏。</p>
+<h3 id="43">4.3 密钥持久化</h3>
+<p>LLM 配置拆分为非敏感字段和敏感字段：</p>
+<ul>
+<li>非敏感字段可以继续持久化，例如模型名、代理地址、超时和 fallback 列表。</li>
+<li>敏感字段包括 proxy、OpenAI、Anthropic、DeepSeek 等 API key。</li>
+</ul>
+<p>敏感字段不得以原始值写入磁盘。API 只接受以下两种商用安全行为：</p>
+<ol>
+<li>持久化 <code>SECRETREF:file:&lt;path&gt;</code> 或 <code>SECRETREF:env:&lt;name&gt;</code> 引用。</li>
+<li>明确请求 session-only 更新，只在当前进程内生效，重启后消失。</li>
+</ol>
+<p><code>SECRETREF:vault:</code> 在实现前继续 fail-fast，不伪装为可用。GET 接口只返回是否配置、来源类型和掩码状态，永不返回引用解析后的 secret。</p>
+<p>启动时发现历史明文覆盖文件：</p>
+<ul>
+<li>full/enterprise 模式拒绝加载敏感明文并给出明确迁移错误。</li>
+<li>lite 模式忽略敏感明文、记录不含值的警告，并保留非敏感配置。</li>
+<li>提供一次性、本地运行的迁移/清理命令，只删除敏感字段，不上传、不调用 provider。</li>
+</ul>
+<p>配置文件使用原子替换和 owner-only 权限；写入失败不得破坏上一份有效配置。</p>
+<h3 id="44">4.4 安全扫描</h3>
+<p>安全扫描的每项检查都返回结构化结果，并统一汇总到退出码。以下检查均为必需：</p>
+<ul>
+<li>安全响应头。</li>
+<li>full 模式未认证业务端点返回 401/403。</li>
+<li>跨租户 header 注入拒绝。</li>
+<li>租户数据隔离。</li>
+<li>SQL 注入输入不造成结构破坏。</li>
+<li>限流在测试专用、显式阈值下确定性触发 429。</li>
+</ul>
+<p>扫描不得依赖生产默认阈值推测请求次数。测试环境通过受控配置设置较低阈值，扫描从服务暴露的配置或命令参数读取期望值。任何检查失败、注册前置失败或响应结构异常都必须返回非零退出码和脱敏 JSON 证据。</p>
+<h3 id="45">4.5 依赖、镜像与供应链</h3>
+<p>API 镜像采用多阶段构建：构建阶段可以安装构建工具，运行阶段只安装锁定的生产依赖和应用代码。运行阶段必须：</p>
+<ul>
+<li>使用非 root 用户。</li>
+<li>不包含编译器、Git、测试框架或 dev extra。</li>
+<li>通过 <code>pip check</code> 和漏洞审计门禁。</li>
+<li>生成 SBOM，并记录基础镜像与产物 digest。</li>
+</ul>
+<p>Web、SDK 和桌面端分别使用 lockfile 执行生产依赖审计。缺失 lockfile 视为门禁失败，不降级为警告。Helm/Compose 商用模板使用不可变版本或 digest，不以 <code>latest</code> 作为交付值。</p>
+<p>漏洞处置只有三种有效状态：已升级修复、证明不在交付制品中、或经负责人限时接受并记录到候选 manifest。未知或未审计不算通过。</p>
+<h2 id="5">5. 组件门设计</h2>
+<h3 id="51-webapi">5.1 Web/API 门</h3>
+<p>出口条件：</p>
+<ul>
+<li>完整 Web/API 后端发布范围通过，跳过项逐项证明不属于该门或在独立集成环境补测。</li>
+<li>前端 lint、精确豁免门、unit、typecheck、build 和生产依赖审计通过。</li>
+<li>TS SDK 测试、类型、打包和生产依赖审计通过。</li>
+<li>隔离 Compose 的 postgres、redis、qdrant、api、worker、web 全部健康，迁移位于 head。</li>
+<li>使用真实本地 Ollama 完成对话、工作流、调度、文件产物和恢复链路。</li>
+<li>浏览器覆盖登录、对话、Run Console、刷新恢复、调度、技能导入、开发任务、产物下载和租户隔离。</li>
+<li>Playwright 最终商用门禁禁用 retry；单次超时或 flaky 均为失败。</li>
+</ul>
+<h3 id="52">5.2 短剧门</h3>
+<p>先修复当前整仓测试暴露的配音、Null/local media、task id、持久化、产物 schema 和 delivery summary 根因。测试数据不得默认访问公共网络服务。</p>
+<p>出口条件：</p>
+<ul>
+<li>单元与集成测试全部通过，无 <code>partial</code>/<code>blocked</code> 状态与预期 <code>produced</code>/<code>ready</code> 不一致。</li>
+<li>Null/local provider 的语义明确：若能力是占位验证，结果必须标记为 fixture/local，不得伪装真实供应商产物。</li>
+<li>至少生成一套可打开、可下载、可校验摘要的本地短剧交付包，包含分镜、时间线、音频/媒体引用、失败记录和审计元数据。</li>
+<li>真实外部图像/视频 provider 的一次性验证在获得费用与提交授权后执行；未知提交结果标记为 <code>submission_unknown</code>，不自动重试。</li>
+</ul>
+<h3 id="53-tauri">5.3 Tauri 桌面门</h3>
+<p>出口条件：</p>
+<ul>
+<li><code>cargo fmt --check</code>、Clippy、测试、locked build 和依赖漏洞审计通过。</li>
+<li>Tauri/Cargo 版本与产品版本一致，生成的 schema 不产生未解释漂移。</li>
+<li>生成 Windows 安装制品并记录 SHA-256、大小、架构和构建 SHA。</li>
+<li>在隔离测试用户或测试环境完成安装、首次启动、连接本地 Web/API、关闭、重新启动和卸载验证。</li>
+<li>打包前端启动时必须从 Rust 命令读取经校验的 loopback API origin；Axios、Fetch 与 SSE 使用同一 origin，API CORS 明确允许 Tauri 本地资源域。可视验收必须用测试账号完成真实登录并进入主工作台。</li>
+<li>无正式签名证书时，候选只能标为 unsigned local candidate；正式桌面商用发布必须补齐签名、证书主体、时间戳和安装验证。</li>
+</ul>
+<h2 id="6-sha">6. 同一 SHA 的证据链</h2>
+<p>所有门禁输出统一绑定：</p>
+<ul>
+<li>repository、branch、commit SHA。</li>
+<li>dirty/clean 状态。</li>
+<li>工具版本和运行时间。</li>
+<li>命令、退出码、通过/失败/跳过计数。</li>
+<li>构建制品摘要和镜像 digest。</li>
+<li>运行环境标识与配置摘要（不含 secret）。</li>
+</ul>
+<p>证据分为三层：</p>
+<ol>
+<li><strong>本地候选证据</strong>：当前 worktree 和隔离运行环境产生。</li>
+<li><strong>正式发布证据</strong>：远端同一 SHA 的 CI、不可变镜像、tag、Release 和签字；需要发布授权。</li>
+<li><strong>客户生产证据</strong>：客户环境部署、迁移、监控、备份恢复、回滚和客户签字；不能由前两层推断。</li>
+</ol>
+<p>本地候选证据写入独立的机器可读 manifest 和人类可读报告。报告不得把历史日志复制为当前证据；每次候选变化后必须全部重新运行。</p>
+<h2 id="7">7. 备份、恢复与回滚</h2>
+<p>本地隔离演练至少验证：</p>
+<ol>
+<li>从零部署当前候选并写入可识别的测试数据。</li>
+<li>备份 Postgres、Qdrant 和应用审计/产物数据。</li>
+<li>执行相邻版本迁移或等价升级演练。</li>
+<li>验证新版本健康和核心链路。</li>
+<li>回滚到上一候选并恢复数据。</li>
+<li>复核数据完整性、租户隔离、产物可打开和审计链连续。</li>
+</ol>
+<p>回滚脚本只能操作带本次审计 project label、明确路径和候选 digest 的资源。不得触碰现有生产或其他项目容器。</p>
+<h2 id="8-fail-closed">8. 错误处理与 fail-closed 原则</h2>
+<ul>
+<li>版本漂移、secret 明文、扫描异常、依赖审计缺失、浏览器 flaky、制品摘要缺失均直接阻断对应门。</li>
+<li>必需测试的 skip 必须有可核对的外部条件和替代验证；无说明 skip 视为失败。</li>
+<li>外部付费提交未知时不重试，状态保持 <code>needs_attention/submission_unknown</code>。</li>
+<li>构建或验证产生的临时文件必须限定在候选工作树或带唯一标签的隔离环境，并在结束时清理。</li>
+<li>文档状态只在证据通过后更新；不得先写「已商用」再补证据。</li>
+</ul>
+<h2 id="9">9. 实施顺序</h2>
+<ol>
+<li>建立共享 P0：版本、Windows 初始化、密钥、安全扫描、供应链。</li>
+<li>修复整仓测试根因，关闭短剧代码级红灯。</li>
+<li>稳定 Web/API Compose 与无 retry 浏览器链路。</li>
+<li>完成桌面构建、安装和连接门。</li>
+<li>生成三类制品、SBOM、摘要和统一候选 manifest。</li>
+<li>在同一 SHA 上执行隔离部署、真实本地模型、备份恢复和回滚。</li>
+<li>形成正式发布候选报告；在获得授权后再进入远端 PR/tag/Release 和客户环境阶段。</li>
+</ol>
+<h2 id="10">10. 完成判定</h2>
+<p>只有以下条件同时成立，目标才算完成：</p>
+<ul>
+<li>目标中列出的每个缺陷和证据缺口均有对应测试或运行证据关闭。</li>
+<li>Web/API、短剧和桌面三个组件门全部通过。</li>
+<li>共享安全、依赖、镜像和版本门全部通过。</li>
+<li>同一 SHA 的本地候选证据完整，工作树干净。</li>
+<li>正式发布和客户生产仍缺少授权或外部条件时，必须保持各自未完成状态；不得把本地候选改名为正式发布或客户验收。</li>
+</ul>
+<p>若尚未授权远端、付费供应商或客户操作，本地代码整改阶段可以收口并形成候选，但总目标不得标记完成。总报告必须明确列出正式发布与客户生产的剩余外部门禁；正式 GA 与客户验收只能在对应证据真实产生后成立。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

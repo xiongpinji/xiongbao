@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/integrations/MCP_PLATFORM_SERVER/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>平台 MCP Server：把 X-Agent 暴露给外部 Agent（V3-4） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u5e73\u53f0 MCP Server\uff1a\u628a X-Agent \u66b4\u9732\u7ed9\u5916\u90e8 Agent\uff08V3-4\uff09";
+        var mkdocs_page_input_path = "integrations/MCP_PLATFORM_SERVER.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/integrations/MCP_PLATFORM_SERVER/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">平台 MCP Server：把 X-Agent 暴露给外部 Agent（V3-4）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/integrations/MCP_PLATFORM_SERVER.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="mcp-server-x-agent-agentv3-4">平台 MCP Server：把 X-Agent 暴露给外部 Agent（V3-4）</h1>
+<blockquote>
+<p>对标 Codex CLI 的 MCP 双向能力。Claude Code / Codex / Cursor 等外部 agent
+可以把 X-Agent 作为 MCP 工具源直接调用：跑任务、代码评审、技能匹配、技能导入。</p>
+</blockquote>
+<h2 id="_1">暴露工具</h2>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>说明</th>
+<th>关键参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>xagent_run</code></td>
+<td>跑一次 agent 任务（内置编排循环），返回最终回答</td>
+<td><code>goal</code>, <code>role?</code></td>
+</tr>
+<tr>
+<td><code>xagent_code_review</code></td>
+<td>逻辑/安全/规范三维并行评审</td>
+<td><code>diff</code> 或 <code>repo</code>+<code>base</code>(+<code>head</code>)</td>
+</tr>
+<tr>
+<td><code>xagent_skill_match</code></td>
+<td>技能库匹配 + prompt 注入文本</td>
+<td><code>goal</code></td>
+</tr>
+<tr>
+<td><code>xagent_skill_import</code></td>
+<td>SKILL.md（agentskills.io）导入，<strong>强制质量门禁</strong></td>
+<td><code>content</code>, <code>origin?</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">传输模式</h2>
+<h3 id="1-stdio">1. stdio（默认，同机宿主拉起）</h3>
+<p>外部 agent 的配置示例（Claude Code <code>.mcp.json</code> / Codex <code>config.toml</code> 语义相同）：</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;xagent-platform&quot;: {
+      &quot;command&quot;: &quot;python&quot;,
+      &quot;args&quot;: [&quot;-m&quot;, &quot;xagent.adapters.mcp.platform_server&quot;],
+      &quot;cwd&quot;: &quot;&lt;repo&gt;/apps/api&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="2-streamable-http">2. streamable HTTP（网络可达部署）</h3>
+<pre><code class="language-bash"># 直接运行（默认仅绑 127.0.0.1:8100）
+python -m xagent.adapters.mcp.platform_server --http --port 8100
+
+# 可选：强制 Bearer 校验
+export XAGENT_PLATFORM_MCP_TOKEN=&lt;random-token&gt;
+</code></pre>
+<p>外部 agent 指向 <code>http://&lt;host&gt;:8100/mcp</code>（HTTP 模式），带 token 时加
+<code>Authorization: Bearer &lt;token&gt;</code> 头。</p>
+<h3 id="3-compose-full">3. Compose 一键启用（full 部署形态）</h3>
+<pre><code class="language-bash">docker compose --profile mcp up -d platform-mcp   # 在 deploy/compose/ 下
+</code></pre>
+<p><code>platform-mcp</code> 服务复用 api 镜像，<code>depends_on</code> api 健康后启动，
+<code>XAGENT_PLATFORM_MCP_TOKEN</code> 写入 <code>deploy/compose/.env</code> 即开启鉴权。</p>
+<h2 id="_3">安全边界</h2>
+<ul>
+<li><code>xagent_run</code> / <code>xagent_code_review</code> 走平台既有权限与工具注册表：
+  shell/python 默认禁用、沙箱 fail-closed 等安全默认不变；</li>
+<li>HTTP 模式默认仅本机绑定；跨机部署必须设置 <code>XAGENT_PLATFORM_MCP_TOKEN</code>；</li>
+<li>技能导入与 Web 面板/API 共用同一 <code>gate_candidate</code> 门禁，外部导入不会绕过质量标准。</li>
+</ul>
+<h2 id="_4">验证</h2>
+<p><code>apps/api/tests/test_platform_mcp_server.py</code>（9 项：工具注册面 / 参数校验 /
+导入+匹配链路 / 评审无 LLM 诚实降级 / Bearer 中间件 / 应用构建）。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

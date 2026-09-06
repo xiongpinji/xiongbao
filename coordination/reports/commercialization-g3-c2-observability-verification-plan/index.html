@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c2-observability-verification-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G3-C2 可观测 / 告警真实验证计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G3-C2 \u53ef\u89c2\u6d4b / \u544a\u8b66\u771f\u5b9e\u9a8c\u8bc1\u8ba1\u5212";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g3-c2-observability-verification-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c2-observability-verification-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G3-C2 可观测 / 告警真实验证计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g3-c2-observability-verification-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g3-c2">G3-C2 可观测 / 告警真实验证计划</h1>
+<blockquote>
+<p>适用阶段：G3 企业级长期运营</p>
+<p>用途：把 G3-C2 从“观测与告警方向定义完成”推进到“已有可执行验证计划”，明确当前哪些观测入口已经真实存在、哪些信号可以被实际验证，以及哪些内容仍只是目标方向。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>本计划的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 的可观测 / 告警包提供第一份真实验证计划，使 G3-C2 不再只停留在定义层，而进入可验证状态。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 验证范围</h2>
+<p>本次验证只覆盖以下内容：</p>
+<ol>
+<li><code>/health</code>、<code>/ready</code>、<code>/metrics</code> 等观测入口是否存在；</li>
+<li>API / worker / web 日志入口是否清晰；</li>
+<li>当前已知关键日志信号是否可被明确点名；</li>
+<li>Helm 模板中与 Prometheus scrape 相关入口是否已表达；</li>
+<li>当前哪些可观测能力已经真实存在，哪些仍只是长期目标。</li>
+</ol>
+<p>本次验证<strong>不</strong>要求一次性完成：
+- 完整 Grafana 看板落地；
+- 完整 Alertmanager / PagerDuty / SLA 流程；
+- 所有 SLO 数值已经生产级签字；
+- 大规模历史指标存储体系建设。</p>
+<hr />
+<h2 id="3">3. 验证环境</h2>
+<p>当前优先采用：</p>
+<ul>
+<li>仓库文档与 Helm 模板的等价验证环境；</li>
+<li>用于确认观测入口、日志入口、Prometheus scrape 配置、当前信号与告警方向。</li>
+</ul>
+<p>环境前提：
+- 能读取 <code>deploy/helm/templates</code> 模板；
+- 能读取 <code>OPERATIONS_MANUAL_V1.md</code>、<code>COMMERCIAL_RELEASE_CHECKLIST_V1.md</code> 等材料；
+- 能确认 <code>/health</code>、<code>/ready</code>、<code>/metrics</code> 已被纳入文档与模板表达。</p>
+<hr />
+<h2 id="4">4. 验证项</h2>
+<h3 id="41">4.1 健康与就绪入口验证</h3>
+<p>验证：
+- <code>/health</code>
+- <code>/ready</code>
+- <code>/metrics</code></p>
+<p>期望：
+- 当前材料中这些入口都被明确列出；
+- <code>/metrics</code> 已进入长期运营阶段的必须关注项。</p>
+<h3 id="42">4.2 日志入口验证</h3>
+<p>验证：
+- <code>docker compose logs --tail=200 api</code>
+- <code>docker compose logs --tail=200 worker</code>
+- <code>docker compose logs --tail=200 web</code></p>
+<p>期望：
+- API / worker / web 的日志入口已被冻结为标准观察方式；
+- 运维手册中明确哪些异常优先看日志。</p>
+<h3 id="43">4.3 关键日志信号验证</h3>
+<p>验证当前被明确列出的信号：
+- <code>ollama_warmup_failed</code>
+- provider 401 / 403 / timeout
+- worker 长时间 pending
+- readiness components 异常</p>
+<p>期望：
+- 这些信号不再只是隐含经验，而是已经成为可观测包的一部分。</p>
+<h3 id="44-helm-prometheus">4.4 Helm / Prometheus 表达验证</h3>
+<p>验证：
+- <code>deploy/helm/templates/deployment.yaml</code> 中 Prometheus scrape annotations 是否存在。</p>
+<p>期望：
+- API Deployment 已具备 <code>/metrics</code> 的 scrape 表达；
+- 说明长期运营阶段的可观测入口不是从零开始。</p>
+<hr />
+<h2 id="5">5. 通过标准</h2>
+<p>G3-C2 的真实验证通过，至少需要满足：</p>
+<ol>
+<li>健康、就绪、指标入口已真实存在；</li>
+<li>API / worker / web 日志入口已清晰固定；</li>
+<li>一组关键日志信号已被正式列为长期运营关注点；</li>
+<li>Prometheus scrape 入口已在模板层被验证存在；</li>
+<li>可以明确区分“当前已存在的观测能力”与“后续仍需平台化建设的能力”。</li>
+</ol>
+<p>这意味着：
+- G3-C2 的“通过”不是完整告警平台已经落地；
+- 而是长期运营所需的观测面已经有真实可验证基础。</p>
+<hr />
+<h2 id="6">6. 证据要求</h2>
+<p>本计划要求输出的最小证据包括：</p>
+<ul>
+<li>现有 <code>/health</code> / <code>/ready</code> / <code>/metrics</code> 入口说明</li>
+<li>日志入口说明</li>
+<li>关键日志信号清单</li>
+<li>Helm 模板中与 metrics/scrape 相关的渲染片段或确认结论</li>
+<li>最终判定：</li>
+<li>通过 / 不通过</li>
+<li>哪些部分已验证</li>
+<li>哪些仍是后续目标</li>
+</ul>
+<p>建议归档到：
+- <code>docs/coordination/reports/commercialization-g3-c2-observability-verification.md</code></p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>当前 <code>G3-C2</code> 已完成方向定义；
+这份计划的作用是让它进入下一状态：</p>
+<blockquote>
+<p><strong>可执行验证</strong></p>
+</blockquote>
+<p>只有完成这一步，<code>G3-C2</code> 才能从“定义完成”走向“验证完成”。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

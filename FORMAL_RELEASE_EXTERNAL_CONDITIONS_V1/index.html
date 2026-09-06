@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent 正式交付剩余外部条件与 R4 环境输入清单 v1 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u6b63\u5f0f\u4ea4\u4ed8\u5269\u4f59\u5916\u90e8\u6761\u4ef6\u4e0e R4 \u73af\u5883\u8f93\u5165\u6e05\u5355 v1";
+        var mkdocs_page_input_path = "FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 正式交付剩余外部条件与 R4 环境输入清单 v1</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/FORMAL_RELEASE_EXTERNAL_CONDITIONS_V1.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-r4-v1">X-Agent 正式交付剩余外部条件与 R4 环境输入清单 v1</h1>
+<blockquote>
+<p>用途：给发布负责人、环境负责人、QA/Reviewer 和 Owner 一页讲清楚——<strong>当前正式交付还差什么，而且这些差项已经不再是代码问题，而是外部环境 / 证据 / 签字问题。</strong></p>
+<p>适用范围：当前候选分支 <code>candidate/min-send-review-20260707-claude</code>。</p>
+<p>边界：本文档不替代 <code>docs/RELEASE_RUNBOOK_V1.md</code> 的执行步骤，也不把 R4 演练、R5 审查包或最终签字写成已完成。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 当前已完成到什么程度</h2>
+<p>截至当前候选，可直接确认：</p>
+<ul>
+<li>当前候选分支：<code>candidate/min-send-review-20260707-claude</code></li>
+<li>当前 PR：<code>#7</code> <code>chore(readiness): freeze minimal send-review candidate</code></li>
+<li>当前远端 CI：GitHub Actions <code>CI</code> run <code>28914695375</code> 成功</li>
+<li>当前 PR 检查项已绿：<code>backend</code> / <code>frontend</code> / <code>license-gate</code> / <code>promptfoo-eval</code></li>
+<li>本轮仓库内可直接补齐的交付材料已形成：</li>
+<li><a href="../DELIVERY_MATERIALS_INDEX_V1/">DELIVERY_MATERIALS_INDEX_V1.md</a></li>
+<li><a href="../ADMIN_DEPLOYMENT_MANUAL_V1/">ADMIN_DEPLOYMENT_MANUAL_V1.md</a></li>
+<li><a href="../OPERATIONS_MANUAL_V1/">OPERATIONS_MANUAL_V1.md</a></li>
+<li><a href="../KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1/">KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</a></li>
+<li><a href="../SUPPORT_ESCALATION_PATH_V1/">SUPPORT_ESCALATION_PATH_V1.md</a></li>
+</ul>
+<p>结论：</p>
+<blockquote>
+<p><strong>当前剩余阻断项已经不应再通过“继续改功能代码”来解决；剩余问题主要是 R4 环境演练、R5 签发级证据、真实联系人与最终签字。</strong></p>
+</blockquote>
+<hr />
+<h2 id="15-2026-08-14-v111">1.5 2026-08-14 状态刷新（v1.1.1 后）</h2>
+<ul>
+<li>候选/master/tag 三段 CI 与双 Release（v1.1.0、v1.1.1）已完成，本机等价环境全栈演练已完成（见 <code>RELEASE_SIGNOFF_PACKAGE_V1.1.1.md</code>）。</li>
+<li>剩余外部条件均已"一键可执行化"：</li>
+<li>发布签字 → <code>docs/RELEASE_SIGNOFF_PACKAGE_V1.1.1.md</code> 第 6 节签字矩阵</li>
+<li>多机 HA 演练 → <code>scripts/ha_drill.py</code>（已在本机双实例实测 PASS；共享 Redis 部署加 <code>--expect-shared-lock</code>）</li>
+<li>E2B L2 实测 → <code>scripts/verify_e2b_sandbox.py</code>（取得 E2B_API_KEY 后一条命令完成）</li>
+</ul>
+<hr />
+<h2 id="2">2. 当前只剩哪些外部条件</h2>
+<table>
+<thead>
+<tr>
+<th>阻断项</th>
+<th>当前状态</th>
+<th>需要谁提供</th>
+<th>完成定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R4 目标环境 / full-mode 演练</td>
+<td>未完成</td>
+<td>环境负责人 + 发布负责人</td>
+<td>在目标环境或 staging 等价环境实际跑通，并归档日志 / smoke / E2E / 回滚信息</td>
+</tr>
+<tr>
+<td>R5 PR 审查包签发</td>
+<td>待 R4 证据后推进</td>
+<td>Reviewer / 发布负责人 / Owner</td>
+<td>PR 包含环境演练证据、风险摘要、验证矩阵、reviewer 关注点并可正式送审</td>
+</tr>
+<tr>
+<td>真实支持联系人</td>
+<td>当前单人交付模式下已明确</td>
+<td>—</td>
+<td>当前 owner <code>canqu</code> 在本轮交付中同时承担 L1/L2/L3/L4；若转入客户现场或外部团队，再补企业联系方式</td>
+</tr>
+<tr>
+<td>最终签字</td>
+<td>未完成</td>
+<td>TL / QA / DevOps / Owner</td>
+<td>对应签字角色确认本次环境、候选和证据满足正式交付门禁</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-r4">3. R4 必须补齐的环境输入</h2>
+<h2 id="31">3.1 候选绑定信息</h2>
+<p>发布负责人必须明确：</p>
+<ul>
+<li>Release ID / 版本号</li>
+<li>候选分支：<code>candidate/min-send-review-20260707-claude</code></li>
+<li>候选 commit SHA</li>
+<li>PR URL：PR #7</li>
+<li>CI run URL / run id：<code>28914695375</code></li>
+<li>发布环境名称：staging / rehearsal / prod</li>
+<li>发布负责人</li>
+<li>回滚负责人</li>
+<li>变更窗口</li>
+</ul>
+<p>没有这些信息时，不要开始 R4。</p>
+<h2 id="32-secret">3.2 必填 secret / 配置来源</h2>
+<p>环境负责人至少提供以下内容的<strong>真实来源</strong>（可以是 secret manager 路径、CI secret 名、平台注入项；不要把真实 secret 写入 Git）：</p>
+<ul>
+<li><code>XAGENT_SECURITY__JWT_SECRET</code></li>
+<li><code>LANGFUSE_NEXTAUTH_SECRET</code></li>
+<li><code>LANGFUSE_SALT</code></li>
+<li><code>LANGFUSE_INIT_USER_PASSWORD</code></li>
+<li><code>XAGENT_CORS_ORIGINS</code></li>
+<li><code>POSTGRES_PASSWORD</code>（若使用 compose 内置 Postgres）</li>
+<li>若启用 LiteLLM：<code>XAGENT_LLM__PROXY_URL</code> / <code>XAGENT_LLM__PROXY_API_KEY</code></li>
+<li>若直连 provider：OpenAI / DeepSeek key 来源</li>
+</ul>
+<h2 id="33-full-mode">3.3 full-mode 显式账号</h2>
+<p>必须提供：</p>
+<ul>
+<li>full-mode 登录账号来源</li>
+<li>用户名 / 邮箱标识</li>
+<li>密码来源或初始化方式</li>
+<li>是否需要 tenant_id</li>
+</ul>
+<p>明确限制：</p>
+<ul>
+<li>不允许把 <code>admin/admin</code> 当作 full-mode 验收账号；</li>
+<li>lite/dev 的默认登录结果不能替代 R4 现场证据。</li>
+</ul>
+<h2 id="34-llm">3.4 LLM 路径</h2>
+<p>必须明确至少一条可用路径：</p>
+<ul>
+<li>宿主机 Ollama</li>
+<li>LiteLLM proxy</li>
+<li>OpenAI / DeepSeek provider</li>
+</ul>
+<p>并补齐：</p>
+<ul>
+<li>目标模型名</li>
+<li>可达地址</li>
+<li>鉴权方式</li>
+<li>若是 Ollama，宿主机是否已拉好模型</li>
+</ul>
+<h2 id="35">3.5 依赖服务与端口</h2>
+<p>需要环境负责人确认：</p>
+<ul>
+<li><code>5432</code> Postgres</li>
+<li><code>6379</code> Redis</li>
+<li><code>6333/6334</code> Qdrant</li>
+<li><code>3001</code> Langfuse</li>
+<li><code>4000</code> LiteLLM</li>
+<li><code>8000</code> API</li>
+<li><code>3000</code> Web</li>
+<li><code>8080</code> ContextForge</li>
+<li><code>8081</code> OpenFGA</li>
+</ul>
+<p>至少要能回答：</p>
+<ul>
+<li>哪些由 compose 拉起</li>
+<li>哪些由平台侧预置</li>
+<li>当前是否有端口冲突</li>
+<li>是否允许执行 <code>docker compose up -d --build</code></li>
+</ul>
+<hr />
+<h2 id="4-r4">4. R4 完成时必须回传的证据</h2>
+<p>环境侧完成 R4 后，至少回传：</p>
+<ul>
+<li><code>docker compose --env-file .env config --quiet</code> 结果</li>
+<li><code>docker compose ps</code></li>
+<li>Alembic current / upgrade / current 输出</li>
+<li><code>/health</code> 结果</li>
+<li><code>/ready</code> 结果</li>
+<li>前端入口结果</li>
+<li>full-mode 登录结果</li>
+<li>至少一组 smoke / E2E 结果</li>
+<li><code>api</code> / <code>worker</code> / <code>web</code> 日志路径或摘录</li>
+<li>若发生回滚：回滚开始时间、结束时间、回滚版本、恢复结果</li>
+</ul>
+<p>统一归档入口：</p>
+<ul>
+<li><a href="../RELEASE_RUNBOOK_V1/">RELEASE_RUNBOOK_V1.md</a></li>
+<li><a href="../coordination/reports/delivery-report/">delivery-report.md</a></li>
+</ul>
+<hr />
+<h2 id="5">5. 哪些东西不能再拿来充当正式交付证据</h2>
+<p>以下内容<strong>不能</strong>再被拿来冒充正式交付闭环：</p>
+<ul>
+<li>lite/dev 下的 <code>admin/admin</code> 登录结果</li>
+<li>仅本地工作站上的 <code>/health</code> / <code>/ready</code> 截图</li>
+<li>只证明代码存在的 E2E spec 文件</li>
+<li>没有目标环境实跑的 <code>.env.example</code></li>
+<li>没有实名联系人的角色占位表</li>
+<li>没有 TL / QA / DevOps / Owner 的口头通过</li>
+</ul>
+<hr />
+<h2 id="6">6. 现在给环境负责人的最小交付请求</h2>
+<p>由于当前是单人交付模式，这里的“环境 / 发布负责人”默认就是 owner 本人。对本轮当前机器的 R4 演练，这一节已经实跑完成；只有在后续切换到其他机器、客户现场或外部环境时，才需要按下面清单再次补齐输入。</p>
+<p>可以直接把下面这段发给后续环境 / 发布负责人：</p>
+<pre><code class="language-text">当前 candidate/min-send-review-20260707-claude 的仓库内代码、CI 和最小交付材料已收口，正式交付剩余阻断主要是 R4 目标环境/full-mode 演练与最终签字。
+
+请提供：
+1) 本次演练环境名、发布负责人、回滚负责人、变更窗口；
+2) JWT/Langfuse/CORS/Postgres 等必填配置的真实来源（secret manager path / CI secret name / 平台注入项）；
+3) full-mode 显式登录账号来源；
+4) 至少一条可用 LLM 路径（Ollama / LiteLLM / provider）；
+5) 依赖服务与端口准备状态；
+6) 允许执行 compose config / up / migration / smoke / E2E 的窗口。
+
+环境条件一旦补齐，就按 docs/RELEASE_RUNBOOK_V1.md 执行，并把日志、health/ready、登录、Run Console、smoke/E2E、回滚信息归档到 docs/coordination/reports/delivery-report.md。
+</code></pre>
+<hr />
+<h2 id="7-claude">7. Claude 接下来还能直接做什么</h2>
+<p>一旦上面的外部条件补齐，Claude 还可以继续负责：</p>
+<ul>
+<li>复核环境输入是否完整；</li>
+<li>帮你逐条执行 runbook；</li>
+<li>记录 R4 演练证据；</li>
+<li>整理 R5 reviewer 输入；</li>
+<li>核对哪些项已经足以进入最终签字。</li>
+</ul>
+<hr />
+<h2 id="8">8. 当前结论</h2>
+<blockquote>
+<p><strong>当前正式交付的剩余阻断，已经不是“代码没做完”，而是“环境没实跑、证据没回传、联系人没实名、签字没完成”。</strong></p>
+<p>只要 R4 环境条件与签字链补齐，后续推进就可以从仓库整理阶段切换为真实交付执行阶段。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

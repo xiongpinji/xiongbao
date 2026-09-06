@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P2-D Platform MCP 闭环证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P2-D Platform MCP \u95ed\u73af\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P2-D Platform MCP 闭环证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_P2D_PLATFORM_MCP_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p2-d-platform-mcp">Web/API P2-D Platform MCP 闭环证据</h1>
+<h2 id="_1">结论</h2>
+<ul>
+<li>审计日期：2026-08-07。</li>
+<li>分支：<code>feature/webapi-release-hardening</code>。</li>
+<li>审计范围：Platform MCP 会话、统一 Runtime、审批、调度历史、Skill Package、RBAC、租户隔离、审计、敏感信息与本机路径脱敏。</li>
+<li>排除范围：短剧、Tauri 桌面、多机 HA 和客户现场部署。</li>
+<li>结论：P2-D 通过。MCP 已从 4 个基础工具扩展为 15 个租户受控工具；同一 Principal、RBAC、tenant filter 和 audit 贯穿读写路径。非回环 HTTP 监听若未配置 Bearer token 会拒绝启动。下一阶段为 R1 全量发布审计。</li>
+</ul>
+<h2 id="_2">工具面与事实链</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>会话</td>
+<td><code>conversation_list/get/message</code>；读取和续聊都限定当前 Principal tenant，跨租户不可见</td>
+</tr>
+<tr>
+<td>运行</td>
+<td><code>run_get/cancel/events</code>；统一读取持久任务或工作流，MCP 新建 run 会先分配 ID 并持久化，使创建、详情和事件属于同一事实链</td>
+</tr>
+<tr>
+<td>取消</td>
+<td>in-process 任务执行真实 <code>asyncio.Task.cancel()</code>；Celery 使用非 terminate revoke；终态不可重复取消，且必须精确确认 run ID</td>
+</tr>
+<tr>
+<td>事件</td>
+<td>合并任务、工作流与证据事件，输出前递归脱敏；不信任存储中的来源字段，统一标记可信来源</td>
+</tr>
+<tr>
+<td>审批</td>
+<td><code>approval_list/resolve</code> 同时覆盖开发任务与工作流 gate；批准、拒绝或否决要求精确 approval ID，并记录审计</td>
+</tr>
+<tr>
+<td>调度</td>
+<td><code>scheduler_job_read/run_read</code> 只读取当前租户数据库事实，不读取其他租户历史</td>
+</tr>
+<tr>
+<td>技能包</td>
+<td>列表仅返回元数据；详情返回 manifest/frontmatter/body，但移除本机 root path 并递归脱敏</td>
+</tr>
+<tr>
+<td>原有工具</td>
+<td>run、code review、skill match/import 也纳入相同 Principal、RBAC、tenant 和 audit 边界</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">安全边界</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Principal</td>
+<td>只从受信任进程环境 <code>XAGENT_PLATFORM_MCP_USER_ID/TENANT_ID/ROLES</code> 构造；工具参数不能覆盖 tenant</td>
+</tr>
+<tr>
+<td>RBAC</td>
+<td>reader/viewer 不可发送会话消息；管理、执行和审批动作按平台既有资源/动作授权</td>
+</tr>
+<tr>
+<td>人工确认</td>
+<td>run cancel 与 approval resolve 均要求调用方回传精确资源 ID，错误确认不产生状态变更</td>
+</tr>
+<tr>
+<td>输出脱敏</td>
+<td>token、secret、password、authorization 等递归脱敏；<code>root_path/worktree_path/patch_path/main_workspace</code> 不出 MCP 响应</td>
+</tr>
+<tr>
+<td>HTTP 鉴权</td>
+<td>默认只监听 <code>127.0.0.1</code>；绑定 <code>0.0.0.0</code>、<code>::</code> 或其他非回环地址且无 token 时启动返回 2；设置 token 后 Bearer 错误或缺失返回 401</td>
+</tr>
+<tr>
+<td>审计</td>
+<td>读取和写入均记录 <code>mcp.*</code> action、tenant、actor、resource 与脱敏 detail</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tdd">TDD 与新鲜验证</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工具注册红灯</td>
+<td>先把合同改为期望 15 个工具，旧实现只注册 4 个，测试失败；实现后通过</td>
+</tr>
+<tr>
+<td>HTTP 门禁红灯</td>
+<td>非回环无 token 用例先因 <code>_http_token_required</code> 不存在失败；最小实现及入口测试完成后通过</td>
+</tr>
+<tr>
+<td>MCP 定向合同</td>
+<td><code>test_platform_mcp_server.py</code> + <code>test_platform_mcp_contracts.py</code> 共 18/18 通过</td>
+</tr>
+<tr>
+<td>Runtime/worker 回归</td>
+<td>相关运行时与 worker 套件 37/37 通过</td>
+</tr>
+<tr>
+<td>目标 Ruff</td>
+<td>Platform MCP、Runtime、worker 与合同测试 0 项</td>
+</tr>
+<tr>
+<td>目标 mypy</td>
+<td>使用项目策略 <code>--follow-imports=skip --ignore-missing-imports</code>，4 个生产文件 0 项；不忽略第三方存根时只报告 Celery 缺少 <code>py.typed</code></td>
+</tr>
+<tr>
+<td>全仓静态门禁</td>
+<td>Ruff <code>262 &lt;= 286</code>；mypy <code>65 &lt;= 74</code></td>
+</tr>
+<tr>
+<td>fresh migration</td>
+<td>独立空 SQLite 完整升级到 <code>20260807_checkpoints (head)</code> 后完成协议验证</td>
+</tr>
+<tr>
+<td>真实 MCP 协议</td>
+<td>独立 Streamable HTTP 服务由标准 MCP ClientSession 初始化，列出 15 个工具，并通过协议读取已播种会话；结果 <code>conversation_visible=true</code>、<code>is_error=false</code></td>
+</tr>
+<tr>
+<td>真实 HTTP 鉴权</td>
+<td>同一服务无 Authorization 请求返回 401；验证后服务已停止，端口不再监听</td>
+</tr>
+<tr>
+<td>差异检查</td>
+<td><code>git diff --check</code> 与分文件提交检查通过</td>
+</tr>
+</tbody>
+</table>
+<p>真实 MCP 协议数据库、客户端脚本和服务日志位于仓库外 <code>C:\Users\canqu\AppData\Local\Temp\xagent-p2d-mcp-evidence-20260807-054654</code>。该目录不包含产品提交，也不作为运行时依赖。</p>
+<h2 id="p2-d">P2-D 实现提交</h2>
+<ul>
+<li><code>734f61d</code>：增加 in-process/Celery 可取消语义、统一 Runtime 取消和安全事件输出。</li>
+<li><code>151bd80</code>：扩展 15 个 Platform MCP 工具，增加租户合同、RBAC、审计、脱敏和非回环 HTTP token 门禁。</li>
+</ul>
+<h2 id="r1">已知限制与 R1 输入</h2>
+<ul>
+<li>既有完整 <code>test_workflow.py</code> 在当前 Windows 测试环境两次高 CPU 超时，未产生断言失败，也不能写成通过；本次新增的轻量真实 workflow approval gate 合同已验证等待审批、拒绝、取消和审计路径。R1 需要用有界超时重新分类该套件。</li>
+<li>Web 仍有 100 条存量 ESLint warning；完整 mypy 仍有 65 项基线债务。当前门禁确认没有新增，但 R1 必须归零或形成逐项 owner、原因和失效日期的发布豁免。</li>
+<li>HTTP Bearer token 是单服务身份边界，Principal 来自服务部署配置；不等于面向互联网的逐用户 OAuth/OIDC。非回环无 token 已硬阻断，生产部署仍必须通过 secret manager 注入 token 和 Principal 配置。</li>
+<li>多机 HA、E2B 和客户现场演练不在当前用户授权范围。R1 不得据此宣称这些能力已发布。</li>
+<li>P2-D 完成不等于整个 Web/API 已发布；只有 R1 全量测试、依赖/安全、迁移、构建、同链浏览器、发布物和回滚审计全部通过，才可形成最终结论。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/RELEASE_NOTES_V1.3.2/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent v1.3.2 发布说明 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent v1.3.2 \u53d1\u5e03\u8bf4\u660e";
+        var mkdocs_page_input_path = "RELEASE_NOTES_V1.3.2.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/RELEASE_NOTES_V1.3.2/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent v1.3.2 发布说明</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/RELEASE_NOTES_V1.3.2.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-v132">X-Agent v1.3.2 发布说明</h1>
+<blockquote>
+<p>发布日期：2026-09-06 · 上一版本：v1.3.1（同日）
+本版主题：<strong>蒸馏技能默认停用（人工启用门）——用户全功能实测发现的技能污染根治</strong></p>
+</blockquote>
+<hr />
+<h2 id="_1">一、背景：全功能实测发现「掺词绕过」</h2>
+<p>v1.3.1 的全泛词门禁上线后，用户视角全功能实测（设置→技能分区）发现新蒸馏技能
+「HelloFileVerify」（触发 <code>创建|Python|Hello Agent|读取|确认</code>）——<strong>掺一个具体词即绕过</strong>
+全泛词检查，且其提示绑定死内容（print Hello Agent），匹配到的创建类任务仍会被污染。
+根因不在词典，在于<strong>自动蒸馏入库即参与注入</strong>这一机制本身。</p>
+<h2 id="_2">二、修复：蒸馏技能启用门（机制级根治）</h2>
+<table>
+<thead>
+<tr>
+<th>变更</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Skill.enabled</code> 字段</td>
+<td>新增独立启用态（与 retired 正交）；<code>is_active = enabled and not retired</code>；旧 JSON 无该字段默认启用（存量技能行为不变）</td>
+</tr>
+<tr>
+<td>蒸馏入库默认停用</td>
+<td>auto_distill / failure_distill 产出的技能 <code>enabled=False</code>，<strong>入库不注入</strong>，等待人工评估</td>
+</tr>
+<tr>
+<td>匹配注入过滤</td>
+<td><code>match()</code> / <code>build_prompt_injection()</code> 跳过未启用技能</td>
+</tr>
+<tr>
+<td>生命周期 API</td>
+<td><code>POST /skills/{id}/enable</code>、<code>POST /skills/{id}/disable</code>（system:manage 权限）</td>
+</tr>
+<tr>
+<td>设置页 UI</td>
+<td>技能卡新增「待启用」徽标 + 启用/停用按钮（含说明 tooltip）</td>
+</tr>
+</tbody>
+</table>
+<p>这同时是对标 Hermes「人工 PR 门禁」的机制对齐：自动学习 → 人工审核 → 生效。</p>
+<h2 id="_3">三、测试</h2>
+<ul>
+<li><code>test_skill_anti_poison.py</code> 扩至 19 项：蒸馏默认停用/启用门控注入/手工默认启用/旧 JSON 兼容</li>
+<li><code>test_skill_distill_gate.py</code> 契约更新：入库即 match → 入库停用+启用后 match</li>
+<li>技能相关套件 56 项全过；ruff 基线计数不变；mypy 干净；前端 54 项单测全绿</li>
+</ul>
+<h2 id="_4">四、升级与兼容</h2>
+<ul>
+<li>无迁移；存量技能（含已启用的手工/导入技能）行为不变</li>
+<li>此后自动蒸馏出的技能会在设置→技能区显示「待启用」，人工点「启用」后才开始注入</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

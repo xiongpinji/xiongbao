@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p1-development-task-loop/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P1 开发任务闭环实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P1 \u5f00\u53d1\u4efb\u52a1\u95ed\u73af\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-07-webapi-p1-development-task-loop.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-p1-development-task-loop/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P1 开发任务闭环实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-07-webapi-p1-development-task-loop.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p1">Web/API P1 开发任务闭环实现计划</h1>
+<h2 id="_1">目标与边界</h2>
+<p>将现有“并行 worktree 执行后截断 diff 并立即删除”的临时能力升级为可持久审查的开发任务闭环：<code>running → awaiting_review → approved → applied</code>，并支持 <code>rejected / conflict / expired / failed / timeout / cancelled</code>。本计划只覆盖 Web/API 与 Git 本地生命周期，不包含短剧、Tauri 桌面、远端 PR 托管或 P2 持久调度。</p>
+<p>成功标准：</p>
+<ol>
+<li>成功的隔离子任务保留结果 commit、worktree、分支和完整 binary patch，直到 apply/reject/expire。</li>
+<li>任务记录按 tenant/owner 持久化，服务重启后仍可查询。</li>
+<li>Approve 不修改目标分支；Apply 必须显式确认，并以 cherry-pick 落地。</li>
+<li>冲突时自动 abort cherry-pick，主工作区恢复干净，任务记录冲突文件。</li>
+<li>Reject/Apply/Expire 清理 worktree 与临时分支，但保留记录和 patch。</li>
+<li>Web 能查看列表、详情、文件级 patch、测试摘要，并执行 approve/reject/apply/cancel。</li>
+</ol>
+<h2 id="_2">约束与取舍</h2>
+<ul>
+<li>复用 <code>core/orchestration/parallel.py</code>、现有 RBAC、审计链和异步 SQLAlchemy，不再建立第二套任务运行时。</li>
+<li>patch 保存到主仓库同级 <code>.xagent-development-tasks/&lt;task_id&gt;.patch</code>；worktree 保存到同级 <code>.xagent-worktrees/&lt;task_id&gt;</code>。两者均不依赖目标仓库 <code>.gitignore</code>，所有路径先解析并验证位于受控根下。</li>
+<li>API 不返回内部绝对路径，只返回任务元数据和按权限读取的 patch 内容。</li>
+<li>P1 不自动 merge/rebase、不覆盖脏工作区、不自动解决冲突。</li>
+<li>现有非 worktree 并行模式保持兼容；只有 <code>use_worktrees=true</code> 创建开发任务记录。</li>
+<li>现有同步并行请求暂不改成 durable queue；运行中 cancel 只保证当前 API 进程内有效，跨重启恢复属于 P2。</li>
+</ul>
+<h2 id="1">任务 1：持久模型、迁移与仓储</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>apps/api/xagent/infra/models/development_task.py</code></li>
+<li>创建：<code>apps/api/xagent/domains/development_tasks/__init__.py</code></li>
+<li>创建：<code>apps/api/xagent/domains/development_tasks/models.py</code></li>
+<li>创建：<code>apps/api/xagent/domains/development_tasks/service.py</code></li>
+<li>创建：<code>apps/api/migrations/versions/20260807_development_tasks.py</code></li>
+<li>修改：<code>apps/api/xagent/infra/models/__init__.py</code></li>
+<li>
+<p>创建：<code>apps/api/tests/test_development_tasks.py</code></p>
+</li>
+<li>
+<p>[x] 先写失败测试：创建 <code>running</code> 记录，更新为 <code>awaiting_review</code>，重新开 session 后按 tenant 查询仍存在；另一 tenant 查询不到。</p>
+</li>
+<li>[x] ORM 字段覆盖 task/run/tenant/owner、goal/status、workspace/base/target/work branch、worktree/result commit、diff stat、patch/test/conflict/error、创建/更新/审查/应用/过期时间。</li>
+<li>[x] domain service 只接受显式 tenant，提供 create/get/list/update；状态序列化使用固定字符串枚举。</li>
+<li>[x] migration 以 <code>20260805_users_persist</code> 为 parent，并安全创建索引。</li>
+<li>[x] 验证：<code>pytest test_development_tasks.py -q</code>、migration upgrade/head、关键 Ruff。</li>
+</ul>
+<h2 id="2-git">任务 2：受控 Git 资产与保留生命周期</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>apps/api/xagent/domains/development_tasks/git_lifecycle.py</code></li>
+<li>修改：<code>apps/api/xagent/core/orchestration/parallel.py</code></li>
+<li>
+<p>修改：<code>apps/api/tests/test_parallel_worktrees.py</code></p>
+</li>
+<li>
+<p>[x] 先把现有“成功后已清理”的测试改为失败契约：成功结果必须为 <code>awaiting_review</code>，worktree/branch/patch/commit 均存在，主工作区仍干净。</p>
+</li>
+<li>[x] 创建 <code>DevelopmentTaskPaths</code> 并验证 worktree/patch 解析路径不能逃逸受控根。</li>
+<li>[x] worktree 固定从 base commit 创建；完成后 <code>git add -A</code>、创建结果 commit、生成完整 <code>--binary</code> patch；API preview 仍最多 4000 字符。</li>
+<li>[x] 并行结果增加 <code>development_task_id</code> 和 <code>development_task_status</code>。</li>
+<li>[x] Agent failed/timeout 时写终态并清理临时 Git 资产；cancelled 在任务 3 接入运行注册表时完成。</li>
+<li>[x] 验证成功保留、失败清理、无 Git 仓库诚实降级和序列化回归。</li>
+</ul>
+<h2 id="3approverejectapplyconflictcancel">任务 3：Approve、Reject、Apply、Conflict、Cancel</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>修改：<code>apps/api/xagent/domains/development_tasks/service.py</code></li>
+<li>修改：<code>apps/api/xagent/domains/development_tasks/git_lifecycle.py</code></li>
+<li>修改：<code>apps/api/xagent/core/orchestration/parallel.py</code></li>
+<li>
+<p>修改：<code>apps/api/tests/test_development_tasks.py</code></p>
+</li>
+<li>
+<p>[x] 先写状态机失败测试：非法迁移拒绝；approve 不改主分支；reject 清理；apply cherry-pick；冲突 abort 后主工作区无未合并文件。</p>
+</li>
+<li>[x] approve 只写状态与 reviewed_at。</li>
+<li>[x] reject/expire 清理 worktree/branch并保留 patch/记录。</li>
+<li>[x] apply 要求 <code>approved</code>、目标 workspace 为干净 Git repo；cherry-pick 成功后写 applied commit/时间并清理。</li>
+<li>[x] cherry-pick 冲突收集 unmerged files、执行 <code>--abort</code>、写 <code>conflict</code>。</li>
+<li>[x] 进程内运行注册表支持 cancel 当前 asyncio task；DB 写 <code>cancelled</code>，跨重启不作虚假保证。</li>
+</ul>
+<h2 id="4-api">任务 4：租户隔离 API 与审计</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>apps/api/xagent/api/v1/development_tasks.py</code></li>
+<li>修改：<code>apps/api/xagent/api/v1/__init__.py</code> 或当前 router 注册文件</li>
+<li>修改：<code>apps/api/xagent/api/v1/automation.py</code></li>
+<li>
+<p>创建：<code>apps/api/tests/test_development_tasks_api.py</code></p>
+</li>
+<li>
+<p>[x] 先写 API 失败测试：list/detail tenant 隔离；approve/reject/apply/cancel 缺显式确认返回 422；patch 不暴露路径。</p>
+</li>
+<li>[x] GET <code>/development-tasks</code>、<code>/{id}</code>、<code>/{id}/patch</code> 使用 <code>agent:read</code>。</li>
+<li>[x] POST approve 使用 <code>code_review:execute</code>；reject/apply/cancel 使用 <code>agent:execute</code>，body 必须携带 task id 确认值。</li>
+<li>[x] 所有动作写现有 audit chain；404 不泄露另一 tenant 的存在。</li>
+<li>[x] parallel-run 响应返回 development task id，便于 Web 跳转。</li>
+</ul>
+<h2 id="5web">任务 5：Web 开发任务控制台</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>创建：<code>apps/web/src/api/developmentTasks.ts</code></li>
+<li>创建：<code>apps/web/src/pages/DevelopmentTasksPage.tsx</code></li>
+<li>修改：<code>apps/web/src/App.tsx</code></li>
+<li>修改：<code>apps/web/src/shell/shellRoutes.ts</code></li>
+<li>修改：<code>apps/web/src/tests/shellNavigation.test.ts</code></li>
+<li>
+<p>创建：<code>apps/web/src/tests/developmentTasks.test.ts</code></p>
+</li>
+<li>
+<p>[x] 先写导航与状态动作失败测试。</p>
+</li>
+<li>[x] 主导航增加“开发任务”，route <code>/development-tasks</code>，使用 workflow 类型而非新增无关 shell 抽象。</li>
+<li>[x] 列表显示状态、目标和更新时间，详情显示 base/result commit、diff stat、完整 patch、测试摘要、冲突文件。当前后端模型无 duration 字段，不在 Web 伪造耗时。</li>
+<li>[x] 按状态只展示合法动作；approve/reject/apply/cancel 均二次确认，并显示服务端错误。</li>
+<li>[x] Web 默认测试入口自动发现新测试；lint 保持 0 error / 100 warnings，typecheck 与 build 通过。</li>
+</ul>
+<h2 id="6p1">任务 6：P1 审计与证据</h2>
+<p><strong>文件：</strong></p>
+<ul>
+<li>修改：<code>docs/coordination/WEB_API_RELEASE_TASK_BOARD.md</code></li>
+<li>
+<p>创建：<code>docs/coordination/reports/WEB_API_P1_DEVELOPMENT_TASK_LOOP_EVIDENCE.md</code></p>
+</li>
+<li>
+<p>[x] 后端运行 development task、parallel worktree、API、code review 相关测试。</p>
+</li>
+<li>[x] 运行 migration fresh upgrade、关键 Ruff、静态质量基线。</li>
+<li>[x] Web 运行 test/lint/typecheck/build，并以 Playwright 验证真实导航与页面。</li>
+<li>[x] 在临时 Git repo 实跑 create → awaiting_review → approve → apply，以及 create → reject、冲突 → abort。</li>
+<li>[x] 证据报告记录退出码、状态链、commit/patch/worktree 清理和剩余风险；P1-A/P1-B 转 DONE，P2-A 转 READY。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-commercial-kernel/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 共享商用内核实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5171\u4eab\u5546\u7528\u5185\u6838\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-15-xagent-commercial-kernel.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-commercial-kernel/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 共享商用内核实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-15-xagent-commercial-kernel.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 共享商用内核实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 关闭版本漂移、Windows 初始化、明文密钥、安全扫描假绿、依赖漂移和不安全运行镜像六个 P0 门。</p>
+<p><strong>架构：</strong> API <code>pyproject.toml</code> 是产品版本唯一来源，验证器静态读取各运行时清单。LLM 覆盖文件只保存非密字段和 <code>SECRETREF:</code>，原始密钥只在当前进程内生效；安全扫描改为结构化、缺检查即失败。生产镜像由锁文件构建为非 root 最小运行层，Helm 支持不可变 digest。</p>
+<p><strong>技术栈：</strong> Python 3.11、pytest、FastAPI/Pydantic、Win32 Unicode API、httpx、Docker、Helm、GitHub Actions、npm、Cargo</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<ul>
+<li>创建：<code>tests/release/test_release_version_gate.py</code> —— 版本漂移回归测试。</li>
+<li>修改：<code>scripts/verify_release_versions.py</code> —— 静态读取 API、Web、Python runtime、Helm、Tauri 与 README 版本。</li>
+<li>修改：<code>apps/api/xagent/__init__.py</code>、<code>deploy/helm/Chart.yaml</code>、<code>apps/desktop/Cargo.toml</code>、<code>apps/desktop/tauri.conf.json</code> —— 对齐产品版本 <code>1.1.3</code>。</li>
+<li>修改：<code>scripts/r2_preflight.py</code>、<code>tests/release/test_r2_preflight.py</code> —— Windows Unicode 身份获取与安全回退。</li>
+<li>创建：<code>apps/api/xagent/infra/secure_json.py</code>、<code>apps/api/tests/test_secure_json.py</code> —— 原子、私有 JSON 写入。</li>
+<li>修改：<code>apps/api/xagent/api/v1/system.py</code> —— 非密字段/密钥引用持久化，原始密钥 session-only。</li>
+<li>创建：<code>apps/api/tests/test_llm_config_security.py</code> —— 明文拒绝、引用解析、重启语义和 fail-closed 测试。</li>
+<li>创建：<code>scripts/migrate_llm_overrides.py</code>、<code>tests/release/test_migrate_llm_overrides.py</code> —— 历史明文清理工具。</li>
+<li>修改：<code>tests/security/scan.py</code>、创建 <code>tests/security/test_scan.py</code> —— 所有检查可计数、可注入、失败闭合。</li>
+<li>创建：<code>apps/api/requirements.lock</code>、<code>packages/sdk-ts/package-lock.json</code> —— 可复现依赖。</li>
+<li>修改：<code>apps/api/Dockerfile</code>、<code>deploy/helm/values.yaml</code>、<code>deploy/helm/templates/*.yaml</code> —— 多阶段非 root 镜像和 digest。</li>
+<li>创建：<code>tests/release/test_container_contract.py</code>、<code>tests/release/test_helm_image_contract.py</code> —— 静态制品合同。</li>
+<li>修改：<code>.github/workflows/ci.yml</code> —— 锁文件、安全审计、SBOM、Cargo audit 与内核门。</li>
+</ul>
+<h3 id="1">任务 1：扩大版本一致性门</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/release/test_release_version_gate.py</code>
+- 修改：<code>scripts/verify_release_versions.py</code>
+- 修改：<code>apps/api/xagent/__init__.py</code>
+- 修改：<code>deploy/helm/Chart.yaml</code>
+- 修改：<code>apps/desktop/Cargo.toml</code>
+- 修改：<code>apps/desktop/tauri.conf.json</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写版本漂移失败测试</strong></li>
+</ul>
+<pre><code class="language-python">from pathlib import Path
+
+from scripts.verify_release_versions import verify_versions
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_current_tree_has_one_product_version() -&gt; None:
+    assert verify_versions(ROOT, tag=&quot;v1.1.3&quot;) == []
+
+
+def test_runtime_drift_is_rejected(tmp_path: Path) -&gt; None:
+    for source in (
+        &quot;apps/api/pyproject.toml&quot;,
+        &quot;apps/web/package.json&quot;,
+        &quot;apps/api/xagent/__init__.py&quot;,
+        &quot;deploy/helm/Chart.yaml&quot;,
+        &quot;apps/desktop/Cargo.toml&quot;,
+        &quot;apps/desktop/tauri.conf.json&quot;,
+        &quot;README.md&quot;,
+    ):
+        target = tmp_path / source
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / source).read_bytes())
+    runtime = tmp_path / &quot;apps/api/xagent/__init__.py&quot;
+    runtime.write_text('__version__ = &quot;9.9.9&quot;\n', encoding=&quot;utf-8&quot;)
+    assert verify_versions(tmp_path) == [
+        &quot;Python runtime version 9.9.9 != API version 1.1.3&quot;
+    ]
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认现有门漏检且当前树漂移</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_release_version_gate.py -q</code></p>
+<p>预期：FAIL；当前树测试报告 Python runtime、Helm 或 Tauri 版本不一致，漂移测试因验证器未检查 runtime 而失败。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现静态版本读取并对齐清单</strong></li>
+</ul>
+<p>在 <code>scripts/verify_release_versions.py</code> 添加并由 <code>verify_versions()</code> 调用：</p>
+<pre><code class="language-python">def _read_assignment(path: Path, name: str) -&gt; str:
+    tree = ast.parse(path.read_text(encoding=&quot;utf-8&quot;), filename=str(path))
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                        return node.value.value
+    raise ValueError(f&quot;{name} string assignment not found&quot;)
+
+
+def _read_yaml_scalar(path: Path, name: str) -&gt; str:
+    for line in path.read_text(encoding=&quot;utf-8&quot;).splitlines():
+        key, sep, value = line.partition(&quot;:&quot;)
+        if sep and key.strip() == name:
+            return value.strip().strip('&quot;').strip(&quot;'&quot;)
+    raise ValueError(f&quot;{name} scalar not found&quot;)
+</code></pre>
+<p>静态读取 <code>apps/api/xagent/__init__.py::__version__</code>、<code>deploy/helm/Chart.yaml::{version,appVersion}</code>、<code>apps/desktop/Cargo.toml::package.version</code> 和 <code>apps/desktop/tauri.conf.json::version</code>，逐项与 API 版本比较。将四个漂移文件改为 <code>1.1.3</code>；TS SDK 保持独立版本 <code>0.1.0</code>，不纳入产品版本等值门。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证版本门</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_release_version_gate.py -q
+python scripts/verify_release_versions.py --tag v1.1.3
+</code></pre>
+<p>预期：全部 PASS；脚本输出 <code>Web/API release versions match tag v1.1.3</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交版本门</strong></li>
+</ul>
+<pre><code class="language-bash">git add tests/release/test_release_version_gate.py scripts/verify_release_versions.py apps/api/xagent/__init__.py deploy/helm/Chart.yaml apps/desktop/Cargo.toml apps/desktop/tauri.conf.json
+git commit -m &quot;fix: enforce product version consistency&quot;
+</code></pre>
+<h3 id="2-windows-unicode">任务 2：修复 Windows Unicode 初始化</h3>
+<p><strong>文件：</strong>
+- 修改：<code>tests/release/test_r2_preflight.py</code>
+- 修改：<code>scripts/r2_preflight.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：添加 Unicode API 与回退测试</strong></li>
+</ul>
+<pre><code class="language-python">@mock.patch(&quot;scripts.r2_preflight._get_windows_identity_unicode&quot;, return_value=&quot;DOMAIN\\熊宝&quot;)
+def test_get_windows_identity_uses_unicode_api(unicode_identity: mock.Mock) -&gt; None:
+    assert r2_preflight.get_windows_identity(Path(&quot;C:/Windows/System32&quot;)) == &quot;DOMAIN\\熊宝&quot;
+    unicode_identity.assert_called_once_with()
+
+
+@mock.patch(&quot;scripts.r2_preflight._get_windows_identity_unicode&quot;, side_effect=OSError(&quot;unavailable&quot;))
+@mock.patch(&quot;scripts.r2_preflight.subprocess.run&quot;)
+def test_get_windows_identity_fallback_decodes_utf8(run: mock.Mock, _unicode: mock.Mock) -&gt; None:
+    run.return_value = subprocess.CompletedProcess([], 0, &quot;机器\\用户&quot;.encode(&quot;utf-8&quot;), b&quot;&quot;)
+    assert r2_preflight.get_windows_identity(Path(&quot;C:/Windows/System32&quot;)) == &quot;机器\\用户&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行失败测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_r2_preflight.py -q</code></p>
+<p>预期：FAIL，报告 <code>_get_windows_identity_unicode</code> 不存在，原先三项 Windows 初始化错误仍可复现。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现 Win32 Unicode 主路径和无损回退</strong></li>
+</ul>
+<pre><code class="language-python">def _get_windows_identity_unicode() -&gt; str:
+    import ctypes
+    from ctypes import wintypes
+
+    name_sam_compatible = 2
+    size = wintypes.ULONG(0)
+    secur32 = ctypes.WinDLL(&quot;secur32&quot;, use_last_error=True)
+    function = secur32.GetUserNameExW
+    function.argtypes = [wintypes.ULONG, wintypes.LPWSTR, ctypes.POINTER(wintypes.ULONG)]
+    function.restype = wintypes.BOOL
+    function(name_sam_compatible, None, ctypes.byref(size))
+    if size.value == 0:
+        raise ctypes.WinError(ctypes.get_last_error())
+    buffer = ctypes.create_unicode_buffer(size.value)
+    if not function(name_sam_compatible, buffer, ctypes.byref(size)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return buffer.value.strip()
+
+
+def _decode_identity(raw: bytes) -&gt; str:
+    for encoding in (&quot;utf-8&quot;, _console_codepage()):
+        try:
+            return raw.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+    return raw.decode(&quot;utf-8&quot;, errors=&quot;surrogateescape&quot;).strip()
+</code></pre>
+<p><code>get_windows_identity()</code> 先返回 <code>_get_windows_identity_unicode()</code>；仅在 <code>OSError</code> 时执行 <code>whoami.exe</code> 并交给 <code>_decode_identity()</code>。保留现有可执行文件路径验证和非零退出码处理。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证 Windows 初始化全绿</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_r2_preflight.py -q
+python scripts/r2_preflight.py init-env --output output/r2-runtime/test.env --force
+</code></pre>
+<p>预期：测试 <code>21 passed</code>；命令退出码 <code>0</code>，生成文件不含解码异常且 ACL 检查通过。删除测试生成的 <code>output/r2-runtime/test.env</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交 Windows 修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/r2_preflight.py tests/release/test_r2_preflight.py
+git commit -m &quot;fix: initialize Windows environment with Unicode identity&quot;
+</code></pre>
+<h3 id="3-json">任务 3：建立安全 JSON 原子写入</h3>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/infra/secure_json.py</code>
+- 创建：<code>apps/api/tests/test_secure_json.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败测试</strong></li>
+</ul>
+<pre><code class="language-python">import json
+import os
+from pathlib import Path
+
+from xagent.infra.secure_json import write_private_json
+
+
+def test_write_private_json_is_atomic_and_private(tmp_path: Path) -&gt; None:
+    target = tmp_path / &quot;nested&quot; / &quot;config.json&quot;
+    write_private_json(target, {&quot;model&quot;: &quot;ollama/qwen3:4b&quot;})
+    assert json.loads(target.read_text(encoding=&quot;utf-8&quot;)) == {&quot;model&quot;: &quot;ollama/qwen3:4b&quot;}
+    assert list(target.parent.glob(f&quot;.{target.name}.*.tmp&quot;)) == []
+    if os.name != &quot;nt&quot;:
+        assert target.stat().st_mode &amp; 0o777 == 0o600
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证模块缺失</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_secure_json.py -q</code></p>
+<p>预期：FAIL，报错 <code>ModuleNotFoundError: xagent.infra.secure_json</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小原子写入函数</strong></li>
+</ul>
+<pre><code class="language-python">def write_private_json(path: Path, value: Mapping[str, object]) -&gt; None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.parent / f&quot;.{path.name}.{uuid.uuid4().hex}.tmp&quot;
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, &quot;w&quot;, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;) as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2, sort_keys=True)
+            stream.write(&quot;\n&quot;)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if os.name != &quot;nt&quot;:
+            os.chmod(path, 0o600)
+    finally:
+        temporary.unlink(missing_ok=True)
+</code></pre>
+<p>在 Windows 上追加 <code>_restrict_windows_file(path)</code>，调用 <code>subprocess.run(["icacls.exe", str(path), "/inheritance:r", "/grant:r", f"{identity}:(R,W)"], check=True, capture_output=True)</code>；身份获取使用本任务 2 的 Unicode 原则，不读取或打印 JSON 内容。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_secure_json.py -q</code></p>
+<p>预期：PASS；Windows 上额外断言目标 ACL 不包含 <code>Everyone</code> 或 <code>BUILTIN\\Users</code> 的写权限。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交安全写入器</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/infra/secure_json.py apps/api/tests/test_secure_json.py
+git commit -m &quot;feat: write private configuration atomically&quot;
+</code></pre>
+<h3 id="4-llm">任务 4：禁止 LLM 原始密钥落盘</h3>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/tests/test_llm_config_security.py</code>
+- 修改：<code>apps/api/xagent/api/v1/system.py</code>
+- 修改：<code>apps/api/tests/test_api_v1_honesty.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写密钥持久化合同测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_raw_key_is_session_only_and_never_written(client, monkeypatch, tmp_path):
+    target = tmp_path / &quot;llm_config_overrides.json&quot;
+    monkeypatch.setattr(system, &quot;_LLM_OVERRIDES_PATH&quot;, target)
+    response = client.put(
+        &quot;/api/v1/system/llm-config&quot;,
+        headers=manage_headers(),
+        json={&quot;openai_api_key&quot;: &quot;test-session-secret&quot;, &quot;default_model&quot;: &quot;gpt-4o-mini&quot;},
+    )
+    assert response.status_code == 200
+    assert response.json()[&quot;secret_persistence&quot;] == &quot;session_only&quot;
+    saved = json.loads(target.read_text(encoding=&quot;utf-8&quot;))
+    assert &quot;openai_api_key&quot; not in saved
+    assert &quot;test-session-secret&quot; not in target.read_text(encoding=&quot;utf-8&quot;)
+
+
+def test_secret_ref_is_persisted_but_resolved_value_is_not(client, monkeypatch, tmp_path):
+    target = tmp_path / &quot;llm_config_overrides.json&quot;
+    monkeypatch.setattr(system, &quot;_LLM_OVERRIDES_PATH&quot;, target)
+    monkeypatch.setenv(&quot;XAGENT_TEST_OPENAI_KEY&quot;, &quot;resolved-test-secret&quot;)
+    response = client.put(
+        &quot;/api/v1/system/llm-config&quot;,
+        headers=manage_headers(),
+        json={&quot;openai_api_key&quot;: &quot;SECRETREF:env:XAGENT_TEST_OPENAI_KEY&quot;},
+    )
+    assert response.status_code == 200
+    assert json.loads(target.read_text(encoding=&quot;utf-8&quot;))[&quot;openai_api_key&quot;] == &quot;SECRETREF:env:XAGENT_TEST_OPENAI_KEY&quot;
+    assert &quot;resolved-test-secret&quot; not in target.read_text(encoding=&quot;utf-8&quot;)
+</code></pre>
+<p>再添加两个直接函数测试：full 模式加载历史明文敏感字段抛 <code>RuntimeError</code>；lite 模式忽略该字段并记录 warning。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认明文仍会写入</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_llm_config_security.py apps/api/tests/test_api_v1_honesty.py -q</code></p>
+<p>预期：FAIL；断言显示 <code>openai_api_key</code> 仍存在于覆盖文件。</p>
+<ul>
+<li>[ ] <strong>步骤 3：拆分敏感字段和持久字段</strong></li>
+</ul>
+<pre><code class="language-python">_LLM_SENSITIVE_FIELDS = frozenset({
+    &quot;proxy_api_key&quot;, &quot;openai_api_key&quot;, &quot;anthropic_api_key&quot;, &quot;deepseek_api_key&quot;,
+})
+_LLM_PERSISTED_FIELDS = frozenset(_LLM_OVERRIDABLE_FIELDS) - _LLM_SENSITIVE_FIELDS
+
+
+def _persistable_llm_changes(changed: dict[str, object]) -&gt; dict[str, object]:
+    persisted: dict[str, object] = {}
+    for key, value in changed.items():
+        if key in _LLM_PERSISTED_FIELDS:
+            persisted[key] = value
+        elif key in _LLM_SENSITIVE_FIELDS and is_secret_ref(value):
+            persisted[key] = value
+    return persisted
+</code></pre>
+<p><code>_load_llm_overrides(mode: RunMode)</code> 只接受白名单。敏感值若为 <code>SECRETREF:</code>，通过 <code>resolve_secret(value, field=f"llm.{key}", lite=mode is RunMode.lite)</code> 应用，磁盘仍保留引用；敏感值若为原始字符串，full/enterprise 抛不含值的 <code>RuntimeError</code>，lite 记录字段名并丢弃。<code>_save_llm_overrides()</code> 改用 <code>write_private_json()</code>。</p>
+<p>PUT 的运行时 <code>changed</code> 继续应用于当前进程；写盘仅合并 <code>_persistable_llm_changes(changed)</code>。响应增加：</p>
+<pre><code class="language-python">{
+    &quot;persisted&quot;: True,
+    &quot;persisted_fields&quot;: sorted(persistable_changes),
+    &quot;session_only_fields&quot;: sorted(set(changed) - set(persistable_changes)),
+    &quot;secret_persistence&quot;: &quot;session_only&quot; if any(
+        key in _LLM_SENSITIVE_FIELDS and not is_secret_ref(value)
+        for key, value in changed.items()
+    ) else &quot;reference_only&quot;,
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：验证 API 安全和兼容性</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_llm_config_security.py -q
+python -m pytest apps/api/tests/test_api_v1_honesty.py -q
+</code></pre>
+<p>预期：全部 PASS；GET 仍只返回 <code>has_*_key</code> 布尔值，不返回密钥或解析值。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交密钥修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/system.py apps/api/tests/test_llm_config_security.py apps/api/tests/test_api_v1_honesty.py
+git commit -m &quot;fix: keep raw provider keys out of persistent overrides&quot;
+</code></pre>
+<h3 id="5">任务 5：清理历史明文覆盖文件</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/migrate_llm_overrides.py</code>
+- 创建：<code>tests/release/test_migrate_llm_overrides.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 dry-run 和 apply 测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_migration_strips_raw_secrets_and_preserves_refs(tmp_path: Path) -&gt; None:
+    target = tmp_path / &quot;llm_config_overrides.json&quot;
+    target.write_text(json.dumps({
+        &quot;default_model&quot;: &quot;ollama/qwen3:4b&quot;,
+        &quot;openai_api_key&quot;: &quot;historical-raw-secret&quot;,
+        &quot;deepseek_api_key&quot;: &quot;SECRETREF:env:DEEPSEEK_API_KEY&quot;,
+    }), encoding=&quot;utf-8&quot;)
+    report = migrate(target, apply=False)
+    assert report.removed_fields == (&quot;openai_api_key&quot;,)
+    assert &quot;historical-raw-secret&quot; in target.read_text(encoding=&quot;utf-8&quot;)
+    migrate(target, apply=True)
+    saved = json.loads(target.read_text(encoding=&quot;utf-8&quot;))
+    assert saved == {
+        &quot;deepseek_api_key&quot;: &quot;SECRETREF:env:DEEPSEEK_API_KEY&quot;,
+        &quot;default_model&quot;: &quot;ollama/qwen3:4b&quot;,
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：确认测试失败</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_migrate_llm_overrides.py -q</code></p>
+<p>预期：FAIL，迁移模块不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现不打印值的迁移器</strong></li>
+</ul>
+<p>定义 <code>MigrationReport(path: Path, removed_fields: Sequence[str], changed: bool)</code>；<code>migrate(path, apply)</code> 读取对象 JSON，删除四个敏感字段中的非 <code>SECRETREF:</code> 值，apply 时调用 <code>write_private_json</code>。CLI 默认 dry-run，仅打印路径、字段名和是否改变；<code>--apply</code> 才写盘。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证迁移并处理当前历史文件</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_migrate_llm_overrides.py -q
+python scripts/migrate_llm_overrides.py data/llm_config_overrides.json
+python scripts/migrate_llm_overrides.py data/llm_config_overrides.json --apply
+</code></pre>
+<p>预期：测试 PASS；实际文件仅在存在时处理，日志不含任何密钥值。已有外泄供应商密钥标记为需要在对应供应商后台轮换，轮换属于外部操作，不在本地脚本内自动执行。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交迁移器</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/migrate_llm_overrides.py tests/release/test_migrate_llm_overrides.py
+git commit -m &quot;feat: migrate plaintext LLM overrides safely&quot;
+</code></pre>
+<h3 id="6">任务 6：让安全扫描缺项即失败</h3>
+<p><strong>文件：</strong>
+- 修改：<code>tests/security/scan.py</code>
+- 创建：<code>tests/security/test_scan.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写结构化结果测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_failed_required_check_changes_exit_code() -&gt; None:
+    results = [
+        CheckResult(&quot;health&quot;, True, &quot;200&quot;),
+        CheckResult(&quot;auth_required&quot;, False, &quot;200&quot;),
+    ]
+    assert exit_code(results) == 1
+
+
+def test_rate_limit_attempts_exceed_configured_threshold() -&gt; None:
+    assert request_count_for_rate_limit(configured_limit=3) == 5
+    assert request_count_for_rate_limit(configured_limit=300) == 302
+
+
+def test_missing_tenant_checks_fail_closed() -&gt; None:
+    results = required_results({&quot;health&quot;: CheckResult(&quot;health&quot;, True, &quot;200&quot;)})
+    assert {item.name for item in results if not item.passed} &gt;= {
+        &quot;tenant_header_injection&quot;, &quot;tenant_memory_isolation&quot;,
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行失败测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/security/test_scan.py -q</code></p>
+<p>预期：FAIL，<code>CheckResult</code> 和纯函数不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现结果模型和确定性阈值</strong></li>
+</ul>
+<pre><code class="language-python">@dataclass(frozen=True)
+class CheckResult:
+    name: str
+    passed: bool
+    detail: str
+
+
+REQUIRED_CHECKS = (
+    &quot;health&quot;, &quot;nosniff&quot;, &quot;frame_deny&quot;, &quot;auth_required&quot;,
+    &quot;tenant_header_injection&quot;, &quot;tenant_memory_isolation&quot;,
+    &quot;sql_injection&quot;, &quot;rate_limit&quot;,
+)
+
+
+def request_count_for_rate_limit(configured_limit: int) -&gt; int:
+    return configured_limit + 2
+
+
+def exit_code(results: Sequence[CheckResult]) -&gt; int:
+    return 0 if results and all(item.passed for item in results) else 1
+</code></pre>
+<p><code>scan(host, expected_mode, configured_limit)</code> 返回 <code>list[CheckResult]</code>。full/enterprise 下业务端点必须 <code>401</code>；注册失败、写记忆失败、搜索失败均追加对应失败结果；限流请求次数由 CLI <code>--rate-limit-requests</code> 明确传入并要求至少一次 <code>429</code>。CLI 只在所有 <code>REQUIRED_CHECKS</code> 各出现一次且通过时返回 <code>0</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行单元与真实低阈值扫描</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/security/test_scan.py apps/api/tests/test_security_middleware.py -q
+python tests/security/scan.py --host http://127.0.0.1:8000 --expected-mode full --rate-limit-requests 3
+</code></pre>
+<p>预期：单元测试 PASS；以 <code>XAGENT_SECURITY__RATE_LIMIT_REQUESTS=3</code> 启动的隔离 API 上八项全部 PASS，退出码 <code>0</code>。API 未启动或任一请求异常时退出码 <code>1</code>，且只打印 URL、状态码和检查名。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交扫描修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add tests/security/scan.py tests/security/test_scan.py
+git commit -m &quot;fix: make security scan fail closed&quot;
+</code></pre>
+<h3 id="7-root">任务 7：锁定依赖并构建最小非 root 镜像</h3>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/requirements.lock</code>
+- 创建：<code>packages/sdk-ts/package-lock.json</code>
+- 修改：<code>apps/api/Dockerfile</code>
+- 修改：<code>deploy/helm/values.yaml</code>
+- 修改：<code>deploy/helm/templates/deployment.yaml</code>
+- 修改：<code>deploy/helm/templates/worker.yaml</code>
+- 修改：<code>deploy/helm/templates/job-post-deploy.yaml</code>
+- 修改：<code>deploy/helm/templates/cronjob-health.yaml</code>
+- 修改：<code>deploy/helm/templates/cronjob-evidence.yaml</code>
+- 修改：<code>deploy/helm/templates/web.yaml</code>
+- 创建：<code>tests/release/test_container_contract.py</code>
+- 创建：<code>tests/release/test_helm_image_contract.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：添加镜像和 Helm 失败合同</strong></li>
+</ul>
+<pre><code class="language-python">def test_api_runtime_image_is_non_root_and_has_no_dev_extra() -&gt; None:
+    dockerfile = (ROOT / &quot;apps/api/Dockerfile&quot;).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;AS builder&quot; in dockerfile
+    assert '&quot;.[dev]&quot;' not in dockerfile
+    assert &quot;USER 10001:10001&quot; in dockerfile
+    runtime = dockerfile.split(&quot;FROM python:3.11-slim AS runtime&quot;, 1)[1]
+    assert &quot;build-essential&quot; not in runtime
+    assert &quot;git&quot; in runtime
+
+
+def test_helm_images_are_immutable() -&gt; None:
+    values = yaml.safe_load((ROOT / &quot;deploy/helm/values.yaml&quot;).read_text(encoding=&quot;utf-8&quot;))
+    assert values[&quot;image&quot;][&quot;tag&quot;] == &quot;1.1.3&quot;
+    assert values[&quot;web&quot;][&quot;image&quot;][&quot;tag&quot;] == &quot;1.1.3&quot;
+    assert values[&quot;image&quot;][&quot;digest&quot;] == &quot;&quot;
+    assert &quot;latest&quot; not in json.dumps(values)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行合同确认当前镜像不合格</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_container_contract.py tests/release/test_helm_image_contract.py -q</code></p>
+<p>预期：FAIL，报告单阶段镜像、dev extra、root 用户和 <code>latest</code> tag。</p>
+<ul>
+<li>[ ] <strong>步骤 3：生成并验证锁文件</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pip install uv
+uv pip compile apps/api/pyproject.toml --python-version 3.11 --generate-hashes --output-file apps/api/requirements.lock
+npm --prefix packages/sdk-ts install --package-lock-only --ignore-scripts
+python -m pip install pip-audit
+pip-audit -r apps/api/requirements.lock
+npm --prefix apps/web audit --omit=dev --audit-level=high
+npm --prefix packages/sdk-ts audit --omit=dev --audit-level=high
+</code></pre>
+<p>预期：锁文件生成；三个生产依赖审计退出码 <code>0</code>。审计若报告漏洞，先在清单中把直接依赖升级到无漏洞兼容版本，重新生成锁并重跑；不使用 ignore 绕过高危漏洞。</p>
+<ul>
+<li>[ ] <strong>步骤 4：实现多阶段非 root Dockerfile</strong></li>
+</ul>
+<pre><code class="language-dockerfile">FROM python:3.11-slim AS builder
+WORKDIR /build
+COPY pyproject.toml README.md ./
+COPY xagent ./xagent
+COPY requirements.lock ./requirements.lock
+RUN python -m venv /opt/venv \
+    &amp;&amp; /opt/venv/bin/pip install --no-cache-dir --require-hashes -r requirements.lock \
+    &amp;&amp; /opt/venv/bin/pip install --no-cache-dir --no-deps .
+
+FROM python:3.11-slim AS runtime
+ENV PATH=&quot;/opt/venv/bin:$PATH&quot; PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends ca-certificates git \
+    &amp;&amp; rm -rf /var/lib/apt/lists/* \
+    &amp;&amp; groupadd --gid 10001 xagent \
+    &amp;&amp; useradd --uid 10001 --gid 10001 --no-create-home xagent
+COPY --from=builder /opt/venv /opt/venv
+WORKDIR /app
+RUN mkdir -p /data &amp;&amp; chown 10001:10001 /data
+USER 10001:10001
+EXPOSE 8000
+CMD [&quot;uvicorn&quot;, &quot;xagent.main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8000&quot;]
+</code></pre>
+<p>CI、根 Compose 与 <code>deploy/compose</code> 当前都以 <code>apps/api</code> 为 build context，因此 COPY 路径固定使用上述 context 内相对路径。</p>
+<ul>
+<li>[ ] <strong>步骤 5：实现 Helm digest 优先模板</strong></li>
+</ul>
+<p>在 <code>values.yaml</code> 为 API 和 Web 分别定义 <code>tag: "1.1.3"</code>、<code>digest: ""</code>。在 <code>_helpers.tpl</code> 添加：</p>
+<pre><code class="language-gotemplate">{{- define &quot;xagent.image&quot; -}}
+{{- if .digest -}}
+{{ printf &quot;%s@%s&quot; .repository .digest }}
+{{- else -}}
+{{ printf &quot;%s:%s&quot; .repository .tag }}
+{{- end -}}
+{{- end -}}
+</code></pre>
+<p>API 模板调用 <code>{{ include "xagent.image" .Values.image | quote }}</code>，Web 调用 <code>{{ include "xagent.image" .Values.web.image | quote }}</code>。这也修复 Web 错用 API tag 的现状。</p>
+<ul>
+<li>[ ] <strong>步骤 6：构建并运行镜像合同</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_container_contract.py tests/release/test_helm_image_contract.py -q
+helm template xagent deploy/helm --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --set web.image.digest=sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+docker build -f apps/api/Dockerfile -t xagent-api:commercial-kernel .
+docker run --rm --entrypoint id xagent-api:commercial-kernel
+</code></pre>
+<p>预期：测试 PASS；Helm 输出 <code>repository@sha256:</code> 且无 <code>:latest</code>；容器 <code>id</code> 输出 <code>uid=10001</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 7：提交供应链修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/requirements.lock packages/sdk-ts/package-lock.json apps/api/Dockerfile deploy/helm tests/release/test_container_contract.py tests/release/test_helm_image_contract.py
+git commit -m &quot;build: lock dependencies and harden runtime images&quot;
+</code></pre>
+<h3 id="8-ci">任务 8：接入 CI 商用内核门</h3>
+<p><strong>文件：</strong>
+- 修改：<code>.github/workflows/ci.yml</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：增加 CI 合同断言</strong></li>
+</ul>
+<p>在 <code>release-version</code> 任务中先运行：</p>
+<pre><code class="language-yaml">- name: Test release and container contracts
+  run: &gt;-
+    python -m pytest
+    tests/release/test_release_version_gate.py
+    tests/release/test_container_contract.py
+    tests/release/test_helm_image_contract.py -q
+</code></pre>
+<p>新增 <code>supply-chain</code> 任务，固定执行 <code>pip-audit -r apps/api/requirements.lock</code>、两个 <code>npm audit --omit=dev --audit-level=high</code>、<code>cargo audit --file apps/desktop/Cargo.lock</code>，并用 <code>anchore/sbom-action</code> 为 API/Web 镜像生成 SPDX JSON 后上传。</p>
+<ul>
+<li>[ ] <strong>步骤 2：本地解析并复跑内核门</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -c &quot;import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('ci yaml ok')&quot;
+python -m pytest tests/release/test_release_version_gate.py tests/release/test_r2_preflight.py tests/release/test_migrate_llm_overrides.py tests/release/test_container_contract.py tests/release/test_helm_image_contract.py tests/security/test_scan.py apps/api/tests/test_secure_json.py apps/api/tests/test_llm_config_security.py -q
+</code></pre>
+<p>预期：输出 <code>ci yaml ok</code>；所有指定测试 PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 3：提交 CI 门</strong></li>
+</ul>
+<pre><code class="language-bash">git add .github/workflows/ci.yml
+git commit -m &quot;ci: enforce commercial kernel gates&quot;
+</code></pre>
+<h2 id="_2">本计划完成判定</h2>
+<p>运行以下命令必须全部通过，且输出不得包含真实 secret：</p>
+<pre><code class="language-powershell">python scripts/verify_release_versions.py --tag v1.1.3
+python -m pytest tests/release/test_release_version_gate.py tests/release/test_r2_preflight.py tests/release/test_migrate_llm_overrides.py tests/release/test_container_contract.py tests/release/test_helm_image_contract.py tests/security/test_scan.py apps/api/tests/test_secure_json.py apps/api/tests/test_llm_config_security.py -q
+pip-audit -r apps/api/requirements.lock
+npm --prefix apps/web audit --omit=dev --audit-level=high
+npm --prefix packages/sdk-ts audit --omit=dev --audit-level=high
+cargo audit --file apps/desktop/Cargo.lock
+</code></pre>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

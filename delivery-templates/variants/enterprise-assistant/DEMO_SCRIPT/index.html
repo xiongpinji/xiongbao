@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/delivery-templates/variants/enterprise-assistant/DEMO_SCRIPT/" />
+      <link rel="shortcut icon" href="../../../../img/favicon.ico" />
+    <title>企业内部助手变体 · 客户演示脚本 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u4f01\u4e1a\u5185\u90e8\u52a9\u624b\u53d8\u4f53 \u00b7 \u5ba2\u6237\u6f14\u793a\u811a\u672c";
+        var mkdocs_page_input_path = "delivery-templates/variants/enterprise-assistant/DEMO_SCRIPT.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/delivery-templates/variants/enterprise-assistant/DEMO_SCRIPT/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">企业内部助手变体 · 客户演示脚本</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/delivery-templates/variants/enterprise-assistant/DEMO_SCRIPT.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="_1">企业内部助手变体 · 客户演示脚本</h1>
+<blockquote>
+<p>三条主路径，全部基于主线已实现能力。演示前置：full 模式环境已起
+（Keycloak 已配 realm，见 <code>deploy/keycloak/</code>），演示用 IdP 账号两个
+（普通员工 + 管理员），知识库已 ingest 若干客户制度文档。</p>
+</blockquote>
+<h2 id="1sso">路径 1：SSO 统一登录（企业采购第一关注点）</h2>
+<ol>
+<li><code>GET /api/v1/auth/oidc/providers</code> → 展示 SSO 可用性（前端据此渲染 SSO 按钮）；</li>
+<li><code>GET /api/v1/auth/oidc/login</code> → 302 跳转企业 IdP 授权页；</li>
+<li>员工用 IdP 账号登录 → <code>/oidc/callback</code> 换票签发会话 → 进入工作台。</li>
+</ol>
+<p><strong>预期结果</strong>：全程无应用内账号注册/口令输入；登录后 <code>/api/v1/auth/me</code> 返回 IdP 身份。
+<strong>讲解点</strong>：账号生命周期全部由企业 IdP 管控（离职即失效），应用侧不落账号库。</p>
+<h2 id="2">路径 2：知识库问答（全员价值演示）</h2>
+<ol>
+<li>管理员现场上传一份制度文档：<code>POST /api/v1/knowledge/ingest</code>；</li>
+<li><code>GET /api/v1/knowledge/documents</code> 确认入库；</li>
+<li>员工提问：<code>POST /api/v1/knowledge/search</code> 语义检索命中该文档；</li>
+<li>在对话中引用检索结果完成问答。</li>
+</ol>
+<p><strong>预期结果</strong>：新上传文档可被即时检索命中。
+<strong>讲解点</strong>：知识库管理员可维护（上传/列出/删除），无需厂商介入。</p>
+<h2 id="3">路径 3：审计追溯与证据归档（合规关注点）</h2>
+<ol>
+<li>回放路径 1/2 的操作，展示审计事件（登录、检索、文档变更）已留痕；</li>
+<li>展示证据归档包结构（health-snapshot / recovery-logs / evidence-records，见
+   <code>scripts/auto_archive_evidence.py</code> 产出）；</li>
+<li>说明保留期配置：enterprise 形态 retentionDays=365，可按合规要求加长。</li>
+</ol>
+<p><strong>预期结果</strong>：每个演示动作都有对应审计/证据记录可查。
+<strong>讲解点</strong>：审计事件覆盖范围是平台统一红线，任何变体不得裁剪；保留期只能加长。</p>
+<h2 id="_2">演示红线</h2>
+<ul>
+<li>不用 lite 模式演示（账号体系不符合企业口径）；不用本地口令账号演示；</li>
+<li>知识库演示用客户授权的真实制度文档，不用编造内容；</li>
+<li>演示环境 config 治理按 <code>docs/CONFIG_GOVERNANCE_V1.md</code> 跑门禁后再交付演示。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../../..";</script>
+    <script src="../../../../js/theme_extra.js"></script>
+    <script src="../../../../js/theme.js"></script>
+      <script src="../../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

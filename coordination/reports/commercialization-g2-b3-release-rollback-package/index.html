@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b3-release-rollback-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G2-B3 发布 / 回滚包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G2-B3 \u53d1\u5e03 / \u56de\u6eda\u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g2-b3-release-rollback-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g2-b3-release-rollback-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G2-B3 发布 / 回滚包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g2-b3-release-rollback-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g2-b3">G2-B3 发布 / 回滚包</h1>
+<blockquote>
+<p>适用阶段：G2 正式商用 GA</p>
+<p>用途：把正式商用候选的发布步骤、回滚边界、失败处置和 smoke 验证整理成一个可交接的最小发布 / 回滚包，确保正式 GA 不只是冻结了候选，也不只是演练过，而是可以按统一口径执行发布与回滚。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G2-B3 的目标是：</p>
+<blockquote>
+<p><strong>把正式商用 GA 的发布 / 回滚流程冻结成一个可执行、可复验、可交接的包。</strong></p>
+</blockquote>
+<p>这一步不负责长周期运维，也不负责企业级 HA；它只负责：</p>
+<ul>
+<li>发布步骤清楚；</li>
+<li>回滚步骤清楚；</li>
+<li>发布失败后知道怎么停、怎么回、怎么留证；</li>
+<li>smoke 验证与异常处置口径统一。</li>
+</ul>
+<hr />
+<h2 id="2">2. 发布输入</h2>
+<p>本包默认依赖的输入如下：</p>
+<ul>
+<li>G2-B1 候选冻结结果；</li>
+<li>G2-B2 目标环境演练结果；</li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code>；</li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code>；</li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code>；</li>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code>；</li>
+<li><code>docs/DELIVERY_MATERIALS_INDEX_V1.md</code>。</li>
+</ul>
+<hr />
+<h2 id="3">3. 发布步骤</h2>
+<h3 id="31">3.1 发布前确认</h3>
+<p>发布前必须确认：</p>
+<ol>
+<li>当前候选已经冻结；</li>
+<li>目标环境演练通过；</li>
+<li>远端 CI 全绿；</li>
+<li>交付材料入口完整；</li>
+<li>试点边界与已知问题已知；</li>
+<li>发布 / 回滚责任人明确。</li>
+</ol>
+<h3 id="32">3.2 发布执行</h3>
+<p>按 runbook 中的最小步骤执行：</p>
+<pre><code class="language-powershell">cd deploy\compose
+docker compose up -d --build postgres redis qdrant litellm langfuse
+docker compose up -d --build api worker web
+docker compose ps
+</code></pre>
+<h3 id="33-smoke">3.3 发布后 smoke</h3>
+<pre><code class="language-powershell">curl.exe -f http://localhost:8000/health
+curl.exe -f http://localhost:8000/ready
+curl.exe -f http://localhost:3000
+</code></pre>
+<p>并确认：
+- 登录可用；
+- 工作台可用；
+- Run Console 可打开；
+- Goal Board 可打开。</p>
+<hr />
+<h2 id="4">4. 回滚边界</h2>
+<h3 id="41">4.1 何时应回滚</h3>
+<p>满足以下任一情况时，优先考虑回滚：</p>
+<ul>
+<li>/health 或 /ready 不通过；</li>
+<li>登录失败且非单点账号问题；</li>
+<li>worker 无法持续消费；</li>
+<li>核心 run / workflow 链路失败；</li>
+<li>数据迁移后出现无法接受的异常；</li>
+<li>smoke 不通过且短时间内无法恢复。</li>
+</ul>
+<h3 id="42">4.2 回滚目标</h3>
+<p>回滚目标必须是：
+- 上一个已知可用候选；
+- 与发布候选区分明确；
+- 不依赖未冻结工作树内容。</p>
+<hr />
+<h2 id="5">5. 回滚步骤</h2>
+<h3 id="51-db">5.1 无 DB 迁移影响</h3>
+<pre><code class="language-powershell">git checkout &lt;previous-release-tag-or-commit&gt;
+cd apps\web
+npm ci
+npm run build
+
+cd ..\..\deploy\compose
+docker compose up -d --build api worker web
+docker compose ps
+</code></pre>
+<h3 id="52-db">5.2 需要恢复 DB</h3>
+<pre><code class="language-powershell">cd deploy\compose
+docker compose stop api worker web
+</code></pre>
+<p>恢复备份：</p>
+<pre><code class="language-powershell">docker compose exec -T postgres dropdb --if-exists -U xagent xagent
+docker compose exec -T postgres createdb -U xagent xagent
+Get-Content backups\&lt;backup-file&gt;.sql | docker compose exec -T postgres psql -U xagent xagent
+</code></pre>
+<p>然后切回上一版本并重新启动：</p>
+<pre><code class="language-powershell">git checkout &lt;previous-release-tag-or-commit&gt;
+cd ..\..\apps\web
+npm ci
+npm run build
+
+cd ..\..\deploy\compose
+docker compose up -d --build api worker web
+</code></pre>
+<hr />
+<h2 id="6">6. 失败处置</h2>
+<h3 id="61">6.1 发布失败</h3>
+<p>如果发布过程中任一步失败：
+1. 立即停止继续扩大范围；
+2. 保留 <code>api</code> / <code>worker</code> / <code>web</code> 日志；
+3. 记录失败点；
+4. 判断是否需要回滚；
+5. 若需回滚，按上节执行。</p>
+<h3 id="62-smoke">6.2 smoke 失败</h3>
+<p>如果 smoke 失败：
+1. 记录 <code>/health</code>、<code>/ready</code>、前端入口结果；
+2. 记录相关日志；
+3. 判断是配置、依赖还是代码问题；
+4. 不能在未留证的情况下继续试错。</p>
+<hr />
+<h2 id="7">7. 现有证据入口</h2>
+<p>当前可直接引用的证据：</p>
+<ul>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li><code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li><code>docs/coordination/reports/R12_SQLITE_ALEMBIC_DRIFT_GUIDE.md</code></li>
+<li><code>docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md</code></li>
+<li><code>docs/coordination/reports/commercialization-g2-b2-target-rehearsal-package.md</code></li>
+<li><code>docs/coordination/reports/commercialization-goal-board.md</code></li>
+</ul>
+<hr />
+<h2 id="8">8. 完成定义</h2>
+<p>G2-B3 只有在以下条件同时成立时，才算完成：</p>
+<ul>
+<li>发布步骤可以按统一口径执行；</li>
+<li>回滚步骤可以按统一口径执行；</li>
+<li>发布失败 / smoke 失败有明确处置边界；</li>
+<li>证据可以回填到发布材料包；</li>
+<li>G2 候选不会因为发布文档而漂移。</li>
+</ul>
+<hr />
+<h2 id="9">9. 当前结论</h2>
+<p>G2-B3 的作用不是扩张系统，而是：</p>
+<blockquote>
+<p><strong>把正式商用 GA 的发布 / 回滚流程冻结为一套可交接、可留证、可执行的最小闭环。</strong></p>
+</blockquote>
+<p>完成 G2-B3 后，G2 就具备进入签字 / 证据包阶段的完整发布动作基础。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

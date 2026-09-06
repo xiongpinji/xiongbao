@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-r1-release-audit/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API R1 发布审计执行计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API R1 \u53d1\u5e03\u5ba1\u8ba1\u6267\u884c\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-07-webapi-r1-release-audit.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-07-webapi-r1-release-audit/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API R1 发布审计执行计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-07-webapi-r1-release-audit.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-r1">Web/API R1 发布审计执行计划</h1>
+<h2 id="_1">目标与边界</h2>
+<p>对 <code>feature/webapi-release-hardening</code> 的当前冻结候选执行可复现发布审计。只对 Web/API、编排、开发任务、调度、技能、checkpoint 与 Platform MCP 形成发布结论；短剧、Tauri 桌面、多机 HA、E2B 和客户现场演练继续排除。</p>
+<h2 id="_2">成功标准</h2>
+<ol>
+<li>工作树无未提交变更，API/Web/README/tag 版本一致，CI release 只在全部依赖 gate 成功后执行。</li>
+<li>后端全量或明确 Web/API 范围测试通过；任何超时、跳过和排除均单独记录，不能写成通过。</li>
+<li>Web 默认单测、lint、typecheck、production build 和关键真实浏览器链通过。</li>
+<li>Ruff/mypy 不反弹；残留问题按精确 finding 形成有 owner、理由、范围和失效日期的临时豁免，不只保存总数。</li>
+<li>生产依赖漏洞、许可证、配置、明文 secret、空库迁移和 Docker/发布配置完成审计；高危未处置项阻断发布。</li>
+<li>从登录到会话/run，再到调度、开发任务、技能包、checkpoint 的关键 Web/API 页面使用独立数据库和真实服务完成同链验证。</li>
+<li>发布物、升级与回滚边界有可执行证据；不创建或移动正式 tag，不向远端推送，不宣称排除能力已发布。</li>
+</ol>
+<h2 id="_3">执行顺序</h2>
+<ol>
+<li>冻结候选与版本/CI/范围审计。</li>
+<li>后端全量、关键静态、迁移、许可证和依赖安全检查。</li>
+<li>Web 安装、单测、lint、typecheck、build 和生产依赖审计。</li>
+<li>独立 SQLite + API + Web 的真实浏览器主链与后端回读。</li>
+<li>质量豁免逐项落盘并用自动门禁校验不漂移。</li>
+<li>复跑所有发布 gate，生成 R1 最终证据；只有无阻断项时才把任务转 Done。</li>
+</ol>
+<h2 id="_4">失败处理</h2>
+<ul>
+<li>测试先记录失败命令、错误和影响面，再做最小修复并重跑相关链。</li>
+<li>网络、Docker、可选依赖或 Windows 路径造成的环境限制单列，不能用阈值或跳过掩盖。</li>
+<li>若高危漏洞、数据迁移、真实认证或核心同链仍失败，R1 保持进行中并给出明确阻断项。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

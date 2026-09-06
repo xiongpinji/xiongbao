@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/RELEASE_NOTES_V1.2.1/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent v1.2.1 发布说明 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent v1.2.1 \u53d1\u5e03\u8bf4\u660e";
+        var mkdocs_page_input_path = "RELEASE_NOTES_V1.2.1.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/RELEASE_NOTES_V1.2.1/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent v1.2.1 发布说明</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/RELEASE_NOTES_V1.2.1.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-v121">X-Agent v1.2.1 发布说明</h1>
+<blockquote>
+<p>发布日期：2026-09-05 · 上一版本：v1.2.0（同日）
+本版主题：<strong>P1 空响应修复（本地思考型模型三连根因）+ E2E spec 对齐 v1.2.0 + MCP num_ctx 配置红线默认化</strong></p>
+</blockquote>
+<hr />
+<h2 id="p1-qwen3">一、P1 修复：本地思考型模型（qwen3 系）空响应（用户实测撞出，探针实捕根因）</h2>
+<p>v1.2.0 全栈实测中，用户在 Chat 页发送「写一个专业的计算器」触发
+<code>model_empty_response_after_retry</code>。三个叠加根因与对应修复：</p>
+<table>
+<thead>
+<tr>
+<th>根因（实测数据）</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>聊天路径 max_tokens=512 截在思考 token 内（计算器 goal：512 全 think→空；2048→正常出码 ct=1722）</td>
+<td>首调 512→2048，恢复 1024→3072；截断判定阈值同步</td>
+</tr>
+<tr>
+<td>任务类型分类兜底=coding，纯问答被注入「优先使用 file_write」提示→qwen3 该形态零输出（ct=0 finish=stop，6/6 稳定复现）</td>
+<td>兜底改 chat；编码词典扩充（写一个/写个/代码/函数/脚本/code/script…）</td>
+</tr>
+<tr>
+<td>MCP 满配（5 server/76 工具）首调 prompt≈6.9k tokens 超 8192 ctx 截断</td>
+<td><code>r2.env.example</code> 默认 <code>XAGENT_LLM__OLLAMA_NUM_CTX=16384</code> + README 快速开始补行</td>
+</tr>
+</tbody>
+</table>
+<p>影响面界定：云模型与简单问答路径在 v1.2.0 即正常；本修复覆盖
+「本地小模型 + 编码/规划型意图」与「直连 API 默认模式」两个受损组合。</p>
+<h2 id="e2e-spec-v120-7">二、E2E spec 对齐 v1.2.0（自 7 月前端重构后首次随版）</h2>
+<ul>
+<li>导航断言：短剧工厂 → 目标看板（ZCode 风格导航）</li>
+<li>Chat：发送按钮 aria-label、消息渲染类 <code>prose-agent</code>、流式正文或「查看运行详情」容错断言</li>
+<li>工作流：旧「创建并执行」→ 专业模式画布冒烟（工作流编排/执行/保存/节点面板）</li>
+<li>短剧路由：改断言排除说明页（发布边界即合同）</li>
+<li>Run Console：标题与实时徽标同节点渲染的匹配修正</li>
+<li>设置：分区导航（索引/知识库/模型）替代旧标题断言</li>
+<li><strong>实测：对 v1.2.0 容器栈 9/9 全绿（21.9s）</strong></li>
+</ul>
+<h2 id="_1">三、测试</h2>
+<ul>
+<li>编排 43 项全过：新增「问答不误判 coding」「编码保留提示」2 项回归</li>
+<li>预算断言 [512,1024]→[2048,3072]（test_orchestration / test_runtime_runs 两处）</li>
+<li>质量基线指纹随行位移刷新（计数不变：E501=186/S=17+15/ASYNC=6）</li>
+</ul>
+<h2 id="_2">四、升级与兼容</h2>
+<ul>
+<li>无数据库迁移变更；无新配置必填项（<code>XAGENT_LLM__OLLAMA_NUM_CTX</code> 仅 MCP 满配部署需要）</li>
+<li>行为变化：直连 API 默认模式下纯问答目标不再注入编码提示（分类兜底 coding→chat）</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

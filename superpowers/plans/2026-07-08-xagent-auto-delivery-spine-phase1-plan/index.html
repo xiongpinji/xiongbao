@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-07-08-xagent-auto-delivery-spine-phase1-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Auto-Delivery Spine Phase 1 实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Auto-Delivery Spine Phase 1 \u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-07-08-xagent-auto-delivery-spine-phase1-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-07-08-xagent-auto-delivery-spine-phase1-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Auto-Delivery Spine Phase 1 实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-07-08-xagent-auto-delivery-spine-phase1-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-auto-delivery-spine-phase-1">X-Agent Auto-Delivery Spine Phase 1 实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 在 xagent 自己身上落地一套最小但完整的 Auto-Delivery Spine Phase 1，实现 goal/taskboard/durable session 与自动交付闭环的统一主链。</p>
+<p><strong>架构：</strong> 实现将以现有 runtime/workflow/run console/agent_task 持久化能力为底座，新增一组 spine 对象（goal/initiative/task/release/review/archive）和一条 PM Agent 主导的状态推进链。Phase 1 先服务 xagent 自举升级自己，主控制面采用 chat/CLI 发起、taskboard 持续状态、PR/Git 作为交付出口的混合模式。</p>
+<p><strong>技术栈：</strong> FastAPI、SQLAlchemy、React + Zustand、Docker Compose、GitHub CLI、pytest、Playwright、Markdown、GitHub Actions</p>
+<hr />
+<h2 id="_1">文件结构与职责边界</h2>
+<h3 id="_2">新增后端文件</h3>
+<ul>
+<li><code>apps/api/xagent/core/spine/models.py</code></li>
+<li>Spine 第一类对象的领域模型：Goal、Initiative、DeliveryTask、ReviewDecision、ReleaseRecord、ArchiveRecord。</li>
+<li><code>apps/api/xagent/infra/models/spine.py</code></li>
+<li>Spine 对象的 ORM 持久化模型。</li>
+<li><code>apps/api/xagent/infra/repos/spine.py</code></li>
+<li>Goal / Initiative / Task / Release / Archive 的 repository。</li>
+<li><code>apps/api/xagent/core/spine/service.py</code></li>
+<li>PM Agent 使用的状态推进服务：创建 goal、拆 task、推进状态、挂接 evidence/release。</li>
+<li><code>apps/api/xagent/api/v1/spine.py</code></li>
+<li>Phase 1 Spine API：goal intake、taskboard snapshot、phase summary、release promotion。</li>
+<li><code>apps/api/xagent/core/spine/session.py</code></li>
+<li>durable session 读取与 resume 决策逻辑。</li>
+<li><code>apps/api/xagent/core/spine/execution.py</code></li>
+<li>执行调度逻辑：current-machine / isolated execution 抽象、run registration。</li>
+<li><code>apps/api/xagent/core/spine/release.py</code></li>
+<li>Release package / review package / archive 组装逻辑。</li>
+<li><code>apps/api/tests/test_spine_service.py</code></li>
+<li>Spine 领域服务测试。</li>
+<li><code>apps/api/tests/test_spine_api.py</code></li>
+<li>Spine API 与 taskboard/release 读写测试。</li>
+<li><code>apps/api/tests/test_spine_session_resume.py</code></li>
+<li>durable session / resume 行为测试。</li>
+<li><code>apps/api/tests/test_spine_release_flow.py</code></li>
+<li>release / review / archive 主链测试。</li>
+</ul>
+<h3 id="_3">新增前端文件</h3>
+<ul>
+<li><code>apps/web/src/api/spine.ts</code></li>
+<li>Spine 后端 API 客户端。</li>
+<li><code>apps/web/src/components/spine/GoalBoard.tsx</code></li>
+<li>Goal / Initiative / Taskboard 主视图。</li>
+<li><code>apps/web/src/components/spine/GoalSummaryCard.tsx</code></li>
+<li>当前 goal、phase、下一步动作摘要。</li>
+<li><code>apps/web/src/components/spine/TaskColumn.tsx</code></li>
+<li>taskboard 列组件（Ready/In Progress/Blocked/Review/Release Ready/Deploying/Verifying/Delivered/Recovery）。</li>
+<li><code>apps/web/src/components/spine/ReleasePane.tsx</code></li>
+<li>release/review/archive 右侧面板。</li>
+<li><code>apps/web/src/pages/GoalBoardPage.tsx</code></li>
+<li>Phase 1 主控制面页面。</li>
+<li><code>apps/web/src/shell/spineShellRoute.ts</code></li>
+<li>将 Goal Board 注册进 shell route 体系。</li>
+<li><code>apps/web/src/tests/goalBoard.test.tsx</code></li>
+<li>Goal Board 组件测试。</li>
+</ul>
+<h3 id="_4">修改后端文件</h3>
+<ul>
+<li><code>apps/api/xagent/api/v1/__init__.py</code></li>
+<li>注册 <code>spine</code> 路由。</li>
+<li><code>apps/api/xagent/main.py</code></li>
+<li>挂载 spine API。</li>
+<li><code>apps/api/xagent/api/v1/tasks.py</code></li>
+<li>提交 task run 后回写 spine task/run linkage。</li>
+<li><code>apps/api/xagent/api/v1/agents.py</code></li>
+<li>直接 agent.run 后为 spine 生成 review/release evidence hook。</li>
+<li><code>apps/api/xagent/api/v1/workflows.py</code></li>
+<li>workflow 运行视图与 spine release/recovery 指针对接。</li>
+<li><code>apps/api/xagent/api/v1/runs.py</code></li>
+<li>runtime 聚合视图中补 Spine 相关 metadata / release pointers。</li>
+<li><code>apps/api/xagent/core/runtime/service.py</code></li>
+<li>run detail 聚合里挂接 spine 任务 / release 关联信息。</li>
+<li><code>apps/api/xagent/infra/models/__init__.py</code></li>
+<li>导出 spine ORM。</li>
+<li><code>apps/api/xagent/infra/repos/__init__.py</code></li>
+<li>导出 spine repository。</li>
+<li><code>apps/api/migrations/versions/&lt;new_revision&gt;_add_spine_tables.py</code></li>
+<li>为 spine 对象新增表结构。</li>
+</ul>
+<h3 id="_5">修改前端文件</h3>
+<ul>
+<li><code>apps/web/src/App.tsx</code></li>
+<li>加入 Goal Board 路由。</li>
+<li><code>apps/web/src/shell/shellRoutes.ts</code></li>
+<li>增加 goal/taskboard 主 surface。</li>
+<li><code>apps/web/src/shell/useShellStore.tsx</code></li>
+<li>增加 spine session / goal board 状态接入。</li>
+<li><code>apps/web/src/components/layout/AppShell.tsx</code></li>
+<li>让 Goal Board 成为主控制面入口之一。</li>
+<li><code>apps/web/src/pages/RunPage.tsx</code></li>
+<li>让 Run Console 显示 spine goal/task/release 关联。</li>
+</ul>
+<h3 id="_6">文档与计划输出</h3>
+<ul>
+<li><code>docs/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md</code></li>
+<li>已批准规格（只读输入）。</li>
+<li><code>docs/coordination/reports/auto-delivery-phase1-report.md</code></li>
+<li>Phase 1 验收报告。</li>
+</ul>
+<hr />
+<h2 id="1-spine">任务 1：定义 Spine 持久化对象与迁移</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/infra/models/spine.py</code>
+- 创建：<code>apps/api/migrations/versions/20260708_add_spine_tables.py</code>
+- 修改：<code>apps/api/xagent/infra/models/__init__.py</code>
+- 测试：<code>apps/api/tests/test_spine_service.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的模型测试</strong></li>
+</ul>
+<pre><code class="language-python">from xagent.infra.models.spine import GoalORM, InitiativeORM, DeliveryTaskORM, ReleaseRecordORM
+
+
+def test_spine_models_exist() -&gt; None:
+    assert GoalORM.__tablename__ == &quot;delivery_goals&quot;
+    assert InitiativeORM.__tablename__ == &quot;delivery_initiatives&quot;
+    assert DeliveryTaskORM.__tablename__ == &quot;delivery_tasks&quot;
+    assert ReleaseRecordORM.__tablename__ == &quot;release_records&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_service.py -k spine_models_exist -v</code>
+预期：FAIL，报错 <code>ModuleNotFoundError</code> 或 <code>cannot import name 'GoalORM'</code></p>
+<ul>
+<li>[ ] <strong>步骤 3：编写最小 ORM 模型</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/infra/models/spine.py
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from xagent.infra.db import Base
+
+
+def _utcnow() -&gt; datetime:
+    return datetime.now(UTC)
+
+
+class GoalORM(Base):
+    __tablename__ = &quot;delivery_goals&quot;
+    goal_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), default=&quot;&quot;, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default=&quot;&quot;, nullable=False)
+    phase: Mapped[str] = mapped_column(String(32), default=&quot;planning&quot;, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=&quot;pending&quot;, nullable=False)
+    owner_id: Mapped[str] = mapped_column(String(64), default=&quot;&quot;, nullable=False)
+    metadata_json: Mapped[str] = mapped_column(Text, default=&quot;{}&quot;, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class InitiativeORM(Base):
+    __tablename__ = &quot;delivery_initiatives&quot;
+    initiative_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    goal_id: Mapped[str] = mapped_column(ForeignKey(&quot;delivery_goals.goal_id&quot;), index=True, nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), default=&quot;&quot;, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=&quot;pending&quot;, nullable=False)
+    priority: Mapped[str] = mapped_column(String(16), default=&quot;medium&quot;, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class DeliveryTaskORM(Base):
+    __tablename__ = &quot;delivery_tasks&quot;
+    task_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    initiative_id: Mapped[str] = mapped_column(ForeignKey(&quot;delivery_initiatives.initiative_id&quot;), index=True, nullable=False)
+    goal_id: Mapped[str] = mapped_column(ForeignKey(&quot;delivery_goals.goal_id&quot;), index=True, nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), default=&quot;&quot;, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default=&quot;&quot;, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=&quot;ready&quot;, nullable=False)
+    task_kind: Mapped[str] = mapped_column(String(32), default=&quot;execution&quot;, nullable=False)
+    run_id: Mapped[str] = mapped_column(String(64), default=&quot;&quot;, nullable=False)
+    blocker_reason: Mapped[str] = mapped_column(Text, default=&quot;&quot;, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class ReleaseRecordORM(Base):
+    __tablename__ = &quot;release_records&quot;
+    release_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    goal_id: Mapped[str] = mapped_column(ForeignKey(&quot;delivery_goals.goal_id&quot;), index=True, nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    branch_name: Mapped[str] = mapped_column(String(128), default=&quot;&quot;, nullable=False)
+    commit_sha: Mapped[str] = mapped_column(String(64), default=&quot;&quot;, nullable=False)
+    pr_number: Mapped[str] = mapped_column(String(32), default=&quot;&quot;, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=&quot;candidate&quot;, nullable=False)
+    summary_json: Mapped[str] = mapped_column(Text, default=&quot;{}&quot;, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：导出模型并编写迁移</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/infra/models/__init__.py
+from xagent.infra.models.spine import DeliveryTaskORM, GoalORM, InitiativeORM, ReleaseRecordORM
+</code></pre>
+<pre><code class="language-python"># apps/api/migrations/versions/20260708_add_spine_tables.py
+&quot;&quot;&quot;add spine tables&quot;&quot;&quot;
+from alembic import op
+import sqlalchemy as sa
+
+revision = &quot;20260708_spine&quot;
+down_revision = &quot;0005&quot;
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -&gt; None:
+    op.create_table(
+        &quot;delivery_goals&quot;,
+        sa.Column(&quot;goal_id&quot;, sa.String(length=64), primary_key=True),
+        sa.Column(&quot;tenant_id&quot;, sa.String(length=64), nullable=False),
+        sa.Column(&quot;title&quot;, sa.String(length=256), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;description&quot;, sa.Text(), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;phase&quot;, sa.String(length=32), nullable=False, server_default=&quot;planning&quot;),
+        sa.Column(&quot;status&quot;, sa.String(length=32), nullable=False, server_default=&quot;pending&quot;),
+        sa.Column(&quot;owner_id&quot;, sa.String(length=64), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;metadata_json&quot;, sa.Text(), nullable=False, server_default=&quot;{}&quot;),
+        sa.Column(&quot;created_at&quot;, sa.DateTime(timezone=True), nullable=False),
+        sa.Column(&quot;updated_at&quot;, sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index(&quot;ix_delivery_goals_tenant_id&quot;, &quot;delivery_goals&quot;, [&quot;tenant_id&quot;])
+    op.create_table(
+        &quot;delivery_initiatives&quot;,
+        sa.Column(&quot;initiative_id&quot;, sa.String(length=64), primary_key=True),
+        sa.Column(&quot;goal_id&quot;, sa.String(length=64), sa.ForeignKey(&quot;delivery_goals.goal_id&quot;), nullable=False),
+        sa.Column(&quot;tenant_id&quot;, sa.String(length=64), nullable=False),
+        sa.Column(&quot;title&quot;, sa.String(length=256), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;status&quot;, sa.String(length=32), nullable=False, server_default=&quot;pending&quot;),
+        sa.Column(&quot;priority&quot;, sa.String(length=16), nullable=False, server_default=&quot;medium&quot;),
+        sa.Column(&quot;created_at&quot;, sa.DateTime(timezone=True), nullable=False),
+        sa.Column(&quot;updated_at&quot;, sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index(&quot;ix_delivery_initiatives_goal_id&quot;, &quot;delivery_initiatives&quot;, [&quot;goal_id&quot;])
+    op.create_index(&quot;ix_delivery_initiatives_tenant_id&quot;, &quot;delivery_initiatives&quot;, [&quot;tenant_id&quot;])
+    op.create_table(
+        &quot;delivery_tasks&quot;,
+        sa.Column(&quot;task_id&quot;, sa.String(length=64), primary_key=True),
+        sa.Column(&quot;initiative_id&quot;, sa.String(length=64), sa.ForeignKey(&quot;delivery_initiatives.initiative_id&quot;), nullable=False),
+        sa.Column(&quot;goal_id&quot;, sa.String(length=64), sa.ForeignKey(&quot;delivery_goals.goal_id&quot;), nullable=False),
+        sa.Column(&quot;tenant_id&quot;, sa.String(length=64), nullable=False),
+        sa.Column(&quot;title&quot;, sa.String(length=256), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;detail&quot;, sa.Text(), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;status&quot;, sa.String(length=32), nullable=False, server_default=&quot;ready&quot;),
+        sa.Column(&quot;task_kind&quot;, sa.String(length=32), nullable=False, server_default=&quot;execution&quot;),
+        sa.Column(&quot;run_id&quot;, sa.String(length=64), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;blocker_reason&quot;, sa.Text(), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;created_at&quot;, sa.DateTime(timezone=True), nullable=False),
+        sa.Column(&quot;updated_at&quot;, sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index(&quot;ix_delivery_tasks_goal_id&quot;, &quot;delivery_tasks&quot;, [&quot;goal_id&quot;])
+    op.create_index(&quot;ix_delivery_tasks_initiative_id&quot;, &quot;delivery_tasks&quot;, [&quot;initiative_id&quot;])
+    op.create_index(&quot;ix_delivery_tasks_tenant_id&quot;, &quot;delivery_tasks&quot;, [&quot;tenant_id&quot;])
+    op.create_table(
+        &quot;release_records&quot;,
+        sa.Column(&quot;release_id&quot;, sa.String(length=64), primary_key=True),
+        sa.Column(&quot;goal_id&quot;, sa.String(length=64), sa.ForeignKey(&quot;delivery_goals.goal_id&quot;), nullable=False),
+        sa.Column(&quot;tenant_id&quot;, sa.String(length=64), nullable=False),
+        sa.Column(&quot;branch_name&quot;, sa.String(length=128), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;commit_sha&quot;, sa.String(length=64), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;pr_number&quot;, sa.String(length=32), nullable=False, server_default=&quot;&quot;),
+        sa.Column(&quot;status&quot;, sa.String(length=32), nullable=False, server_default=&quot;candidate&quot;),
+        sa.Column(&quot;summary_json&quot;, sa.Text(), nullable=False, server_default=&quot;{}&quot;),
+        sa.Column(&quot;created_at&quot;, sa.DateTime(timezone=True), nullable=False),
+        sa.Column(&quot;updated_at&quot;, sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index(&quot;ix_release_records_goal_id&quot;, &quot;release_records&quot;, [&quot;goal_id&quot;])
+    op.create_index(&quot;ix_release_records_tenant_id&quot;, &quot;release_records&quot;, [&quot;tenant_id&quot;])
+
+
+def downgrade() -&gt; None:
+    op.drop_index(&quot;ix_release_records_tenant_id&quot;, table_name=&quot;release_records&quot;)
+    op.drop_index(&quot;ix_release_records_goal_id&quot;, table_name=&quot;release_records&quot;)
+    op.drop_table(&quot;release_records&quot;)
+    op.drop_index(&quot;ix_delivery_tasks_tenant_id&quot;, table_name=&quot;delivery_tasks&quot;)
+    op.drop_index(&quot;ix_delivery_tasks_initiative_id&quot;, table_name=&quot;delivery_tasks&quot;)
+    op.drop_index(&quot;ix_delivery_tasks_goal_id&quot;, table_name=&quot;delivery_tasks&quot;)
+    op.drop_table(&quot;delivery_tasks&quot;)
+    op.drop_index(&quot;ix_delivery_initiatives_tenant_id&quot;, table_name=&quot;delivery_initiatives&quot;)
+    op.drop_index(&quot;ix_delivery_initiatives_goal_id&quot;, table_name=&quot;delivery_initiatives&quot;)
+    op.drop_table(&quot;delivery_initiatives&quot;)
+    op.drop_index(&quot;ix_delivery_goals_tenant_id&quot;, table_name=&quot;delivery_goals&quot;)
+    op.drop_table(&quot;delivery_goals&quot;)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_service.py -k spine_models_exist -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/infra/models/spine.py apps/api/xagent/infra/models/__init__.py apps/api/migrations/versions/20260708_add_spine_tables.py apps/api/tests/test_spine_service.py
+git commit -m &quot;feat(spine): add persistent spine models&quot;
+</code></pre>
+<hr />
+<h2 id="2-spine">任务 2：实现 Spine 领域模型与状态推进服务</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/core/spine/models.py</code>
+- 创建：<code>apps/api/xagent/infra/repos/spine.py</code>
+- 创建：<code>apps/api/xagent/core/spine/service.py</code>
+- 测试：<code>apps/api/tests/test_spine_service.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的服务测试</strong></li>
+</ul>
+<pre><code class="language-python">from xagent.core.spine.models import GoalStatus, SpinePhase
+from xagent.core.spine.service import create_goal, decompose_goal
+
+
+def test_create_goal_defaults_to_planning_phase() -&gt; None:
+    goal = create_goal(
+        tenant_id=&quot;t-1&quot;,
+        owner_id=&quot;owner-1&quot;,
+        title=&quot;Build auto-delivery spine&quot;,
+        description=&quot;Phase 1 self-hosted delivery loop&quot;,
+    )
+    assert goal.phase is SpinePhase.planning
+    assert goal.status is GoalStatus.pending
+    assert goal.title == &quot;Build auto-delivery spine&quot;
+
+
+def test_decompose_goal_creates_initiatives_and_ready_tasks() -&gt; None:
+    goal = create_goal(
+        tenant_id=&quot;t-1&quot;,
+        owner_id=&quot;owner-1&quot;,
+        title=&quot;Build auto-delivery spine&quot;,
+        description=&quot;Phase 1 self-hosted delivery loop&quot;,
+    )
+    initiatives, tasks = decompose_goal(goal)
+    assert [item.title for item in initiatives] == [
+        &quot;Goal / Taskboard / Session Core&quot;,
+        &quot;Execution Environment Orchestrator&quot;,
+        &quot;PR / Review / Release Packaging Core&quot;,
+        &quot;Deploy / Verify / Recover Core&quot;,
+        &quot;Control / Policy / Safety Core&quot;,
+        &quot;Evidence / Archive / Continuous Learning Core&quot;,
+    ]
+    assert all(task.status == &quot;ready&quot; for task in tasks)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_service.py -k "create_goal_defaults or decompose_goal_creates" -v</code>
+预期：FAIL，报错 <code>ModuleNotFoundError: No module named 'xagent.core.spine'</code></p>
+<ul>
+<li>[ ] <strong>步骤 3：编写领域模型</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/models.py
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
+
+
+def _utcnow() -&gt; str:
+    return datetime.now(UTC).isoformat()
+
+
+class SpinePhase(str, Enum):
+    planning = &quot;planning&quot;
+    execution = &quot;execution&quot;
+    review = &quot;review&quot;
+    release = &quot;release&quot;
+    deploy = &quot;deploy&quot;
+    recovery = &quot;recovery&quot;
+    archive = &quot;archive&quot;
+
+
+class GoalStatus(str, Enum):
+    pending = &quot;pending&quot;
+    active = &quot;active&quot;
+    blocked = &quot;blocked&quot;
+    delivered = &quot;delivered&quot;
+    archived = &quot;archived&quot;
+
+
+@dataclass(slots=True)
+class Goal:
+    goal_id: str
+    tenant_id: str
+    owner_id: str
+    title: str
+    description: str
+    phase: SpinePhase = SpinePhase.planning
+    status: GoalStatus = GoalStatus.pending
+    created_at: str = field(default_factory=_utcnow)
+    updated_at: str = field(default_factory=_utcnow)
+
+
+@dataclass(slots=True)
+class Initiative:
+    initiative_id: str
+    goal_id: str
+    tenant_id: str
+    title: str
+    status: str = &quot;pending&quot;
+    priority: str = &quot;medium&quot;
+    created_at: str = field(default_factory=_utcnow)
+    updated_at: str = field(default_factory=_utcnow)
+
+
+@dataclass(slots=True)
+class DeliveryTask:
+    task_id: str
+    initiative_id: str
+    goal_id: str
+    tenant_id: str
+    title: str
+    detail: str
+    status: str = &quot;ready&quot;
+    task_kind: str = &quot;execution&quot;
+    run_id: str = &quot;&quot;
+    blocker_reason: str = &quot;&quot;
+    created_at: str = field(default_factory=_utcnow)
+    updated_at: str = field(default_factory=_utcnow)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：编写最小服务与仓储接口</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/service.py
+from __future__ import annotations
+
+import uuid
+
+from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+
+
+INITIATIVE_BLUEPRINTS = [
+    &quot;Goal / Taskboard / Session Core&quot;,
+    &quot;Execution Environment Orchestrator&quot;,
+    &quot;PR / Review / Release Packaging Core&quot;,
+    &quot;Deploy / Verify / Recover Core&quot;,
+    &quot;Control / Policy / Safety Core&quot;,
+    &quot;Evidence / Archive / Continuous Learning Core&quot;,
+]
+
+
+def create_goal(*, tenant_id: str, owner_id: str, title: str, description: str) -&gt; Goal:
+    return Goal(
+        goal_id=uuid.uuid4().hex,
+        tenant_id=tenant_id,
+        owner_id=owner_id,
+        title=title,
+        description=description,
+    )
+
+
+def decompose_goal(goal: Goal) -&gt; tuple[list[Initiative], list[DeliveryTask]]:
+    initiatives: list[Initiative] = []
+    tasks: list[DeliveryTask] = []
+    for title in INITIATIVE_BLUEPRINTS:
+        initiative = Initiative(
+            initiative_id=uuid.uuid4().hex,
+            goal_id=goal.goal_id,
+            tenant_id=goal.tenant_id,
+            title=title,
+        )
+        initiatives.append(initiative)
+        tasks.append(
+            DeliveryTask(
+                task_id=uuid.uuid4().hex,
+                initiative_id=initiative.initiative_id,
+                goal_id=goal.goal_id,
+                tenant_id=goal.tenant_id,
+                title=f&quot;Initialize {title}&quot;,
+                detail=f&quot;Bootstrap the first execution path for {title}&quot;,
+            )
+        )
+    return initiatives, tasks
+</code></pre>
+<pre><code class="language-python"># apps/api/xagent/infra/repos/spine.py
+from __future__ import annotations
+
+import json
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from xagent.core.spine.models import DeliveryTask, Goal, Initiative
+from xagent.infra.models.spine import DeliveryTaskORM, GoalORM, InitiativeORM
+
+
+async def persist_goal(session: AsyncSession, goal: Goal) -&gt; None:
+    session.add(
+        GoalORM(
+            goal_id=goal.goal_id,
+            tenant_id=goal.tenant_id,
+            owner_id=goal.owner_id,
+            title=goal.title,
+            description=goal.description,
+            phase=goal.phase.value,
+            status=goal.status.value,
+            metadata_json=json.dumps({}),
+        )
+    )
+
+
+async def persist_initiatives(session: AsyncSession, initiatives: list[Initiative]) -&gt; None:
+    for item in initiatives:
+        session.add(
+            InitiativeORM(
+                initiative_id=item.initiative_id,
+                goal_id=item.goal_id,
+                tenant_id=item.tenant_id,
+                title=item.title,
+                status=item.status,
+                priority=item.priority,
+            )
+        )
+
+
+async def persist_tasks(session: AsyncSession, tasks: list[DeliveryTask]) -&gt; None:
+    for task in tasks:
+        session.add(
+            DeliveryTaskORM(
+                task_id=task.task_id,
+                initiative_id=task.initiative_id,
+                goal_id=task.goal_id,
+                tenant_id=task.tenant_id,
+                title=task.title,
+                detail=task.detail,
+                status=task.status,
+                task_kind=task.task_kind,
+                run_id=task.run_id,
+                blocker_reason=task.blocker_reason,
+            )
+        )
+
+
+async def load_goal_snapshot(session: AsyncSession, goal_id: str, tenant_id: str) -&gt; dict | None:
+    goal = await session.get(GoalORM, goal_id)
+    if goal is None or goal.tenant_id != tenant_id:
+        return None
+    initiatives = (
+        (
+            await session.execute(
+                select(InitiativeORM).where(
+                    InitiativeORM.goal_id == goal_id,
+                    InitiativeORM.tenant_id == tenant_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    tasks = (
+        (
+            await session.execute(
+                select(DeliveryTaskORM).where(
+                    DeliveryTaskORM.goal_id == goal_id,
+                    DeliveryTaskORM.tenant_id == tenant_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        &quot;goal&quot;: {
+            &quot;goal_id&quot;: goal.goal_id,
+            &quot;title&quot;: goal.title,
+            &quot;description&quot;: goal.description,
+            &quot;phase&quot;: goal.phase,
+            &quot;status&quot;: goal.status,
+        },
+        &quot;initiatives&quot;: [
+            {
+                &quot;initiative_id&quot;: item.initiative_id,
+                &quot;title&quot;: item.title,
+                &quot;status&quot;: item.status,
+                &quot;priority&quot;: item.priority,
+            }
+            for item in initiatives
+        ],
+        &quot;tasks&quot;: [
+            {
+                &quot;task_id&quot;: item.task_id,
+                &quot;initiative_id&quot;: item.initiative_id,
+                &quot;title&quot;: item.title,
+                &quot;detail&quot;: item.detail,
+                &quot;status&quot;: item.status,
+                &quot;task_kind&quot;: item.task_kind,
+                &quot;run_id&quot;: item.run_id,
+                &quot;blocker_reason&quot;: item.blocker_reason,
+            }
+            for item in tasks
+        ],
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_service.py -k "create_goal_defaults or decompose_goal_creates" -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/core/spine/models.py apps/api/xagent/core/spine/service.py apps/api/xagent/infra/repos/spine.py apps/api/tests/test_spine_service.py
+git commit -m &quot;feat(spine): add goal decomposition service&quot;
+</code></pre>
+<hr />
+<h2 id="3-goal-taskboard-session-spine-api">任务 3：暴露 Goal / Taskboard / Session Spine API</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/api/v1/spine.py</code>
+- 修改：<code>apps/api/xagent/api/v1/__init__.py</code>
+- 修改：<code>apps/api/xagent/main.py</code>
+- 测试：<code>apps/api/tests/test_spine_api.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的 API 测试</strong></li>
+</ul>
+<pre><code class="language-python">from fastapi.testclient import TestClient
+
+
+def test_create_goal_returns_goal_tree(client: TestClient) -&gt; None:
+    response = client.post(
+        &quot;/api/v1/spine/goals&quot;,
+        json={
+            &quot;title&quot;: &quot;Auto-Delivery Spine Phase 1&quot;,
+            &quot;description&quot;: &quot;Make xagent upgrade itself&quot;,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body[&quot;goal&quot;][&quot;title&quot;] == &quot;Auto-Delivery Spine Phase 1&quot;
+    assert len(body[&quot;initiatives&quot;]) == 6
+    assert len(body[&quot;tasks&quot;]) == 6
+
+
+def test_get_goal_board_snapshot_returns_grouped_columns(client: TestClient) -&gt; None:
+    created = client.post(
+        &quot;/api/v1/spine/goals&quot;,
+        json={
+            &quot;title&quot;: &quot;Auto-Delivery Spine Phase 1&quot;,
+            &quot;description&quot;: &quot;Make xagent upgrade itself&quot;,
+        },
+    ).json()
+    goal_id = created[&quot;goal&quot;][&quot;goal_id&quot;]
+    response = client.get(f&quot;/api/v1/spine/goals/{goal_id}/board&quot;)
+    assert response.status_code == 200
+    board = response.json()
+    assert &quot;ready&quot; in board[&quot;columns&quot;]
+    assert board[&quot;columns&quot;][&quot;ready&quot;]
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_api.py -k "goal" -v</code>
+预期：FAIL，报错 <code>404 Not Found</code> 或 <code>ImportError</code></p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小 API</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/api/v1/spine.py
+from __future__ import annotations
+
+from collections import defaultdict
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from xagent.core.spine.service import create_goal, decompose_goal
+from xagent.enterprise.auth.principal import Principal
+from xagent.enterprise.authz.guards import require_permission
+from xagent.infra.db import get_session
+from xagent.infra.repos.spine import load_goal_snapshot, persist_goal, persist_initiatives, persist_tasks
+
+router = APIRouter(prefix=&quot;/spine&quot;, tags=[&quot;spine&quot;])
+
+
+class GoalCreateIn(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: str = Field(&quot;&quot;, min_length=0)
+
+
+@router.post(&quot;/goals&quot;, summary=&quot;创建 delivery goal&quot;)
+async def create_delivery_goal(
+    body: GoalCreateIn,
+    principal: Principal = Depends(require_permission(&quot;agent&quot;, &quot;execute&quot;)),
+    session: AsyncSession = Depends(get_session),
+) -&gt; dict:
+    goal = create_goal(
+        tenant_id=principal.tenant_id,
+        owner_id=principal.user_id,
+        title=body.title,
+        description=body.description,
+    )
+    initiatives, tasks = decompose_goal(goal)
+    await persist_goal(session, goal)
+    await persist_initiatives(session, initiatives)
+    await persist_tasks(session, tasks)
+    await session.commit()
+    return {
+        &quot;goal&quot;: {
+            &quot;goal_id&quot;: goal.goal_id,
+            &quot;title&quot;: goal.title,
+            &quot;description&quot;: goal.description,
+            &quot;phase&quot;: goal.phase.value,
+            &quot;status&quot;: goal.status.value,
+        },
+        &quot;initiatives&quot;: [item.__dict__ for item in initiatives],
+        &quot;tasks&quot;: [item.__dict__ for item in tasks],
+    }
+
+
+@router.get(&quot;/goals/{goal_id}/board&quot;, summary=&quot;获取 goal taskboard 快照&quot;)
+async def get_goal_board(
+    goal_id: str,
+    principal: Principal = Depends(require_permission(&quot;agent&quot;, &quot;read&quot;)),
+    session: AsyncSession = Depends(get_session),
+) -&gt; dict:
+    snapshot = await load_goal_snapshot(session, goal_id, principal.tenant_id)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail=&quot;goal not found&quot;)
+    columns = defaultdict(list)
+    for task in snapshot[&quot;tasks&quot;]:
+        columns[task[&quot;status&quot;]].append(task)
+    return {
+        &quot;goal&quot;: snapshot[&quot;goal&quot;],
+        &quot;initiatives&quot;: snapshot[&quot;initiatives&quot;],
+        &quot;columns&quot;: dict(columns),
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：注册路由</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/api/v1/__init__.py
+from xagent.api.v1 import spine
+</code></pre>
+<pre><code class="language-python"># apps/api/xagent/main.py
+from xagent.api.v1.spine import router as spine_router
+app.include_router(spine_router, prefix=&quot;/api/v1&quot;)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_api.py -k "goal" -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/spine.py apps/api/xagent/api/v1/__init__.py apps/api/xagent/main.py apps/api/tests/test_spine_api.py
+git commit -m &quot;feat(spine): add goal board api&quot;
+</code></pre>
+<hr />
+<h2 id="4-run-workflow-task-spine">任务 4：把 run / workflow / task 挂接到 Spine 状态链</h2>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/xagent/api/v1/tasks.py</code>
+- 修改：<code>apps/api/xagent/api/v1/agents.py</code>
+- 修改：<code>apps/api/xagent/api/v1/workflows.py</code>
+- 修改：<code>apps/api/xagent/api/v1/runs.py</code>
+- 修改：<code>apps/api/xagent/core/runtime/service.py</code>
+- 测试：<code>apps/api/tests/test_spine_release_flow.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的整合测试</strong></li>
+</ul>
+<pre><code class="language-python">from fastapi.testclient import TestClient
+
+
+def test_task_submission_updates_delivery_task_with_run_id(client: TestClient) -&gt; None:
+    created = client.post(
+        &quot;/api/v1/spine/goals&quot;,
+        json={&quot;title&quot;: &quot;Spine Flow&quot;, &quot;description&quot;: &quot;Track task execution&quot;},
+    ).json()
+    board = client.get(f&quot;/api/v1/spine/goals/{created['goal']['goal_id']}/board&quot;).json()
+    spine_task = board[&quot;columns&quot;][&quot;ready&quot;][0]
+
+    response = client.post(&quot;/api/v1/tasks&quot;, json={&quot;goal&quot;: spine_task[&quot;title&quot;]})
+    assert response.status_code == 200
+    run_id = response.json()[&quot;run_id&quot;]
+
+    board_after = client.get(f&quot;/api/v1/spine/goals/{created['goal']['goal_id']}/board&quot;).json()
+    updated = next(task for task in board_after[&quot;columns&quot;][&quot;ready&quot;] if task[&quot;task_id&quot;] == spine_task[&quot;task_id&quot;])
+    assert updated[&quot;run_id&quot;] == run_id
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_release_flow.py -k task_submission_updates_delivery_task_with_run_id -v</code>
+预期：FAIL，因 board 不会更新 run_id</p>
+<ul>
+<li>[ ] <strong>步骤 3：增加 spine linkage 更新逻辑</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/infra/repos/spine.py
+async def attach_run_to_task(
+    session: AsyncSession,
+    *,
+    goal_id: str,
+    tenant_id: str,
+    task_title: str,
+    run_id: str,
+    next_status: str = &quot;in_progress&quot;,
+) -&gt; None:
+    stmt = (
+        select(DeliveryTaskORM)
+        .where(
+            DeliveryTaskORM.goal_id == goal_id,
+            DeliveryTaskORM.tenant_id == tenant_id,
+            DeliveryTaskORM.title == task_title,
+        )
+        .order_by(DeliveryTaskORM.created_at.asc())
+    )
+    row = (await session.execute(stmt)).scalars().first()
+    if row is None:
+        return
+    row.run_id = run_id
+    row.status = next_status
+</code></pre>
+<pre><code class="language-python"># apps/api/xagent/api/v1/tasks.py
+from xagent.infra.repos.spine import attach_run_to_task
+
+# in submit_task(), after task_id known
+if principal.tenant_id and body.goal:
+    try:
+        async with get_sessionmaker()() as session:
+            await attach_run_to_task(
+                session,
+                goal_id=body.goal if body.goal.startswith(&quot;goal:&quot;) else &quot;&quot;,
+                tenant_id=principal.tenant_id,
+                task_title=body.goal,
+                run_id=task_id,
+            )
+            await session.commit()
+    except Exception:
+        pass
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：为 runs 聚合补 Spine 关联字段</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/runtime/service.py
+# return payload append
+&quot;spine&quot;: {
+    &quot;goal_id&quot;: task_view.get(&quot;goal_id&quot;, &quot;&quot;),
+    &quot;initiative_id&quot;: task_view.get(&quot;initiative_id&quot;, &quot;&quot;),
+}
+</code></pre>
+<pre><code class="language-python"># apps/api/xagent/api/v1/runs.py
+if isinstance(detail.get(&quot;spine&quot;), dict):
+    detail[&quot;spine&quot;] = detail[&quot;spine&quot;]
+else:
+    detail[&quot;spine&quot;] = {&quot;goal_id&quot;: &quot;&quot;, &quot;initiative_id&quot;: &quot;&quot;}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_release_flow.py -k task_submission_updates_delivery_task_with_run_id -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/tasks.py apps/api/xagent/api/v1/agents.py apps/api/xagent/api/v1/workflows.py apps/api/xagent/api/v1/runs.py apps/api/xagent/core/runtime/service.py apps/api/xagent/infra/repos/spine.py apps/api/tests/test_spine_release_flow.py
+git commit -m &quot;feat(spine): connect task runs to board state&quot;
+</code></pre>
+<hr />
+<h2 id="5-durable-session-resume">任务 5：实现 durable session / resume 决策</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/core/spine/session.py</code>
+- 修改：<code>apps/api/xagent/core/spine/service.py</code>
+- 测试：<code>apps/api/tests/test_spine_session_resume.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的 session 测试</strong></li>
+</ul>
+<pre><code class="language-python">from xagent.core.spine.session import choose_next_action
+
+
+def test_choose_next_action_prefers_blocked_recovery() -&gt; None:
+    snapshot = {
+        &quot;goal&quot;: {&quot;phase&quot;: &quot;execution&quot;, &quot;status&quot;: &quot;active&quot;},
+        &quot;columns&quot;: {
+            &quot;blocked&quot;: [{&quot;task_id&quot;: &quot;t-1&quot;, &quot;title&quot;: &quot;Fix deploy&quot;, &quot;blocker_reason&quot;: &quot;verify failed&quot;}],
+            &quot;ready&quot;: [{&quot;task_id&quot;: &quot;t-2&quot;, &quot;title&quot;: &quot;Write docs&quot;}],
+        },
+    }
+    action = choose_next_action(snapshot)
+    assert action == {
+        &quot;kind&quot;: &quot;recovery&quot;,
+        &quot;task_id&quot;: &quot;t-1&quot;,
+        &quot;reason&quot;: &quot;verify failed&quot;,
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_session_resume.py -k choose_next_action_prefers_blocked_recovery -v</code>
+预期：FAIL，模块不存在</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小 session 决策器</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/session.py
+from __future__ import annotations
+
+
+def choose_next_action(snapshot: dict) -&gt; dict:
+    columns = snapshot.get(&quot;columns&quot;) or {}
+    blocked = columns.get(&quot;blocked&quot;) or []
+    if blocked:
+        task = blocked[0]
+        return {
+            &quot;kind&quot;: &quot;recovery&quot;,
+            &quot;task_id&quot;: task[&quot;task_id&quot;],
+            &quot;reason&quot;: task.get(&quot;blocker_reason&quot;, &quot;blocked&quot;),
+        }
+    review = columns.get(&quot;review&quot;) or []
+    if review:
+        task = review[0]
+        return {
+            &quot;kind&quot;: &quot;review&quot;,
+            &quot;task_id&quot;: task[&quot;task_id&quot;],
+        }
+    ready = columns.get(&quot;ready&quot;) or []
+    if ready:
+        task = ready[0]
+        return {
+            &quot;kind&quot;: &quot;execute&quot;,
+            &quot;task_id&quot;: task[&quot;task_id&quot;],
+        }
+    return {&quot;kind&quot;: &quot;idle&quot;}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：在 service 中暴露 phase summary</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/service.py
+from xagent.core.spine.session import choose_next_action
+
+
+def summarize_goal_board(snapshot: dict) -&gt; dict:
+    return {
+        &quot;goal&quot;: snapshot[&quot;goal&quot;],
+        &quot;columns&quot;: snapshot[&quot;columns&quot;],
+        &quot;next_action&quot;: choose_next_action(snapshot),
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_session_resume.py -k choose_next_action_prefers_blocked_recovery -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/core/spine/session.py apps/api/xagent/core/spine/service.py apps/api/tests/test_spine_session_resume.py
+git commit -m &quot;feat(spine): add durable session action selection&quot;
+</code></pre>
+<hr />
+<h2 id="6-goal-board">任务 6：实现前端 Goal Board 主控制面</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/web/src/api/spine.ts</code>
+- 创建：<code>apps/web/src/components/spine/GoalBoard.tsx</code>
+- 创建：<code>apps/web/src/components/spine/GoalSummaryCard.tsx</code>
+- 创建：<code>apps/web/src/components/spine/TaskColumn.tsx</code>
+- 创建：<code>apps/web/src/components/spine/ReleasePane.tsx</code>
+- 创建：<code>apps/web/src/pages/GoalBoardPage.tsx</code>
+- 修改：<code>apps/web/src/App.tsx</code>
+- 修改：<code>apps/web/src/shell/shellRoutes.ts</code>
+- 修改：<code>apps/web/src/shell/useShellStore.tsx</code>
+- 测试：<code>apps/web/src/tests/goalBoard.test.tsx</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的前端测试</strong></li>
+</ul>
+<pre><code class="language-tsx">import { render, screen } from &quot;@testing-library/react&quot;;
+import GoalBoard from &quot;../components/spine/GoalBoard&quot;;
+
+it(&quot;renders goal board columns and next action&quot;, () =&gt; {
+  render(
+    &lt;GoalBoard
+      snapshot={{
+        goal: { title: &quot;Phase 1&quot;, phase: &quot;execution&quot;, status: &quot;active&quot; },
+        columns: {
+          ready: [{ task_id: &quot;t-1&quot;, title: &quot;Build taskboard&quot; }],
+          blocked: [],
+          review: [],
+        },
+        next_action: { kind: &quot;execute&quot;, task_id: &quot;t-1&quot; },
+      }}
+    /&gt;,
+  );
+
+  expect(screen.getByText(&quot;Phase 1&quot;)).toBeInTheDocument();
+  expect(screen.getByText(&quot;ready&quot;)).toBeInTheDocument();
+  expect(screen.getByText(&quot;Build taskboard&quot;)).toBeInTheDocument();
+  expect(screen.getByText(/execute/i)).toBeInTheDocument();
+});
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/web &amp;&amp; npm test -- goalBoard.test.tsx</code>
+预期：FAIL，组件不存在</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小 API 客户端与组件</strong></li>
+</ul>
+<pre><code class="language-ts">// apps/web/src/api/spine.ts
+import { api } from &quot;./client&quot;;
+
+export interface GoalBoardSnapshot {
+  goal: { goal_id?: string; title: string; phase: string; status: string };
+  columns: Record&lt;string, Array&lt;{ task_id: string; title: string; detail?: string; status?: string }&gt;&gt;;
+  next_action?: { kind: string; task_id?: string; reason?: string };
+}
+
+export async function getGoalBoard(goalId: string) {
+  const response = await api.get&lt;GoalBoardSnapshot&gt;(`/spine/goals/${encodeURIComponent(goalId)}/board`);
+  return response.data;
+}
+</code></pre>
+<pre><code class="language-tsx">// apps/web/src/components/spine/GoalBoard.tsx
+import GoalSummaryCard from &quot;./GoalSummaryCard&quot;;
+import TaskColumn from &quot;./TaskColumn&quot;;
+import type { GoalBoardSnapshot } from &quot;../../api/spine&quot;;
+
+export default function GoalBoard({ snapshot }: { snapshot: GoalBoardSnapshot }) {
+  return (
+    &lt;div className=&quot;space-y-6&quot;&gt;
+      &lt;GoalSummaryCard snapshot={snapshot} /&gt;
+      &lt;div className=&quot;grid gap-4 lg:grid-cols-3&quot;&gt;
+        {Object.entries(snapshot.columns).map(([column, tasks]) =&gt; (
+          &lt;TaskColumn key={column} title={column} tasks={tasks} /&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<pre><code class="language-tsx">// apps/web/src/components/spine/GoalSummaryCard.tsx
+import type { GoalBoardSnapshot } from &quot;../../api/spine&quot;;
+
+export default function GoalSummaryCard({ snapshot }: { snapshot: GoalBoardSnapshot }) {
+  return (
+    &lt;section className=&quot;xagent-surface p-6&quot;&gt;
+      &lt;div className=&quot;text-xs uppercase tracking-[0.24em] text-neutral-500&quot;&gt;Goal Board&lt;/div&gt;
+      &lt;h1 className=&quot;mt-2 text-2xl font-semibold text-white&quot;&gt;{snapshot.goal.title}&lt;/h1&gt;
+      &lt;p className=&quot;mt-2 text-sm text-neutral-400&quot;&gt;phase: {snapshot.goal.phase} · status: {snapshot.goal.status}&lt;/p&gt;
+      {snapshot.next_action ? (
+        &lt;div className=&quot;mt-4 text-sm text-neutral-200&quot;&gt;next: {snapshot.next_action.kind}&lt;/div&gt;
+      ) : null}
+    &lt;/section&gt;
+  );
+}
+</code></pre>
+<pre><code class="language-tsx">// apps/web/src/components/spine/TaskColumn.tsx
+export default function TaskColumn({ title, tasks }: { title: string; tasks: Array&lt;{ task_id: string; title: string }&gt; }) {
+  return (
+    &lt;section className=&quot;xagent-surface-subtle p-4&quot;&gt;
+      &lt;div className=&quot;text-sm font-medium text-white&quot;&gt;{title}&lt;/div&gt;
+      &lt;div className=&quot;mt-3 space-y-2&quot;&gt;
+        {tasks.map((task) =&gt; (
+          &lt;article key={task.task_id} className=&quot;rounded-2xl border border-white/[0.08] bg-black/20 p-3 text-sm text-neutral-200&quot;&gt;
+            {task.title}
+          &lt;/article&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/section&gt;
+  );
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：挂载 Goal Board 页面与 shell route</strong></li>
+</ul>
+<pre><code class="language-tsx">// apps/web/src/pages/GoalBoardPage.tsx
+import { useQuery } from &quot;@tanstack/react-query&quot;;
+import GoalBoard from &quot;../components/spine/GoalBoard&quot;;
+import { getGoalBoard } from &quot;../api/spine&quot;;
+
+export default function GoalBoardPage() {
+  const goalId = &quot;phase1-xagent&quot;;
+  const query = useQuery({
+    queryKey: [&quot;goal-board&quot;, goalId],
+    queryFn: () =&gt; getGoalBoard(goalId),
+  });
+
+  if (query.isLoading) return &lt;div className=&quot;p-8 text-neutral-400&quot;&gt;正在加载 Goal Board...&lt;/div&gt;;
+  if (!query.data) return &lt;div className=&quot;p-8 text-neutral-400&quot;&gt;暂无 Goal 数据。&lt;/div&gt;;
+
+  return &lt;GoalBoard snapshot={query.data} /&gt;;
+}
+</code></pre>
+<pre><code class="language-tsx">// apps/web/src/App.tsx
+const GoalBoardPage = React.lazy(() =&gt; import(&quot;./pages/GoalBoardPage&quot;));
+&lt;Route path=&quot;/goal-board&quot; element={&lt;GoalBoardPage /&gt;} /&gt;
+</code></pre>
+<pre><code class="language-ts">// apps/web/src/shell/shellRoutes.ts
+{
+  taskId: &quot;goal-board&quot;,
+  kind: &quot;workflow&quot;,
+  route: &quot;/goal-board&quot;,
+  title: &quot;目标任务板&quot;,
+  subtitle: &quot;持续推进当前交付主目标&quot;,
+  badge: &quot;PM&quot;,
+  pinned: true,
+  isPrimary: true,
+  status: &quot;ready&quot;,
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/web &amp;&amp; npm test -- goalBoard.test.tsx</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/web/src/api/spine.ts apps/web/src/components/spine apps/web/src/pages/GoalBoardPage.tsx apps/web/src/App.tsx apps/web/src/shell/shellRoutes.ts apps/web/src/shell/useShellStore.tsx apps/web/src/tests/goalBoard.test.tsx
+git commit -m &quot;feat(spine): add goal board control surface&quot;
+</code></pre>
+<hr />
+<h2 id="7-release-packaging-archive">任务 7：实现 Release Packaging / Archive 核心</h2>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/core/spine/release.py</code>
+- 修改：<code>apps/api/xagent/core/spine/service.py</code>
+- 测试：<code>apps/api/tests/test_spine_release_flow.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写失败的 release 测试</strong></li>
+</ul>
+<pre><code class="language-python">from xagent.core.spine.release import build_release_package
+
+
+def test_build_release_package_collects_candidate_metadata() -&gt; None:
+    package = build_release_package(
+        goal_id=&quot;goal-1&quot;,
+        branch_name=&quot;candidate/phase1&quot;,
+        commit_sha=&quot;abc123&quot;,
+        pr_number=&quot;7&quot;,
+        ci_run=&quot;28921940625&quot;,
+        evidence_paths=[&quot;r4-evidence/compose-ps.txt&quot;],
+    )
+    assert package[&quot;goal_id&quot;] == &quot;goal-1&quot;
+    assert package[&quot;candidate&quot;][&quot;branch_name&quot;] == &quot;candidate/phase1&quot;
+    assert package[&quot;review&quot;][&quot;ci_run&quot;] == &quot;28921940625&quot;
+    assert package[&quot;evidence&quot;][0] == &quot;r4-evidence/compose-ps.txt&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试验证失败</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_release_flow.py -k build_release_package_collects_candidate_metadata -v</code>
+预期：FAIL，函数不存在</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现最小 release 打包器</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/release.py
+from __future__ import annotations
+
+
+def build_release_package(
+    *,
+    goal_id: str,
+    branch_name: str,
+    commit_sha: str,
+    pr_number: str,
+    ci_run: str,
+    evidence_paths: list[str],
+) -&gt; dict:
+    return {
+        &quot;goal_id&quot;: goal_id,
+        &quot;candidate&quot;: {
+            &quot;branch_name&quot;: branch_name,
+            &quot;commit_sha&quot;: commit_sha,
+            &quot;pr_number&quot;: pr_number,
+        },
+        &quot;review&quot;: {
+            &quot;ci_run&quot;: ci_run,
+            &quot;status&quot;: &quot;ready&quot;,
+        },
+        &quot;evidence&quot;: list(evidence_paths),
+    }
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 4：在 spine service 中挂接 release summary</strong></li>
+</ul>
+<pre><code class="language-python"># apps/api/xagent/core/spine/service.py
+from xagent.core.spine.release import build_release_package
+
+
+def make_release_summary(goal_id: str, branch_name: str, commit_sha: str, pr_number: str, ci_run: str, evidence_paths: list[str]) -&gt; dict:
+    return build_release_package(
+        goal_id=goal_id,
+        branch_name=branch_name,
+        commit_sha=commit_sha,
+        pr_number=pr_number,
+        ci_run=ci_run,
+        evidence_paths=evidence_paths,
+    )
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行测试验证通过</strong></li>
+</ul>
+<p>运行：<code>cd apps/api &amp;&amp; .venv\Scripts\python.exe -m pytest tests/test_spine_release_flow.py -k build_release_package_collects_candidate_metadata -v</code>
+预期：PASS</p>
+<ul>
+<li>[ ] <strong>步骤 6：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/core/spine/release.py apps/api/xagent/core/spine/service.py apps/api/tests/test_spine_release_flow.py
+git commit -m &quot;feat(spine): add release packaging core&quot;
+</code></pre>
+<hr />
+<h2 id="8-phase-1-owner">任务 8：生成 Phase 1 验收报告与 owner 启动入口</h2>
+<p><strong>文件：</strong>
+- 创建：<code>docs/coordination/reports/auto-delivery-phase1-report.md</code>
+- 修改：<code>docs/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md</code>
+- 测试：无（文档校验）</p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 Phase 1 报告模板</strong></li>
+</ul>
+<pre><code class="language-md"># Auto-Delivery Phase 1 Report
+
+## Goal
+- goal id:
+- title:
+- phase:
+
+## Taskboard Snapshot
+- ready:
+- in_progress:
+- blocked:
+- review:
+- release_ready:
+- deploying:
+- verifying:
+- delivered:
+- recovery:
+
+## Execution Evidence
+- run ids:
+- review package:
+- ci runs:
+- deploy runs:
+- recovery runs:
+
+## Final Status
+- delivered / failed / archived
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：保存文档</strong></li>
+</ul>
+<p>将上述内容写入：<code>docs/coordination/reports/auto-delivery-phase1-report.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 3：运行文档校验</strong></li>
+</ul>
+<p>运行：<code>git diff --check -- docs/coordination/reports/auto-delivery-phase1-report.md docs/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md</code>
+预期：退出码 0</p>
+<ul>
+<li>[ ] <strong>步骤 4：Commit</strong></li>
+</ul>
+<pre><code class="language-bash">git add docs/coordination/reports/auto-delivery-phase1-report.md docs/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md
+git commit -m &quot;docs(spine): add phase1 delivery report template&quot;
+</code></pre>
+<hr />
+<h2 id="_7">自检</h2>
+<h3 id="_8">规格覆盖度</h3>
+<ul>
+<li>总方案：已覆盖（任务 1-8）</li>
+<li>三层架构：</li>
+<li>Planning Layer：任务 2、3、5、6</li>
+<li>Execution Layer：任务 4、6</li>
+<li>Control &amp; Evidence Layer：任务 1、4、7、8</li>
+<li>第一类对象：任务 1、2</li>
+<li>PM Agent 工作流：任务 2、5、6、7</li>
+<li>Phase 1 子项目：</li>
+<li>Goal/Taskboard/Session：任务 2、3、5、6</li>
+<li>Execution Orchestrator：任务 4</li>
+<li>PR/Review/Release：任务 7</li>
+<li>Deploy/Verify/Recover：任务 4、7、8</li>
+<li>Policy/Safety：任务 4（最小接线），后续计划中继续扩展</li>
+<li>Evidence/Archive：任务 7、8</li>
+<li>新会话启动提示词：已在设计规格中保留，实施阶段通过任务 8 的报告模板和后续工作流落地。</li>
+</ul>
+<h3 id="_9">占位符扫描</h3>
+<ul>
+<li>无“TODO/待定/后续补充”占位符</li>
+<li>每个代码步骤都给出具体代码块</li>
+<li>每个测试步骤都给出明确命令与预期结果</li>
+</ul>
+<h3 id="_10">类型一致性</h3>
+<ul>
+<li><code>Goal / Initiative / DeliveryTask / ReleaseRecord</code> 命名在全部任务中保持一致</li>
+<li>API 路径统一使用 <code>/api/v1/spine/...</code></li>
+<li>前端统一使用 <code>GoalBoardSnapshot</code></li>
+</ul>
+<hr />
+<h2 id="_11">执行交接</h2>
+<p>计划已完成并保存到 <code>docs/superpowers/plans/2026-07-08-xagent-auto-delivery-spine-phase1-plan.md</code>。两种执行方式：</p>
+<p><strong>1. 子代理驱动（推荐）</strong> - 每个任务调度一个新的子代理，任务间进行审查，快速迭代</p>
+<p><strong>2. 内联执行</strong> - 在当前会话中使用 executing-plans 执行任务，批量执行并设有检查点</p>
+<p>选哪种方式？</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

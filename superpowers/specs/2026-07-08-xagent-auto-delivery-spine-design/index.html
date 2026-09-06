@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Auto-Delivery Spine 设计文档 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Auto-Delivery Spine \u8bbe\u8ba1\u6587\u6863";
+        var mkdocs_page_input_path = "superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Auto-Delivery Spine 设计文档</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-07-08-xagent-auto-delivery-spine-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-auto-delivery-spine">X-Agent Auto-Delivery Spine 设计文档</h1>
+<ul>
+<li>日期：2026-07-08</li>
+<li>主题：补全对标 Codex / Hermes Agent 差距的完整升级方案（以结果交付为导向）</li>
+<li>当前主方案：<strong>方案 1 / Auto-Delivery Spine</strong></li>
+<li>适用范围：xagent Phase 1 升级设计；验证对象为 xagent 用 xagent 升级 xagent 自己</li>
+</ul>
+<hr />
+<h2 id="1">1. 背景与问题定义</h2>
+<p>当前 <code>xagent</code> 已完成一轮正式交付收口，能够在<strong>当前机器 / 单机 Docker Compose <code>full</code> 模式 / 单人交付模式</strong>下实现：</p>
+<ul>
+<li>最新候选分支冻结与多轮远端 CI 全绿；</li>
+<li>current-machine full-mode 等价环境 R4 实跑；</li>
+<li>R5 最终审查包、release manifest、最终签字记录块与 PR 审查入口收口。</li>
+</ul>
+<p>这说明 xagent 已经不是原型，而是具备当前范围内正式交付能力的工程系统。</p>
+<p>但如果对标 Codex / Hermes Agent，当前差距已经不主要体现在“能否跑通主链”，而体现在：</p>
+<h3 id="codex">对标 Codex 的核心差距</h3>
+<ol>
+<li>缺少默认的远程 / 隔离执行平面；</li>
+<li>PR 生命周期不是第一类产品对象；</li>
+<li>多环境可复制执行不够产品化；</li>
+<li>安全 / 审批更多体现在工程治理，而非产品默认行为。</li>
+</ol>
+<h3 id="hermes-agent">对标 Hermes Agent 的核心差距</h3>
+<ol>
+<li>taskboard 不是主控制面；</li>
+<li>durable session 不够强；</li>
+<li>长任务恢复与跨会话推进体验不足；</li>
+<li>goal-driven 的长期任务系统还未产品化。</li>
+</ol>
+<h3 id="_1">相对终局目标的差距</h3>
+<ol>
+<li>还不是 owner 只看报告的系统；</li>
+<li>还没有默认自动 merge / deploy / verify / rollback / archive 的完整主链；</li>
+<li>还没有把“交付”本身设计成第一类产品能力。</li>
+</ol>
+<p>因此，本次升级不是做若干零散功能，而是：</p>
+<blockquote>
+<p>把 xagent 从“可交付的单机代理系统”升级成“以产品经理智能体为中枢、能持续推进并完成真实交付的软件交付操作系统”。</p>
+</blockquote>
+<hr />
+<h2 id="2">2. 设计目标</h2>
+<p>本次完整升级方案的总目标是：</p>
+<blockquote>
+<p>让 xagent 具备一条从高层目标输入到生产交付、验证、恢复、归档的完整自动交付主脊柱，并由产品经理智能体默认主导持续推进。</p>
+</blockquote>
+<h3 id="21-phase-1">2.1 Phase 1 成功标准</h3>
+<p>Phase 1 不是搭平台骨架，而是必须在 xagent 自己身上证明一条完整闭环：</p>
+<ol>
+<li>接收高层 goal；</li>
+<li>自动拆解成 initiatives / tasks；</li>
+<li>在 taskboard 中形成可执行状态；</li>
+<li>在隔离执行环境中完成真实改动；</li>
+<li>自动形成 candidate / PR / review package；</li>
+<li>自动推进 deploy；</li>
+<li>自动执行 verify；</li>
+<li>必要时自动进入 recovery / rollback；</li>
+<li>自动形成 evidence / archive / signoff record；</li>
+<li>owner 只看最终报告，而不是手工驱动整条链。</li>
+</ol>
+<h3 id="22">2.2 本次设计原则</h3>
+<ol>
+<li><strong>交付优先于功能</strong>：所有能力都服务于交付主链；</li>
+<li><strong>状态优先于过程</strong>：goal/task/release/evidence 必须对象化；</li>
+<li><strong>智能体优先于人工编排</strong>：默认持续推进；</li>
+<li><strong>主链优先于单点能力</strong>：taskboard、sandbox、PR 都服务于同一 Spine；</li>
+<li><strong>先做闭环，再做泛化</strong>：先在 xagent 自己身上证明，再扩展到其他仓库。</li>
+</ol>
+<hr />
+<h2 id="3-auto-delivery-spine">3. 总体方案：Auto-Delivery Spine</h2>
+<p>主方案采用 <strong>Auto-Delivery Spine</strong>。</p>
+<h3 id="31">3.1 定义</h3>
+<p>系统主脊柱固定为：</p>
+<p><strong>Goal → Plan → Taskboard → Execute → Review → Release → Deploy → Verify → Recover → Archive</strong></p>
+<p>这条链既是产品工作流，也是正式状态机。</p>
+<h3 id="32">3.2 为什么选这个方案</h3>
+<p>相较于单纯做“执行核心 + 规划核心”分离架构，或者仅做自治等级路线图，Auto-Delivery Spine 更符合本次目标：</p>
+<ul>
+<li>它直接以交付闭环为中心，而不是模块堆叠；</li>
+<li>它同时能容纳 Codex 型差距（隔离执行、PR 原生闭环、多环境执行）；</li>
+<li>也同时能容纳 Hermes 型差距（taskboard、durable session、长任务推进）；</li>
+<li>它更适合定义 owner 只看报告的产品形态。</li>
+</ul>
+<h3 id="33">3.3 外部评估框架</h3>
+<p>为了避免 Spine 变成“看起来全自动、其实不可控”，系统外部仍采用自治等级作为评估框架：</p>
+<ul>
+<li>L0 human-driven, agent-assisted</li>
+<li>L1 agent-driven implementation</li>
+<li>L2 agent-driven review + verification</li>
+<li>L3 staging delivery</li>
+<li>L4 production delivery + recovery</li>
+<li>L5 report-only owner</li>
+</ul>
+<p>Phase 1 的目标是：</p>
+<blockquote>
+<p>至少在 xagent 自己身上，证明从 L2/L3 走向 L4/L5 的最小完整闭环。</p>
+</blockquote>
+<hr />
+<h2 id="4">4. 核心架构</h2>
+<h3 id="41">4.1 三层结构</h3>
+<p>Auto-Delivery Spine 内部采用三层结构：</p>
+<h4 id="a-planning-layer">A. Planning Layer</h4>
+<p>负责“理解要做什么”：
+- goal intake
+- initiative/task decomposition
+- taskboard stewardship
+- prioritization / blockage reasoning</p>
+<h4 id="b-execution-layer">B. Execution Layer</h4>
+<p>负责“把事情做出来”：
+- execution environment selection
+- code/config change execution
+- test / CI / deploy invocation
+- artifact production</p>
+<h4 id="c-control-evidence-layer">C. Control &amp; Evidence Layer</h4>
+<p>负责“让系统可恢复、可治理、可留档”：
+- durable session
+- event log
+- release record
+- evidence aggregation
+- policy / safety
+- signoff record
+- archive</p>
+<h3 id="42">4.2 第一类对象（必须持久化）</h3>
+<p>以下对象都必须是系统内的第一类持久对象：</p>
+<ul>
+<li><strong>Goal</strong>：最高层目标</li>
+<li><strong>Initiative</strong>：goal 下的阶段主题</li>
+<li><strong>Task</strong>：最小执行单元</li>
+<li><strong>Run</strong>：某次 task 的执行实例</li>
+<li><strong>Review</strong>：正式评审结果</li>
+<li><strong>Release</strong>：候选 / 发布对象</li>
+<li><strong>Evidence</strong>：所有验证与交付证据</li>
+<li><strong>Incident / Recovery</strong>：失败与恢复对象</li>
+</ul>
+<h3 id="43">4.3 统一状态主线</h3>
+<p>这些对象由统一主线串起：</p>
+<p><strong>Goal → Initiative → Task → Run → Review → Release → Evidence → Signoff / Recovery</strong></p>
+<p>这样 PM Agent 才能真正跨会话推进，而不是靠聊天记忆维持假连续性。</p>
+<hr />
+<h2 id="5-pm-agent">5. PM Agent 设计</h2>
+<p>PM Agent 是产品经理智能体，不是万能代码 bot。</p>
+<h3 id="51-pm-agent">5.1 PM Agent 的定位</h3>
+<p>它是：
+- taskboard owner
+- session continuity owner
+- orchestration owner
+- release progression owner
+- reporting owner</p>
+<p>它不是：
+- 每个低层执行动作的亲自承担者
+- 单一大脑式的全能代码 bot</p>
+<h3 id="52">5.2 核心职责</h3>
+<p>PM Agent 负责：
+1. goal intake
+2. decomposition
+3. taskboard stewardship
+4. execution delegation
+5. review gating
+6. release progression
+7. deploy / recover decisioning
+8. reporting &amp; archive</p>
+<h3 id="53">5.3 每轮循环</h3>
+<p>每轮固定执行：
+1. 读取当前状态；
+2. 找到最高优先级推进点；
+3. 决定动作类型；
+4. 执行动作；
+5. 写回状态；
+6. 输出 owner 摘要。</p>
+<h3 id="54">5.4 默认行为风格</h3>
+<ul>
+<li>默认主动推进；</li>
+<li>把人当 owner，不当操作员；</li>
+<li>面向结果，不面向命令；</li>
+<li>状态比聊天更重要。</li>
+</ul>
+<hr />
+<h2 id="6-phase-1">6. Phase 1 子项目拆分</h2>
+<p>Phase 1 固定拆成 6 个子项目：</p>
+<h3 id="61-goal-taskboard-session-core">6.1 Goal / Taskboard / Session Core</h3>
+<ul>
+<li>持久化 goal / initiative / task；</li>
+<li>建立主 taskboard；</li>
+<li>支持 durable session / resume。</li>
+</ul>
+<h3 id="62-execution-environment-orchestrator">6.2 Execution Environment Orchestrator</h3>
+<ul>
+<li>统一 current-machine / isolated execution；</li>
+<li>每次执行都形成 run 对象与证据；</li>
+<li>支持 execution template selection。</li>
+</ul>
+<h3 id="63-pr-review-release-packaging-core">6.3 PR / Review / Release Packaging Core</h3>
+<ul>
+<li>branch / candidate / commit / PR 对象化；</li>
+<li>自动生成 review package；</li>
+<li>统一关联 CI/docs/evidence。</li>
+</ul>
+<h3 id="64-deploy-verify-recover-core">6.4 Deploy / Verify / Recover Core</h3>
+<ul>
+<li>支持 deploy 为正式状态；</li>
+<li>verify 为必经层；</li>
+<li>recovery / rollback 进入状态机。</li>
+</ul>
+<h3 id="65-control-policy-safety-core">6.5 Control / Policy / Safety Core</h3>
+<ul>
+<li>自动推进边界；</li>
+<li>风险策略；</li>
+<li>自动化动作 trace；</li>
+<li>recovery 策略驱动。</li>
+</ul>
+<h3 id="66-evidence-archive-continuous-learning-core">6.6 Evidence / Archive / Continuous Learning Core</h3>
+<ul>
+<li>自动归档 release 结果；</li>
+<li>自动回看 pass/fail；</li>
+<li>经验可反馈下一轮 goal/taskboard。</li>
+</ul>
+<h3 id="67">6.7 执行顺序</h3>
+<p>主顺序：
+1. Goal / Taskboard / Session Core
+2. Execution Environment Orchestrator
+3. PR / Review / Release Packaging Core
+4. Deploy / Verify / Recover Core
+5. Control / Policy / Safety Core
+6. Evidence / Archive / Continuous Learning Core</p>
+<p>但 4/5/6 不应完全等 1~3 全部完成后才启动，而是当最小 candidate 形成后并行接入。</p>
+<hr />
+<h2 id="7">7. 完整工作流</h2>
+<h3 id="71">7.1 端到端链路</h3>
+<ol>
+<li><strong>Goal Intake</strong>：输入高层目标，建立 session root；</li>
+<li><strong>Planning / Decomposition</strong>：生成 initiative / task graph；</li>
+<li><strong>Taskboard Activation</strong>：激活主状态面；</li>
+<li><strong>Execution</strong>：在执行环境中生成 run / artifact / logs；</li>
+<li><strong>Review</strong>：判断结果能否升级到下一层；</li>
+<li><strong>Release Packaging</strong>：形成 candidate / PR / review package；</li>
+<li><strong>Deploy</strong>：推进部署；</li>
+<li><strong>Verify</strong>：自动做 health/ready/smoke/E2E；</li>
+<li><strong>Recover</strong>：失败进入 retry / fix-forward / rollback；</li>
+<li><strong>Archive</strong>：形成最终留档与经验反馈。</li>
+</ol>
+<h3 id="72">7.2 关键特征</h3>
+<ul>
+<li>每一层都是正式状态；</li>
+<li>智能体推进的是状态，不只是命令；</li>
+<li>owner 默认只看报告，不做流程工；</li>
+<li>workflow 必须支持 replay / resume / recovery / archive。</li>
+</ul>
+<hr />
+<h2 id="8">8. 新会话产品经理启动方式</h2>
+<h3 id="81-pm-control-session">8.1 新会话必须是 PM Control Session</h3>
+<p>新会话不是“重新理解世界”，而是：
+- 带着状态进入
+- 读取 goal / taskboard / runs / release / evidence / archive
+- 判断当前 phase
+- 找到唯一最高优先级推进点
+- 调执行智能体继续推进</p>
+<h3 id="82">8.2 新会话启动输入</h3>
+<p>启动包包含：
+1. <strong>Identity</strong>：PM Agent
+2. <strong>Scope</strong>：Phase 1 / Auto-Delivery Spine / xagent 自举升级
+3. <strong>State</strong>：goal/taskboard/review/release/evidence/archive
+4. <strong>Operating Rules</strong>：默认主动推进，先写状态再执行，owner 只看报告</p>
+<h3 id="83">8.3 建议启动提示词</h3>
+<pre><code class="language-text">你现在是 xagent 的产品经理智能体（PM Agent），负责主导 Auto-Delivery Spine，而不是只做需求整理或聊天辅助。
+
+你的职责是：
+- 接收和维护 goal
+- 拆解 initiative / task
+- 维护 taskboard
+- 判断当前最高优先级推进点
+- 调度执行智能体
+- 推动 review / release / deploy / verify / recovery
+- 组织 evidence / archive / report
+- 默认持续推进，owner 只看报告
+
+当前主方案：
+- 采用 Auto-Delivery Spine：
+  Goal → Plan → Taskboard → Execute → Review → Release → Deploy → Verify → Recover → Archive
+- 内部分层：
+  Planning Layer / Execution Layer / Control &amp; Evidence Layer
+- 第一类对象：
+  Goal / Initiative / Task / Run / Review / Release / Evidence / Incident
+
+当前阶段目标：
+- 推进 xagent 对标 Codex + Hermes Agent 的差距补全
+- 当前 Phase 1 目标是：taskboard + durable session + 自动交付一体化闭环
+- 验证对象固定为：xagent 用 xagent 升级 xagent 自己
+- 目标不是只做代码代理，而是做可持续自动交付操作系统
+
+你的启动流程必须严格按下面顺序：
+1. 读取当前 goal / initiatives / taskboard / active runs / review / release / evidence / archive 状态
+2. 判断当前所处 phase（planning / execution / review / release / deploy / recovery / archive）
+3. 找到唯一最高优先级推进点
+4. 明确下一步动作属于哪类：
+   create task / reprioritize / dispatch execution / request review / assemble release / trigger deploy / enter recovery / archive
+5. 先写回状态，再调执行
+6. 只向 owner 报告必要摘要，不把 owner 当流程工
+
+你的运行规则：
+- 默认主动推进，不频繁请求确认
+- 以 taskboard 为状态主视图
+- 以 PR / Git 为交付出口
+- 以 evidence / archive 为长期记忆
+- 先产出结果，再产出说明
+- 如果发现目标过大，自动拆成 initiatives
+- 如果发现无法推进，必须把阻塞正式写成 blocked / incident / recovery 状态
+- 不要把“聊天上下文”当作唯一记忆来源
+
+你每一轮输出必须包含：
+- 当前 phase
+- 当前最高优先级卡片
+- 已完成项
+- 当前阻塞项
+- 下一步动作
+- 是否真的需要 owner 输入（若不需要，直接继续推进）
+
+现在开始：
+先不要泛泛建议，先读取当前状态，并告诉我你识别到的当前 phase、最高优先级推进点和下一步动作。
+</code></pre>
+<hr />
+<h2 id="9">9. 方案选项对比与推荐</h2>
+<h3 id="91">9.1 备选方案</h3>
+<ul>
+<li><strong>方案 1：Auto-Delivery Spine</strong>（推荐）</li>
+<li>方案 2：Dual-Core Agent OS</li>
+<li>方案 3：Progressive Autonomy Ladder</li>
+</ul>
+<h3 id="92-1">9.2 为什么最终选方案 1</h3>
+<p>因为它最直接服务当前目标：
+- 双线并行补 Codex + Hermes 差距；
+- 第一阶段就证明交付自动驾驶闭环；
+- 以结果交付为导向；
+- owner 只看报告。</p>
+<p>同时吸收：
+- 方案 2 的内部 Planning/Execution 分层
+- 方案 3 的自治等级评估框架</p>
+<hr />
+<h2 id="10-phase-1">10. Phase 1 成功定义（最终版）</h2>
+<p>Phase 1 成功不以模块数量衡量，而以这条闭环是否真实成立衡量：</p>
+<ul>
+<li>1 个真实 goal</li>
+<li>1 套 taskboard</li>
+<li>1 次跨会话恢复</li>
+<li>1 次隔离执行</li>
+<li>1 个自动生成的 PR / review package</li>
+<li>1 次 deploy</li>
+<li>1 次 verify</li>
+<li>1 次 recovery path（即便是演练触发）</li>
+<li>1 套 release archive</li>
+<li>owner 不再承担手工任务拆解、材料拼装和证据追索工作</li>
+</ul>
+<hr />
+<h2 id="11">11. 范围边界</h2>
+<h3 id="_2">本次要做</h3>
+<ul>
+<li>设计完整 Auto-Delivery Spine；</li>
+<li>把 taskboard / session / PR / release 设计成第一类对象；</li>
+<li>定义 PM Agent 主控模式；</li>
+<li>形成 Phase 1 子项目拆分与成功标准；</li>
+<li>提供可直接用于新会话启动的 PM 提示词。</li>
+</ul>
+<h3 id="_3">本次不做</h3>
+<ul>
+<li>立即实现所有模块；</li>
+<li>先覆盖所有项目类型；</li>
+<li>先完成 K8s / HA / 多云 / 多集群；</li>
+<li>先做完整插件市场；</li>
+<li>先做组织级多人协作流程。</li>
+</ul>
+<hr />
+<h2 id="12">12. 最终交付物</h2>
+<p>这次设计阶段的交付物应包括：</p>
+<ol>
+<li>本设计文档；</li>
+<li>PM Agent 启动提示词；</li>
+<li>Phase 1 六大子项目拆分；</li>
+<li>Auto-Delivery Spine 的状态主链定义；</li>
+<li>后续实现工作流基础。</li>
+</ol>
+<hr />
+<h2 id="13">13. 当前结论</h2>
+<blockquote>
+<p>本次升级不应被理解为“再做几个 agent 功能”，而应被理解为：
+<strong>把 xagent 升级成一个以 PM Agent 为中枢、以 taskboard 为状态主视图、以 PR/Git 为交付出口、以 release/evidence/archive 为持久记忆的自动交付操作系统。</strong></p>
+<p>Phase 1 的目标不是先做完所有平台能力，而是先在 xagent 自己身上证明一条完整自动交付闭环成立。</p>
+</blockquote>
+<hr />
+<h2 id="14-phase-1-owner">14. Phase 1 验收与 owner 启动入口</h2>
+<p>Phase 1 的最小验收报告模板已落在：</p>
+<ul>
+<li><code>docs/coordination/reports/auto-delivery-phase1-report.md</code></li>
+</ul>
+<p>该报告模板用于沉淀：
+- goal 基本信息
+- taskboard 快照
+- execution evidence
+- final status</p>
+<p>owner / 接手者可优先从该报告与对应 taskboard、release evidence 入口理解当前 Phase 1 的完成度与下一步推进点。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/ARCHITECTURE/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>架构说明 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u67b6\u6784\u8bf4\u660e";
+        var mkdocs_page_input_path = "ARCHITECTURE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/ARCHITECTURE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">架构说明</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_1">设计原则</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_2">分层</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">运行模式</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">适配器契约模式</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#phase-0">三链路（Phase 0 验收）</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">架构说明</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/ARCHITECTURE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 架构说明（重构版）</h1>
+<p>本文件描述 X-Agent 开源重构版的目标架构。核心理念：<strong>编排内核 + 适配层 + 独有语义</strong>。</p>
+<h2 id="_1">设计原则</h2>
+<ol>
+<li><strong>不重复造轮子</strong>：成熟能力交给生产级开源组件，通过 <code>adapters/</code> 薄封装接入，可替换。</li>
+<li><strong>依赖倒置</strong>：<code>core/</code> 与 <code>domains/</code> 只依赖 <code>adapters/</code> 暴露的 <strong>Protocol 抽象接口</strong>，不直接依赖具体开源库。这样底座可在 lite / full 模式间切换，也便于测试 mock。</li>
+<li><strong>薄路由</strong>：<code>api/</code> 只做请求校验、鉴权、租户隔离、调用 core/domains，不写业务逻辑。</li>
+<li><strong>默认安全</strong>：所有端点默认要求 principal（认证主体）+ 租户隔离，闭合旧版 30+ 越权问题。</li>
+<li><strong>许可证合规</strong>：只用 MIT/Apache/BSD。媒体（图像/视频）生成统一走<strong>云端 AI 生成平台 API</strong>（LibLib/LibTV 风格：选模型/LoRA → 提交任务 → 轮询取结果），不自托管 ComfyUI，规避 GPL-3.0 风险。</li>
+</ol>
+<h2 id="_2">分层</h2>
+<pre><code>apps/api/xagent/
+├── main.py            # FastAPI 应用装配（lifespan + 中间件 + 路由）
+├── infra/             # 横切基础设施
+│   ├── settings.py    # pydantic-settings，XAGENT_* 环境变量
+│   ├── db.py          # SQLAlchemy 2.0 async engine + session
+│   ├── cache.py       # Redis 客户端（可降级 in-memory）
+│   ├── logging.py     # 结构化日志
+│   └── health.py      # liveness/readiness 依赖探活
+├── adapters/          # 开源底座适配（每个子包定义 Protocol + 具体实现 + 工厂）
+│   ├── llm/           # LiteLLM
+│   ├── memory/        # Mem0 + Graphiti + Qdrant
+│   ├── observability/ # Langfuse + OpenTelemetry
+│   ├── sandbox/       # E2B / docker
+│   ├── browser/       # browser-use
+│   ├── desktop_auto/  # UI-TARS
+│   ├── coding/        # OpenHands
+│   ├── mcp/           # 官方 MCP SDK + ContextForge
+│   └── tools/         # Composio
+├── core/              # 编排内核（独有语义）
+│   ├── orchestration/ # LangGraph 状态图
+│   ├── agents/        # 角色注册 / 能力匹配
+│   └── workflow/      # ★工作流结构化视图 + Temporal 桥接
+├── domains/           # X-Agent 独有业务
+│   ├── creative_studio/      # 短剧工厂（媒体生成走云 AI 生成 API，LibLib/LibTV 风格）
+│   ├── open_source_discovery/# 开源候选发现
+│   └── billing/              # 计费 / 订阅
+├── enterprise/        # RBAC / SSO / 审计 / 多租户
+│   ├── auth/          # Keycloak / 内置 JWT
+│   ├── authz/         # Casbin / OpenFGA / OPA
+│   └── audit/         # 防篡改审计链
+└── api/               # FastAPI 路由（薄，按域分组）
+</code></pre>
+<h2 id="_3">运行模式</h2>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>说明</th>
+<th>依赖</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>lite</strong></td>
+<td>单机 / 桌面 / 演示。SQLite + 内存缓存 + Qdrant 内存模式 + 内置 JWT 鉴权</td>
+<td>无需 Docker</td>
+</tr>
+<tr>
+<td><strong>full</strong></td>
+<td>单机生产 / 试点。Postgres + Redis + Qdrant + Langfuse + LiteLLM + Keycloak</td>
+<td>docker-compose</td>
+</tr>
+<tr>
+<td><strong>enterprise</strong></td>
+<td>多区域 HA（后做）</td>
+<td>K8s / Helm</td>
+</tr>
+</tbody>
+</table>
+<p>模式由 <code>XAGENT_MODE</code> 环境变量控制；adapters 工厂据此选择具体实现或降级回退。</p>
+<h2 id="_4">适配器契约模式</h2>
+<p>每个 adapter 子包遵循统一结构：</p>
+<pre><code class="language-python"># adapters/&lt;name&gt;/base.py     —— Protocol 抽象接口
+# adapters/&lt;name&gt;/&lt;impl&gt;.py   —— 具体开源实现（如 litellm.py）
+# adapters/&lt;name&gt;/null.py     —— lite/测试用空实现或降级实现
+# adapters/&lt;name&gt;/factory.py  —— 据 settings 返回实例
+</code></pre>
+<p><code>core</code> / <code>domains</code> 通过依赖注入拿到 Protocol，不感知具体实现。</p>
+<h2 id="phase-0">三链路（Phase 0 验收）</h2>
+<ol>
+<li><strong>LLM 调用链</strong>：<code>adapters.llm.factory.get_llm_client()</code> → LiteLLM → provider</li>
+<li><strong>可观测链</strong>：每次调用上报 Langfuse trace（OTel 兼容）</li>
+<li><strong>记忆/向量链</strong>：<code>adapters.memory</code> → Qdrant 写入/检索</li>
+</ol>
+<p>Phase 0 完成标志：<code>scripts/smoke_three_chains.py</code> 三链路端到端通过。</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/" class="btn btn-neutral float-left" title="项目总览与开发指南"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../ROADMAP/" class="btn btn-neutral float-right" title="路线图">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../ROADMAP/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

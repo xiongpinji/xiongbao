@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G3-C1 HA / K8s 真实验证计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G3-C1 HA / K8s \u771f\u5b9e\u9a8c\u8bc1\u8ba1\u5212";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G3-C1 HA / K8s 真实验证计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g3-c1-ha-k8s-verification-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g3-c1-ha-k8s">G3-C1 HA / K8s 真实验证计划</h1>
+<blockquote>
+<p>适用阶段：G3 企业级长期运营</p>
+<p>用途：把 G3-C1 从“方向与边界已定义”推进到“真实验证可执行”，明确 HA / K8s / secret 管理 / 多实例一致性要在什么环境、按什么标准、输出什么证据来验证。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>本计划的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 的 HA / K8s 包提供第一份真实验证计划，使 G3-C1 不再只停留在方向定义，而进入可验证、可判定通过与否的状态。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 验证范围</h2>
+<p>本次验证只覆盖 G3-C1 的四个核心问题：</p>
+<ol>
+<li>API 多副本是否能稳定工作；</li>
+<li>worker 多副本是否会引入重复消费 / 幂等问题；</li>
+<li>Helm / K8s 渲染是否已具备最小平台化入口；</li>
+<li>secret 注入方向是否已明确，不会把 env 值误写成已支持 secretRef。</li>
+</ol>
+<p>本次验证<strong>不</strong>要求一次性完成：
+- 正式多集群部署；
+- 生产级 secret manager 落地；
+- 企业级流量治理；
+- 完整性能压测平台。</p>
+<hr />
+<h2 id="3">3. 验证环境</h2>
+<h3 id="31">3.1 当前推荐验证环境</h3>
+<p>优先采用：</p>
+<ul>
+<li><strong>等价验证环境</strong></li>
+<li>单机或本地 K8s / 等价容器环境</li>
+<li>用于 Helm 渲染、多副本结构检查、secret 注入方式检查</li>
+</ul>
+<h3 id="32">3.2 环境前提</h3>
+<p>必须具备：</p>
+<ul>
+<li>可运行 Helm 模板渲染；</li>
+<li>至少可以模拟 API / worker 多副本配置；</li>
+<li>可以检查 <code>security.jwtSecret</code> 等关键配置在模板中的注入路径；</li>
+<li>可以保留输出日志和渲染产物。</li>
+</ul>
+<hr />
+<h2 id="4">4. 验证项</h2>
+<h3 id="41-helm-k8s">4.1 Helm / K8s 渲染验证</h3>
+<p>运行：</p>
+<pre><code class="language-powershell">helm template xagent deploy/helm --set api.enabled=true --set security.jwtSecret=&lt;32+ chars random&gt;
+</code></pre>
+<p>期望：
+- chart 能成功渲染；
+- <code>jwtSecret</code> 仍保持 fail-fast；
+- API / worker 模板能够生成；
+- 不出现依赖危险默认值才能渲染成功的情况。</p>
+<h3 id="42">4.2 多实例结构验证</h3>
+<p>检查：
+- <code>replicaCount</code> 可提升到 &gt;1；
+- worker <code>replicas</code> 可提升到 &gt;1；
+- autoscaling 入口存在；
+- chart / values 中没有把多实例写成“已验证完成”的事实。</p>
+<p>输出：
+- 渲染结果摘要
+- 当前 chart 能表达的多实例结构说明</p>
+<h3 id="43-secret">4.3 secret 管理方向验证</h3>
+<p>检查：
+- 当前是否仍以 env / values 注入为主；
+- 文档中是否已明确 secretRef / external secret manager 是后续目标方向；
+- 没有把“平台化 secret 注入”写成已经完成。</p>
+<p>输出：
+- 当前注入方式表
+- 目标注入方式表
+- 差距说明</p>
+<h3 id="44">4.4 多实例一致性验证清单</h3>
+<p>至少列出后续必须验证的对象：
+- API 状态读模型
+- worker 任务消费
+- queue / broker 行为
+- run / task / workflow 的幂等与可追溯性
+- 回滚后多副本状态收敛</p>
+<p>输出：
+- 一份“后续必须验证”的一致性清单，而不是模糊描述</p>
+<hr />
+<h2 id="5">5. 通过标准</h2>
+<p>G3-C1 的真实验证通过，不等于“K8s 已正式上线”，而是至少满足：</p>
+<ol>
+<li>Helm / K8s 最小模板已被验证可渲染；</li>
+<li>API / worker 多实例结构已被验证可表达；</li>
+<li>secret 注入当前态与目标态差距已明确；</li>
+<li>多实例前必须验证的一致性对象已经列成清单；</li>
+<li>有一份可审阅的验证输出，而不是只在口头里说“后续做 HA”。</li>
+</ol>
+<hr />
+<h2 id="6">6. 证据要求</h2>
+<p>本计划要求输出的最小证据包括：</p>
+<ul>
+<li>Helm template 输出摘要</li>
+<li>多实例相关 values / 渲染片段</li>
+<li>当前 secret 注入方式与目标方式对照</li>
+<li>一致性验证清单</li>
+<li>最终判定：</li>
+<li>通过 / 不通过</li>
+<li>哪些部分仍阻塞</li>
+<li>下一步责任包</li>
+</ul>
+<p>建议归档到：
+- <code>docs/coordination/reports/commercialization-g3-c1-ha-k8s-verification.md</code></p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>当前 <code>G3-C1</code> 已完成方向定义；
+这份计划的作用是让它进入下一状态：</p>
+<blockquote>
+<p><strong>可执行验证</strong></p>
+</blockquote>
+<p>只有完成这一步，<code>G3-C1</code> 才能从“定义完成”走向“验证完成”。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

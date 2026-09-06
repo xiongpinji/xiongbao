@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-desktop-delivery-gate/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Tauri 桌面商用交付门实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Tauri \u684c\u9762\u5546\u7528\u4ea4\u4ed8\u95e8\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-15-xagent-desktop-delivery-gate.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-desktop-delivery-gate/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Tauri 桌面商用交付门实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-15-xagent-desktop-delivery-gate.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-tauri">X-Agent Tauri 桌面商用交付门实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 生成可审计的 Windows MSI/NSIS 制品，在隔离本地目录实际完成诊断连接、安装、首次启动、关闭、重启与卸载，并将未签名状态准确标为 <code>unsigned_local_candidate</code>。</p>
+<p><strong>架构：</strong> Rust 层集中校验后端 URL、路径和 HTTP 方法，桌面后端只允许 loopback。安装后的同一可执行文件支持 <code>--diagnostics-file</code> 无界面健康诊断，安装门用它证明打包二进制能连接本轮 Web/API；GUI 进程生命周期另行验证。制品收集器记录 SHA-256、大小、架构、版本、构建 SHA 和签名状态。</p>
+<p><strong>技术栈：</strong> Rust 2021、Tauri 2、reqwest、Tokio、Cargo、Windows MSI/NSIS、PowerShell、GitHub Actions Windows runner</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<ul>
+<li>修改：<code>apps/desktop/src/lib.rs</code> —— loopback URL/path/method 验证、健康诊断与单元测试。</li>
+<li>修改：<code>apps/desktop/src/main.rs</code> —— <code>--diagnostics-file</code> 命令行入口和 GUI 入口分流。</li>
+<li>修改：<code>apps/desktop/Cargo.toml</code>、<code>apps/desktop/Cargo.lock</code> —— URL/错误依赖与产品版本锁定。</li>
+<li>修改：<code>apps/desktop/tauri.conf.json</code> —— 产品版本、固定 installer targets 与安全配置。</li>
+<li>创建：<code>scripts/collect_desktop_artifacts.py</code>、<code>tests/release/test_collect_desktop_artifacts.py</code> —— 制品摘要和签名分类。</li>
+<li>创建：<code>scripts/verify_desktop_installer.ps1</code>、<code>tests/release/test_desktop_installer_script.py</code> —— 安全安装、诊断、GUI 生命周期和卸载。</li>
+<li>创建：<code>scripts/run_desktop_commercial_gate.ps1</code>、<code>tests/release/test_desktop_gate_script.py</code> —— Rust/build/installer 同 SHA 门。</li>
+<li>修改：<code>.github/workflows/ci.yml</code> —— <code>windows-latest</code> 桌面质量与 bundle job。</li>
+</ul>
+<h3 id="1">任务 1：锁定桌面后端代理边界</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/desktop/src/lib.rs</code>
+- 修改：<code>apps/desktop/Cargo.toml</code>
+- 修改：<code>apps/desktop/Cargo.lock</code>
+- 创建：<code>apps/web/src/api/baseUrl.ts</code>
+- 修改：<code>apps/web/src/api/client.ts</code>、<code>apps/web/src/main.tsx</code> 与使用原生 Fetch/SSE 的页面
+- 修改：<code>apps/api/xagent/infra/settings.py</code>、<code>deploy/compose/docker-compose.yml</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：先写 URL、路径和方法单元测试</strong></li>
+</ul>
+<p>在 <code>apps/desktop/src/lib.rs</code> 底部添加：</p>
+<pre><code class="language-rust">#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_url_accepts_loopback_api_path() {
+        let url = build_backend_url(&quot;http://127.0.0.1:8000&quot;, &quot;/api/v1/system/capabilities&quot;).unwrap();
+        assert_eq!(url.as_str(), &quot;http://127.0.0.1:8000/api/v1/system/capabilities&quot;);
+    }
+
+    #[test]
+    fn backend_url_rejects_remote_hosts_and_path_escape() {
+        assert!(build_backend_url(&quot;https://example.com&quot;, &quot;/health&quot;).is_err());
+        assert!(build_backend_url(&quot;http://127.0.0.1:8000&quot;, &quot;//example.com/steal&quot;).is_err());
+        assert!(build_backend_url(&quot;http://127.0.0.1:8000&quot;, &quot;/api/v1/../admin&quot;).is_err());
+        assert!(build_backend_url(&quot;http://127.0.0.1:8000&quot;, &quot;health&quot;).is_err());
+    }
+
+    #[test]
+    fn request_method_is_allowlisted() {
+        assert_eq!(parse_method(&quot;get&quot;).unwrap(), reqwest::Method::GET);
+        assert_eq!(parse_method(&quot;DELETE&quot;).unwrap(), reqwest::Method::DELETE);
+        assert!(parse_method(&quot;CONNECT&quot;).is_err());
+        assert!(parse_method(&quot;TRACE&quot;).is_err());
+    }
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认函数不存在</strong></li>
+</ul>
+<p>运行：<code>cargo test --manifest-path apps/desktop/Cargo.toml --locked</code></p>
+<p>预期：FAIL，找不到 <code>build_backend_url</code> 和 <code>parse_method</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现 loopback URL 和 allowlist</strong></li>
+</ul>
+<p>在 <code>Cargo.toml</code> 添加 <code>url = "2"</code>，实现：</p>
+<pre><code class="language-rust">fn parse_method(method: &amp;str) -&gt; Result&lt;reqwest::Method, String&gt; {
+    match method.to_ascii_uppercase().as_str() {
+        &quot;GET&quot; =&gt; Ok(reqwest::Method::GET),
+        &quot;POST&quot; =&gt; Ok(reqwest::Method::POST),
+        &quot;PUT&quot; =&gt; Ok(reqwest::Method::PUT),
+        &quot;PATCH&quot; =&gt; Ok(reqwest::Method::PATCH),
+        &quot;DELETE&quot; =&gt; Ok(reqwest::Method::DELETE),
+        _ =&gt; Err(format!(&quot;unsupported method: {method}&quot;)),
+    }
+}
+
+
+fn build_backend_url(base: &amp;str, path: &amp;str) -&gt; Result&lt;url::Url, String&gt; {
+    if !path.starts_with('/') || path.starts_with(&quot;//&quot;) || path.split('/').any(|part| part == &quot;..&quot;) {
+        return Err(&quot;backend path must be an absolute non-escaping path&quot;.to_string());
+    }
+    let mut base_url = url::Url::parse(base).map_err(|error| error.to_string())?;
+    let host = base_url.host_str().unwrap_or_default();
+    if base_url.scheme() != &quot;http&quot; || !matches!(host, &quot;127.0.0.1&quot; | &quot;localhost&quot; | &quot;::1&quot;) {
+        return Err(&quot;backend base URL must use HTTP loopback&quot;.to_string());
+    }
+    base_url.set_path(path);
+    base_url.set_query(None);
+    base_url.set_fragment(None);
+    Ok(base_url)
+}
+</code></pre>
+<p><code>call_backend_api</code> 从 <code>XAGENT_DESKTOP_API_URL</code> 读取 base，缺省 <code>http://127.0.0.1:8000</code>；使用 <code>client.request(parse_method(&amp;method)?, build_backend_url(&amp;base, &amp;path)?)</code>。错误不得包含 bearer token 或请求 body。</p>
+<p>安装包可视验收补充要求：Rust 同时暴露只返回规范化 loopback origin 的 <code>desktop_api_base_url</code> 命令。Web 启动必须等待该命令，并让 Axios、Fetch 与 SSE 统一使用返回的 origin；普通浏览器构建继续使用相对 <code>/api/v1</code>。Windows API CORS 允许 <code>http://tauri.localhost</code>，跨平台候选同时允许 <code>tauri://localhost</code>，不得使用通配符。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行 Rust 质量门</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">cargo fmt --manifest-path apps/desktop/Cargo.toml -- --check
+cargo clippy --manifest-path apps/desktop/Cargo.toml --locked --all-targets -- -D warnings
+cargo test --manifest-path apps/desktop/Cargo.toml --locked
+</code></pre>
+<p>预期：全部退出码 <code>0</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交代理边界</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/desktop/src/lib.rs apps/desktop/Cargo.toml apps/desktop/Cargo.lock
+git commit -m &quot;fix: constrain desktop backend proxy to loopback&quot;
+</code></pre>
+<h3 id="2">任务 2：为安装后可执行文件增加健康诊断</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/desktop/src/lib.rs</code>
+- 修改：<code>apps/desktop/src/main.rs</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写诊断结果单元测试</strong></li>
+</ul>
+<pre><code class="language-rust">#[tokio::test]
+async fn diagnostics_reports_backend_health() {
+    let server = mockito::Server::new_async().await;
+    let mock = server.mock(&quot;GET&quot;, &quot;/health&quot;)
+        .with_status(200)
+        .with_header(&quot;content-type&quot;, &quot;application/json&quot;)
+        .with_body(r#&quot;{&quot;status&quot;:&quot;ok&quot;,&quot;version&quot;:&quot;1.1.3&quot;}&quot;#)
+        .create_async().await;
+    let result = diagnose_backend(&amp;server.url()).await.unwrap();
+    assert_eq!(result[&quot;status&quot;], &quot;ok&quot;);
+    assert_eq!(result[&quot;version&quot;], &quot;1.1.3&quot;);
+    mock.assert_async().await;
+}
+</code></pre>
+<p>在 <code>[dev-dependencies]</code> 添加 <code>mockito = "1"</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认诊断函数不存在</strong></li>
+</ul>
+<p>运行：<code>cargo test --manifest-path apps/desktop/Cargo.toml --locked diagnostics_reports_backend_health</code></p>
+<p>预期：FAIL，找不到 <code>diagnose_backend</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现诊断与文件输出入口</strong></li>
+</ul>
+<pre><code class="language-rust">pub async fn diagnose_backend(base: &amp;str) -&gt; Result&lt;serde_json::Value, String&gt; {
+    let url = build_backend_url(base, &quot;/health&quot;)?;
+    let response = reqwest::Client::new().get(url).send().await.map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(&quot;backend health returned {}&quot;, response.status()));
+    }
+    response.json::&lt;serde_json::Value&gt;().await.map_err(|error| error.to_string())
+}
+</code></pre>
+<p><code>main.rs</code> 解析精确参数对 <code>--diagnostics-file C:\XAgentEvidence\desktop-diagnostics.json</code>；实际参数路径不是绝对路径或父目录不存在时退出 <code>2</code>。诊断成功写：</p>
+<pre><code class="language-json">{
+  &quot;desktop_version&quot;: &quot;1.1.3&quot;,
+  &quot;backend_url&quot;: &quot;http://127.0.0.1:8000&quot;,
+  &quot;backend_status&quot;: &quot;ok&quot;,
+  &quot;backend_version&quot;: &quot;1.1.3&quot;
+}
+</code></pre>
+<p>失败写同一 schema 的 <code>backend_status: "failed"</code> 和不含 secret 的 <code>error</code>，退出 <code>1</code>。未传该参数时才调用 <code>xagent_desktop_lib::run()</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证诊断二进制</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">cargo test --manifest-path apps/desktop/Cargo.toml --locked
+cargo build --manifest-path apps/desktop/Cargo.toml --release --locked
+$diagnostics = (Resolve-Path .).Path + '\output\desktop-diagnostics.json'
+New-Item -ItemType Directory -Force -Path (Split-Path $diagnostics) | Out-Null
+&amp; '.\apps\desktop\target\release\xagent-desktop.exe' --diagnostics-file $diagnostics
+Get-Content -Raw -LiteralPath $diagnostics | ConvertFrom-Json
+</code></pre>
+<p>预期：在本地 API <code>1.1.3</code> 健康时进程退出 <code>0</code>，JSON 四个字段匹配；API 不可达时退出 <code>1</code> 且不会启动 GUI。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交诊断入口</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/desktop/src/lib.rs apps/desktop/src/main.rs apps/desktop/Cargo.toml apps/desktop/Cargo.lock
+git commit -m &quot;feat: add installed desktop backend diagnostics&quot;
+</code></pre>
+<h3 id="3">任务 3：收集安装制品摘要与签名状态</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/collect_desktop_artifacts.py</code>
+- 创建：<code>tests/release/test_collect_desktop_artifacts.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写制品清单测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_collect_records_hash_size_arch_and_unsigned_state(tmp_path: Path) -&gt; None:
+    nsis = tmp_path / &quot;X-Agent_1.1.3_x64-setup.exe&quot;
+    msi = tmp_path / &quot;X-Agent_1.1.3_x64_en-US.msi&quot;
+    nsis.write_bytes(b&quot;nsis&quot;)
+    msi.write_bytes(b&quot;msi&quot;)
+    manifest = collect_artifacts(tmp_path, source_sha=&quot;a&quot; * 40, version=&quot;1.1.3&quot;)
+    assert manifest[&quot;classification&quot;] == &quot;unsigned_local_candidate&quot;
+    assert {item[&quot;format&quot;] for item in manifest[&quot;artifacts&quot;]} == {&quot;nsis&quot;, &quot;msi&quot;}
+    assert all(item[&quot;arch&quot;] == &quot;x64&quot; for item in manifest[&quot;artifacts&quot;])
+    assert all(len(item[&quot;sha256&quot;]) == 64 and item[&quot;size_bytes&quot;] &gt; 0 for item in manifest[&quot;artifacts&quot;])
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认模块缺失</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_collect_desktop_artifacts.py -q</code></p>
+<p>预期：FAIL，收集器不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现严格收集器</strong></li>
+</ul>
+<p><code>collect_artifacts(bundle_root, source_sha, version)</code> 只接受 40 位小写十六进制 SHA，递归收集恰好一个 <code>.msi</code> 和一个 <code>-setup.exe</code>，文件名必须包含精确版本和 <code>x64</code>。每个条目包含：</p>
+<pre><code class="language-python">{
+    &quot;path&quot;: artifact.relative_to(bundle_root).as_posix(),
+    &quot;format&quot;: &quot;msi&quot; if artifact.suffix.lower() == &quot;.msi&quot; else &quot;nsis&quot;,
+    &quot;version&quot;: version,
+    &quot;arch&quot;: &quot;x64&quot;,
+    &quot;size_bytes&quot;: artifact.stat().st_size,
+    &quot;sha256&quot;: hashlib.sha256(artifact.read_bytes()).hexdigest(),
+    &quot;signature&quot;: &quot;unsigned&quot;,
+}
+</code></pre>
+<p>缺件、多件、空文件、版本不符或 <code>signtool verify /pa</code> 意外报告签名无效都退出 <code>1</code>。本计划不生成自签名证书，不把自签名包标为正式签名。</p>
+<ul>
+<li>[ ] <strong>步骤 4：运行测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_collect_desktop_artifacts.py -q</code></p>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交收集器</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/collect_desktop_artifacts.py tests/release/test_collect_desktop_artifacts.py
+git commit -m &quot;feat: inventory desktop installer artifacts&quot;
+</code></pre>
+<h3 id="4-windows-msi-nsis">任务 4：构建 Windows MSI 与 NSIS</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/desktop/tauri.conf.json</code>
+- 修改：<code>apps/desktop/Cargo.lock</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：验证版本和 Tauri 配置</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python scripts/verify_release_versions.py --tag v1.1.3
+npm --prefix apps/web ci
+npm --prefix apps/web run build
+cargo install tauri-cli --version '^2' --locked
+Push-Location apps/desktop
+cargo tauri info
+Pop-Location
+</code></pre>
+<p>预期：产品版本一致；Tauri 识别 Windows x86_64、WebView2、MSI 与 NSIS。</p>
+<ul>
+<li>[ ] <strong>步骤 2：构建 locked installers</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">cargo fmt --manifest-path apps/desktop/Cargo.toml -- --check
+cargo clippy --manifest-path apps/desktop/Cargo.toml --locked --all-targets -- -D warnings
+cargo test --manifest-path apps/desktop/Cargo.toml --locked
+Push-Location apps/desktop
+cargo tauri build --bundles msi,nsis
+Pop-Location
+</code></pre>
+<p>预期：退出码 <code>0</code>；<code>apps/desktop/target/release/bundle/msi</code> 和 <code>nsis</code> 各有一个非空 1.1.3 x64 installer；<code>git status --porcelain</code> 不含未解释 schema 或 lock 漂移。</p>
+<ul>
+<li>[ ] <strong>步骤 3：收集摘要</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$sha = (git rev-parse HEAD).Trim()
+python scripts/collect_desktop_artifacts.py `
+  --bundle-root apps/desktop/target/release/bundle `
+  --source-sha $sha `
+  --version 1.1.3 `
+  --output &quot;output/commercial-delivery/$sha/desktop/artifacts.json&quot;
+</code></pre>
+<p>预期：输出 classification 为 <code>unsigned_local_candidate</code>，MSI/NSIS 各一个且摘要可重新计算。</p>
+<ul>
+<li>[ ] <strong>步骤 4：提交配置/锁文件</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/desktop/tauri.conf.json apps/desktop/Cargo.lock
+git commit -m &quot;build: produce versioned Windows desktop installers&quot;
+</code></pre>
+<h3 id="5">任务 5：安全验证安装、连接、启动、重启和卸载</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/verify_desktop_installer.ps1</code>
+- 创建：<code>tests/release/test_desktop_installer_script.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 Windows 安全合同测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_installer_script_scopes_all_mutation_to_test_root() -&gt; None:
+    text = (ROOT / &quot;scripts/verify_desktop_installer.ps1&quot;).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;$env:LOCALAPPDATA&quot; in text
+    assert &quot;XAgentCommercialTest&quot; in text
+    assert &quot;-WindowStyle Hidden&quot; in text
+    assert &quot;--diagnostics-file&quot; in text
+    assert &quot;Get-Process | Stop-Process&quot; not in text
+    assert &quot;Remove-Item -Recurse&quot; not in text
+    assert &quot;production&quot; not in text.lower()
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认脚本不存在</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_desktop_installer_script.py -q</code></p>
+<p>预期：FAIL，脚本不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现显式目标和 PID 级清理</strong></li>
+</ul>
+<p>脚本参数：</p>
+<pre><code class="language-powershell">param(
+  [Parameter(Mandatory=$true)][string]$Installer,
+  [Parameter(Mandatory=$true)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceSha,
+  [string]$ApiUrl = 'http://127.0.0.1:8000'
+)
+$installerPath = (Resolve-Path -LiteralPath $Installer).Path
+$testBase = Join-Path $env:LOCALAPPDATA &quot;XAgentCommercialTest\$SourceSha&quot;
+$testRoot = [System.IO.Path]::GetFullPath($testBase)
+$allowedBase = [System.IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'XAgentCommercialTest'))
+if (-not $testRoot.StartsWith($allowedBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw 'resolved test install root escaped allowlist'
+}
+New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+</code></pre>
+<p>仅接受 <code>apps/desktop/target/release/bundle/nsis</code> 下的精确 <code>-setup.exe</code>。使用 <code>Start-Process -WindowStyle Hidden -Wait -PassThru -ArgumentList @('/S', "/D=$testRoot")</code> 安装。精确解析 <code>$testRoot\X-Agent.exe</code>，以 <code>XAGENT_DESKTOP_API_URL=$ApiUrl</code> 启动 <code>--diagnostics-file</code> 并要求 JSON backend status/version 通过。随后启动 GUI 两次，每次只保存返回的 PID，等待窗口进程存活 10 秒后按该 PID <code>CloseMainWindow()</code>，超时才 <code>Stop-Process -Id $pid</code>。最后从 <code>$testRoot</code> 内精确解析 uninstaller，静默卸载并验证 exe 消失；不递归删除其他目录。</p>
+<ul>
+<li>[ ] <strong>步骤 4：解析并静态验证脚本</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_desktop_installer_script.py -q
+pwsh -NoProfile -Command '$errors=$null; [System.Management.Automation.Language.Parser]::ParseFile(&quot;scripts/verify_desktop_installer.ps1&quot;, [ref]$null, [ref]$errors) &gt; $null; if ($errors) { $errors | Out-String | Write-Error }'
+</code></pre>
+<p>预期：测试 PASS，PowerShell 无语法错误。</p>
+<ul>
+<li>[ ] <strong>步骤 5：在隔离目录实际运行 NSIS 验证</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$sha = (git rev-parse HEAD).Trim()
+$installers = @(Get-ChildItem -LiteralPath 'apps/desktop/target/release/bundle/nsis' -Filter '*-setup.exe' -File -Recurse)
+if ($installers.Count -ne 1) { throw &quot;Expected exactly one NSIS installer, found $($installers.Count)&quot; }
+$installer = $installers[0].FullName
+pwsh -NoProfile -File scripts/verify_desktop_installer.ps1 -Installer $installer -SourceSha $sha
+</code></pre>
+<p>预期：安装、诊断、首次 GUI、关闭、重启、卸载全部 PASS；证据 JSON 记录精确 PID/路径/退出码且不含 token。用 computer-use 技能打开一次安装后的 GUI，确认标题为 <code>X-Agent</code>、Web 内容渲染，并用隔离测试账号真实登录进入主工作台；截图写到该 SHA 的 desktop evidence 目录，再按应用内关闭。</p>
+<ul>
+<li>[ ] <strong>步骤 6：提交 installer verifier</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/verify_desktop_installer.ps1 tests/release/test_desktop_installer_script.py
+git commit -m &quot;test: verify Windows desktop installer lifecycle&quot;
+</code></pre>
+<h3 id="6-windows-ci">任务 6：接入桌面独立门和 Windows CI</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/run_desktop_commercial_gate.ps1</code>
+- 创建：<code>tests/release/test_desktop_gate_script.py</code>
+- 修改：<code>.github/workflows/ci.yml</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写门脚本合同</strong></li>
+</ul>
+<pre><code class="language-python">def test_desktop_gate_requires_quality_build_install_and_uninstall() -&gt; None:
+    text = (ROOT / &quot;scripts/run_desktop_commercial_gate.ps1&quot;).read_text(encoding=&quot;utf-8&quot;)
+    for required in (
+        &quot;cargo fmt&quot;, &quot;cargo clippy&quot;, &quot;cargo test&quot;, &quot;cargo audit&quot;,
+        &quot;cargo tauri build&quot;, &quot;collect_desktop_artifacts.py&quot;,
+        &quot;verify_desktop_installer.ps1&quot;, &quot;unsigned_local_candidate&quot;, &quot;source_sha&quot;,
+    ):
+        assert required in text
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：实现 fail-fast 桌面门</strong></li>
+</ul>
+<p>脚本要求 Windows、干净工作树和健康本地 API 1.1.3，顺序执行 Rust 质量、<code>cargo audit --file apps/desktop/Cargo.lock</code>、Web build、Tauri build、artifact collect 和 NSIS lifecycle。成功写：</p>
+<pre><code class="language-json">{
+  &quot;gate&quot;: &quot;desktop&quot;,
+  &quot;source_sha&quot;: &quot;由脚本读取的四十位 Git SHA&quot;,
+  &quot;status&quot;: &quot;passed&quot;,
+  &quot;classification&quot;: &quot;unsigned_local_candidate&quot;,
+  &quot;installer_formats&quot;: [&quot;msi&quot;, &quot;nsis&quot;],
+  &quot;install_lifecycle&quot;: &quot;passed&quot;,
+  &quot;backend_connection&quot;: &quot;passed&quot;,
+  &quot;code_signing&quot;: &quot;not_authorized&quot;
+}
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 3：新增 Windows CI job</strong></li>
+</ul>
+<p><code>desktop</code> job 使用 <code>windows-latest</code>，安装 Node/Rust/Tauri prerequisites，执行 fmt/clippy/test/audit、Web build、<code>cargo tauri build --bundles msi,nsis</code>、artifact collect，并上传 installers 与 <code>artifacts.json</code>。CI 没有交互桌面和本地客户 API时，<code>install_lifecycle</code> 证据仍由本轮本地 Windows 商用门提供，CI 不伪造该字段。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证并提交</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_desktop_gate_script.py -q
+python -c &quot;import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('ci yaml ok')&quot;
+</code></pre>
+<p>预期：PASS。</p>
+<pre><code class="language-bash">git add scripts/run_desktop_commercial_gate.ps1 tests/release/test_desktop_gate_script.py .github/workflows/ci.yml
+git commit -m &quot;ci: add independent Tauri desktop delivery gate&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行桌面商用门</strong></li>
+</ul>
+<p>运行：<code>pwsh -NoProfile -File scripts/run_desktop_commercial_gate.ps1</code></p>
+<p>预期：同一 SHA 的 Rust、installer、diagnostics、GUI lifecycle 和 uninstall 通过，<code>gate.json</code> classification 严格为 <code>unsigned_local_candidate</code>。没有正式代码签名证书、时间戳服务和签名安装复核时，不得称为正式桌面商用发布。</p>
+<h2 id="_2">本计划完成判定</h2>
+<p>fmt/clippy/test/locked build/audit 全绿；MSI/NSIS 真实生成且摘要一致；安装后同一二进制连接本地 Web/API；首次启动、关闭、重启、卸载均实际执行；GUI 有本轮可视证据；版本/SHA 一致；签名缺口准确阻断正式发布但不阻断 <code>unsigned_local_candidate</code> 本地候选。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

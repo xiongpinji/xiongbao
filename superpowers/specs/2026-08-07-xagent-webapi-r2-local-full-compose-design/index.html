@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent Web/API R2 本机隔离 Full Compose 设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent Web/API R2 \u672c\u673a\u9694\u79bb Full Compose \u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent Web/API R2 本机隔离 Full Compose 设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-08-07-xagent-webapi-r2-local-full-compose-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-webapi-r2-full-compose">X-Agent Web/API R2 本机隔离 Full Compose 设计</h1>
+<blockquote>
+<p>日期：2026-08-07</p>
+<p>状态：Owner 已批准方案 A，待规格复核后进入实施</p>
+<p>基线：<code>feature/webapi-release-hardening</code> / <code>0627747</code></p>
+</blockquote>
+<h2 id="1">1. 目标</h2>
+<p>把 R1 已验证的 Web/API 本地发布候选放入生产等价的单实例环境，完成真实内部试用、持久化、恢复、观测和回退演练，使它具备安全部署和持续测试条件。</p>
+<p>R2 不是重新实现 R1 功能，也不以“容器成功启动”作为完成。完成必须证明同一套当前源码经过：</p>
+<ol>
+<li>隔离 Full 模式编排和最新 PostgreSQL migration；</li>
+<li>Web → API → PostgreSQL/Redis/Qdrant → 本地真实 Ollama 的同链调用；</li>
+<li>API/worker/整套服务重启后的状态恢复；</li>
+<li>数据备份后在全新隔离实例恢复；</li>
+<li>浏览器、服务、指标、故障恢复和回退证据闭环。</li>
+</ol>
+<h2 id="2">2. 范围边界</h2>
+<h3 id="21">2.1 本阶段包含</h3>
+<ul>
+<li>PostgreSQL、Redis、Qdrant、API、Celery worker、Nginx Web 的单机 Full 模式核心栈。</li>
+<li>宿主机 Ollama 作为零付费真实模型入口。</li>
+<li>Platform MCP 的独立验收 profile。</li>
+<li>Prometheus、Grafana 的独立观测 profile。</li>
+<li>本机强密码、精确 CORS、仅 loopback 暴露、配置预检和健康门禁。</li>
+<li>数据卷、工作区、技能包、运行产物的持久化与备份/恢复。</li>
+<li>注册/登录、对话与 run、开发任务、调度器、技能包、会话/checkpoint 的真实浏览器试用。</li>
+<li>当前分支的测试、镜像、运行日志、截图和审计报告。</li>
+</ul>
+<h3 id="22">2.2 本阶段不包含</h3>
+<ul>
+<li>短剧业务及其媒体生成、画布、剪辑和供应商链路。</li>
+<li>Tauri 桌面端、桌面签名、自动更新和桌面发布物。</li>
+<li>多机 HA、负载均衡、跨节点 sticky session。</li>
+<li>E2B、云托管 sandbox、客户现场异构环境演练。</li>
+<li>付费模型供应商调用和生产环境写入。</li>
+<li>正式 push、tag、GitHub Release 或生产部署。</li>
+</ul>
+<p>shell/python 工具在 R2 核心栈中保持关闭。本阶段不向 API 容器挂载宿主机 Docker Socket；这避免为了本地试运行引入等同宿主机 root 的控制面。</p>
+<h2 id="3">3. 已确认的本机条件</h2>
+<p>2026-08-07 的设计前只读检查确认：</p>
+<ul>
+<li>Docker Engine/Client <code>29.5.3</code>，Docker Compose <code>5.1.4</code> 可用。</li>
+<li>已有其他项目占用宿主机 <code>5432</code>，因此不能复用当前固定端口。</li>
+<li>R2 候选端口 <code>13002/15432/16333/16334/16379/18000/18080/19090</code> 均空闲。</li>
+<li>Ollama 监听 <code>127.0.0.1:11434</code>，已有 <code>qwen3:4b</code> 和 <code>xagent-qwen3:latest</code>。</li>
+<li>当前工作树干净，且已是 Git linked worktree；R2 复用该隔离工作树，不创建嵌套 worktree。</li>
+</ul>
+<p>这些结果只用于确定设计可行性。正式验收必须重新运行预检，不能把本节当作运行证据。</p>
+<h2 id="4">4. 当前编排缺口</h2>
+<p><code>deploy/compose/docker-compose.yml</code> 已接入主要服务，但还不能直接作为 R2 验收入口：</p>
+<ol>
+<li>顶层固定 <code>name: xagent</code>，端口固定为常见端口，会与现有项目冲突。</li>
+<li>ContextForge、OpenFGA、LiteLLM、Langfuse 默认进入启动集合，扩大核心路径故障面。</li>
+<li>API 和 worker 未显式挂载共享工作区、技能包/产物数据卷，容器替换后文件型状态可能丢失。</li>
+<li>API 健康检查只验证 <code>/health</code>，没有把数据库、Redis 和 Qdrant 深度就绪作为验收门禁。</li>
+<li>worker 禁用了健康检查，无法区分“容器存在”和“能够消费任务”。</li>
+<li>Web/API 部分端口绑定所有接口，不符合本机隔离试运行边界。</li>
+<li><code>.env.staging</code> 与当前 Compose 数据库名和安全要求存在漂移，不能作为 R2 输入。</li>
+<li>根目录和 <code>deploy/compose</code> 同时存在宣称生产用途的编排入口，容易产生事实源分叉。</li>
+</ol>
+<h2 id="5">5. 选定方案与取舍</h2>
+<p>Owner 选择方案 A：本机隔离核心 Full Compose。</p>
+<ul>
+<li>未选择“全部扩展服务一次启动”：它会把网关、联邦授权和 tracing 的第三方初始化问题混入核心发布判定。</li>
+<li>未选择“Web/API 跑宿主机、数据层跑容器”的混合模式：它与实际镜像运行方式不同，重启和恢复证据不足。</li>
+<li>选定方案以六个核心服务为默认启动面，扩展能力通过 profile 分批验收；既保持生产等价容器边界，也限制本轮复杂度。</li>
+</ul>
+<h2 id="6">6. 目标架构</h2>
+<pre><code class="language-text">Browser 127.0.0.1:18080
+  └─ Nginx Web
+       └─ X-Agent API :8000（宿主映射 127.0.0.1:18000）
+            ├─ PostgreSQL :5432（宿主映射 127.0.0.1:15432）
+            ├─ Redis :6379（宿主映射 127.0.0.1:16379）
+            ├─ Qdrant :6333/:6334（宿主映射 127.0.0.1:16333/:16334）
+            └─ host.docker.internal:11434 / qwen3:4b
+
+Celery worker
+  ├─ PostgreSQL
+  ├─ Redis
+  ├─ Qdrant
+  ├─ shared workspace/artifact volume
+  └─ host.docker.internal:11434 / qwen3:4b
+
+Profiles
+  ├─ mcp: Platform MCP
+  ├─ observability: Prometheus + Grafana
+  ├─ gateway: LiteLLM（本阶段不验收）
+  ├─ tracing: Langfuse（本阶段不验收）
+  └─ federation: ContextForge + OpenFGA（本阶段不验收）
+</code></pre>
+<h3 id="61">6.1 单一事实源</h3>
+<p>R2 只以 <code>deploy/compose/docker-compose.yml</code> 为发布等价编排事实源。根目录 Compose 保留给开发兼容，但文档必须明确其非 R2/发布入口；不新增第三份 Compose。</p>
+<p>Compose project name 由 <code>COMPOSE_PROJECT_NAME</code> 或命令行显式指定，R2 默认使用 <code>xagent-r2</code>。所有宿主端口均可由环境变量覆盖，并默认只绑定 <code>127.0.0.1</code>。</p>
+<h3 id="62">6.2 服务分层</h3>
+<p>默认启动：</p>
+<ul>
+<li><code>postgres</code></li>
+<li><code>redis</code></li>
+<li><code>qdrant</code></li>
+<li><code>api</code></li>
+<li><code>worker</code></li>
+<li><code>web</code></li>
+</ul>
+<p>R2 验收时再依次启用：</p>
+<ul>
+<li><code>mcp</code></li>
+<li><code>observability</code></li>
+</ul>
+<p>LiteLLM、Langfuse、ContextForge、OpenFGA 只做 profile 化和 Compose 配置有效性检查，不把它们的运行结果计入 R2 完成声明。</p>
+<h2 id="7">7. 配置与秘密管理</h2>
+<p>新增可提交的 R2 示例配置，只包含非秘密默认值和必填项说明。真实本机配置使用被 <code>.gitignore</code> 覆盖的文件，不能进入 Git、日志、截图或证据正文。</p>
+<p>预检必须拒绝：</p>
+<ul>
+<li>空密码或已知默认密码；</li>
+<li>少于 32 字符的 JWT secret；</li>
+<li>Full 模式下 <code>CORS=*</code>；</li>
+<li>端口被占用；</li>
+<li>Docker/Ollama 不可访问；</li>
+<li>Ollama 目标模型不存在；</li>
+<li>同名 Compose project 正在使用不兼容配置；</li>
+<li>当前 Git 工作树不是预期分支或存在未说明修改。</li>
+</ul>
+<p>Full 模式保持 <code>require_auth=true</code>。不内置 <code>admin/admin</code>，试用账号通过 <code>/api/v1/auth/register</code> 创建，并使用隔离 tenant。</p>
+<h2 id="8">8. 数据与持久化</h2>
+<p>保留独立 named volumes：</p>
+<ul>
+<li>PostgreSQL 数据；</li>
+<li>Redis AOF；</li>
+<li>Qdrant collection；</li>
+<li>Grafana/Prometheus 数据；</li>
+<li>X-Agent 共享数据。</li>
+</ul>
+<p>API 和 worker 共享 X-Agent 数据卷，并显式设置：</p>
+<pre><code class="language-text">XAGENT_WORKSPACE=/data/workspace
+XAGENT_STORAGE__LOCAL_ROOT=/data/storage
+</code></pre>
+<p>数据库保存业务记录、租户、run、scheduler、checkpoint 和审计元数据；共享文件卷保存 Git 工作区、技能包文件、patch、证据归档及其他文件产物。两者必须在备份/恢复中保持版本一致。</p>
+<h3 id="81">8.1 备份与恢复</h3>
+<p>备份集合至少包含：</p>
+<ul>
+<li>PostgreSQL 逻辑备份；</li>
+<li>Redis 持久快照/AOF；</li>
+<li>Qdrant snapshot；</li>
+<li>X-Agent 共享数据卷归档；</li>
+<li>当前镜像 tag、migration revision、Git commit 和配置摘要，不包含 secret 值。</li>
+</ul>
+<p>恢复必须使用新的 Compose project name、全新 volumes 和另一组端口。原 R2 实例保持可回退，不执行 <code>down -v</code> 或覆盖式恢复。</p>
+<h2 id="9">9. 健康、错误与恢复语义</h2>
+<h3 id="91">9.1 启动门禁</h3>
+<p>依赖顺序必须由健康状态控制：</p>
+<ol>
+<li>PostgreSQL、Redis、Qdrant 健康；</li>
+<li>migration 到 head；</li>
+<li>API <code>/health</code>、<code>/health/ready</code>、<code>/health/deep</code> 满足预期；</li>
+<li>worker 能响应 Celery ping 或完成一项无副作用探针任务；</li>
+<li>Web 反向代理 API 成功；</li>
+<li>MCP/观测 profile 分别健康。</li>
+</ol>
+<p>Ollama warmup 失败不能被当作真实模型验收成功。即使服务允许降级启动，R2 证据也必须记录真实模型请求和响应。</p>
+<h3 id="92">9.2 故障注入</h3>
+<p>只做可恢复、非破坏性故障：</p>
+<ul>
+<li>暂停/重启 worker，确认任务状态不会静默丢失或重复完成；</li>
+<li>暂停/重启 Redis，确认 API 返回可解释失败并在恢复后重新就绪；</li>
+<li>重启 API，确认登录外持久业务状态仍可读取；</li>
+<li>重启整套核心栈，确认数据卷和文件产物恢复。</li>
+</ul>
+<p>每次注入前记录目标容器和基线状态；不删除 volumes，不影响工作区外服务。</p>
+<h2 id="10">10. 内部真实试用路径</h2>
+<p>所有浏览器验收都从 <code>http://127.0.0.1:18080</code> 进入，并通过 Nginx <code>/api</code> 反代，禁止测试页面直连另一个 API 实例。</p>
+<p>必须完成：</p>
+<ol>
+<li>注册隔离账号、登录、刷新后会话保持。</li>
+<li>使用本地 <code>qwen3:4b</code> 发起对话并创建成功 run。</li>
+<li>打开 Run Console，核对事件、证据、checkpoint 和终态。</li>
+<li>创建开发任务，验证 Git 结果、review、download/export；高风险 apply 只在临时验收仓库执行。</li>
+<li>创建 scheduler job，观察 worker 消费、暂停、恢复和 run history。</li>
+<li>导入包含 <code>SKILL.md</code>、<code>references/</code>、<code>scripts/</code>、<code>assets/</code> 的测试技能包，重启后仍可读取。</li>
+<li>从 checkpoint 恢复为新 run，验证父子关系和刷新后的会话恢复。</li>
+<li>启用 Platform MCP，读取同一租户的会话/run/审批/事件，并验证跨租户拒绝。</li>
+<li>在桌面宽度和约 1037px 视口完成关键页面检查，浏览器控制台无错误。</li>
+</ol>
+<p>短剧路由、桌面端和媒体供应商不出现在本阶段试用矩阵中。</p>
+<h2 id="11">11. 观测与审计</h2>
+<p>Prometheus 必须抓取当前 R2 API，而不是宿主机或历史容器。Grafana 数据源和仪表盘必须指向同一 Prometheus。</p>
+<p>验收至少观察：</p>
+<ul>
+<li>API 请求量、错误率、延迟；</li>
+<li>run 成功/失败与执行时长；</li>
+<li>scheduler claim/retry/recovery；</li>
+<li>worker 在线状态；</li>
+<li>PostgreSQL、Redis、Qdrant 深度健康；</li>
+<li>Ollama 调用失败或超时；</li>
+<li>浏览器 client error 上报。</li>
+</ul>
+<p>日志和审计导出必须脱敏 token、JWT secret、数据库密码及外部 key。</p>
+<h2 id="12">12. 实施阶段</h2>
+<h3 id="r2-a">R2-A：编排硬化</h3>
+<ul>
+<li>参数化 project name、loopback 端口和数据库名。</li>
+<li>为扩展服务增加 profiles。</li>
+<li>增加共享数据卷、环境变量和健康依赖。</li>
+<li>提供安全示例配置和 PowerShell 预检入口。</li>
+<li>明确唯一 R2 Compose 入口。</li>
+</ul>
+<h3 id="r2-b">R2-B：核心栈与真实模型</h3>
+<ul>
+<li>重新构建当前 HEAD 镜像。</li>
+<li>fresh volumes 启动核心栈并执行 migration。</li>
+<li>验证深度健康、worker 和 Ollama。</li>
+<li>完成核心浏览器内部试用。</li>
+</ul>
+<h3 id="r2-c-mcp">R2-C：恢复、观测与 MCP</h3>
+<ul>
+<li>重启和故障注入。</li>
+<li>启用 observability 与 mcp profiles。</li>
+<li>完成备份并恢复至新的隔离 project。</li>
+<li>在恢复实例重复关键读取和浏览器验收。</li>
+</ul>
+<h3 id="r2-d">R2-D：发布审计</h3>
+<ul>
+<li>后端全量测试、Web 测试/typecheck/lint/build/audit。</li>
+<li>Compose config、镜像、migration、健康、浏览器与恢复证据汇总。</li>
+<li>更新任务板、运行手册和 R2 证据报告。</li>
+<li>只形成“可进入人工部署审批”的结论，不执行 push/tag/deploy。</li>
+</ul>
+<h2 id="13">13. 完成标准</h2>
+<p>R2 只有同时满足以下条件才能标记完成：</p>
+<ol>
+<li>当前 HEAD 的核心 Full Compose 在隔离 project/ports/volumes 中从零启动。</li>
+<li>最新 migration 为 <code>20260807_checkpoints</code> 或实施时仓库中的更新 head。</li>
+<li><code>/health</code>、ready、deep health、worker、Web proxy 均有新鲜证据。</li>
+<li>至少一次真实本地 Ollama 请求完成，不能使用 MockLLM 替代。</li>
+<li>第 10 节的核心浏览器路径通过，控制台和服务日志无未解释错误。</li>
+<li>API、worker、整栈重启后持久状态和文件产物仍可读取。</li>
+<li>备份已在全新隔离实例恢复，并重复验证账号、会话、run、scheduler、skill 和 checkpoint。</li>
+<li>MCP 租户边界、Prometheus 抓取和 Grafana 数据源通过。</li>
+<li>后端/Web/发布依赖门禁通过；任何 skip、warning、豁免均被准确列出。</li>
+<li>证据报告明确已验证、未验证和排除项，且没有生产动作。</li>
+</ol>
+<p>任一链路只通过单元测试、Mock、静态页面、历史报告或容器启动，都只能记为部分完成，不能替代 R2 验收。</p>
+<h2 id="14">14. 回退与停止条件</h2>
+<ul>
+<li>所有运行使用 R2 专用 project name 和 volumes；停止默认保留数据。</li>
+<li>回退优先停用 R2 project 并重新启动上一已验证镜像，不修改其他项目容器。</li>
+<li>migration 或恢复失败时保留源实例和备份，不在原 volume 上反复覆盖。</li>
+<li>若发现需要生产凭据、付费调用、Docker Socket、远程部署或用户数据写入，立即停止并重新取得授权。</li>
+<li>若真实模型、浏览器、恢复或深度健康任一关键链无法形成证据，最终结论必须标为部分完成或阻塞。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

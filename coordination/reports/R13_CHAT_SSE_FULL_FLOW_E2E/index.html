@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R13 Chat SSE 完成态与 full-flow 复绿记录 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R13 Chat SSE \u5b8c\u6210\u6001\u4e0e full-flow \u590d\u7eff\u8bb0\u5f55";
+        var mkdocs_page_input_path = "coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R13 Chat SSE 完成态与 full-flow 复绿记录</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R13_CHAT_SSE_FULL_FLOW_E2E.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r13-chat-sse-full-flow">R13 Chat SSE 完成态与 full-flow 复绿记录</h1>
+<ul>
+<li>任务包：R13 Chat SSE 完成态 / 回退闭环修复并复绿 full-flow</li>
+<li>交付人：Codex</li>
+<li>日期：2026-07-06</li>
+<li>工作树：<code>D:\AI编程库\项目库\进行中的项目\xiong bao\xagent</code></li>
+</ul>
+<h2 id="_1">结论</h2>
+<ul>
+<li><code>ChatPage</code> 的 SSE 读取逻辑已拆为 <code>readAgentRunStream</code>，只有收到带 <code>run_id</code> 的 <code>done</code> 事件才视为流式运行成功。</li>
+<li>SSE 流自然结束但没有 <code>done</code> 时会抛出 <code>SSE stream ended before done event</code>，触发既有 <code>/api/v1/agents/run</code> fallback。</li>
+<li><code>ChatPage</code> 主区渲染条件已纳入 <code>runId</code>，修复“右侧 Context 已同步 run id，但主区不显示查看运行详情”的 UI 断点。</li>
+<li><code>tests/e2e/specs/full-flow.spec.ts --project=chromium</code> 已从 R10 的 8/9 提升到 9/9 通过。</li>
+</ul>
+<h2 id="_2">变更文件</h2>
+<ul>
+<li><code>apps/web/src/api/chatStream.ts</code></li>
+<li><code>apps/web/src/pages/ChatPage.tsx</code></li>
+<li><code>apps/web/tests/chatStream.test.mjs</code></li>
+</ul>
+<h2 id="_3">关键诊断</h2>
+<p>R10 剩余失败并非 selector 漂移。R13 复验显示：</p>
+<ul>
+<li>API 8000 收到 <code>POST /api/v1/stream/agents/run</code> 并返回 200。</li>
+<li><code>syncRunTask</code> 已把 run id 同步到右侧 Context。</li>
+<li>主内容区仍不出现“查看运行详情”，因为 Bot 消息容器的渲染条件缺少 <code>runId</code>。</li>
+</ul>
+<p>因此最小修复为：</p>
+<ol>
+<li>把 SSE 解析和 done 完成态抽成可测试 helper。</li>
+<li>对无 <code>done</code> 的流结束显式失败，让普通 run fallback 生效。</li>
+<li>让 <code>runId</code> 单独存在时也渲染主区运行详情入口。</li>
+</ol>
+<h2 id="_4">验证命令</h2>
+<pre><code class="language-powershell">cd apps/web
+node --test tests/chatStream.test.mjs
+npm run lint
+npm run typecheck
+npm run build
+</code></pre>
+<pre><code class="language-powershell">cd tests/e2e
+$env:E2E_BASE_URL='http://127.0.0.1:3100'
+$env:E2E_USERNAME='admin'
+$env:E2E_PASSWORD='admin'
+npx playwright test specs/full-flow.spec.ts --project=chromium -g &quot;对话运行 agent&quot;
+npx playwright test specs/full-flow.spec.ts --project=chromium
+</code></pre>
+<h2 id="_5">验证结果</h2>
+<ul>
+<li><code>node --test tests/chatStream.test.mjs</code>：3 passed。</li>
+<li><code>npm run lint</code>：通过。</li>
+<li><code>npm run typecheck</code>：通过。</li>
+<li><code>npm run build</code>：通过；仍有既有 Vite chunk warning，JS bundle 为 606.82 kB / gzip 189.30 kB。</li>
+<li><code>对话运行 agent</code> 单例：1 passed。</li>
+<li>完整 <code>full-flow.spec.ts</code>：9 passed。</li>
+</ul>
+<h2 id="_6">边界与剩余风险</h2>
+<ul>
+<li>本包只修 Chat SSE 完成态 / fallback / 主区详情入口，不处理 R14 Vite chunk warning。</li>
+<li>本包证据来自本地 API 8000 + 当前仓库 Web 3100 + lite admin 账号，不替代 R4 目标环境演练。</li>
+<li>本包不宣称正式商用可交付；R4 目标环境演练与 R5 PR 审查包仍需总调度闭环。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

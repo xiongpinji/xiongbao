@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P2-B 完整技能包证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P2-B \u5b8c\u6574\u6280\u80fd\u5305\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P2-B 完整技能包证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_P2B_SKILL_PACKAGE_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p2-b">Web/API P2-B 完整技能包证据</h1>
+<h2 id="_1">结论</h2>
+<ul>
+<li>审计日期：2026-08-07。</li>
+<li>分支：<code>feature/webapi-release-hardening</code>。</li>
+<li>审计范围：租户技能包持久记录、安全 ZIP/目录导入、完整正文运行时匹配、API/Web manifest 与 hash 回读、失败补偿清理。</li>
+<li>排除范围：短剧、Tauri 桌面和技能脚本自动执行。</li>
+<li>结论：P2-B 通过。技能包保留原始 <code>SKILL.md</code>、<code>references</code>、<code>scripts</code>、<code>assets</code>，脚本只存储不执行；下一阶段为 P2-C Session/Checkpoint/受控回滚。</li>
+</ul>
+<h2 id="_2">持久化与安全门禁</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据库记录</td>
+<td><code>skill_packages</code> 按 tenant/owner 保存 name/version、SHA-256、manifest、受控 root、完整 body、source、文件数、总大小和导入时间</td>
+</tr>
+<tr>
+<td>原始包保留</td>
+<td>受控目录完整写入 <code>SKILL.md</code>、references/scripts/assets；manifest 逐文件保存 path/size/SHA-256</td>
+</tr>
+<tr>
+<td>ZIP/目录上限</td>
+<td>默认最多 100 文件、单文件 2 MiB、归档与解压总量 20 MiB；ZIP 成员按 64 KiB 流式计数，不信任中心目录声明大小</td>
+</tr>
+<tr>
+<td>路径安全</td>
+<td>拒绝绝对路径、盘符、反斜杠、<code>..</code>、ADS/冒号、Windows 设备名、尾随点空格、大小写或 Unicode 等价重复路径</td>
+</tr>
+<tr>
+<td>链接安全</td>
+<td>ZIP 符号链接拒绝测试实际通过；目录符号链接也会拒绝，当前 Windows 因无创建符号链接权限仅跳过该测试用例</td>
+</tr>
+<tr>
+<td>运行时正文</td>
+<td>包导入技能按 tenant 隔离，匹配器和详情读取完整正文；列表仅返回 500 字符预览并标记截断，避免大正文拖慢 Web 列表</td>
+</tr>
+<tr>
+<td>失败原子性</td>
+<td>数据库 flush 失败或 commit 失败均删除运行时 JSON 技能与本次 <code>package_id</code> 受控目录；补偿测试已通过</td>
+</tr>
+<tr>
+<td>脚本边界</td>
+<td><code>scripts</code> 纳入 manifest 和存储，但导入路径不执行脚本</td>
+</tr>
+</tbody>
+</table>
+<h2 id="apiweb">API、Web 与真实浏览器</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>租户 API</td>
+<td>package list/detail/import 和 skill list/detail 均按 Principal tenant 过滤；跨租户 package 返回 404，技能不可匹配</td>
+</tr>
+<tr>
+<td>API 脱敏</td>
+<td>列表不返回完整 body/frontmatter，任何响应均不暴露服务器 <code>root_path</code>；详情保留完整 body 和 manifest</td>
+</tr>
+<tr>
+<td>Web 页面</td>
+<td>设置页支持 ZIP 上传，显示包名、版本、来源、完整 hash tooltip、文件数、总大小和可展开 manifest；明确脚本不自动执行</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>退出码 0；默认发现并执行 19/19，包含 hash 稳定预览和 manifest 路径完整性</td>
+</tr>
+<tr>
+<td><code>npm run typecheck</code></td>
+<td>退出码 0</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>退出码 0；0 error / 100 条存量 warning，未反弹</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>退出码 0；2377 modules transformed，生产构建成功</td>
+</tr>
+<tr>
+<td>Playwright 真实链路</td>
+<td>隔离 API + Vite 登录后进入 <code>/settings?section=skills</code>，上传本地 Playwright 技能 ZIP；页面从数据库 API 回读包名、版本、64 位 SHA-256、9 文件、23,256 bytes，并展开显示 <code>SKILL.md</code>、references、scripts 与 assets</td>
+</tr>
+</tbody>
+</table>
+<p>浏览器链路导入得到 SHA-256 <code>aa5e6b5b87195ce2ae412812938f09c85fc8b9528dee445bca5cb783cf5c59fb</code>；设置页控制台为 0 error、2 条既有 warning。验证产物已移至仓库外临时证据目录，工作树未残留测试包。</p>
+<h2 id="_3">新鲜验证</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>后端关联回归</td>
+<td><code>test_skill_packages.py</code>、<code>test_skill_packages_api.py</code>、<code>test_skill_import.py</code>、<code>test_skills_list_cache.py</code>、<code>test_skill_evolve_review.py</code>、<code>test_skill_evolve_auto.py</code> 共 45 项通过、1 项环境权限跳过</td>
+</tr>
+<tr>
+<td>目标 Ruff</td>
+<td>skill package domain/API/skills 及关联测试全部通过，0 项</td>
+</tr>
+<tr>
+<td>目标 mypy</td>
+<td>skill package domain/API 全部通过，0 项</td>
+</tr>
+<tr>
+<td>全仓静态门禁</td>
+<td>Ruff <code>271 &lt;= 286</code>；mypy <code>65 &lt;= 74</code>，继续低于基线</td>
+</tr>
+<tr>
+<td>fresh migration</td>
+<td>空 SQLite 升级到 <code>20260807_skill_packages (head)</code>，<code>skill_packages</code> 表与 Alembic head 已回读</td>
+</tr>
+<tr>
+<td>Web 回归</td>
+<td>19/19、typecheck、lint 0/100、build 全部通过</td>
+</tr>
+<tr>
+<td>差异审计</td>
+<td><code>git diff --check</code>、提交检查通过；实现提交后工作树无未提交实现文件</td>
+</tr>
+</tbody>
+</table>
+<p>Windows 本机测试期间一度出现套接字缓冲区紧张，使提交失败补偿用例耗时约 106 秒；重跑关联套件最终全部通过，不属于产品断言或业务链失败。</p>
+<h2 id="p2-b">P2-B 实现提交</h2>
+<ul>
+<li><code>611bda5</code>：增加完整技能包安全导入、数据库模型和迁移。</li>
+<li><code>c65c520</code>：接入租户技能包 API 与完整正文运行时匹配。</li>
+<li><code>8efb736</code>：增加 Web ZIP 导入、manifest/hash 清单、列表正文限长与 commit 失败补偿。</li>
+</ul>
+<h2 id="_4">已知剩余风险</h2>
+<ul>
+<li>运行时技能仍由既有 JSON SkillStore 提供，包元数据以数据库为事实源；服务重启可从 JSON 恢复，但 P2-C/R1 应增加数据库包与运行时索引一致性审计。</li>
+<li>目录符号链接拒绝逻辑已实现，但当前 Windows 账户无法创建符号链接，只有 ZIP 符号链接拒绝获得本机实跑证据。</li>
+<li>Web 仍有 100 条存量 ESLint warning；P2 总收口必须归零或形成逐项 owner/理由/失效日期豁免。</li>
+<li>P2-C checkpoint、P2-D MCP 与 R1 发布门禁尚未完成，因此不能判定整个 Web/API 已达发布标准。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

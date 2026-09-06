@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/integrations/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>GitHub 集成：X-Agent Code Review - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "GitHub \u96c6\u6210\uff1aX-Agent Code Review";
+        var mkdocs_page_input_path = "integrations/README.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/integrations/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">GitHub 集成：X-Agent Code Review</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/integrations/README.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="github-x-agent-code-review">GitHub 集成：X-Agent Code Review</h1>
+<p>对标 OpenAI Codex 的 Code Review：PR 自动评审 + 仓库自定义规则。</p>
+<h2 id="_1">快速接入</h2>
+<ol>
+<li>把 <a href="github-code-review.yml"><code>github-code-review.yml</code></a> 复制到被审仓库的
+   <code>.github/workflows/code-review.yml</code>。</li>
+<li>在仓库 Secrets 配置 LLM key（如 <code>XAGENT_LLM__OPENAI_API_KEY</code>）。</li>
+<li>打开 PR 即自动评审并把结构化结论（findings 表格 + verdict）评论到 PR。</li>
+</ol>
+<h2 id="codex-agentsmd">与 Codex 对齐的自定义规则（AGENTS.md）</h2>
+<p>评审服务复用 <code>core/instructions.get_layered_instructions</code> 的分层加载：</p>
+<ul>
+<li><strong>用户级</strong> <code>~/.xagent/AGENTS.md</code> &lt; <strong>仓库根</strong> <code>AGENTS.md</code> &lt; <strong>子目录级</strong>（按 diff
+  涉及文件就近选择，越深优先级越高），冲突时高优先级覆盖低优先级。</li>
+<li>规则注入到 standards 维度（风格与项目规范符合度）的评审 prompt；
+  该维度的每条 finding 带 <code>rule_ref</code> 字段，引用被违反的规则原文。</li>
+</ul>
+<h2 id="_2">输出契约</h2>
+<ul>
+<li><strong>findings</strong>：<code>file / line / severity（critical|high|medium|low|info）/ issue /
+  suggestion / dimension / rule_ref</code></li>
+<li><strong>verdict</strong>：任一 critical/high → <code>request_changes</code>；仅有中低危 → <code>comment</code>；
+  无发现 → <code>approve</code></li>
+<li><strong>summary</strong>：LLM 综合摘要（失败时降级为确定性统计摘要）</li>
+</ul>
+<h2 id="api">本地 / API 用法</h2>
+<pre><code class="language-bash"># CLI（本地直调，无需起 API 服务）
+xagent review --repo . --base main --head HEAD --output review.md
+xagent review --repo . --diff-file pr.diff        # repo 非 git 或不可访问时
+
+# API
+POST /api/v1/code-review        {&quot;diff&quot;: &quot;...&quot;} 或 {&quot;repo&quot;: &quot;.&quot;, &quot;base&quot;: &quot;main&quot;}
+GET  /api/v1/code-review/{id}   查询评审结果（RBAC: code_review:read）
+</code></pre>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

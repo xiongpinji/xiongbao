@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-same-sha-evidence-rollback/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 同一 SHA 证据与回滚实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u540c\u4e00 SHA \u8bc1\u636e\u4e0e\u56de\u6eda\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-15-xagent-same-sha-evidence-rollback.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-same-sha-evidence-rollback/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 同一 SHA 证据与回滚实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-15-xagent-same-sha-evidence-rollback.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-sha">X-Agent 同一 SHA 证据与回滚实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 用机器可验证清单证明五个门都来自同一干净 SHA，并在两个独立 Compose 项目中实际完成备份、恢复、升级、应用回滚和数据完整性复核。</p>
+<p><strong>架构：</strong> 每个门写相同最小 schema 的 <code>gate.json</code>，聚合器重新计算制品摘要并拒绝缺门、dirty、SHA 漂移、命令失败或授权越界。备份脚本输出带 SHA/project/collection 的 manifest；恢复永远写入新的 <code>xagent-restore-*</code> 项目和不存在的 collection，不删除已有 collection。应用回滚仅切换带本轮 Compose project label 的 API/worker/web 候选，不触碰现有项目或生产。</p>
+<p><strong>技术栈：</strong> Python 3.11、pytest、Docker Compose、Postgres pg_dump/pg_restore、Qdrant snapshots、Git worktree、PowerShell、JSON/SHA-256</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<ul>
+<li>创建：<code>scripts/commercial_delivery_gate.py</code>、<code>tests/release/test_commercial_delivery_gate.py</code> —— 五门同 SHA 聚合和最终分类。</li>
+<li>创建：<code>scripts/gate_evidence.py</code>、<code>tests/release/test_gate_evidence.py</code> —— gate schema、命令记录与 artifact 摘要共享函数。</li>
+<li>修改：<code>scripts/backup.py</code>、<code>scripts/restore.py</code> —— 显式 project/collection/scope、安全 manifest、无隐式删除。</li>
+<li>创建：<code>tests/release/test_backup_restore_safety.py</code> —— 备份恢复安全边界。</li>
+<li>创建：<code>scripts/run_rollback_drill.ps1</code>、<code>tests/release/test_rollback_drill_script.py</code> —— 隔离备份恢复与候选回滚演练。</li>
+<li>创建：<code>docs/release/commercial-delivery-evidence.md</code> —— 本地候选人类可读报告格式和三层证据边界。</li>
+<li>修改：<code>scripts/run_commercial_kernel_gate.ps1</code>、<code>scripts/run_webapi_commercial_gate.ps1</code>、<code>scripts/run_short_drama_commercial_gate.ps1</code>、<code>scripts/run_desktop_commercial_gate.ps1</code> —— 统一 schema。</li>
+<li>修改：<code>.github/workflows/ci.yml</code> —— 下载各 job 证据并在同一 <code>github.sha</code> 聚合，正式发布仍需独立授权。</li>
+</ul>
+<h3 id="1-gate-schema">任务 1：定义统一 gate 证据 schema</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/gate_evidence.py</code>
+- 创建：<code>tests/release/test_gate_evidence.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 schema 与摘要测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_build_gate_evidence_records_source_and_commands(tmp_path: Path) -&gt; None:
+    artifact = tmp_path / &quot;artifact.zip&quot;
+    artifact.write_bytes(b&quot;delivery&quot;)
+    evidence = build_gate_evidence(
+        gate=&quot;webapi&quot;,
+        repository=&quot;xagent&quot;,
+        branch=&quot;codex/commercial-delivery-20260815&quot;,
+        source_sha=&quot;a&quot; * 40,
+        dirty=False,
+        started_at=&quot;2026-08-15T00:00:00Z&quot;,
+        finished_at=&quot;2026-08-15T00:10:00Z&quot;,
+        tools={&quot;python&quot;: &quot;3.11.9&quot;},
+        commands=[CommandEvidence(command=&quot;python -m pytest&quot;, exit_code=0, passed=10, failed=0, skipped=0)],
+        artifacts=[artifact],
+        evidence_root=tmp_path,
+        classification=&quot;candidate_local&quot;,
+    )
+    assert evidence[&quot;source_sha&quot;] == &quot;a&quot; * 40
+    assert evidence[&quot;commands&quot;][0][&quot;exit_code&quot;] == 0
+    assert evidence[&quot;artifacts&quot;][0][&quot;sha256&quot;] == hashlib.sha256(b&quot;delivery&quot;).hexdigest()
+
+
+def test_invalid_gate_or_sha_fails_closed(tmp_path: Path) -&gt; None:
+    with pytest.raises(ValueError, match=&quot;source_sha&quot;):
+        build_gate_evidence(
+            gate=&quot;unknown&quot;, repository=&quot;xagent&quot;, branch=&quot;main&quot;, source_sha=&quot;short&quot;,
+            dirty=False, started_at=&quot;2026-08-15T00:00:00Z&quot;, finished_at=&quot;2026-08-15T00:01:00Z&quot;,
+            tools={}, commands=[], artifacts=[], evidence_root=tmp_path,
+            classification=&quot;candidate_local&quot;,
+        )
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认模块不存在</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_gate_evidence.py -q</code></p>
+<p>预期：FAIL，<code>scripts.gate_evidence</code> 不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现固定 schema</strong></li>
+</ul>
+<pre><code class="language-python">ALLOWED_GATES = frozenset({&quot;commercial_kernel&quot;, &quot;webapi&quot;, &quot;short_drama&quot;, &quot;desktop&quot;, &quot;rollback&quot;})
+SHA_PATTERN = re.compile(r&quot;^[a-f0-9]{40}$&quot;)
+
+
+@dataclass(frozen=True)
+class CommandEvidence:
+    command: str
+    exit_code: int
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+
+
+def artifact_evidence(path: Path, evidence_root: Path) -&gt; dict[str, object]:
+    resolved = path.resolve(strict=True)
+    root = evidence_root.resolve(strict=True)
+    if root not in resolved.parents:
+        raise ValueError(&quot;artifact must be inside evidence root&quot;)
+    payload = resolved.read_bytes()
+    return {
+        &quot;path&quot;: resolved.relative_to(root).as_posix(),
+        &quot;size_bytes&quot;: len(payload),
+        &quot;sha256&quot;: hashlib.sha256(payload).hexdigest(),
+    }
+</code></pre>
+<p><code>build_gate_evidence</code> 拒绝未知 gate、非 40 位 SHA、dirty、空 commands、任一非零 exit code/failed、结束早于开始。输出字段固定为：<code>schema_version</code>、<code>gate</code>、<code>repository</code>、<code>branch</code>、<code>source_sha</code>、<code>dirty</code>、<code>started_at</code>、<code>finished_at</code>、<code>tools</code>、<code>environment</code>、<code>commands</code>、<code>artifacts</code>、<code>status</code>、<code>classification</code>、<code>authorizations</code>。<code>authorizations</code> 默认四项均为 <code>not_authorized</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证 schema</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_gate_evidence.py -q</code></p>
+<p>预期：PASS；生成 JSON 中无环境变量值、token、URL credential 或 secret。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交证据 schema</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/gate_evidence.py tests/release/test_gate_evidence.py
+git commit -m &quot;feat: define commercial gate evidence schema&quot;
+</code></pre>
+<h3 id="2">任务 2：统一五门脚本输出</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/run_commercial_kernel_gate.ps1</code>
+- 修改：<code>scripts/run_webapi_commercial_gate.ps1</code>
+- 修改：<code>scripts/run_short_drama_commercial_gate.ps1</code>
+- 修改：<code>scripts/run_desktop_commercial_gate.ps1</code>
+- 创建：<code>tests/release/test_gate_script_schema.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写五门脚本合同测试</strong></li>
+</ul>
+<pre><code class="language-python">@pytest.mark.parametrize(&quot;script,gate&quot;, [
+    (&quot;run_commercial_kernel_gate.ps1&quot;, &quot;commercial_kernel&quot;),
+    (&quot;run_webapi_commercial_gate.ps1&quot;, &quot;webapi&quot;),
+    (&quot;run_short_drama_commercial_gate.ps1&quot;, &quot;short_drama&quot;),
+    (&quot;run_desktop_commercial_gate.ps1&quot;, &quot;desktop&quot;),
+])
+def test_gate_script_writes_shared_schema(script: str, gate: str) -&gt; None:
+    text = (ROOT / &quot;scripts&quot; / script).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;gate_evidence.py&quot; in text
+    assert gate in text
+    assert &quot;source_sha&quot; in text
+    assert &quot;commands&quot; in text
+    assert &quot;artifacts&quot; in text
+    assert &quot;not_authorized&quot; in text
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：实现共享 JSON 输入约定</strong></li>
+</ul>
+<p>每个 PowerShell 门把自身命令记录写入 <code>commands.raw.json</code>，格式：</p>
+<pre><code class="language-json">[
+  {
+    &quot;command&quot;: &quot;python scripts/verify_release_versions.py --tag v1.1.3&quot;,
+    &quot;exit_code&quot;: 0,
+    &quot;passed&quot;: 1,
+    &quot;failed&quot;: 0,
+    &quot;skipped&quot;: 0
+  }
+]
+</code></pre>
+<p>脚本成功末尾调用：</p>
+<pre><code class="language-powershell">python &quot;$RepoRoot\scripts\gate_evidence.py&quot; build `
+  --gate $gate `
+  --repo-root $RepoRoot `
+  --source-sha $sourceSha `
+  --started-at $startedAt `
+  --commands &quot;$evidence\commands.raw.json&quot; `
+  --artifacts-root $evidence `
+  --output &quot;$evidence\gate.json&quot;
+</code></pre>
+<p>kernel 门顺序执行版本、Windows preflight、secret、security、dependency audit、container/Helm tests；任何失败不写 <code>passed</code> gate。门脚本只允许清洗后的工具版本和运行环境摘要，不序列化完整 environment。</p>
+<ul>
+<li>[ ] <strong>步骤 3：验证四门脚本可解析</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_gate_script_schema.py -q
+Get-ChildItem scripts\run_*commercial_gate.ps1 | ForEach-Object {
+  $tokens = $null; $errors = $null
+  [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) &gt; $null
+  if ($errors) { throw ($errors | Out-String) }
+}
+</code></pre>
+<p>预期：测试 PASS，四个脚本无语法错误。</p>
+<ul>
+<li>[ ] <strong>步骤 4：提交统一门输出</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/run_commercial_kernel_gate.ps1 scripts/run_webapi_commercial_gate.ps1 scripts/run_short_drama_commercial_gate.ps1 scripts/run_desktop_commercial_gate.ps1 tests/release/test_gate_script_schema.py
+git commit -m &quot;test: standardize commercial gate evidence&quot;
+</code></pre>
+<h3 id="3">任务 3：修复备份脚本的范围和可验证性</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/backup.py</code>
+- 创建：<code>tests/release/test_backup_restore_safety.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写备份范围与 manifest 测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_backup_manifest_binds_project_collection_and_sha(tmp_path: Path) -&gt; None:
+    artifact = tmp_path / &quot;postgres.dump&quot;
+    artifact.write_bytes(b&quot;pg&quot;)
+    manifest = build_backup_manifest(
+        output_root=tmp_path,
+        compose_project=&quot;xagent-commercial-a1b2c3d4&quot;,
+        source_sha=&quot;a&quot; * 40,
+        qdrant_collection=&quot;xagent_memory_a1b2c3d4&quot;,
+        artifacts=[artifact],
+    )
+    assert manifest[&quot;compose_project&quot;] == &quot;xagent-commercial-a1b2c3d4&quot;
+    assert manifest[&quot;qdrant_collection&quot;] == &quot;xagent_memory_a1b2c3d4&quot;
+    assert manifest[&quot;artifacts&quot;][0][&quot;sha256&quot;] == hashlib.sha256(b&quot;pg&quot;).hexdigest()
+
+
+def test_backup_rejects_generic_project_and_collection(tmp_path: Path) -&gt; None:
+    with pytest.raises(ValueError):
+        validate_scope(&quot;xagent-r2&quot;, &quot;xagent_memory&quot;, &quot;a&quot; * 40, tmp_path)
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认现有脚本无 scope</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_backup_restore_safety.py -q</code></p>
+<p>预期：FAIL，<code>build_backup_manifest</code> 和 <code>validate_scope</code> 不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现显式 scope 和 hash manifest</strong></li>
+</ul>
+<p><code>backup.py</code> 新增必填参数：<code>--compose-project</code> 必须匹配 <code>^xagent-commercial-[a-f0-9]{8}$</code>，<code>--source-sha</code> 必须为 40 位，<code>--qdrant-collection</code> 必须等于 <code>f"xagent_memory_{source_sha[:8]}"</code>，<code>--output</code> resolve 后必须位于 <code>repo / "output" / "commercial-delivery" / source_sha / "rollback"</code> 下。Postgres 改用：</p>
+<pre><code class="language-python">subprocess.run(
+    [&quot;pg_dump&quot;, &quot;--format=custom&quot;, &quot;--no-owner&quot;, &quot;--no-privileges&quot;, pg_url, &quot;--file&quot;, str(path)],
+    check=True,
+    capture_output=True,
+)
+</code></pre>
+<p>Qdrant 所有 URL 使用显式 collection。删除 <code>_cleanup_old_backups</code> 调用；该门不替用户执行留存删除。完成后写 <code>backup-manifest.json</code>，对 Postgres dump、Qdrant snapshot、audit export和短剧 ZIP逐个记录相对路径、大小、SHA-256。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证备份单元测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_backup_restore_safety.py -q</code></p>
+<p>预期：PASS；输出目录越界、generic collection 或 project 名不匹配均在任何 subprocess/HTTP 调用前失败。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交安全备份</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/backup.py tests/release/test_backup_restore_safety.py
+git commit -m &quot;fix: scope backup artifacts to commercial drill&quot;
+</code></pre>
+<h3 id="4">任务 4：把恢复限制到新的空目标</h3>
+<p><strong>文件：</strong>
+- 修改：<code>scripts/restore.py</code>
+- 修改：<code>tests/release/test_backup_restore_safety.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写禁止删除与新目标测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_restore_requires_new_restore_project_and_collection() -&gt; None:
+    scope = validate_restore_scope(
+        compose_project=&quot;xagent-restore-a1b2c3d4&quot;,
+        qdrant_collection=&quot;xagent_restore_a1b2c3d4&quot;,
+        source_sha=&quot;a&quot; * 40,
+    )
+    assert scope.compose_project == &quot;xagent-restore-a1b2c3d4&quot;
+    assert scope.qdrant_collection == &quot;xagent_restore_a1b2c3d4&quot;
+
+
+def test_restore_source_has_no_qdrant_delete_call() -&gt; None:
+    source = (ROOT / &quot;scripts/restore.py&quot;).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;httpx.delete&quot; not in source
+    assert &quot;DELETE&quot; not in source
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认现有恢复会删除 collection</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_backup_restore_safety.py -q</code></p>
+<p>预期：FAIL，当前 <code>restore.py</code> 包含 <code>httpx.delete</code> 且没有 scope 验证。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现新项目/新 collection 恢复</strong></li>
+</ul>
+<p>CLI 只接受 <code>--manifest backup-manifest.json</code>、<code>--target-project "xagent-restore-$sha8"</code>、<code>--target-pg-url</code>、<code>--target-qdrant-url</code>、<code>--target-qdrant-collection "xagent_restore_$sha8"</code>，其中 <code>$sha8 = $sourceSha.Substring(0, 8)</code>。先重新计算 manifest 内所有 hash；再确认：</p>
+<ol>
+<li><code>docker compose -p $targetProject -f deploy/compose/docker-compose.yml ps</code> 返回的所有容器 label <code>com.docker.compose.project</code> 都等于 <code>$targetProject</code>；</li>
+<li>target Postgres 除系统 schema 外没有业务表；</li>
+<li>target Qdrant collection 不存在。</li>
+</ol>
+<p>Postgres 使用参数数组 <code>pg_restore --exit-on-error --no-owner --no-privileges --dbname $targetPgUrl $dumpPath</code>。Qdrant只对新 collection执行 create 和 snapshot upload；如果 collection 已存在立即失败，不删除、不覆盖。恢复后写 <code>restore-manifest.json</code>，记录 source backup hash、target project/collection、命令退出码和完成时间。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证恢复单元测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_backup_restore_safety.py -q</code></p>
+<p>预期：PASS；source 不包含任何 Qdrant DELETE；已有表/collection、hash 不一致、label 不一致都 fail-closed。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交安全恢复</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/restore.py tests/release/test_backup_restore_safety.py
+git commit -m &quot;fix: restore only into isolated empty targets&quot;
+</code></pre>
+<h3 id="5">任务 5：实现隔离升级与应用回滚演练</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/run_rollback_drill.ps1</code>
+- 创建：<code>tests/release/test_rollback_drill_script.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写危险操作与范围合同</strong></li>
+</ul>
+<pre><code class="language-python">def test_rollback_drill_uses_only_audited_projects() -&gt; None:
+    text = (ROOT / &quot;scripts/run_rollback_drill.ps1&quot;).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;xagent-commercial-&quot; in text
+    assert &quot;xagent-restore-&quot; in text
+    assert &quot;com.docker.compose.project&quot; in text
+    assert &quot;backup-manifest.json&quot; in text
+    assert &quot;restore-manifest.json&quot; in text
+    assert &quot;docker volume rm&quot; not in text
+    assert &quot;docker system prune&quot; not in text
+    assert &quot;Remove-Item -Recurse&quot; not in text
+    assert &quot;production&quot; not in text.lower()
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：实现 preflight 和 test data</strong></li>
+</ul>
+<p>脚本先要求 Windows 本地、干净工作树、40 位 source SHA、Docker engine healthy。设置 <code>$sha8 = $sourceSha.Substring(0, 8)</code>、<code>$candidateProject = "xagent-commercial-$sha8"</code>、<code>$restoreProject = "xagent-restore-$sha8"</code>；对每个已运行容器执行 <code>docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}'</code> 并精确匹配。候选 collection 设置为 <code>"xagent_memory_$sha8"</code>，恢复 collection 设置为 <code>"xagent_restore_$sha8"</code>。</p>
+<p>通过 API 创建两个租户，各写带 nonce 的 memory、调度任务和短剧 production；下载短剧 ZIP并记录 SHA。查询 <code>/api/v1/audit/verify</code> 确认链通过。所有测试 ID 都以 PowerShell 字符串 <code>"rollback-$sha8-"</code> 开头。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实际备份并恢复到第二项目</strong></li>
+</ul>
+<p>调用新版 <code>backup.py</code> 生成 manifest；启动空 restore Compose 项目（使用独立 ports override 和独立 volumes），再调用 <code>restore.py</code>。restore API 启动后验证：两个租户仍只能看到各自数据；memory nonce、scheduler、短剧 production 和 ZIP摘要一致；<code>/api/v1/audit/verify</code> 通过；Postgres 行数、Qdrant points count 和 artifact hash 与备份清单一致。</p>
+<ul>
+<li>[ ] <strong>步骤 4：构建基线和当前候选并执行应用回滚</strong></li>
+</ul>
+<p>基线 commit 固定为本计划开始基线 <code>c87aab2b706c443bc4b92fb00aba8d65c986bd0f</code>。脚本设置 <code>$baseWorktree = Join-Path $RepoRoot ".worktrees\rollback-base-$sha8"</code>，运行参数数组 <code>git -C $RepoRoot worktree add --detach $baseWorktree c87aab2b706c443bc4b92fb00aba8d65c986bd0f</code>，构建 <code>"xagent-api:rollback-base-$sha8"</code> 与 <code>"xagent-web:rollback-base-$sha8"</code>；当前 SHA 构建 <code>"xagent-api:rollback-current-$sha8"</code> 与 <code>"xagent-web:rollback-current-$sha8"</code>。所有镜像读取并记录 immutable digest。</p>
+<p>在 restore 项目先以 baseline images 健康启动并读取已恢复数据，再用 override 切到 current digests、运行 <code>alembic upgrade head</code>、验证核心链；最后用 override 切回 baseline digests，不回退数据库破坏性迁移，验证健康、租户隔离、ZIP和审计连续。仅对 label 匹配 restore 项目的 <code>api</code>、<code>worker</code>、<code>web</code> 执行 <code>up -d --no-deps --no-build</code>。</p>
+<p>临时 worktree 用 <code>git -C $RepoRoot worktree remove $baseWorktree</code> 清理前，先 resolve 并确认 <code>$baseWorktree</code> 的父目录精确等于 repo <code>.worktrees</code>；不使用递归文件删除。</p>
+<ul>
+<li>[ ] <strong>步骤 5：生成 rollback gate</strong></li>
+</ul>
+<p>成功时通过 <code>gate_evidence.py</code> 写 PowerShell 路径 <code>output/commercial-delivery/$sourceSha/rollback/gate.json</code>，classification <code>candidate_local</code>，artifacts 包含 backup/restore manifests、两个短剧 ZIP、镜像 digest 清单、升级和回滚健康日志。任一数据摘要或租户隔离不一致则 status 为 failed 且脚本退出 <code>1</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 6：验证脚本与提交</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_rollback_drill_script.py tests/release/test_backup_restore_safety.py -q
+pwsh -NoProfile -Command '$errors=$null; [System.Management.Automation.Language.Parser]::ParseFile(&quot;scripts/run_rollback_drill.ps1&quot;, [ref]$null, [ref]$errors) &gt; $null; if ($errors) { $errors | Out-String | Write-Error }'
+</code></pre>
+<p>预期：PASS。</p>
+<pre><code class="language-bash">git add scripts/run_rollback_drill.ps1 tests/release/test_rollback_drill_script.py
+git commit -m &quot;test: add isolated backup restore and rollback drill&quot;
+</code></pre>
+<h3 id="6-sha">任务 6：实现同一 SHA 聚合器</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/commercial_delivery_gate.py</code>
+- 创建：<code>tests/release/test_commercial_delivery_gate.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写缺门、SHA 漂移和 hash 漂移测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_verify_requires_all_five_gates(tmp_path: Path) -&gt; None:
+    write_gate(tmp_path, &quot;commercial_kernel&quot;, &quot;a&quot; * 40)
+    with pytest.raises(GateError, match=&quot;missing gates&quot;):
+        verify_evidence(tmp_path, &quot;a&quot; * 40)
+
+
+def test_verify_rejects_sha_and_artifact_drift(tmp_path: Path) -&gt; None:
+    write_all_gates(tmp_path, &quot;a&quot; * 40)
+    gate_path = tmp_path / &quot;desktop&quot; / &quot;gate.json&quot;
+    gate = json.loads(gate_path.read_text(encoding=&quot;utf-8&quot;))
+    gate[&quot;source_sha&quot;] = &quot;b&quot; * 40
+    gate_path.write_text(json.dumps(gate), encoding=&quot;utf-8&quot;)
+    with pytest.raises(GateError, match=&quot;source_sha&quot;):
+        verify_evidence(tmp_path, &quot;a&quot; * 40)
+
+    write_all_gates(tmp_path, &quot;a&quot; * 40)
+    (tmp_path / &quot;desktop&quot; / &quot;installer.exe&quot;).write_bytes(b&quot;tampered&quot;)
+    with pytest.raises(GateError, match=&quot;sha256&quot;):
+        verify_evidence(tmp_path, &quot;a&quot; * 40)
+
+
+def test_verified_local_candidate_does_not_claim_external_release(tmp_path: Path) -&gt; None:
+    write_all_gates(tmp_path, &quot;a&quot; * 40)
+    result = verify_evidence(tmp_path, &quot;a&quot; * 40)
+    assert result[&quot;classification&quot;] == &quot;candidate_local&quot;
+    assert result[&quot;remote_release&quot;] == &quot;not_authorized&quot;
+    assert result[&quot;production_deployment&quot;] == &quot;not_authorized&quot;
+    assert result[&quot;customer_production_acceptance&quot;] == &quot;not_authorized&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认聚合器不存在</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_commercial_delivery_gate.py -q</code></p>
+<p>预期：FAIL，模块不存在。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现五门验证和最终 manifest</strong></li>
+</ul>
+<pre><code class="language-python">GATE_DIRECTORIES = {
+    &quot;commercial_kernel&quot;: &quot;kernel&quot;,
+    &quot;webapi&quot;: &quot;webapi&quot;,
+    &quot;short_drama&quot;: &quot;short-drama&quot;,
+    &quot;desktop&quot;: &quot;desktop&quot;,
+    &quot;rollback&quot;: &quot;rollback&quot;,
+}
+
+
+def verify_artifact(root: Path, item: Mapping[str, object]) -&gt; None:
+    path = (root / str(item[&quot;path&quot;])).resolve(strict=True)
+    if root.resolve() not in path.parents:
+        raise GateError(&quot;artifact path escaped evidence root&quot;)
+    payload = path.read_bytes()
+    if len(payload) != int(item[&quot;size_bytes&quot;]):
+        raise GateError(f&quot;artifact size mismatch: {path.name}&quot;)
+    if hashlib.sha256(payload).hexdigest() != str(item[&quot;sha256&quot;]):
+        raise GateError(f&quot;artifact sha256 mismatch: {path.name}&quot;)
+</code></pre>
+<p><code>verify_evidence(root, source_sha)</code> 读取五个固定目录的 <code>gate.json</code>，要求 schema <code>1.0</code>、gate 名、repository <code>xagent</code>、同一 branch/SHA、dirty false、status passed、非空 commands 且全零失败、artifact 重算一致、授权状态不超界。生成：</p>
+<pre><code class="language-python">{
+    &quot;schema_version&quot;: &quot;1.0&quot;,
+    &quot;repository&quot;: &quot;xagent&quot;,
+    &quot;source_sha&quot;: source_sha,
+    &quot;classification&quot;: &quot;candidate_local&quot;,
+    &quot;gates&quot;: {name: &quot;passed&quot; for name in GATE_DIRECTORIES},
+    &quot;remote_release&quot;: &quot;not_authorized&quot;,
+    &quot;production_deployment&quot;: &quot;not_authorized&quot;,
+    &quot;paid_provider_acceptance&quot;: &quot;not_authorized&quot;,
+    &quot;customer_production_acceptance&quot;: &quot;not_authorized&quot;,
+}
+</code></pre>
+<p>CLI <code>verify --evidence-root --source-sha --require-clean</code> 在 <code>--require-clean</code> 下同时检查当前 repo HEAD 和 porcelain 为空；成功写 <code>commercial-delivery-manifest.json</code> 和 <code>commercial-delivery-report.md</code>，任何异常退出 <code>1</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证聚合器</strong></li>
+</ul>
+<p>运行：<code>python -m pytest tests/release/test_commercial_delivery_gate.py tests/release/test_gate_evidence.py -q</code></p>
+<p>预期：PASS。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交聚合器</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/commercial_delivery_gate.py tests/release/test_commercial_delivery_gate.py
+git commit -m &quot;feat: verify same SHA commercial delivery evidence&quot;
+</code></pre>
+<h3 id="7ci">任务 7：CI 聚合和人类可读报告边界</h3>
+<p><strong>文件：</strong>
+- 修改：<code>.github/workflows/ci.yml</code>
+- 创建：<code>docs/release/commercial-delivery-evidence.md</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：新增 CI 聚合 job</strong></li>
+</ul>
+<p>新增 <code>commercial-evidence</code> job，<code>needs</code> 为 kernel、backend-commercial、frontend、short-drama、desktop、supply-chain。各 job 的 gate artifact 必须含 <code>source_sha: ${{ github.sha }}</code>；聚合 job 下载到固定目录并运行 <code>commercial_delivery_gate.py verify</code>。CI 没有本地 installer lifecycle、真实 Ollama 和回滚 drill 时，不创建完整 <code>candidate_local</code>，只输出 <code>ci_component_evidence</code>；完整本地清单必须来自本轮本地五门。</p>
+<ul>
+<li>[ ] <strong>步骤 2：编写报告模板</strong></li>
+</ul>
+<p><code>docs/release/commercial-delivery-evidence.md</code> 固定包含：候选路径/分支/SHA/dirty、五门结果、命令统计、artifact hash、skip 分类、真实本地模型、浏览器 retry、短剧 provider classification、desktop signature、backup/restore/rollback、四项外部授权。模板明确三层：本地候选、正式发布、客户生产，不允许从前一层推断后一层。</p>
+<ul>
+<li>[ ] <strong>步骤 3：验证 CI YAML 和占位符扫描</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -c &quot;import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('ci yaml ok')&quot;
+rg -n '待[定]|TO[D]O|TB[D]|以后[补]|假定已[通过]' docs/release/commercial-delivery-evidence.md
+</code></pre>
+<p>预期：YAML 可解析；扫描无匹配。</p>
+<ul>
+<li>[ ] <strong>步骤 4：提交 CI 与报告</strong></li>
+</ul>
+<pre><code class="language-bash">git add .github/workflows/ci.yml docs/release/commercial-delivery-evidence.md
+git commit -m &quot;ci: aggregate commercial evidence without release overclaim&quot;
+</code></pre>
+<h3 id="8">任务 8：实际运行备份恢复、回滚和最终聚合</h3>
+<ul>
+<li>[ ] <strong>步骤 1：在干净最终 SHA 重跑前四门</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">pwsh -NoProfile -File scripts/run_commercial_kernel_gate.ps1
+pwsh -NoProfile -File scripts/run_webapi_commercial_gate.ps1
+pwsh -NoProfile -File scripts/run_short_drama_commercial_gate.ps1
+pwsh -NoProfile -File scripts/run_desktop_commercial_gate.ps1
+</code></pre>
+<p>预期：四个 gate.json 同 SHA、dirty false、status passed。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行隔离回滚演练</strong></li>
+</ul>
+<p>运行：<code>pwsh -NoProfile -File scripts/run_rollback_drill.ps1</code></p>
+<p>预期：候选与恢复项目 label 精确匹配；备份、恢复、baseline→current→baseline、租户隔离、短剧 ZIP、Qdrant、audit 全部通过；不删除 volumes 或已有 collection。</p>
+<ul>
+<li>[ ] <strong>步骤 3：最终聚合</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$sha = (git rev-parse HEAD).Trim()
+python scripts/commercial_delivery_gate.py verify `
+  --evidence-root &quot;output/commercial-delivery/$sha&quot; `
+  --source-sha $sha `
+  --require-clean
+</code></pre>
+<p>预期：退出码 <code>0</code>，输出 <code>commercial delivery candidate: candidate_local</code>；manifest 五门全 passed，四项外部授权仍为 <code>not_authorized</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：最终泄密、dirty 与证据审计</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">git status --porcelain
+git diff --check
+$sha = (git rev-parse HEAD).Trim()
+$manifest = Get-Content -Raw -LiteralPath &quot;output/commercial-delivery/$sha/commercial-delivery-manifest.json&quot; | ConvertFrom-Json
+if ($manifest.source_sha -ne $sha -or $manifest.classification -ne 'candidate_local') { throw 'final manifest mismatch' }
+rg -n --hidden --glob '!.git/**' --glob '!output/**' '(sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' .
+</code></pre>
+<p>预期：工作树为空、diff check 通过、manifest 匹配当前 SHA、泄密扫描无匹配。</p>
+<h2 id="_2">本计划完成判定</h2>
+<p>五门 schema 与 artifact hash 全部复核通过且同一 SHA；备份恢复和应用回滚在两个带明确 Compose label 的隔离项目中实际执行；测试数据、租户隔离、短剧 ZIP、Qdrant 和 audit 连续；最终只生成 <code>candidate_local</code>，没有把远端 Release、签名、生产部署、付费 provider 或客户验收标成已完成。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

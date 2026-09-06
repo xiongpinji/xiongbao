@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/release/commercial-delivery-evidence/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>X-Agent 商用交付证据边界 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u5546\u7528\u4ea4\u4ed8\u8bc1\u636e\u8fb9\u754c";
+        var mkdocs_page_input_path = "release/commercial-delivery-evidence.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/release/commercial-delivery-evidence/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 商用交付证据边界</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/release/commercial-delivery-evidence.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 商用交付证据边界</h1>
+<p>本文件规定商用候选证据的固定读取方式。机器事实源是当前 SHA 对应目录中的 <code>commercial-delivery-manifest.json</code>；本文件不替代机器清单，也不把历史构建、单元测试或 CI 组件结果提升为端到端验收。</p>
+<h2 id="_1">候选身份</h2>
+<ul>
+<li>实际仓库：记录绝对工作树路径，不使用临时终端目录代称。</li>
+<li>分支：必须与五个 <code>gate.json</code> 的 <code>branch</code> 一致。</li>
+<li>SHA：必须为当前 <code>git rev-parse HEAD</code> 的 40 位值。</li>
+<li>工作树：五门开始和结束时均为 <code>dirty: false</code>，最终聚合再次检查 porcelain 为空。</li>
+<li>分类：只有五门同 SHA 且制品哈希复算通过时才是 <code>candidate_local</code>。</li>
+</ul>
+<h2 id="_2">五门证据</h2>
+<table>
+<thead>
+<tr>
+<th>门</th>
+<th>必须证明</th>
+<th>不能推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>commercial_kernel</td>
+<td>版本、Windows preflight、秘密不落盘、安全检查、锁定依赖审计、不可变镜像合同</td>
+<td>不能推断业务端到端通过</td>
+</tr>
+<tr>
+<td>webapi</td>
+<td>完整 API、Web、SDK、六服务、迁移、真实本地模型、三轮零重试浏览器主链</td>
+<td>不能推断外部供应商或客户环境通过</td>
+</tr>
+<tr>
+<td>short_drama</td>
+<td>本地离线成片、重开、下载、ZIP 独立哈希和 provider 边界</td>
+<td>不能推断付费媒体供应商验收</td>
+</tr>
+<tr>
+<td>desktop</td>
+<td>Rust 质量、MSI/NSIS、安装后二进制诊断、两次 GUI 生命周期、卸载、签名状态</td>
+<td>未签名候选不能称为正式桌面发布</td>
+</tr>
+<tr>
+<td>rollback</td>
+<td>两租户数据、备份、空目标恢复、baseline→current→baseline、Qdrant、审计与 ZIP 连续</td>
+<td>不能推断客户真实数据恢复完成</td>
+</tr>
+</tbody>
+</table>
+<p>每个门必须保存非空 <code>commands</code>、退出码、通过/失败/跳过计数以及 <code>artifacts</code> 的相对路径、大小和 SHA-256。聚合器从文件重新计算摘要；摘要不一致即失败。</p>
+<h2 id="_3">命令与制品摘要</h2>
+<p>最终报告从机器清单读取以下字段：</p>
+<ul>
+<li><code>command_totals.passed</code>、<code>command_totals.failed</code>、<code>command_totals.skipped</code>；</li>
+<li><code>artifact_count</code>；</li>
+<li>Web/API 的真实本地模型和 Playwright retry 数；</li>
+<li>短剧的 <code>provider_classification</code> 与外部 provider 授权；</li>
+<li>桌面端 MSI/NSIS SHA-256、大小和 Authenticode 状态；</li>
+<li><code>backup-manifest.json</code>、<code>restore-manifest.json</code>、镜像 ID、三个运行阶段与数据计数。</li>
+</ul>
+<p>跳过只允许分为显式的环境边界或未授权外部动作。任何核心本地命令退出非零、<code>failed &gt; 0</code>、证据缺失或 SHA 漂移都不能归为跳过。</p>
+<h2 id="_4">三层交付边界</h2>
+<h3 id="1">1. 本地候选</h3>
+<p><code>candidate_local</code> 只表示当前 Windows 工作站、当前仓库 SHA 和本轮隔离服务已经通过五门。它允许交付本地候选制品与审计清单，不授权推送、发布、部署、付费调用或客户数据写入。</p>
+<h3 id="2">2. 正式发布</h3>
+<p>正式发布还要求受信任代码签名和时间戳、远端 CI 的同 SHA 成功记录、受保护发布环境审批、制品仓库落库、发布说明和发布后复核。CI 的 <code>ci_component_evidence</code> 不是本地五门，也不能单独生成正式发布结论。</p>
+<h3 id="3">3. 客户生产</h3>
+<p>客户生产还要求客户目标环境的网络、身份、密钥托管、容量、监控、真实供应商、计费、备份恢复和业务验收。正式发布成功不能推断客户生产验收成功。</p>
+<h2 id="_5">外部授权固定值</h2>
+<p>本地最终清单必须保持以下四项：</p>
+<ul>
+<li><code>remote_release: not_authorized</code></li>
+<li><code>production_deployment: not_authorized</code></li>
+<li><code>paid_provider_acceptance: not_authorized</code></li>
+<li><code>customer_production_acceptance: not_authorized</code></li>
+</ul>
+<p>只有用户针对具体目标另行授权并完成对应外部验证后，才能在独立发布记录中改变这些状态；不得修改本地候选历史清单来追认。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

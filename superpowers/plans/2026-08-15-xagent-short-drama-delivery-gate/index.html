@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-short-drama-delivery-gate/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent 短剧商用交付门实现计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent \u77ed\u5267\u5546\u7528\u4ea4\u4ed8\u95e8\u5b9e\u73b0\u8ba1\u5212";
+        var mkdocs_page_input_path = "superpowers/plans/2026-08-15-xagent-short-drama-delivery-gate.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/plans/2026-08-15-xagent-short-drama-delivery-gate/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent 短剧商用交付门实现计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/plans/2026-08-15-xagent-short-drama-delivery-gate.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent">X-Agent 短剧商用交付门实现计划</h1>
+<blockquote>
+<p><strong>面向 AI 代理的工作者：</strong> 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（<code>- [ ]</code>）语法来跟踪进度。</p>
+</blockquote>
+<p><strong>目标：</strong> 让短剧测试默认完全离线、状态与产物一致，并生成可下载、可重新打开、可校验摘要且明确标注 provider 等级的本地 ZIP 交付包。</p>
+<p><strong>架构：</strong> <code>null</code>、<code>pollinations</code> 和 <code>openai</code> 三种图像 provider 语义分离，只有显式选择公共/付费 provider 才允许网络路径。生产文档持久化完整时间线快照；交付包构建器只打包生产 JSON、时间线 JSON 和允许根目录内的本地媒体，placeholder/外部 URI 只作为引用记录。API 下载前先做租户校验，ZIP manifest 对每个成员记录 SHA-256。</p>
+<p><strong>技术栈：</strong> FastAPI、pytest-asyncio、SQLAlchemy、Python <code>zipfile</code>/<code>hashlib</code>、Playwright</p>
+<hr />
+<h2 id="_1">文件结构</h2>
+<ul>
+<li>修改：<code>apps/api/xagent/infra/settings.py</code> —— 明确 <code>null | pollinations | openai</code> provider 语义。</li>
+<li>修改：<code>apps/api/xagent/domains/creative_studio/media/registry.py</code> —— 默认 null，不隐式访问 Pollinations。</li>
+<li>修改：<code>apps/api/tests/test_creative_studio.py</code>、<code>apps/api/tests/test_pipeline.py</code>、<code>apps/api/tests/test_audio_providers.py</code> —— 离线 provider、task id、配音、时间线与状态回归。</li>
+<li>修改：<code>apps/api/xagent/api/v1/creative_studio.py</code> —— 持久化时间线快照并提供 tenant-safe bundle 下载。</li>
+<li>创建：<code>apps/api/xagent/domains/creative_studio/delivery_bundle.py</code> —— 安全生成 ZIP 与 manifest。</li>
+<li>创建：<code>apps/api/tests/test_creative_delivery_bundle.py</code> —— ZIP、摘要、路径边界、placeholder 分类、租户隔离和重启恢复测试。</li>
+<li>创建：<code>tests/e2e/specs/short-drama-delivery.spec.ts</code> —— 浏览器上下文中的产出、重开、下载与摘要验证。</li>
+<li>创建：<code>scripts/run_short_drama_commercial_gate.ps1</code>、<code>tests/release/test_short_drama_gate_script.py</code> —— 同一 SHA 短剧门。</li>
+<li>修改：<code>.github/workflows/ci.yml</code> —— 短剧门独立命名并上传非敏感测试证据。</li>
+</ul>
+<h3 id="1-provider">任务 1：修复默认图像 provider 的隐式联网</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/tests/test_creative_studio.py</code>
+- 修改：<code>apps/api/xagent/domains/creative_studio/media/registry.py</code>
+- 修改：<code>apps/api/xagent/infra/settings.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写默认 null 与显式 Pollinations 测试</strong></li>
+</ul>
+<pre><code class="language-python">def test_registry_image_defaults_to_null(monkeypatch: pytest.MonkeyPatch) -&gt; None:
+    settings = get_settings()
+    monkeypatch.setattr(settings.media, &quot;default_image_provider&quot;, &quot;null&quot;)
+    reset_media_registry()
+    registry = get_media_registry()
+    assert registry.get(MediaKind.image) is registry.null
+
+
+def test_registry_pollinations_requires_explicit_opt_in(monkeypatch: pytest.MonkeyPatch) -&gt; None:
+    settings = get_settings()
+    monkeypatch.setattr(settings.media, &quot;default_image_provider&quot;, &quot;pollinations&quot;)
+    reset_media_registry()
+    assert get_media_registry().get(MediaKind.image).name == &quot;pollinations&quot;
+
+
+def test_openai_without_key_falls_back_to_null(monkeypatch: pytest.MonkeyPatch) -&gt; None:
+    settings = get_settings()
+    monkeypatch.setattr(settings.media, &quot;default_image_provider&quot;, &quot;openai&quot;)
+    monkeypatch.setattr(settings.media, &quot;openai_image_api_key&quot;, &quot;&quot;)
+    monkeypatch.delenv(&quot;OPENAI_API_KEY&quot;, raising=False)
+    reset_media_registry()
+    assert get_media_registry().get(MediaKind.image) is get_media_registry().null
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认默认错误注册 Pollinations</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_studio.py -q</code></p>
+<p>预期：至少 <code>test_registry_image_defaults_to_null</code> FAIL，实际 provider 为 <code>pollinations</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现显式 provider 分支</strong></li>
+</ul>
+<pre><code class="language-python">image_provider = cfg.default_image_provider
+if image_provider == &quot;openai&quot; and (
+    cfg.openai_image_api_key or os.environ.get(&quot;OPENAI_API_KEY&quot;)
+):
+    registry.register(
+        MediaKind.image,
+        OpenAIImageProvider(
+            api_key=cfg.openai_image_api_key or os.environ.get(&quot;OPENAI_API_KEY&quot;, &quot;&quot;),
+            base_url=cfg.openai_image_base_url,
+            default_model=cfg.openai_image_model,
+        ),
+    )
+elif image_provider == &quot;pollinations&quot;:
+    registry.register(MediaKind.image, PollinationsProvider())
+</code></pre>
+<p><code>null</code> 和 openai 缺 key 均不注册图像 provider，由 <code>registry.get()</code> 返回 <code>NullProvider</code>。把 <code>MediaSettings.default_image_provider</code> 注释改为 <code>null | pollinations | openai</code>；不改变默认值 <code>null</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证短剧关键回归</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest apps/api/tests/test_creative_studio.py apps/api/tests/test_creative_persistence.py apps/api/tests/test_pipeline.py apps/api/tests/test_audio_providers.py -q
+</code></pre>
+<p>预期：此前 <code>pollinations-err</code>、常量 task id、<code>partial</code>、零 artifacts 和持久化失败全部消失；配音本地时间线测试得到两条 audio clip。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交 provider 修复</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/infra/settings.py apps/api/xagent/domains/creative_studio/media/registry.py apps/api/tests/test_creative_studio.py apps/api/tests/test_pipeline.py apps/api/tests/test_audio_providers.py
+git commit -m &quot;fix: keep short drama defaults offline&quot;
+</code></pre>
+<h3 id="2">任务 2：持久化完整时间线快照</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/tests/test_creative_studio.py</code>
+- 修改：<code>apps/api/xagent/api/v1/creative_studio.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写产出与重启恢复测试</strong></li>
+</ul>
+<pre><code class="language-python">@pytest.mark.asyncio
+async def test_production_persists_openable_timeline_after_memory_clear(client: AsyncClient) -&gt; None:
+    token = create_access_token(user_id=&quot;u&quot;, tenant_id=&quot;timeline-tenant&quot;, roles=[&quot;member&quot;])
+    headers = {&quot;Authorization&quot;: f&quot;Bearer {token}&quot;}
+    response = await client.post(
+        &quot;/api/v1/creative-studio/produce&quot;,
+        headers=headers,
+        json={&quot;brief&quot;: &quot;离线交付测试&quot;, &quot;with_video&quot;: False},
+    )
+    assert response.status_code == 200
+    produced = response.json()
+    assert produced[&quot;status&quot;] == &quot;produced&quot;
+    assert produced[&quot;timeline&quot;][&quot;id&quot;] == produced[&quot;timeline_id&quot;]
+    assert produced[&quot;timeline&quot;][&quot;clips&quot;]
+
+    creative_api._productions.clear()
+    creative_persistence.reset_creative_table_cache()
+    reopened = await client.get(
+        f&quot;/api/v1/creative-studio/productions/{produced['storyboard_id']}&quot;,
+        headers=headers,
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()[&quot;timeline&quot;] == produced[&quot;timeline&quot;]
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行失败测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_studio.py::test_production_persists_openable_timeline_after_memory_clear -q</code></p>
+<p>预期：FAIL，产出文档只有 <code>timeline_id</code>，没有 <code>timeline</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：在保存前附加时间线快照</strong></li>
+</ul>
+<pre><code class="language-python">from xagent.domains.creative_studio.editor.tools import get_timeline
+
+
+def _attach_timeline_snapshot(doc: dict[str, Any]) -&gt; dict[str, Any]:
+    timeline_id = str(doc.get(&quot;timeline_id&quot;) or &quot;&quot;)
+    timeline = get_timeline(timeline_id) if timeline_id else None
+    doc[&quot;timeline&quot;] = timeline.to_dict() if timeline is not None else None
+    return doc
+</code></pre>
+<p><code>produce()</code> 在加入 <code>tenant_id</code>/<code>owner</code> 后、写 <code>_productions</code> 与 DB 前调用该函数。若 <code>timeline_id</code> 存在而 timeline 缺失，把结果状态改为 <code>partial</code> 并在顶层 <code>failures</code> 追加 <code>timeline_snapshot_missing</code>，不返回伪 <code>produced</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证持久化回归</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_studio.py apps/api/tests/test_creative_persistence.py -q</code></p>
+<p>预期：全部 PASS；内存清空后仍能取回相同时间线。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交时间线持久化</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/creative_studio.py apps/api/tests/test_creative_studio.py
+git commit -m &quot;feat: persist short drama timeline snapshots&quot;
+</code></pre>
+<h3 id="3-zip">任务 3：实现安全、可校验的短剧 ZIP 交付包</h3>
+<p><strong>文件：</strong>
+- 创建：<code>apps/api/xagent/domains/creative_studio/delivery_bundle.py</code>
+- 创建：<code>apps/api/tests/test_creative_delivery_bundle.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 ZIP 内容与路径边界测试</strong></li>
+</ul>
+<pre><code class="language-python">def sample_production(
+    *,
+    image_outputs: list[str] | None = None,
+    audio_outputs: list[str] | None = None,
+) -&gt; dict[str, object]:
+    return {
+        &quot;storyboard_id&quot;: &quot;storyboard-test&quot;,
+        &quot;status&quot;: &quot;produced&quot;,
+        &quot;timeline_id&quot;: &quot;timeline-test&quot;,
+        &quot;timeline&quot;: {&quot;id&quot;: &quot;timeline-test&quot;, &quot;clips&quot;: []},
+        &quot;shots&quot;: [{
+            &quot;shot_id&quot;: &quot;shot-1&quot;,
+            &quot;image_outputs&quot;: image_outputs or [],
+            &quot;video_outputs&quot;: [],
+            &quot;audio_outputs&quot;: audio_outputs or [],
+        }],
+        &quot;failures&quot;: [],
+    }
+
+
+def test_build_bundle_contains_manifest_timeline_and_allowed_media(tmp_path: Path) -&gt; None:
+    media = tmp_path / &quot;media&quot; / &quot;voice.wav&quot;
+    media.parent.mkdir()
+    media.write_bytes(b&quot;RIFF-test-audio&quot;)
+    production = sample_production(audio_outputs=[str(media)])
+    payload = build_delivery_bundle(production, allowed_roots=(tmp_path,))
+    with ZipFile(BytesIO(payload)) as archive:
+        names = set(archive.namelist())
+        assert {&quot;manifest.json&quot;, &quot;production.json&quot;, &quot;timeline.json&quot;, &quot;assets/voice.wav&quot;} &lt;= names
+        manifest = json.loads(archive.read(&quot;manifest.json&quot;))
+        entry = next(item for item in manifest[&quot;files&quot;] if item[&quot;path&quot;] == &quot;assets/voice.wav&quot;)
+        assert entry[&quot;sha256&quot;] == hashlib.sha256(b&quot;RIFF-test-audio&quot;).hexdigest()
+        assert entry[&quot;size_bytes&quot;] == len(b&quot;RIFF-test-audio&quot;)
+
+
+def test_build_bundle_never_reads_outside_allowed_roots(tmp_path: Path) -&gt; None:
+    outside = tmp_path.parent / &quot;private.txt&quot;
+    outside.write_text(&quot;must-not-leak&quot;, encoding=&quot;utf-8&quot;)
+    payload = build_delivery_bundle(sample_production(audio_outputs=[str(outside)]), allowed_roots=(tmp_path,))
+    with ZipFile(BytesIO(payload)) as archive:
+        assert &quot;must-not-leak&quot; not in b&quot;&quot;.join(archive.read(name) for name in archive.namelist()).decode(&quot;utf-8&quot;)
+        manifest = json.loads(archive.read(&quot;manifest.json&quot;))
+        assert manifest[&quot;references&quot;][0][&quot;classification&quot;] == &quot;outside_allowed_roots&quot;
+
+
+def test_placeholder_is_declared_as_fixture_not_real_media() -&gt; None:
+    payload = build_delivery_bundle(
+        sample_production(image_outputs=[&quot;placeholder://image/task-1&quot;]),
+        allowed_roots=(),
+    )
+    with ZipFile(BytesIO(payload)) as archive:
+        manifest = json.loads(archive.read(&quot;manifest.json&quot;))
+        assert manifest[&quot;provider_classification&quot;] == &quot;fixture_local&quot;
+        assert manifest[&quot;external_provider_acceptance&quot;] == &quot;not_authorized&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行测试确认模块不存在</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_delivery_bundle.py -q</code></p>
+<p>预期：FAIL，不能导入 <code>delivery_bundle</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现规范 JSON、摘要和 ZIP</strong></li>
+</ul>
+<pre><code class="language-python">from collections.abc import Sequence
+
+
+def _json_bytes(value: object) -&gt; bytes:
+    return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + &quot;\n&quot;).encode(&quot;utf-8&quot;)
+
+
+def _file_entry(path: str, payload: bytes) -&gt; dict[str, object]:
+    return {
+        &quot;path&quot;: path,
+        &quot;size_bytes&quot;: len(payload),
+        &quot;sha256&quot;: hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _is_within(path: Path, roots: Sequence[Path]) -&gt; bool:
+    resolved = path.resolve(strict=True)
+    return any(resolved == root.resolve() or root.resolve() in resolved.parents for root in roots)
+</code></pre>
+<p><code>build_delivery_bundle(production, allowed_roots)</code> 先写 <code>production.json</code> 和 <code>timeline.json</code>；遍历每个 shot 的 <code>image_outputs</code>、<code>video_outputs</code>、<code>audio_outputs</code>。本地普通路径仅在 <code>_is_within</code> 为真且是常规文件时写到 <code>assets/{sha256前12位}-{安全basename}</code>；HTTP、placeholder、缺失和越界路径只进入 <code>references</code>。<code>manifest.json</code> 固定包含：</p>
+<pre><code class="language-python">manifest = {
+    &quot;schema_version&quot;: &quot;1.0&quot;,
+    &quot;storyboard_id&quot;: str(production[&quot;storyboard_id&quot;]),
+    &quot;production_status&quot;: str(production[&quot;status&quot;]),
+    &quot;provider_classification&quot;: &quot;fixture_local&quot; if placeholder_seen else &quot;local_files&quot;,
+    &quot;external_provider_acceptance&quot;: &quot;not_authorized&quot;,
+    &quot;files&quot;: sorted(file_entries, key=lambda item: str(item[&quot;path&quot;])),
+    &quot;references&quot;: references,
+    &quot;failures&quot;: production.get(&quot;failures&quot;, []),
+}
+</code></pre>
+<p>ZIP 每个成员使用固定时间戳 <code>(1980, 1, 1, 0, 0, 0)</code>，保证相同输入得到相同摘要。禁止 <code>../</code>、绝对 ZIP member 和同名覆盖。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证 ZIP 可打开且可重复</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_delivery_bundle.py -q</code></p>
+<p>预期：全部 PASS；相同输入两次返回完全相同 bytes；越界文件内容不进入 ZIP。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交 bundle 构建器</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/domains/creative_studio/delivery_bundle.py apps/api/tests/test_creative_delivery_bundle.py
+git commit -m &quot;feat: build verifiable short drama delivery bundles&quot;
+</code></pre>
+<h3 id="4">任务 4：提供租户隔离的下载端点</h3>
+<p><strong>文件：</strong>
+- 修改：<code>apps/api/xagent/api/v1/creative_studio.py</code>
+- 修改：<code>apps/api/tests/test_creative_delivery_bundle.py</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 API 下载与隔离测试</strong></li>
+</ul>
+<pre><code class="language-python">@pytest.mark.asyncio
+async def test_bundle_download_reopens_and_is_tenant_isolated(client: AsyncClient) -&gt; None:
+    token_a = create_access_token(user_id=&quot;a&quot;, tenant_id=&quot;bundle-a&quot;, roles=[&quot;member&quot;])
+    token_b = create_access_token(user_id=&quot;b&quot;, tenant_id=&quot;bundle-b&quot;, roles=[&quot;member&quot;])
+    headers_a = {&quot;Authorization&quot;: f&quot;Bearer {token_a}&quot;}
+    headers_b = {&quot;Authorization&quot;: f&quot;Bearer {token_b}&quot;}
+    create_response = await client.post(
+        &quot;/api/v1/creative-studio/produce&quot;,
+        headers=headers_a,
+        json={&quot;brief&quot;: &quot;交付包租户测试&quot;, &quot;with_video&quot;: False},
+    )
+    assert create_response.status_code == 200
+    produced = create_response.json()
+    storyboard_id = produced[&quot;storyboard_id&quot;]
+    response = await client.get(
+        f&quot;/api/v1/creative-studio/productions/{storyboard_id}/bundle&quot;,
+        headers=headers_a,
+    )
+    assert response.status_code == 200
+    assert response.headers[&quot;content-type&quot;].startswith(&quot;application/zip&quot;)
+    assert f'filename=&quot;short-drama-{storyboard_id}.zip&quot;' in response.headers[&quot;content-disposition&quot;]
+    with ZipFile(BytesIO(response.content)) as archive:
+        assert archive.testzip() is None
+        assert json.loads(archive.read(&quot;production.json&quot;))[&quot;storyboard_id&quot;] == storyboard_id
+
+    forbidden = await client.get(
+        f&quot;/api/v1/creative-studio/productions/{storyboard_id}/bundle&quot;,
+        headers=headers_b,
+    )
+    assert forbidden.status_code == 404
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：运行失败测试</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_delivery_bundle.py -q</code></p>
+<p>预期：FAIL，下载路由返回 404。</p>
+<ul>
+<li>[ ] <strong>步骤 3：实现下载端点</strong></li>
+</ul>
+<pre><code class="language-python">@router.get(&quot;/productions/{storyboard_id}/bundle&quot;, summary=&quot;下载短剧交付包&quot;)
+async def download_production_bundle(
+    storyboard_id: str,
+    principal: Principal = Depends(require_permission(&quot;creative&quot;, &quot;read&quot;)),
+) -&gt; Response:
+    doc = await creative_persistence.load_production(storyboard_id, principal.tenant_id)
+    if doc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, &quot;产物不存在或无权访问&quot;)
+    payload = build_delivery_bundle(doc, allowed_roots=_creative_delivery_roots())
+    return Response(
+        payload,
+        media_type=&quot;application/zip&quot;,
+        headers={&quot;Content-Disposition&quot;: f'attachment; filename=&quot;short-drama-{storyboard_id}.zip&quot;'},
+    )
+</code></pre>
+<p><code>_creative_delivery_roots()</code> 只返回 <code>Path(get_settings().media.tts_output_dir).resolve()</code> 和 <code>FS_ALLOWED_ROOTS</code> 中的非空绝对路径。不得使用用户请求参数扩展 allowlist。</p>
+<ul>
+<li>[ ] <strong>步骤 4：验证下载、重启与租户隔离</strong></li>
+</ul>
+<p>运行：<code>python -m pytest apps/api/tests/test_creative_delivery_bundle.py apps/api/tests/test_creative_persistence.py apps/api/tests/test_creative_studio.py -q</code></p>
+<p>预期：全部 PASS；越权返回 404；清空内存后仍能从 DB 下载相同逻辑内容。</p>
+<ul>
+<li>[ ] <strong>步骤 5：提交下载端点</strong></li>
+</ul>
+<pre><code class="language-bash">git add apps/api/xagent/api/v1/creative_studio.py apps/api/tests/test_creative_delivery_bundle.py
+git commit -m &quot;feat: expose tenant safe short drama bundles&quot;
+</code></pre>
+<h3 id="5">任务 5：浏览器验证产出、重开、下载和摘要</h3>
+<p><strong>文件：</strong>
+- 创建：<code>tests/e2e/specs/short-drama-delivery.spec.ts</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写 Playwright 端到端测试</strong></li>
+</ul>
+<pre><code class="language-typescript">const API_BASE = process.env.E2E_API_URL || &quot;http://127.0.0.1:8000&quot;;
+
+async function register(
+  request: APIRequestContext,
+  username: string,
+  password: string,
+  tenantId: string,
+): Promise&lt;string&gt; {
+  const response = await request.post(`${API_BASE}/api/v1/auth/register`, {
+    data: { username, password, tenant_id: tenantId },
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).access_token;
+}
+
+
+test(&quot;短剧本地产出可重开并下载校验包&quot;, async ({ request }) =&gt; {
+  const token = await register(request, `short-drama-${Date.now()}`, &quot;pass123456&quot;, `tenant-${Date.now()}`);
+  const headers = { Authorization: `Bearer ${token}` };
+  const produced = await request.post(`${API_BASE}/api/v1/creative-studio/produce`, {
+    headers,
+    data: { brief: &quot;本地离线交付验收&quot;, with_video: false },
+    timeout: 180_000,
+  });
+  expect(produced.status()).toBe(200);
+  const doc = await produced.json();
+  expect(doc.status).toBe(&quot;produced&quot;);
+  expect(doc.timeline.id).toBe(doc.timeline_id);
+
+  const reopened = await request.get(`${API_BASE}/api/v1/creative-studio/productions/${doc.storyboard_id}`, { headers });
+  expect((await reopened.json()).timeline).toEqual(doc.timeline);
+  const bundle = await request.get(`${API_BASE}/api/v1/creative-studio/productions/${doc.storyboard_id}/bundle`, { headers });
+  expect(bundle.status()).toBe(200);
+  const bytes = await bundle.body();
+  expect(bytes.subarray(0, 2).toString()).toBe(&quot;PK&quot;);
+  await writeFile(resolve(process.env.E2E_EVIDENCE_DIR!, &quot;short-drama.zip&quot;), bytes);
+});
+</code></pre>
+<p>同一测试随后用 <code>adm-zip</code> 打开下载文件，验证 <code>manifest.json</code>、<code>production.json</code>、<code>timeline.json</code>，逐个重新计算 <code>manifest.files</code> 的 SHA-256。把 <code>adm-zip</code> 固定到 <code>tests/e2e/package.json</code> 并更新 lock。</p>
+<ul>
+<li>[ ] <strong>步骤 2：运行单一短剧浏览器门</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">$sha = (git rev-parse HEAD).Trim()
+$env:E2E_EVIDENCE_DIR = (Resolve-Path .).Path + &quot;\output\commercial-delivery\$sha\short-drama\browser&quot;
+npm --prefix tests/e2e ci
+npm --prefix tests/e2e exec -- playwright test specs/short-drama-delivery.spec.ts --reporter=list
+</code></pre>
+<p>预期：<code>1 passed</code>、零 retry；证据目录含可由 <code>Expand-Archive</code> 打开的 <code>short-drama.zip</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：提交浏览器验收</strong></li>
+</ul>
+<pre><code class="language-bash">git add tests/e2e/specs/short-drama-delivery.spec.ts tests/e2e/package.json tests/e2e/package-lock.json
+git commit -m &quot;test: verify short drama delivery download in browser&quot;
+</code></pre>
+<h3 id="6">任务 6：建立短剧独立门与证据</h3>
+<p><strong>文件：</strong>
+- 创建：<code>scripts/run_short_drama_commercial_gate.ps1</code>
+- 创建：<code>tests/release/test_short_drama_gate_script.py</code>
+- 修改：<code>.github/workflows/ci.yml</code></p>
+<ul>
+<li>[ ] <strong>步骤 1：编写门脚本合同</strong></li>
+</ul>
+<pre><code class="language-python">def test_short_drama_gate_is_offline_by_default() -&gt; None:
+    text = (ROOT / &quot;scripts/run_short_drama_commercial_gate.ps1&quot;).read_text(encoding=&quot;utf-8&quot;)
+    assert &quot;XAGENT_MEDIA__DEFAULT_IMAGE_PROVIDER='null'&quot; in text
+    assert &quot;XAGENT_MEDIA__DEFAULT_VIDEO_PROVIDER='null'&quot; in text
+    assert &quot;short-drama-delivery.spec.ts&quot; in text
+    assert '&quot;external_provider_acceptance&quot;: &quot;not_authorized&quot;' in text
+    assert &quot;pollinations.ai&quot; not in text
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 2：实现并解析门脚本</strong></li>
+</ul>
+<p>脚本从干净工作树读取 <code>source_sha</code>，设置三个 media provider 为 null，运行短剧相关单元/集成测试、整仓后端 runner、Compose API、短剧 Playwright 和 ZIP 摘要复核；成功时写 <code>output/commercial-delivery/$sourceSha/short-drama/gate.json</code>：</p>
+<pre><code class="language-json">{
+  &quot;gate&quot;: &quot;short_drama&quot;,
+  &quot;source_sha&quot;: &quot;由脚本读取的四十位 Git SHA&quot;,
+  &quot;status&quot;: &quot;passed&quot;,
+  &quot;provider_classification&quot;: &quot;fixture_local&quot;,
+  &quot;external_provider_acceptance&quot;: &quot;not_authorized&quot;,
+  &quot;paid_submission_attempted&quot;: false
+}
+</code></pre>
+<p>任何外部 provider 路径出现、ZIP 摘要不一致、<code>partial</code>/<code>blocked</code>、pytest failed 或 Playwright retry 都使脚本退出 <code>1</code>。</p>
+<ul>
+<li>[ ] <strong>步骤 3：验证脚本与 CI YAML</strong></li>
+</ul>
+<p>运行：</p>
+<pre><code class="language-powershell">python -m pytest tests/release/test_short_drama_gate_script.py -q
+python -c &quot;import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('ci yaml ok')&quot;
+</code></pre>
+<p>预期：PASS。CI 新增 <code>short-drama</code> job，运行离线测试与 bundle 单元测试；不在 CI 调用 Pollinations/OpenAI/Kling/即梦/火山等外部生成服务。</p>
+<ul>
+<li>[ ] <strong>步骤 4：提交独立门</strong></li>
+</ul>
+<pre><code class="language-bash">git add scripts/run_short_drama_commercial_gate.ps1 tests/release/test_short_drama_gate_script.py .github/workflows/ci.yml
+git commit -m &quot;ci: add independent short drama delivery gate&quot;
+</code></pre>
+<ul>
+<li>[ ] <strong>步骤 5：运行实际短剧门</strong></li>
+</ul>
+<p>运行：<code>pwsh -NoProfile -File scripts/run_short_drama_commercial_gate.ps1</code></p>
+<p>预期：退出码 <code>0</code>；同一 SHA 的短剧 <code>gate.json</code> 为 <code>passed</code>，ZIP 可打开且摘要全部一致。结果只能标记 <code>fixture_local</code>；在获得付费价格、余额和一次提交授权前，不执行真实外部图像/视频调用。</p>
+<h2 id="_2">本计划完成判定</h2>
+<p>默认测试无公共网络请求；短剧相关测试及整仓测试通过；状态为 <code>produced/ready</code>；产物重启后可重开；ZIP 含 production、timeline、引用、失败记录、审计元数据和文件摘要；浏览器实际下载并复核 ZIP；付费 provider 保持 <code>not_authorized</code> 且没有提交记录。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

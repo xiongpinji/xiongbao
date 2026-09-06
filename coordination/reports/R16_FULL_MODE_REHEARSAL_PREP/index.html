@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R16 Full-Mode Rehearsal Prerequisite Checklist - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R16 Full-Mode Rehearsal Prerequisite Checklist";
+        var mkdocs_page_input_path = "coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R16 Full-Mode Rehearsal Prerequisite Checklist</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r16-full-mode-rehearsal-prerequisite-checklist">R16 Full-Mode Rehearsal Prerequisite Checklist</h1>
+<blockquote>
+<p>日期：2026-07-06
+Owner：Codex
+范围：R4 full-mode / compose rehearsal 前置条件补齐，不执行目标环境演练</p>
+</blockquote>
+<h2 id="1">1. 结论</h2>
+<p>R16 已将 R4 当前阻塞拆成可恢复的前置清单和复跑步骤。该清单用于帮助 R4 恢复执行，不构成目标环境或 staging 等价演练完成证据。</p>
+<p>当前最小结论：</p>
+<ul>
+<li><code>docker compose --env-file .env.example config --quiet</code> 在缺少 Langfuse 必填 secret 时按预期失败。</li>
+<li>补齐 R16 演练占位 secret 后，<code>docker compose --env-file .env.example config --quiet</code> 可通过。</li>
+<li>5432 / 6379 / 6333 / 6334 / 3001 / 4000 / 8080 / 8081 当前未监听，说明本机没有可直接复用的 full-stack 运行面。</li>
+<li>R4 恢复前仍必须准备真实或等价 rehearsal secret、full-mode 显式账号、至少一条可用 LLM 路径，并实际启动 compose/full-mode 栈。</li>
+</ul>
+<h2 id="2-r4">2. R4 已知阻塞</h2>
+<p>来自 <code>delivery-report.md</code> 的 R4 记录：</p>
+<ul>
+<li>当前 live stack 是 lite/dev 级别，不能替代 full/staging 发布演练。</li>
+<li><code>deploy/compose/.env</code> / <code>.env.rehearsal</code> 缺少 <code>LANGFUSE_NEXTAUTH_SECRET</code>、<code>LANGFUSE_SALT</code>、<code>LANGFUSE_INIT_USER_PASSWORD</code> 一类必填值。</li>
+<li>compose 依赖端口 5432 / 6379 / 6333 / 6334 / 3001 / 4000 / 8080 / 8081 未监听。</li>
+<li>full-mode 不能使用 lite 默认 <code>admin/admin</code>，必须准备显式账号来源。</li>
+<li>还没有形成 full-mode 可用 LLM 路径演练证据。</li>
+</ul>
+<h2 id="3-rehearsal">3. Rehearsal 输入清单</h2>
+<h3 id="31">3.1 候选与构建</h3>
+<ul>
+<li>固定候选 commit / branch / worktree。</li>
+<li><code>apps/web/dist</code> 已由当前候选执行 <code>npm run build</code> 生成。</li>
+<li>当前候选对应的验证证据已可追溯：R1 / R2 / R3 / R13 / R14 等只作为输入证据，不替代 R4 演练。</li>
+</ul>
+<h3 id="32-compose-env">3.2 Compose env</h3>
+<p>建议从模板生成 rehearsal 专用 env，不把 secret 写入 Git：</p>
+<pre><code class="language-powershell">cd deploy\compose
+Copy-Item .env.example .env.rehearsal
+</code></pre>
+<p><code>.env.rehearsal</code> 至少补齐：</p>
+<pre><code class="language-text">XAGENT_MODE=full
+XAGENT_CORS_ORIGINS=[&quot;http://localhost:3000&quot;]
+XAGENT_SECURITY__JWT_SECRET=&lt;32+ chars random&gt;
+XAGENT_SECURITY__REQUIRE_AUTH=true
+LANGFUSE_NEXTAUTH_SECRET=&lt;random&gt;
+LANGFUSE_SALT=&lt;random&gt;
+LANGFUSE_INIT_USER_PASSWORD=&lt;strong password&gt;
+POSTGRES_PASSWORD=&lt;strong password or accepted local rehearsal password&gt;
+</code></pre>
+<p>LLM 路径三选一：</p>
+<pre><code class="language-text"># A. 宿主机 Ollama
+XAGENT_LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
+XAGENT_LLM__OLLAMA_MODEL=qwen3:4b
+XAGENT_LLM__DEFAULT_MODEL=qwen3:4b
+
+# B. LiteLLM Proxy
+XAGENT_LLM__PROXY_URL=http://litellm:4000
+XAGENT_LLM__PROXY_API_KEY=&lt;proxy key&gt;
+
+# C. 直连 provider
+XAGENT_LLM__OPENAI_API_KEY=&lt;provider key&gt;
+# or
+XAGENT_LLM__DEEPSEEK_API_KEY=&lt;provider key&gt;
+</code></pre>
+<h3 id="33">3.3 账号</h3>
+<p>full / enterprise 不再内置默认 <code>admin/admin</code>。R4 开始前必须明确其中一种：</p>
+<ul>
+<li>Keycloak / OIDC 用户源已配置，且有可用于验收的账号。</li>
+<li>DB / 显式初始化流程已创建管理员或验收用户。</li>
+<li>Playwright 使用 <code>E2E_USERNAME</code> / <code>E2E_PASSWORD</code> 指向该 full-mode 用户。</li>
+</ul>
+<p>不得把 lite/dev 的 <code>admin/admin</code> 登录结果作为 full-mode rehearsal 证据。</p>
+<h3 id="34">3.4 端口与依赖</h3>
+<p>启动前检查这些端口没有冲突，或由 R4 明确改 compose 端口映射：</p>
+<table>
+<thead>
+<tr>
+<th>服务</th>
+<th>端口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres</td>
+<td>5432</td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>6379</td>
+</tr>
+<tr>
+<td>Qdrant HTTP / gRPC</td>
+<td>6333 / 6334</td>
+</tr>
+<tr>
+<td>Langfuse</td>
+<td>3001</td>
+</tr>
+<tr>
+<td>LiteLLM</td>
+<td>4000</td>
+</tr>
+<tr>
+<td>ContextForge</td>
+<td>8080</td>
+</tr>
+<tr>
+<td>OpenFGA</td>
+<td>8081</td>
+</tr>
+<tr>
+<td>API / Web</td>
+<td>8000 / 3000</td>
+</tr>
+</tbody>
+</table>
+<p>检查命令：</p>
+<pre><code class="language-powershell">Get-NetTCPConnection -LocalPort 5432,6379,6333,6334,3001,4000,8080,8081,8000,3000 -ErrorAction SilentlyContinue
+</code></pre>
+<h2 id="4-r4">4. R4 恢复步骤建议</h2>
+<p>R4 可按以下顺序恢复，不需要重新设计流程：</p>
+<ol>
+<li>复制并填写 <code>deploy/compose/.env.rehearsal</code>。</li>
+<li>执行 <code>docker compose --env-file .env.rehearsal config --quiet</code>，必须退出码 0。</li>
+<li>在 <code>apps/web</code> 执行 <code>npm ci</code> 与 <code>npm run build</code>，确保 <code>dist</code> 属于当前候选。</li>
+<li>启动依赖：</li>
+</ol>
+<pre><code class="language-powershell">cd deploy\compose
+docker compose --env-file .env.rehearsal up -d --build postgres redis qdrant litellm langfuse contextforge openfga
+docker compose --env-file .env.rehearsal ps
+</code></pre>
+<ol>
+<li>启动应用：</li>
+</ol>
+<pre><code class="language-powershell">docker compose --env-file .env.rehearsal up -d --build api worker web
+docker compose --env-file .env.rehearsal ps
+</code></pre>
+<ol>
+<li>记录迁移和启动日志：</li>
+</ol>
+<pre><code class="language-powershell">docker compose --env-file .env.rehearsal logs --tail=200 api &gt; rehearsal-api.log
+docker compose --env-file .env.rehearsal logs --tail=200 worker &gt; rehearsal-worker.log
+docker compose --env-file .env.rehearsal logs --tail=200 web &gt; rehearsal-web.log
+</code></pre>
+<ol>
+<li>执行 smoke：</li>
+</ol>
+<pre><code class="language-powershell">curl.exe -f http://localhost:8000/health
+curl.exe -f http://localhost:8000/ready
+curl.exe -f http://localhost:3000
+</code></pre>
+<ol>
+<li>使用 full-mode 显式账号做登录 / Run Console 验收：</li>
+</ol>
+<pre><code class="language-powershell">cd tests\e2e
+$env:E2E_BASE_URL = &quot;http://localhost:3000&quot;
+$env:E2E_USERNAME = &quot;&lt;full-mode-user&gt;&quot;
+$env:E2E_PASSWORD = &quot;&lt;full-mode-password&gt;&quot;
+npx playwright test specs/creative-smoke.spec.ts --project=chromium
+</code></pre>
+<p>如 R4 选择完整 full-flow，应继续执行：</p>
+<pre><code class="language-powershell">npx playwright test specs/full-flow.spec.ts --project=chromium
+</code></pre>
+<h2 id="5">5. 常见阻塞与恢复</h2>
+<table>
+<thead>
+<tr>
+<th>阻塞</th>
+<th>恢复动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LANGFUSE_NEXTAUTH_SECRET is missing</code></td>
+<td>在 <code>.env.rehearsal</code> 填入 <code>LANGFUSE_NEXTAUTH_SECRET</code>、<code>LANGFUSE_SALT</code>、<code>LANGFUSE_INIT_USER_PASSWORD</code></td>
+</tr>
+<tr>
+<td><code>XAGENT_SECURITY__JWT_SECRET is missing</code></td>
+<td>填入 32+ 字符随机 secret；不得恢复弱默认</td>
+</tr>
+<tr>
+<td>端口已被占用</td>
+<td>停止占用进程，或由 R4 显式记录端口改动；不要静默复用错误服务</td>
+</tr>
+<tr>
+<td><code>/ready</code> 失败</td>
+<td>查看 readiness components 和 <code>api</code> 日志，定位 Postgres / Redis / Qdrant</td>
+</tr>
+<tr>
+<td>worker pending</td>
+<td>查看 <code>worker</code> 日志和 Redis broker；确认 <code>worker</code> 容器 running</td>
+</tr>
+<tr>
+<td>LLM 调用失败</td>
+<td>先确定 Ollama / LiteLLM / provider 其中一条路径；保留 provider 日志或 curl 证据</td>
+</tr>
+<tr>
+<td>登录失败</td>
+<td>核对 full-mode 账号来源；不要回退到 <code>admin/admin</code></td>
+</tr>
+<tr>
+<td>旧 volume 数据异常</td>
+<td>先备份，再按 <code>DEPLOYMENT_RUNBOOK.md</code> 判断 <code>docker compose down -v</code> 或手工补建数据库</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-r16">6. R16 验证</h2>
+<p>命令：</p>
+<pre><code class="language-powershell">docker compose --env-file .env.example config --quiet
+
+$env:XAGENT_SECURITY__JWT_SECRET='0123456789abcdef0123456789abcdef'
+$env:LANGFUSE_NEXTAUTH_SECRET='0123456789abcdef0123456789abcdef'
+$env:LANGFUSE_SALT='0123456789abcdef0123456789abcdef'
+$env:LANGFUSE_INIT_USER_PASSWORD='ChangeMe-R16-Rehearsal-Only-123!'
+docker compose --env-file .env.example config --quiet
+
+Get-NetTCPConnection -LocalPort 5432,6379,6333,6334,3001,4000,8080,8081 -ErrorAction SilentlyContinue
+</code></pre>
+<p>结果：</p>
+<ul>
+<li>缺 secret config：退出码 1，报 <code>required variable LANGFUSE_NEXTAUTH_SECRET is missing a value</code>。</li>
+<li>补齐 R16 演练占位 secret 后 config：退出码 0。</li>
+<li>依赖端口扫描：无输出，表示当前未监听。</li>
+</ul>
+<h2 id="7">7. 边界</h2>
+<p>R16 不做：</p>
+<ul>
+<li>不启动 compose / full-mode 服务。</li>
+<li>不创建真实账号或写入 secret。</li>
+<li>不执行数据库迁移、备份或恢复。</li>
+<li>不把 <code>.env.example</code> 的本地示例值提升为 staging / prod 凭据。</li>
+<li>不将本清单写成 R4 目标环境演练完成。</li>
+</ul>
+<p>R4 仍需基于实际环境执行演练并归档日志、截图、命令输出和异常处置结果。</p>
+<hr />
+<h2 id="8-2026-08-03secretref">8. 增补（2026-08-03）：secretRef 外部密管注入路径</h2>
+<blockquote>
+<p>增补背景：944675b 落地 secretRef 外部密管后，full-mode secret 注入在「直接写值」之外新增了引用式路径。本增补只登记新路径，不改变 R16 既有清单与边界（本包已于 2026-08-03 验收 DONE，本节为同口径增补）。</p>
+</blockquote>
+<h3 id="81-secretref">8.1 secretRef 引用格式</h3>
+<p>支持在任意 <code>XAGENT_*</code> 配置值中使用引用代替明文：</p>
+<table>
+<thead>
+<tr>
+<th>前缀</th>
+<th>语义</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SECRETREF:file:&lt;path&gt;</code></td>
+<td>从文件读取 secret（K8s/Docker secrets 挂载）</td>
+<td><code>XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/jwt_secret</code></td>
+</tr>
+<tr>
+<td><code>SECRETREF:env:&lt;VAR&gt;</code></td>
+<td>从另一环境变量间接引用</td>
+<td><code>XAGENT_DB__URL=SECRETREF:env:DATABASE_URL</code></td>
+</tr>
+</tbody>
+</table>
+<p>行为约束：</p>
+<ul>
+<li>生产模式（full/enterprise）下 secretRef 解析失败 <strong>fail-fast</strong>（不静默回退默认值）；</li>
+<li><code>SECRETREF:vault:&lt;path&gt;#&lt;key&gt;</code> 前缀已预留接口（未实装，引用即 fail-fast 提示）；</li>
+<li>直接写值路径仍然有效，二者可混用。</li>
+</ul>
+<h3 id="82-r16-32">8.2 对 R16 §3.2 清单的增补</h3>
+<p><code>.env.rehearsal</code> 中的 secret 项可按 secretRef 改写，例如：</p>
+<pre><code class="language-text">XAGENT_SECURITY__JWT_SECRET=SECRETREF:file:/run/secrets/xagent_jwt
+POSTGRES_PASSWORD=SECRETREF:file:/run/secrets/pg_password
+</code></pre>
+<p>Helm 部署时优先使用 chart 内置的 existingSecret / secretRef 接线（见 <code>deploy/helm</code> 与交付验证报告 v3 平台化一节），不再把 secret 明文写入 values。</p>
+<h3 id="83">8.3 边界（增补同样适用）</h3>
+<ul>
+<li>不新增真实 secret、不启动服务、不构成 R4 演练完成证据；</li>
+<li>secretRef 的实机解析演练属下一轮 R4 级演练内容。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

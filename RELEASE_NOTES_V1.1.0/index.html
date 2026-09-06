@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/RELEASE_NOTES_V1.1.0/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>X-Agent v1.1.0 Release Notes - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent v1.1.0 Release Notes";
+        var mkdocs_page_input_path = "RELEASE_NOTES_V1.1.0.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/RELEASE_NOTES_V1.1.0/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent v1.1.0 Release Notes</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/RELEASE_NOTES_V1.1.0.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-v110-release-notes">X-Agent v1.1.0 Release Notes</h1>
+<blockquote>
+<p>候选冻结：2026-08-12。
+当前仅为本地 Web/API 发布候选；远端 CI、<code>v1.1.0</code> tag、GitHub Release 和目标环境签字尚未完成。
+状态口径以 <code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code> 为唯一事实源。</p>
+</blockquote>
+<h2 id="_1">版本定位</h2>
+<p><code>v1.1.0</code> 是 <code>v1.0.0</code> 之后的向后兼容功能版本。提交区间包含 27 个 <code>feat</code>，未发现
+<code>BREAKING CHANGE</code> 或 Conventional Commit 的 breaking 标记，因此按 SemVer 提升 MINOR，
+不复用也不移动现有 <code>v1.0.0</code> 标签。</p>
+<h2 id="_2">新增能力</h2>
+<ul>
+<li>开发任务闭环：租户隔离的 worktree、commit、完整 patch、审查、批准、拒绝、应用、冲突和清理状态链。</li>
+<li>持久调度：数据库 Job/Run、原子领取、Redis 租约、重试恢复、终态通知及 Web 调度中心。</li>
+<li>Skill Package：安全导入完整 <code>SKILL.md</code>、references、scripts、assets，支持租户隔离存储、清单和正文运行时。</li>
+<li>Checkpoint 与恢复：数据库检查点、会话恢复、父子 run 谱系、受控回滚和 Web 时间线。</li>
+<li>Platform MCP：扩展至 15 个租户受控工具，覆盖会话、运行、审批、事件和技能包读取。</li>
+<li>Web/API Chat：增加无工具对话分路，保留真实模型输出并对空响应、截断响应和失败终态 fail-closed。</li>
+<li>运维与可观测：R2 Compose 核心栈、动态 Docker DNS/精确 WebSocket 代理、Prometheus/Grafana、备份与隔离恢复演练。</li>
+</ul>
+<h2 id="_3">可靠性与安全硬化</h2>
+<ul>
+<li>file_write 开发任务要求真实工具调用、非空 diff 和受控路径，拒绝 <code>..</code>、外部绝对路径、<code>.git</code> 与符号链接逃逸。</li>
+<li>AgentRun、SSE、API、Celery 和调度终态统一，失败不再伪装为 <code>final</code>、<code>done</code> 或 <code>succeeded</code>。</li>
+<li>修复 Worker 跨 event loop 数据库连接复用、Redis 深度健康检查超时、Prometheus 指标缓存和技能跨租户去重。</li>
+<li>镜像发布等待版本一致性与七个运行门禁全部通过后才允许推送 GHCR，避免错误 tag 或未完成门禁提前覆盖 <code>latest</code>。</li>
+</ul>
+<h2 id="_4">候选质量证据</h2>
+<ul>
+<li>R3 不可变真实模型批次 <code>20260811T230626Z-f9a73d</code>：Chat 30/30、Scheduler 10/10、file_write 10/10。</li>
+<li>P95：Chat 8.152 秒、Scheduler 38.346 秒、file_write 177.452 秒；假成功、MockLLM、forbidden、租户泄漏和清理失败均为 0。</li>
+<li>R2 Full Compose 同轮 headed Chromium 6/6；重启、Redis 降级恢复、无 <code>-v</code> down/up、MCP、Prometheus/Grafana 和隔离恢复演练均已本地通过。</li>
+<li>当前 Web/API 后端发布范围、R2/R3 release contracts、Web test/typecheck/build、Ruff/mypy 精确基线均已本地复验。</li>
+<li>本节只证明本地候选；Hosted CI 和正式 Release 证据必须绑定后续远端候选 SHA。</li>
+</ul>
+<h2 id="_5">发布范围外</h2>
+<ul>
+<li>短剧业务链路（独立项目稳定后再接入）。</li>
+<li>Tauri 桌面端。</li>
+<li>多机 HA、E2B 云沙箱、付费 provider 和客户生产现场。</li>
+<li>SaaS 级容量或与 Codex/Hermes 全能力永久等价的承诺。</li>
+</ul>
+<h2 id="_6">已知边界</h2>
+<ul>
+<li>R3 file_write 的 parallel API 暂不直接暴露内部工具事件计数；真实工具使用由 required-first-tool 门、worktree、commit、diff、patch 和清理证据共同证明。</li>
+<li>本地 <code>qwen3:4b</code> 可靠性数据只代表冻结批次和当前机器，不构成跨机器或生产 SLA。</li>
+<li>私有仓库当前未配置 master 分支保护；正式远端操作必须遵守候选分支 → CI → PR/merge → master CI → tag 的人工门禁顺序。</li>
+</ul>
+<h2 id="_7">升级与回滚</h2>
+<p>升级和回滚按 <code>docs/RELEASE_RUNBOOK_V1.md</code> 执行。发布前必须完成数据库备份、
+<code>alembic upgrade head</code>、目标环境 smoke/E2E、镜像 digest 记录和回滚负责人签字；
+失败时回退到不可变 <code>v1.0.0</code> 与对应数据备份，不移动任何既有标签。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

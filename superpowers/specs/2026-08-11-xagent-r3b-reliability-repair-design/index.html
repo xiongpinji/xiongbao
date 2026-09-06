@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/superpowers/specs/2026-08-11-xagent-r3b-reliability-repair-design/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>X-Agent R3-B 可靠性缺陷修复设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "X-Agent R3-B \u53ef\u9760\u6027\u7f3a\u9677\u4fee\u590d\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "superpowers/specs/2026-08-11-xagent-r3b-reliability-repair-design.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/superpowers/specs/2026-08-11-xagent-r3b-reliability-repair-design/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">X-Agent R3-B 可靠性缺陷修复设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/superpowers/specs/2026-08-11-xagent-r3b-reliability-repair-design.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="x-agent-r3-b">X-Agent R3-B 可靠性缺陷修复设计</h1>
+<blockquote>
+<p>日期：2026-08-11</p>
+<p>状态：CLAIMED</p>
+<p>基线：<code>feature/webapi-r2-staging-readiness</code> / <code>b8cecee</code></p>
+</blockquote>
+<h2 id="1">1. 目标</h2>
+<p>修复 R3-A 批次 <code>20260811T064937Z-2ec342</code> 暴露的两个产品边界：</p>
+<ol>
+<li>无工具 Chat 把非空但被 token 上限截断的响应持久化为成功；</li>
+<li>隔离 <code>file_write</code> 在 180 秒被产品主动取消，早于 240 秒 SLO。</li>
+</ol>
+<p>本任务不改变模型、provider、提示词、工具权限或 R3 样本判定标准。</p>
+<h2 id="2-chat">2. Chat 合同</h2>
+<ul>
+<li>首次响应为空、<code>finish_reason=length</code> 或 completion tokens 达到请求上限时，只允许一次受控恢复。</li>
+<li>截断恢复使用 1024 tokens；普通空响应保持 512 tokens 恢复预算。</li>
+<li>恢复响应再次为空或仍被截断时，AgentRun 必须以明确错误失败，不得发出 final/done 或持久化为 succeeded。</li>
+<li>正常非空且未触及上限的响应保持现有单次成功路径。</li>
+</ul>
+<h2 id="3-file_write">3. 隔离 file_write 超时合同</h2>
+<ul>
+<li>普通并行任务继续使用 180 秒超时。</li>
+<li>只有建立真实 worktree 且 capability 精确为 <code>[file_write]</code> 的严格开发任务使用 270 秒 Agent 执行预算。</li>
+<li>270 秒高于 240 秒统计 SLO，避免产品在 SLO 前截断；同时给现有 300 秒黑盒请求保留终态持久化、Git finalize 和 HTTP 返回余量。</li>
+<li>超时仍保持现有 fail-closed、DB timeout、worktree/branch/patch 清理合同。</li>
+</ul>
+<h2 id="4">4. 验证顺序</h2>
+<ol>
+<li>红灯：非空截断首答当前不会恢复；截断恢复当前会伪成功。</li>
+<li>绿灯：Chat 有界恢复与二次截断失败。</li>
+<li>红灯：严格 <code>file_write</code> 当前仍向 <code>asyncio.wait_for</code> 传 180 秒。</li>
+<li>绿灯：严格任务 270 秒、普通任务 180 秒，错误文本使用实际预算。</li>
+<li>运行 orchestration、runtime、parallel/development-task 回归及静态检查。</li>
+<li>独立审查通过前，不重建容器、不运行真实模型、不重跑 50 样本。</li>
+</ol>
+<h2 id="5">5. 排除范围</h2>
+<p>短剧/媒体、Tauri、多机 HA、E2B、付费 provider、远程 push/tag/release 和生产部署均不在本任务范围。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

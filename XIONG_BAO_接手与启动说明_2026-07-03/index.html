@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/XIONG_BAO_%E6%8E%A5%E6%89%8B%E4%B8%8E%E5%90%AF%E5%8A%A8%E8%AF%B4%E6%98%8E_2026-07-03/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>XIONG BAO 项目接手与启动说明（2026-07-03） - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "XIONG BAO \u9879\u76ee\u63a5\u624b\u4e0e\u542f\u52a8\u8bf4\u660e\uff082026-07-03\uff09";
+        var mkdocs_page_input_path = "XIONG_BAO_\u63a5\u624b\u4e0e\u542f\u52a8\u8bf4\u660e_2026-07-03.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/XIONG_BAO_%E6%8E%A5%E6%89%8B%E4%B8%8E%E5%90%AF%E5%8A%A8%E8%AF%B4%E6%98%8E_2026-07-03/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">XIONG BAO 项目接手与启动说明（2026-07-03）</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/XIONG_BAO_接手与启动说明_2026-07-03.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="xiong-bao-2026-07-03">XIONG BAO 项目接手与启动说明（2026-07-03）</h1>
+<blockquote>
+<p>适用对象：当前或下一位接手 <code>xiong bao/xagent</code> 的开发者。
+目标：快速回答「项目现在是什么状态、怎么启动、为什么之前会感觉启动不了、接下来先做什么」。</p>
+<p>2026-07-06 更新：本文保留 2026-07-03 接手现场记录；当前发布 / 商用 readiness 判断以 <code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code> 为准。本轮 readiness 已补 frontend lint/typecheck/build、关键 E2E、release runbook 与环境基线证据，但仍未宣称正式商用 GA。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 一句话现状</h2>
+<p><code>xagent</code> 当前处于<strong>主链可运行 + 前端仍在活跃迭代 + 运行时一致性仍在继续硬化</strong>的研发态，不是完全静态封板的成品状态。</p>
+<p>这句话比“全部完成”更贴近当前仓库现实：</p>
+<ul>
+<li>lite / dev 路径当前已验证可以启动。</li>
+<li>前端工作台存在较多未提交改动，说明工作仍在推进中。</li>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code> 仍在描述 unified runtime 的下一轮加固计划。</li>
+</ul>
+<hr />
+<h2 id="2">2. 本次接手时已核验的事实</h2>
+<h3 id="21">2.1 已验证可用</h3>
+<p>以下内容已在本地实际核验：</p>
+<ul>
+<li>后端健康检查可访问：<code>http://127.0.0.1:8000/health</code></li>
+<li>前端 dev server 可访问：<code>http://127.0.0.1:3000</code></li>
+<li>登录接口可用：<code>POST /api/v1/auth/login</code></li>
+<li>lite / dev 本地验证账号可用：<code>admin / admin</code>；full / prod 不再内置默认管理员。</li>
+</ul>
+<h3 id="22">2.2 对应证据</h3>
+<ul>
+<li>后端启动成功日志：<code>apps/api/api-8000.err.log</code></li>
+<li><code>Started server process</code></li>
+<li><code>Application startup complete</code></li>
+<li><code>Uvicorn running on http://127.0.0.1:8000</code></li>
+<li>前端启动成功日志：<code>apps/web/frontend-3000-20260703-123118.log</code></li>
+<li><code>vite --host 127.0.0.1 --port 3000</code></li>
+<li><code>Local: http://127.0.0.1:3000/</code></li>
+<li>后端结构化日志：<code>apps/api/api-8000.log</code></li>
+<li>包含 <code>/health</code>、<code>/auth/login</code>、<code>/api/v1/agents/roles</code> 的访问记录</li>
+</ul>
+<hr />
+<h2 id="3">3. 当前仓库状态</h2>
+<h3 id="31-git">3.1 Git 状态</h3>
+<p>接手时仓库分支状态：</p>
+<ul>
+<li>分支：<code>master</code></li>
+<li>上游：<code>origin/master</code></li>
+<li>当前存在大量<strong>前端未提交改动</strong>，主要集中在：</li>
+<li><code>apps/web/src/components/layout/*</code></li>
+<li><code>apps/web/src/pages/*</code></li>
+<li><code>apps/web/src/components/runs/RunConsole.tsx</code></li>
+<li><code>apps/web/src/index.css</code></li>
+<li><code>apps/web/src/api/client.ts</code></li>
+</ul>
+<h3 id="32">3.2 未跟踪文件</h3>
+<p>接手时还存在一批未跟踪文件，主要分三类：</p>
+<ol>
+<li><strong>运行日志</strong></li>
+<li><code>apps/api/api-8000.log</code></li>
+<li><code>apps/api/api-8000.err.log</code></li>
+<li><code>apps/web/frontend-3000-*.log</code></li>
+<li>
+<p><code>apps/web/frontend-3000-*.err.log</code></p>
+</li>
+<li>
+<p><strong>新增前端资源 / 页面 / 组件</strong></p>
+</li>
+<li><code>apps/web/public/assets/xiongbao-logo.png</code></li>
+<li><code>apps/web/public/assets/xiongbao-mascot.png</code></li>
+<li><code>apps/web/src/components/chat/ConversationalCommand.tsx</code></li>
+<li><code>apps/web/src/components/effects/AmbientAurora.tsx</code></li>
+<li><code>apps/web/src/components/layout/ShellContextPanel.tsx</code></li>
+<li>
+<p><code>apps/web/src/pages/ProfessionalModePage.tsx</code></p>
+</li>
+<li>
+<p><strong>开发过程文件</strong></p>
+</li>
+<li><code>.worktrees/...</code></li>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code></li>
+</ol>
+<h3 id="33">3.3 当前判断</h3>
+<p>这说明当前工作重点已经偏向：</p>
+<ul>
+<li>前端工作台体验重构</li>
+<li>unified runtime 的交互与运行态展示</li>
+<li>运行时失败闭环 / 详情页体验加固</li>
+</ul>
+<p>而不是从 0 到 1 的“项目能不能启动”问题。</p>
+<hr />
+<h2 id="4">4. 推荐阅读顺序</h2>
+<p>接手时建议按下面顺序读文档：</p>
+<ol>
+<li><code>README.md</code></li>
+<li><code>docs/项目总览与开发指南.md</code></li>
+<li><code>docs/DEPLOYMENT_RUNBOOK.md</code></li>
+<li><code>docs/ROADMAP.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code></li>
+</ol>
+<h3 id="_1">为什么这么排</h3>
+<ul>
+<li><code>README.md</code>：先建立整体心智模型。</li>
+<li><code>项目总览与开发指南</code>：看功能版图、阶段状态、历史变更。</li>
+<li><code>DEPLOYMENT_RUNBOOK</code>：看真正可执行的启动路径与排障口径。</li>
+<li><code>ROADMAP</code>：辨别“历史宣称完成”与“还在继续推进”的差异。</li>
+<li><code>phase2-a plan</code>：判断当前近期任务重心。</li>
+</ul>
+<hr />
+<h2 id="5-sop">5. 已验证可用的启动 SOP（推荐接手路径）</h2>
+<blockquote>
+<p>推荐优先走 <strong>lite / dev</strong> 路径，先确认前后端和登录链路正常，再决定是否切 full / compose。</p>
+</blockquote>
+<h3 id="51-lite-dev">5.1 后端（lite / dev）</h3>
+<p>在 <code>apps/api</code> 目录执行：</p>
+<pre><code class="language-bash">pip install -e &quot;.[dev]&quot;
+xagent serve
+</code></pre>
+<p>默认端口：</p>
+<ul>
+<li>API：<code>http://127.0.0.1:8000</code></li>
+<li>健康检查：<code>http://127.0.0.1:8000/health</code></li>
+<li>文档：<code>http://127.0.0.1:8000/docs</code></li>
+</ul>
+<h3 id="52-dev-server">5.2 前端（dev server）</h3>
+<p>在 <code>apps/web</code> 目录执行：</p>
+<pre><code class="language-bash">npm install
+npm run dev
+</code></pre>
+<p>默认端口：</p>
+<ul>
+<li>Web：<code>http://127.0.0.1:3000</code></li>
+</ul>
+<h3 id="53">5.3 登录</h3>
+<p>当前已验证可用的 lite / dev 默认账号：</p>
+<ul>
+<li>用户名：<code>admin</code></li>
+<li>密码：<code>admin</code></li>
+</ul>
+<h3 id="54">5.4 启动后最小验收顺序</h3>
+<p>建议每次接手都按这 4 步走：</p>
+<ol>
+<li>打开 <code>http://127.0.0.1:8000/health</code></li>
+<li>打开 <code>http://127.0.0.1:3000</code></li>
+<li>在 lite / dev 下用 <code>admin / admin</code> 登录；full / prod 需使用显式配置的账号</li>
+<li>登录后确认首页 / 工作台不报错，再继续排查业务问题</li>
+</ol>
+<hr />
+<h2 id="6-full-compose">6. full / compose 路径注意事项</h2>
+<p>如果走 <code>docker compose</code>，请注意这不是和 lite/dev 等价的路径，额外要求更多。</p>
+<h3 id="61">6.1 启动前必须先构建前端静态文件</h3>
+<p>在 <code>apps/web</code> 目录先执行：</p>
+<pre><code class="language-bash">npm install
+npm run build
+</code></pre>
+<p>然后再执行：</p>
+<pre><code class="language-bash">cd deploy/compose
+cp .env.example .env
+docker compose up -d --build
+</code></pre>
+<h3 id="62-full">6.2 常见 full 路径前置项</h3>
+<ul>
+<li>需要正确的 <code>JWT_SECRET</code></li>
+<li>需要正确的 <code>CORS</code> 配置</li>
+<li>需要数据库 / Redis / Qdrant / LiteLLM / Langfuse 等依赖可用</li>
+<li>若依赖宿主机 Ollama，需要确认 <code>host.docker.internal:11434</code> 可访问</li>
+</ul>
+<h3 id="63">6.3 结论</h3>
+<p>如果只是接手、排查、看页面、理解现状，<strong>不要一上来就走 compose</strong>。除非明确要验证 full 模式、worker 或持久化链路，否则优先 lite/dev。</p>
+<hr />
+<h2 id="7">7. 为什么之前会感觉“启动不了”</h2>
+<p>根据当前文档、日志和仓库状态，高概率不是“整个项目完全起不来”，而是以下几类问题之一。</p>
+<h3 id="71-appsapi">7.1 在仓库根而不是 <code>apps/api</code> 下运行后端命令</h3>
+<p>这是文档反复提醒的坑。</p>
+<p>后果：容易出现 <code>ModuleNotFoundError: xagent</code>。</p>
+<h3 id="72-litedev-fullcompose">7.2 把 lite/dev 和 full/compose 路径混用</h3>
+<p>常见误区：</p>
+<ul>
+<li>用 full 的预期去跑 lite</li>
+<li>用 lite 的配置去跑 full</li>
+<li>只看 README 某一段，没有对照 Runbook</li>
+</ul>
+<p>结果会表现为：</p>
+<ul>
+<li>后端校验失败</li>
+<li>外部依赖没起全</li>
+<li>worker / Celery / Redis 链路异常</li>
+<li>LLM provider 不通</li>
+</ul>
+<h3 id="73">7.3 前端代理目标指错</h3>
+<p>前端 dev server 默认通过 <code>XAGENT_DEV_API_TARGET</code> 代理到后端。</p>
+<p>默认值是：</p>
+<pre><code class="language-ts">http://localhost:8000
+</code></pre>
+<p>如果之前切过 worktree、多开过端口，可能会出现：</p>
+<ul>
+<li>前端打开了</li>
+<li>但请求仍打到旧端口 / 旧实例</li>
+<li>页面看起来像“没启动”或“接口全挂”</li>
+</ul>
+<h3 id="74-401">7.4 未登录导致前端接口返回 401</h3>
+<p>在结构化日志里可以看到：</p>
+<ul>
+<li><code>/api/v1/agents/roles</code> 曾出现 <code>401 Unauthorized</code></li>
+<li>后续又恢复为 <code>200</code></li>
+</ul>
+<p>这说明某些时刻服务本身已经起来，但页面在未登录或 token 丢失状态下访问鉴权接口，用户容易误判为“项目没启动成功”。</p>
+<h3 id="75-compose-appswebdist">7.5 compose 路径缺少 <code>apps/web/dist</code></h3>
+<p>这是另一个高频坑。</p>
+<p>如果直接 <code>docker compose up</code>，但没有先跑 <code>npm run build</code>，<code>web</code> 容器可能无法正常提供前端页面。</p>
+<hr />
+<h2 id="8">8. 当前主要卡点与风险</h2>
+<h3 id="81">8.1 文档口径偏“完成态”，仓库现实偏“迭代态”</h3>
+<p><code>项目总览与开发指南</code> 中有大量“全部完成 / 已验证 / 商用就绪”的描述，但当前仓库仍有大量前端未提交改动，并且还有新的运行时加固计划。</p>
+<p>风险：</p>
+<ul>
+<li>新接手者会预期这是封板成品</li>
+<li>但实际面对的是持续演进中的研发仓</li>
+<li>进而把“体验不稳定 / 页面未收口 / 鉴权未恢复”误判为“项目坏了”</li>
+</ul>
+<h3 id="82">8.2 当前工作区前端改动面较大</h3>
+<p>当前前端 diff 已经覆盖：</p>
+<ul>
+<li>AppShell</li>
+<li>TopBar / Sidebar / ContextPanel</li>
+<li>多个 page</li>
+<li>RunConsole</li>
+<li>全局样式</li>
+<li>登录页</li>
+</ul>
+<p>风险：</p>
+<ul>
+<li>2026-07-06 R2 已完成 <code>npm run lint</code>、<code>npm run typecheck</code>、<code>npm run build</code> 本地验证；若继续改前端，交付前仍需重跑。</li>
+</ul>
+<h3 id="83">8.3 运行日志未清理，容易干扰下一位接手者判断</h3>
+<p>当前仓库里直接存在运行日志文件，容易造成两种误解：</p>
+<ul>
+<li>被误当成正式项目文件</li>
+<li>被旧日志误导，以为是“当前最新问题”</li>
+</ul>
+<h3 id="84">8.4 默认账号仍可用，安全口径仅适合本地接手</h3>
+<p><code>admin / admin</code> 当前仅适合 lite / dev 本地调试，不适合被误当作 full / prod 设置。</p>
+<hr />
+<h2 id="9">9. 接手后的优先任务建议（按顺序）</h2>
+<h3 id="p1">P1：若前端继续改动，先复跑类型检查与构建</h3>
+<p>建议执行：</p>
+<pre><code class="language-bash">cd apps/web
+npm run typecheck
+npm run build
+</code></pre>
+<p>目的：</p>
+<ul>
+<li>判断本次改动后的前端工作区是否仍处于可继续开发状态</li>
+<li>为后续继续推进 UI/交互工作提供基线</li>
+</ul>
+<h3 id="p2">P2：如果前端通过，再补一次后端最小基线检查</h3>
+<p>建议执行：</p>
+<pre><code class="language-bash">cd apps/api
+xagent info
+xagent serve
+</code></pre>
+<p>必要时补：</p>
+<pre><code class="language-bash">curl http://127.0.0.1:8000/health
+</code></pre>
+<p>目的：</p>
+<ul>
+<li>保证当前接手环境下前后端基线都正常</li>
+</ul>
+<h3 id="p3-phase2-a-runtime">P3：再决定是推进前端工作台，还是继续 phase2-a runtime 加固</h3>
+<p>判断方法：</p>
+<ul>
+<li>如果当前前端工作区已接近完成，优先继续做前端收口。</li>
+<li>如果 <code>Run Console</code> / runtime detail / failure bundle 仍是最近重点，则转向 <code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code> 中的收口任务。</li>
+</ul>
+<hr />
+<h2 id="10-5">10. 接手者 5 分钟操作清单</h2>
+<h3 id="_2">只想先确认项目活着</h3>
+<ol>
+<li>进入 <code>apps/api</code>，运行 <code>xagent serve</code></li>
+<li>打开 <code>http://127.0.0.1:8000/health</code></li>
+<li>进入 <code>apps/web</code>，运行 <code>npm run dev</code></li>
+<li>打开 <code>http://127.0.0.1:3000</code></li>
+<li>在 lite / dev 下用 <code>admin / admin</code> 登录</li>
+</ol>
+<h3 id="_3">想继续当前工作</h3>
+<ol>
+<li>先看本文件</li>
+<li>再看 <code>docs/项目总览与开发指南.md</code></li>
+<li>执行 <code>npm run typecheck</code></li>
+<li>执行 <code>npm run build</code></li>
+<li>根据结果决定是修前端当前改动，还是转去 runtime phase2-a</li>
+</ol>
+<hr />
+<h2 id="11">11. 本次接手给出的工作判断</h2>
+<h3 id="_4">当前最靠谱的判断</h3>
+<ul>
+<li>项目<strong>不是</strong>“完全启动不了”。</li>
+<li>项目更像是“<strong>能启动、能登录、能继续开发，但每轮前端或运行时改动后仍需要复跑基线验证</strong>”。</li>
+<li>2026-07-06 已补齐前端 lint/typecheck/build 与关键 E2E 的本地证据；后续按任务板继续补远端 CI、目标环境演练和 PR 审查包。</li>
+</ul>
+<h3 id="_5">推荐的下一步</h3>
+<blockquote>
+<p>若继续修改前端，先执行 <code>apps/web</code> 下的 <code>npm run lint</code>、<code>npm run typecheck</code> 和 <code>npm run build</code>；若不改前端，按 <code>docs/coordination/TASK_BOARD.md</code> 领取下一张 READY 任务。</p>
+</blockquote>
+<hr />
+<h2 id="12">12. 相关文件索引</h2>
+<ul>
+<li><code>README.md</code></li>
+<li><code>docs/项目总览与开发指南.md</code></li>
+<li><code>docs/DEPLOYMENT_RUNBOOK.md</code></li>
+<li><code>docs/ROADMAP.md</code></li>
+<li><code>docs/superpowers/plans/2026-07-01-unified-runtime-phase2-a.md</code></li>
+<li><code>apps/api/api-8000.log</code></li>
+<li><code>apps/api/api-8000.err.log</code></li>
+<li><code>apps/web/frontend-3000-20260703-123118.log</code></li>
+</ul>
+<hr />
+<h2 id="13">13. 备注</h2>
+<p>如果后续确认“之前启动不了”指的是某个<strong>特定场景</strong>（例如 compose、worker、Ollama、某个 worktree、某个页面登录后白屏），应单独补一份场景化排障记录，而不要继续用“项目启动不了”这种过于笼统的表述。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

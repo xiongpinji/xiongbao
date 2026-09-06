@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/VIDEO_EDITOR_DESIGN/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>视频剪辑引擎设计 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u89c6\u9891\u526a\u8f91\u5f15\u64ce\u8bbe\u8ba1";
+        var mkdocs_page_input_path = "VIDEO_EDITOR_DESIGN.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/VIDEO_EDITOR_DESIGN/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">视频剪辑引擎设计</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_2">一、选型理由</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">二、架构</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#_4">数据模型（中间表示，引擎无关）</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#videoeditor">VideoEditor 引擎</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#toolregistry">智能体剪辑工具（注册到 ToolRegistry）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#api">三、API 路由</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_5">四、与短剧全链路衔接</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_6">五、许可证</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">视频剪辑引擎设计</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/VIDEO_EDITOR_DESIGN.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="_1">短剧工厂 · 视频剪辑引擎设计（类剪映）</h1>
+<blockquote>
+<p>目标：短剧工厂具备<strong>专业视频剪辑完整功能</strong>，智能体可完全操作整个剪辑流程。
+选型：<strong>MoviePy v2</strong>（MIT，服务端渲染导出）+ <strong>pyJianYingDraft</strong>（Apache，剪映草稿导出）。</p>
+</blockquote>
+<h2 id="_2">一、选型理由</h2>
+<table>
+<thead>
+<tr>
+<th>引擎</th>
+<th>用途</th>
+<th>许可</th>
+<th>服务端无GUI</th>
+<th>核心能力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MoviePy v2</td>
+<td>服务端视频渲染导出</td>
+<td>MIT</td>
+<td>✅</td>
+<td>剪切/拼接/字幕/配乐/合成/转场/导出</td>
+</tr>
+<tr>
+<td>pyJianYingDraft</td>
+<td>剪映草稿生成</td>
+<td>Apache</td>
+<td>✅</td>
+<td>时间线/轨道/片段/转场/字幕/配乐/特效/滤镜/关键帧</td>
+</tr>
+</tbody>
+</table>
+<p>两者互补：MoviePy 做自动化渲染（智能体可全程操作），pyJianYingDraft 做剪映草稿（用户可打开精修）。</p>
+<h2 id="_3">二、架构</h2>
+<pre><code>domains/creative_studio/
+  editor/
+    models.py        时间线/轨道/片段/特效 数据模型（与剪辑引擎无关的中间表示）
+    video_editor.py  VideoEditor 引擎（MoviePy 渲染 + pyJianYingDraft 草稿导出）
+    tools.py         智能体剪辑工具（注册到 ToolRegistry）
+</code></pre>
+<h3 id="_4">数据模型（中间表示，引擎无关）</h3>
+<pre><code class="language-python">class TrackType(Enum): video / audio / text / effect
+class Clip:
+    id, track_id, source_url, start, end,       # 时间线位置
+    source_start, source_end,                    # 素材截取范围
+    text, font_size, color, position,            # 文本属性
+    volume, fade_in, fade_out                    # 音频属性
+class Transition:
+    id, clip_id, type(dissolve/fade/wipe...), duration
+class Timeline:
+    id, width, height, fps, clips[], transitions[]
+</code></pre>
+<h3 id="videoeditor">VideoEditor 引擎</h3>
+<pre><code class="language-python">class VideoEditor:
+    async def render(timeline: Timeline, output_path: str) -&gt; str
+        # MoviePy: 加载素材 → 剪切 → 拼接 → 加字幕 → 加配乐 → 合成 → 导出
+    def export_jianying_draft(timeline: Timeline, draft_path: str) -&gt; str
+        # pyJianYingDraft: 生成剪映草稿 JSON
+    def preview_timeline(timeline: Timeline) -&gt; dict
+        # 返回时间线结构化预览（前端渲染用）
+</code></pre>
+<h3 id="toolregistry">智能体剪辑工具（注册到 ToolRegistry）</h3>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>editor_create_timeline</code></td>
+<td>创建时间线（宽高/帧率）</td>
+</tr>
+<tr>
+<td><code>editor_add_clip</code></td>
+<td>添加片段到轨道（素材/时间范围/文本）</td>
+</tr>
+<tr>
+<td><code>editor_add_transition</code></td>
+<td>添加转场</td>
+</tr>
+<tr>
+<td><code>editor_add_subtitle</code></td>
+<td>添加字幕（文本/时间/样式）</td>
+</tr>
+<tr>
+<td><code>editor_add_audio</code></td>
+<td>添加配乐（音频素材/淡入淡出）</td>
+</tr>
+<tr>
+<td><code>editor_trim_clip</code></td>
+<td>剪切片段（调整起止时间）</td>
+</tr>
+<tr>
+<td><code>editor_render</code></td>
+<td>渲染导出视频（MoviePy）</td>
+</tr>
+<tr>
+<td><code>editor_export_draft</code></td>
+<td>导出剪映草稿</td>
+</tr>
+</tbody>
+</table>
+<p>智能体可通过 function-calling 自主调用这些工具完成完整剪辑流程。</p>
+<h2 id="api">三、API 路由</h2>
+<table>
+<thead>
+<tr>
+<th>端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /creative-studio/editor/timelines</code></td>
+<td>创建时间线</td>
+</tr>
+<tr>
+<td><code>GET /creative-studio/editor/timelines</code></td>
+<td>列出时间线</td>
+</tr>
+<tr>
+<td><code>POST /creative-studio/editor/timelines/{id}/clips</code></td>
+<td>添加片段</td>
+</tr>
+<tr>
+<td><code>POST /creative-studio/editor/timelines/{id}/transitions</code></td>
+<td>添加转场</td>
+</tr>
+<tr>
+<td><code>POST /creative-studio/editor/timelines/{id}/render</code></td>
+<td>渲染导出视频</td>
+</tr>
+<tr>
+<td><code>POST /creative-studio/editor/timelines/{id}/export-draft</code></td>
+<td>导出剪映草稿</td>
+</tr>
+<tr>
+<td><code>POST /creative-studio/editor/agent-clip</code></td>
+<td>智能体自主剪辑（一句话指令→完整剪辑）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_5">四、与短剧全链路衔接</h2>
+<p>produce_short_drama 产出的逐镜头视频 → 自动创建 Timeline → 添加到轨道 → 智能体可进一步操作（加转场/字幕/配乐）→ 渲染导出成片。</p>
+<h2 id="_6">五、许可证</h2>
+<ul>
+<li>MoviePy: MIT ✅</li>
+<li>pyJianYingDraft: Apache-2.0 ✅</li>
+<li>均无 GPL/AGPL 风险，CI license-check 通过。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../TESTING/" class="btn btn-neutral float-left" title="测试指南"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../CREATIVE_STUDIO_MEDIA/" class="btn btn-neutral float-right" title="短剧工厂媒体设计">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../TESTING/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../CREATIVE_STUDIO_MEDIA/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

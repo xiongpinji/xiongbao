@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/commercialization-g1-a4-pilot-delivery-package/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>G1-A4 试点交付材料包 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "G1-A4 \u8bd5\u70b9\u4ea4\u4ed8\u6750\u6599\u5305";
+        var mkdocs_page_input_path = "coordination/reports/commercialization-g1-a4-pilot-delivery-package.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/commercialization-g1-a4-pilot-delivery-package/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">G1-A4 试点交付材料包</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/commercialization-g1-a4-pilot-delivery-package.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="g1-a4">G1-A4 试点交付材料包</h1>
+<blockquote>
+<p>适用阶段：G1 内部试点可稳定使用</p>
+<p>用途：把当前 <code>xagent</code> 进入内部试点所需的管理员部署、运维值守、升级/回滚、已知问题、支持升级路径和阶段边界整理成一个最小可交付材料包，让试点负责人不需要开发者陪跑也能启动、值守并理解边界。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>G1-A4 的目标是：</p>
+<blockquote>
+<p><strong>把当前已经存在的部署、运维、边界、升级与支持材料，整理成一套内部试点负责人可以直接拿来用的交付包。</strong></p>
+</blockquote>
+<p>这不是正式商用 GA 的签发包，也不是企业级长期运营包；它只服务于内部试点与受控私有部署阶段。</p>
+<hr />
+<h2 id="2">2. 材料包组成</h2>
+<p>G1-A4 当前固定包含以下材料：</p>
+<ol>
+<li><strong>管理员部署手册</strong></li>
+<li><code>docs/ADMIN_DEPLOYMENT_MANUAL_V1.md</code></li>
+<li><strong>运维手册</strong></li>
+<li><code>docs/OPERATIONS_MANUAL_V1.md</code></li>
+<li><strong>升级 / 回滚说明</strong></li>
+<li><code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li><strong>已知问题 / 试点边界</strong></li>
+<li><code>docs/KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+<li><strong>支持与故障升级路径</strong></li>
+<li><code>docs/SUPPORT_ESCALATION_PATH_V1.md</code></li>
+<li><strong>当前真实状态口径</strong></li>
+<li><code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><strong>Goal / 执行包入口</strong></li>
+<li><code>docs/coordination/reports/commercialization-goal-board.md</code></li>
+<li><strong>功能链路包</strong></li>
+<li><code>docs/coordination/reports/commercialization-g1-a1-functional-package.md</code></li>
+<li><strong>稳定性 / 恢复包</strong></li>
+<li><code>docs/coordination/reports/commercialization-g1-a2-stability-package.md</code></li>
+<li><strong>数据 / 权限 / 审计包</strong><ul>
+<li><code>docs/coordination/reports/commercialization-g1-a3-data-governance-package.md</code></li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="3">3. 试点负责人如何使用</h2>
+<h3 id="31">3.1 开始前先看</h3>
+<p>试点负责人建议按下面顺序阅读：</p>
+<ol>
+<li><code>COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li><code>KNOWN_ISSUES_AND_PILOT_BOUNDARIES_V1.md</code></li>
+<li><code>commercialization-goal-board.md</code></li>
+<li><code>commercialization-g1-a1-functional-package.md</code></li>
+<li><code>commercialization-g1-a2-stability-package.md</code></li>
+<li><code>commercialization-g1-a3-data-governance-package.md</code></li>
+<li><code>ADMIN_DEPLOYMENT_MANUAL_V1.md</code></li>
+<li><code>OPERATIONS_MANUAL_V1.md</code></li>
+<li><code>RELEASE_RUNBOOK_V1.md</code></li>
+<li><code>SUPPORT_ESCALATION_PATH_V1.md</code></li>
+</ol>
+<h3 id="32">3.2 为什么按这个顺序</h3>
+<ul>
+<li>先看真实状态与试点边界，避免误以为当前就是正式 GA；</li>
+<li>再看 Goal 板和 G1 的三个执行包，理解当前试点究竟冻结了哪些内容；</li>
+<li>再看管理员、运维、回滚手册，进入实际部署和值守；</li>
+<li>最后看升级路径，知道出问题该找谁、怎么升级。</li>
+</ul>
+<hr />
+<h2 id="4">4. 对试点负责人的最小承诺</h2>
+<p>当前材料包支持的最小承诺是：</p>
+<ul>
+<li>可以按固定路径完成部署；</li>
+<li>可以完成登录、工作台、Goal Board、run 主链的试点使用；</li>
+<li>失败时可以按现有材料判断故障入口与恢复入口；</li>
+<li>知道当前哪些能力已经 ready，哪些还不能按正式商用 GA 对外承诺。</li>
+</ul>
+<p>当前材料包<strong>不承诺</strong>：</p>
+<ul>
+<li>正式商用 GA 已完成；</li>
+<li>多实例 HA 已完成；</li>
+<li>K8s / secretRef 平台化已完成；</li>
+<li>全量 SLO / 容量 / 长期审计保留已冻结。</li>
+</ul>
+<hr />
+<h2 id="5">5. 最小交付检查</h2>
+<p>试点交付前，负责人至少检查：</p>
+<h3 id="51">5.1 版本与环境</h3>
+<ul>
+<li>当前候选 commit / branch 已记录；</li>
+<li>环境基线和 secret 输入已确认；</li>
+<li>不依赖默认管理员；</li>
+<li>不依赖危险默认值。</li>
+</ul>
+<h3 id="52">5.2 主链可用性</h3>
+<ul>
+<li>登录路径可用；</li>
+<li><code>/chat</code>、<code>/goal-board</code>、<code>/runs/:runId</code>、<code>/settings</code> 入口已知；</li>
+<li>关键测试命令已知；</li>
+<li>现有主链证据入口已知。</li>
+</ul>
+<h3 id="53">5.3 故障处置</h3>
+<ul>
+<li>试点负责人知道从哪里看 Goal Board / Run Console / 日志；</li>
+<li>知道升级 / 回滚手册在哪里；</li>
+<li>知道联系谁升级问题；</li>
+<li>知道当前哪些问题仍属于已知边界。</li>
+</ul>
+<hr />
+<h2 id="6">6. 最小验证命令</h2>
+<h3 id="61">6.1 前端验证</h3>
+<pre><code class="language-bash">cd apps/web
+npm test -- goalBoard.test.tsx
+</code></pre>
+<h3 id="62">6.2 后端主链验证</h3>
+<pre><code class="language-bash">cd apps/api
+.venv\Scripts\python.exe -m pytest tests/test_spine_api.py tests/test_spine_session_resume.py tests/test_spine_release_flow.py -q
+</code></pre>
+<h3 id="63-worker-service">6.3 worker / service / 恢复验证</h3>
+<pre><code class="language-bash">cd apps/api
+.venv\Scripts\python.exe -m pytest tests/test_worker.py tests/test_runtime_runs.py tests/test_spine_service.py -q
+</code></pre>
+<h3 id="64">6.4 环境健康检查</h3>
+<pre><code class="language-bash">curl -f http://localhost:8000/health
+curl -f http://localhost:8000/ready
+curl -f http://localhost:3000
+</code></pre>
+<hr />
+<h2 id="7">7. 完成定义</h2>
+<p>G1-A4 只有在以下条件同时成立时，才算完成：</p>
+<ul>
+<li>试点负责人可以按固定入口拿到整套材料；</li>
+<li>试点负责人不需要开发者口头解释，就能知道应该先看什么；</li>
+<li>已知问题、试点边界、支持升级路径都在同一交付包内；</li>
+<li>当前 G1-A1 / G1-A2 / G1-A3 的成果都已被纳入材料索引；</li>
+<li>材料包明确说明“当前是内部试点阶段，而不是正式商用 GA”。</li>
+</ul>
+<hr />
+<h2 id="8">8. 当前结论</h2>
+<p>G1-A4 的作用不是新增手册，而是：</p>
+<blockquote>
+<p><strong>把当前已经存在的部署、运维、恢复、边界与支持材料收成一套真正可交接的内部试点交付包。</strong></p>
+</blockquote>
+<p>当 G1-A1、G1-A2、G1-A3、G1-A4 全部具备后，<code>G1 内部试点可稳定使用</code> 就具备进入阶段 Gate 评估的基础。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

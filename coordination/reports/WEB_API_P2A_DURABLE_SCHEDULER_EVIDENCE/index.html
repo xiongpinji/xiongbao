@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Web/API P2-A 持久调度闭环证据 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Web/API P2-A \u6301\u4e45\u8c03\u5ea6\u95ed\u73af\u8bc1\u636e";
+        var mkdocs_page_input_path = "coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Web/API P2-A 持久调度闭环证据</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/WEB_API_P2A_DURABLE_SCHEDULER_EVIDENCE.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="webapi-p2-a">Web/API P2-A 持久调度闭环证据</h1>
+<h2 id="_1">结论</h2>
+<ul>
+<li>审计日期：2026-08-07。</li>
+<li>分支：<code>feature/webapi-release-hardening</code>。</li>
+<li>审计范围：数据库持久任务/运行、原子领取、Redis 二级租约、崩溃恢复、有界重试、终态 Webhook、租户 API、Web 调度中心。</li>
+<li>排除范围：短剧、Tauri 桌面、多机 HA 压测和客户现场演练。</li>
+<li>结论：P2-A 通过。调度任务已从旧 JSON 触发路径切换为数据库运行事实源，Web/API 可创建、暂停、恢复、删除、手动运行和读取历史；总目标仍未完成，下一阶段为 P2-B Skill Package。</li>
+</ul>
+<h2 id="_2">数据库调度与恢复</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>持久模型</td>
+<td><code>scheduled_jobs</code>、<code>scheduled_job_runs</code> 保存 tenant/owner、计划时间、attempt、claim token、lease、结果、错误、重试和通知状态</td>
+</tr>
+<tr>
+<td>原子 claim</td>
+<td>数据库条件更新先推进 <code>next_run</code>，并只创建一个 run；并发第二次领取返回空</td>
+</tr>
+<tr>
+<td>错过计划</td>
+<td>只补最近一次到期运行，下一次从当前领取时间向后推进，不回放历史洪峰</td>
+</tr>
+<tr>
+<td>启动恢复</td>
+<td>过期 <code>running</code> lease 转 <code>interrupted</code> 并进入重试队列</td>
+</tr>
+<tr>
+<td>有界重试</td>
+<td>默认最多 3 次重试，指数退避；达到上限后写 <code>failed</code></td>
+</tr>
+<tr>
+<td>暂停边界</td>
+<td>已暂停任务不消费普通 retry；显式手动运行 attempt 0 仍可领取</td>
+</tr>
+<tr>
+<td>Redis 二级租约</td>
+<td>配置 Redis 时，先取得 job 级 360 秒所有者租约，再做数据库原子 claim；拒绝租约不生成 run；执行结束以 <code>WATCH/MULTI/EXEC</code> 仅释放自己的锁</td>
+</tr>
+<tr>
+<td>终态通知</td>
+<td>仅 <code>succeeded/failed</code> 发 <code>scheduler.job_run.completed</code>；HTTP 非 2xx 和异常写独立通知失败，不改变任务终态</td>
+</tr>
+<tr>
+<td>重启后 Webhook</td>
+<td>启动时恢复全部租户持久 Webhook，不再只恢复 <code>default</code> 租户</td>
+</tr>
+</tbody>
+</table>
+<h2 id="apiweb">API、Web 与真实浏览器</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>租户 API</td>
+<td>list/create/delete/toggle/history/manual-run 均按 principal tenant 读取或变更；跨租户历史返回 404</td>
+</tr>
+<tr>
+<td>变更确认</td>
+<td>delete/toggle/manual-run 要求精确 job ID 确认，并写既有审计链</td>
+</tr>
+<tr>
+<td>Web 页面</td>
+<td><code>/scheduler</code> 提供创建、启停、立即运行、删除及运行历史；状态、attempt、下次重试、错误和结果可见</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>退出码 0；自动发现并执行 17/17</td>
+</tr>
+<tr>
+<td><code>npm run typecheck</code></td>
+<td>退出码 0</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>退出码 0；0 error / 100 条存量 warning，未反弹</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>退出码 0；2376 modules transformed，生成独立 <code>SchedulerPage</code> chunk</td>
+</tr>
+<tr>
+<td>Playwright 真实链路</td>
+<td>隔离 lite API + Vite 登录后，侧栏进入 <code>/scheduler</code>，创建 <code>Release audit</code> 并读回；点击“立即运行”后页面先见 attempt 0 <code>retry_wait</code>，后台领取后读回 attempt 0 <code>retried</code> 与 attempt 1 <code>running</code></td>
+</tr>
+</tbody>
+</table>
+<p>真实浏览器验证证明的是“页面 → 租户 API → 数据库 → 后台 scheduler claim”同链路，不将尚未等待完成的真实模型调用冒充终态成功；终态、失败重试和通知隔离由数据库集成测试覆盖。</p>
+<h2 id="_3">新鲜验证</h2>
+<table>
+<thead>
+<tr>
+<th>验证</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>后端关联回归</td>
+<td><code>test_durable_scheduler.py</code>、<code>test_durable_scheduler_api.py</code>、<code>test_webhooks.py</code>、<code>test_multi_instance.py</code> 共 26/26 通过</td>
+</tr>
+<tr>
+<td>目标 Ruff</td>
+<td>scheduler/webhook/persistence/domain/main 及关联测试全部通过</td>
+</tr>
+<tr>
+<td>目标 mypy</td>
+<td>scheduler/webhook/persistence/domain/main 全部通过，0 项</td>
+</tr>
+<tr>
+<td>全仓静态门禁</td>
+<td>Ruff <code>276 &lt;= 286</code>；mypy <code>67 &lt;= 74</code>，均低于 P0/P1 基线</td>
+</tr>
+<tr>
+<td>fresh migration</td>
+<td>空 SQLite 从初始版本升级到 <code>20260807_durable_scheduler (head)</code></td>
+</tr>
+<tr>
+<td>表回读</td>
+<td><code>sqlite_master</code> 返回 <code>scheduled_job_runs,scheduled_jobs</code>，<code>alembic_version=20260807_durable_scheduler</code></td>
+</tr>
+<tr>
+<td>工作树</td>
+<td>实现提交后 <code>git status --short</code> 无输出</td>
+</tr>
+</tbody>
+</table>
+<p>Windows 中文路径下 <code>uv run --isolated</code> 曾在 Python site 初始化阶段触发 GBK 解码错误；验证改用 ASCII 临时虚拟环境并通过 <code>-S</code> 显式装载项目/测试依赖，未修改全局 Python，业务测试实际执行并通过。</p>
+<h2 id="p2-a">P2-A 实现提交</h2>
+<ul>
+<li><code>097033c</code>：增加持久任务运行模型与原子领取。</li>
+<li><code>fc7ef3b</code>：增加租约恢复与有界重试。</li>
+<li><code>33c49be</code>：接入数据库执行循环与租户 API。</li>
+<li><code>379935a</code>：增加 Web 持久调度中心与手动运行。</li>
+<li><code>5e5e0fb</code>：完成 Redis 所有者租约、终态通知回执和暂停重试边界。</li>
+<li><code>76c996a</code>：恢复全部租户持久 Webhook 配置。</li>
+</ul>
+<h2 id="_4">已知剩余风险</h2>
+<ul>
+<li>多实例部署必须配置 Redis；未配置时仍依赖数据库原子 claim 保证 run 唯一，但不具备 Redis job 级互斥。</li>
+<li>Webhook 当前在终态后顺序投递，每个目标超时 10 秒；任务终态不会被通知失败回滚，但大量慢 Webhook 后续应改为独立投递队列。</li>
+<li>旧 JSON scheduler 的兼容读写方法仍在代码中，但主循环和 Web/API 已不再从它触发；最终发布审计需决定迁移删除窗口。</li>
+<li>Web 仍有 100 条存量 ESLint warning；P2 总收口必须按计划归零或形成逐项 owner/理由/失效日期豁免。</li>
+<li>P2-B Skill Package、P2-C 数据库 checkpoint 和 P2-D MCP 接口尚未完成，因此当前不能判定整个 Web/API 已达发布标准。</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

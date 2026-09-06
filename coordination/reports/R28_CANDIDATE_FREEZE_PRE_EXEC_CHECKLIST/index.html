@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/R28_CANDIDATE_FREEZE_PRE_EXEC_CHECKLIST/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>R28 Candidate Freeze Pre-Execution Checklist - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "R28 Candidate Freeze Pre-Execution Checklist";
+        var mkdocs_page_input_path = "coordination/reports/R28_CANDIDATE_FREEZE_PRE_EXEC_CHECKLIST.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/R28_CANDIDATE_FREEZE_PRE_EXEC_CHECKLIST/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">R28 Candidate Freeze Pre-Execution Checklist</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/R28_CANDIDATE_FREEZE_PRE_EXEC_CHECKLIST.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="r28-candidate-freeze-pre-execution-checklist">R28 Candidate Freeze Pre-Execution Checklist</h1>
+<blockquote>
+<p>日期：2026-07-07
+Owner：Claude Code
+范围：把已决范围（R27）转换为真正冻结前可逐条执行的检查单。
+边界：本清单用于执行前核对与顺序控制；<strong>不自动执行 git add / branch / commit / push</strong>。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 适用前提</h2>
+<p>使用本清单前，默认以下条件已经成立：</p>
+<ul>
+<li>已接受 <code>R27_DECIDED_FREEZE_SCOPE_MEMO.md</code> 中的默认拍板结果；</li>
+<li>本轮采用 <strong>最小可送审候选</strong>；</li>
+<li><code>ci.yml</code> 随候选冻结；</li>
+<li>Helm / Keycloak / R16 / R17 / R19 / R9 视觉证据 / <code>r9-visual-evidence.spec.ts</code> <strong>不进入本轮最小候选</strong>。</li>
+</ul>
+<p>如果上述任一项变化，应先回退到 R26 / R27，重新确认范围，再继续执行。</p>
+<hr />
+<h2 id="2">2. 执行目标</h2>
+<p>本清单的目标不是“发布”，而是完成以下更小一步：</p>
+<blockquote>
+<p><strong>形成一个干净、可检查、可绑定 branch / commit / CI 的 staged candidate。</strong></p>
+</blockquote>
+<p>完成本清单后，应达到：</p>
+<ul>
+<li>候选范围固定到 staged set；</li>
+<li>staged set 不包含排除项；</li>
+<li>staged set 与 R25 精确暂存清单一致；</li>
+<li>可以安全进入 branch / commit / push / CI 绑定动作。</li>
+</ul>
+<hr />
+<h2 id="3">3. 执行前禁止事项</h2>
+<p>在执行本清单期间，禁止：</p>
+<ul>
+<li>直接运行 <code>git add .</code></li>
+<li>直接运行 <code>git add -A</code></li>
+<li>在未核对 staged set 前创建候选 commit</li>
+<li>把日志、snapshot、过程文档、扩展证据包混入最小候选</li>
+<li>把 staged candidate 误称为“已冻结候选”</li>
+</ul>
+<hr />
+<h2 id="4">4. 执行检查单</h2>
+<h2 id="step-0">Step 0：确认当前目标</h2>
+<ul>
+<li>[ ] 当前目标是“形成 staged candidate”，不是“完成发布”</li>
+<li>[ ] 当前目标不是 R4 演练完成</li>
+<li>[ ] 当前目标不是 R5 已可签发</li>
+<li>[ ] 已接受最小可送审候选模式</li>
+</ul>
+<hr />
+<h2 id="step-1">Step 1：确认排除项不进入候选</h2>
+<p>必须确认以下内容<strong>不进入本轮 staged set</strong>：</p>
+<h3 id="_1">日志</h3>
+<ul>
+<li>[ ] <code>apps/api/api-8000.err.log</code></li>
+<li>[ ] <code>apps/api/api-8000.log</code></li>
+<li>[ ] <code>apps/api/r3-api-8000.err.log</code></li>
+<li>[ ] <code>apps/api/r3-api-8000.log</code></li>
+<li>[ ] <code>apps/web/frontend-3000-20260702-201604.err.log</code></li>
+<li>[ ] <code>apps/web/frontend-3000-20260702-201604.log</code></li>
+<li>[ ] <code>apps/web/frontend-3000-20260703-123118.err.log</code></li>
+<li>[ ] <code>apps/web/frontend-3000-20260703-123118.log</code></li>
+<li>[ ] <code>apps/web/r3-web-3100.err.log</code></li>
+<li>[ ] <code>apps/web/r3-web-3100.log</code></li>
+</ul>
+<h3 id="snapshot">snapshot / 一次性材料</h3>
+<ul>
+<li>[ ] <code>apps/api/r3-canvas-snapshot.json</code></li>
+<li>[ ] <code>apps/web/08_diff_fix/codex-ui-1to1-audit-20260705.md</code></li>
+</ul>
+<h3 id="_2">过程性文档</h3>
+<ul>
+<li>[ ] <code>docs/FRONTEND_*</code></li>
+<li>[ ] <code>docs/superpowers/plans/*</code></li>
+<li>[ ] <code>docs/coordination/EXECUTION_LIVE_OUTPUT_PROTOCOL.md</code></li>
+<li>[ ] <code>docs/coordination/README.md</code></li>
+<li>[ ] <code>docs/coordination/TASK_PACKAGE_PROTOCOL.md</code></li>
+</ul>
+<p>如果以上任一文件已经被加入 staged set，应先移出 staged，再继续。</p>
+<hr />
+<h2 id="step-2-a">Step 2：暂存 A 组（代码 / 测试 / 运行配置）</h2>
+<p>按 R25 的 A 组执行暂存，并逐组核对：</p>
+<h3 id="21-ci">2.1 根目录与 CI</h3>
+<ul>
+<li>[ ] <code>.github/workflows/ci.yml</code></li>
+<li>[ ] <code>README.md</code></li>
+</ul>
+<h3 id="22">2.2 后端源码与测试</h3>
+<ul>
+<li>[ ] <code>apps/api/xagent/...</code></li>
+<li>[ ] <code>apps/api/tests/...</code></li>
+</ul>
+<h3 id="23">2.3 前端源码 / 测试 / 静态资源</h3>
+<ul>
+<li>[ ] <code>apps/web/src/...</code></li>
+<li>[ ] <code>apps/web/tests/...</code></li>
+<li>[ ] <code>apps/web/public/assets/...</code></li>
+</ul>
+<h3 id="24-e2e">2.4 E2E</h3>
+<ul>
+<li>[ ] <code>tests/e2e/specs/creative-smoke.spec.ts</code></li>
+<li>[ ] <code>tests/e2e/specs/full-flow.spec.ts</code></li>
+</ul>
+<h3 id="25">2.5 运行配置</h3>
+<ul>
+<li>[ ] <code>deploy/compose/.env.example</code></li>
+<li>[ ] <code>deploy/compose/docker-compose.yml</code></li>
+<li>[ ] <code>deploy/helm/templates/worker-web.yaml</code></li>
+</ul>
+<hr />
+<h2 id="step-3-b">Step 3：暂存 B 组（最小文档主干）</h2>
+<p>按 R25 的 B 组执行暂存，并逐项核对：</p>
+<h3 id="31">3.1 核心状态 / 门禁 / 手册</h3>
+<ul>
+<li>[ ] <code>docs/COMMERCIAL_STATUS_SOURCE_OF_TRUTH.md</code></li>
+<li>[ ] <code>docs/COMMERCIAL_RELEASE_CHECKLIST_V1.md</code></li>
+<li>[ ] <code>docs/ENVIRONMENT_BASELINE_V1.md</code></li>
+<li>[ ] <code>docs/RELEASE_RUNBOOK_V1.md</code></li>
+<li>[ ] <code>docs/RELEASE_MESSAGE_CONSISTENCY_AUDIT_R8.md</code></li>
+<li>[ ] <code>docs/ROADMAP.md</code></li>
+<li>[ ] <code>docs/DEPLOYMENT_RUNBOOK.md</code></li>
+<li>[ ] <code>docs/INTEGRATION_GUIDE.md</code></li>
+<li>[ ] <code>docs/项目总览与开发指南.md</code></li>
+<li>[ ] <code>docs/XIONG_BAO_接手与启动说明_2026-07-03.md</code></li>
+</ul>
+<h3 id="32">3.2 当前候选 / 交付主索引</h3>
+<ul>
+<li>[ ] <code>docs/coordination/TASK_BOARD.md</code></li>
+<li>[ ] <code>docs/coordination/reports/delivery-report.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R18_CANDIDATE_FRESHNESS_AUDIT.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R20_FINAL_WRAP_UP_DELIVERY.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R21_CANDIDATE_FREEZE_R4_R5_CLOSURE_CHECKLIST.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R22_CANDIDATE_INCLUSION_LIST.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R23_MINIMAL_SEND_REVIEW_CANDIDATE_FILESET.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R24_CANDIDATE_FREEZE_EXECUTION_SHEET.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R25_EXACT_STAGING_LIST_MINIMAL_CANDIDATE.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R26_YES_NO_DECISION_SHEET_FOR_CANDIDATE_FREEZE.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R27_DECIDED_FREEZE_SCOPE_MEMO.md</code></li>
+</ul>
+<hr />
+<h2 id="step-4-staged-set">Step 4：确认拍板项没有误入 staged set</h2>
+<p>本轮默认<strong>不应</strong>出现在 staged set 中：</p>
+<ul>
+<li>[ ] <code>deploy/helm/templates/deployment.yaml</code></li>
+<li>[ ] <code>deploy/helm/values.yaml</code></li>
+<li>[ ] <code>deploy/keycloak/xagent-realm.json</code></li>
+<li>[ ] <code>docs/coordination/reports/R16_FULL_MODE_REHEARSAL_PREP.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R17_PR_EVIDENCE_MATRIX_SOURCE.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R19_FULL_MODE_SECRET_HANDOFF_TEMPLATE.md</code></li>
+<li>[ ] <code>docs/coordination/reports/R9_KEY_PAGE_VISUAL_EVIDENCE.md</code></li>
+<li>[ ] <code>docs/coordination/reports/evidence/r9-key-pages/*</code></li>
+<li>[ ] <code>tests/e2e/specs/r9-visual-evidence.spec.ts</code></li>
+</ul>
+<p>如果这些文件中有任意一个出现在 staged set，需要先判断：
+- 是误加？则移出 staged
+- 是负责人新拍板改为 YES？则回写 R27 / R26 口径后再继续</p>
+<hr />
+<h2 id="step-5-staged-set">Step 5：检查 staged set</h2>
+<p>在形成 commit 前，必须检查以下四项：</p>
+<h3 id="51-staged">5.1 staged 文件列表</h3>
+<ul>
+<li>[ ] staged list 与 R25 的 A / B 组一致</li>
+<li>[ ] staged list 不包含排除项</li>
+<li>[ ] staged list 不包含未拍板项</li>
+</ul>
+<h3 id="52-staged-diff">5.2 staged diff 统计</h3>
+<ul>
+<li>[ ] diff 规模与当前候选预期一致</li>
+<li>[ ] 未出现“明显不属于本轮候选”的陌生路径</li>
+</ul>
+<h3 id="53-staged-diff-check">5.3 staged diff check</h3>
+<ul>
+<li>[ ] <code>git diff --check --cached</code> 无阻断问题</li>
+</ul>
+<h3 id="54">5.4 验证口径仍成立</h3>
+<ul>
+<li>[ ] 前端 <code>lint/typecheck/build</code> 通过</li>
+<li>[ ] 后端 <code>ruff/pytest</code> 通过</li>
+<li>[ ] Python 许可证门禁通过</li>
+</ul>
+<hr />
+<h2 id="step-6">Step 6：通过后才能进入真正冻结动作</h2>
+<p>只有在 Step 1 到 Step 5 全部完成后，才进入：</p>
+<ol>
+<li>创建候选分支</li>
+<li>形成唯一候选 commit</li>
+<li>记录 branch / commit / 时间戳</li>
+<li>push 到远端</li>
+<li>获取新的远端 CI run</li>
+</ol>
+<p>到这一步之后，才可以说：</p>
+<blockquote>
+<p><strong>候选已冻结。</strong></p>
+</blockquote>
+<p>在这之前，都只能说：</p>
+<blockquote>
+<p><strong>候选范围已决 / staged candidate 已就绪</strong></p>
+</blockquote>
+<hr />
+<h2 id="5">5. 一句话结论</h2>
+<blockquote>
+<p>R28 的作用是把“真正冻结前要逐条确认什么”变成一张执行检查单；只有这张清单过完，R25 才能从“建议暂存列表”进入“可安全提交的 staged candidate”。</p>
+</blockquote>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

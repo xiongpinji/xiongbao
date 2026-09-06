@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/xiongpinji/xiongbao/coordination/reports/roadmap-v2-ops-automation-verification-plan/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Roadmap v2 B 自动化运营增强真实验证计划 - X-Agent 文档</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Roadmap v2 B \u81ea\u52a8\u5316\u8fd0\u8425\u589e\u5f3a\u771f\u5b9e\u9a8c\u8bc1\u8ba1\u5212";
+        var mkdocs_page_input_path = "coordination/reports/roadmap-v2-ops-automation-verification-plan.md";
+        var mkdocs_page_url = "/xiongpinji/xiongbao/coordination/reports/roadmap-v2-ops-automation-verification-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> X-Agent 文档
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">首页</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../%E9%A1%B9%E7%9B%AE%E6%80%BB%E8%A7%88%E4%B8%8E%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/">项目总览与开发指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ARCHITECTURE/">架构说明</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../ROADMAP/">路线图</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../DEPLOYMENT_RUNBOOK/">部署指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../deployment/multi-instance/">多实例部署</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../TESTING/">测试指南</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../VIDEO_EDITOR_DESIGN/">视频剪辑引擎设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../CREATIVE_STUDIO_MEDIA/">短剧工厂媒体设计</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../EXEC_AGENTS_GUIDE/">执行 Agent 接入</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">X-Agent 文档</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Roadmap v2 B 自动化运营增强真实验证计划</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/xiongpinji/xiongbao/edit/master/docs/coordination/reports/roadmap-v2-ops-automation-verification-plan.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="roadmap-v2-b">Roadmap v2 B 自动化运营增强真实验证计划</h1>
+<blockquote>
+<p>适用阶段：Roadmap v2</p>
+<p>用途：把 B 自动化运营增强包从“方向定义”推进到“可执行验证”，明确自动告警、自动恢复、自动证据归档和自动运行态汇总的验证范围、方法与证据要求。</p>
+</blockquote>
+<hr />
+<h2 id="1">1. 目标</h2>
+<p>本计划的目标是：</p>
+<blockquote>
+<p><strong>为 <code>xagent</code> 的自动化运营增强路线提供第一份真实验证计划，使 B 包不再停留在概念层，而进入可验证状态。</strong></p>
+</blockquote>
+<hr />
+<h2 id="2">2. 验证范围</h2>
+<p>本次验证只覆盖以下内容：</p>
+<ol>
+<li>当前哪些运营动作仍依赖人工；</li>
+<li>当前哪些步骤已经具备可自动化的前提；</li>
+<li>哪些证据收集动作可以优先自动化；</li>
+<li>哪些运行态汇总入口已经存在；</li>
+<li>当前自动化增强的第一步应该落在哪些最小场景上。</li>
+</ol>
+<p>本次验证<strong>不</strong>要求一次性完成：
+- 全自动发布；
+- 全自动恢复；
+- 全自动审计归档；
+- 全量值守编排平台。</p>
+<hr />
+<h2 id="3">3. 验证环境</h2>
+<p>当前优先采用：
+- 仓库中已有运维手册、发布/回滚手册、支持升级路径、G1/G2/G3 包的等价验证环境；
+- 用于识别哪些操作已经是结构化步骤、可以成为自动化候选。</p>
+<p>环境前提：
+- 能读取 <code>OPERATIONS_MANUAL_V1.md</code>
+- 能读取 <code>RELEASE_RUNBOOK_V1.md</code>
+- 能读取 <code>SUPPORT_ESCALATION_PATH_V1.md</code>
+- 能读取 <code>commercialization-goal-board.md</code> 与 G1/G2/G3 相关包文档</p>
+<hr />
+<h2 id="4">4. 验证项</h2>
+<h3 id="41">4.1 当前仍依赖人工的动作</h3>
+<p>至少识别：
+- 故障出现后的人工判断
+- 手工收集日志与健康检查结果
+- 手工回填证据文档
+- 手工判断是否回滚
+- 手工整理最终运行态结论</p>
+<p>期望：
+- 这些动作被明确列出来，而不是模糊说“以后自动化”。</p>
+<h3 id="42">4.2 已具备自动化前提的动作</h3>
+<p>至少识别：
+- <code>/health</code> / <code>/ready</code> 结果采集
+- <code>docker compose ps</code> 与日志抽样采集
+- 关键验证命令的执行结果记录
+- Goal / Task / Run / Evidence 的结构化入口</p>
+<p>期望：
+- 可以明确哪些动作已经足够结构化，可以优先做自动化。</p>
+<h3 id="43">4.3 自动证据归档方向</h3>
+<p>验证当前是否已经存在可自动归档的对象：
+- run id
+- task id
+- workflow id
+- CI run URL
+- <code>/health</code> / <code>/ready</code> 结果
+- smoke / 回滚 / 演练输出</p>
+<p>期望：
+- 证据归档不再完全依赖人工描述。</p>
+<h3 id="44">4.4 自动运行态汇总方向</h3>
+<p>验证当前是否已经存在可汇总的结构化入口：
+- Goal Board
+- G1/G2/G3 执行包
+- delivery-report
+- final-summary</p>
+<p>期望：
+- 自动运行态汇总至少已有明确输入面，而不是从零开始。</p>
+<hr />
+<h2 id="5">5. 通过标准</h2>
+<p>B 自动化运营增强包的真实验证通过，至少需要满足：</p>
+<ol>
+<li>当前人工动作已被明确识别；</li>
+<li>当前可自动化动作已被明确识别；</li>
+<li>证据归档的自动化入口已被正式列出；</li>
+<li>运行态汇总的自动化入口已被正式列出；</li>
+<li>团队能够明确知道“先自动化什么”而不是继续泛泛讨论自动化。</li>
+</ol>
+<p>这意味着：
+- B 包的“通过”不是自动化已经全部完成；
+- 而是自动化增强已经进入真实可执行验证阶段。</p>
+<hr />
+<h2 id="6">6. 证据要求</h2>
+<p>本计划要求输出的最小证据包括：</p>
+<ul>
+<li>当前人工动作清单</li>
+<li>可自动化动作清单</li>
+<li>证据自动归档候选入口清单</li>
+<li>运行态汇总候选入口清单</li>
+<li>最终判定：</li>
+<li>通过 / 不通过</li>
+<li>哪些已验证</li>
+<li>哪些仍是后续目标</li>
+</ul>
+<p>建议归档到：
+- <code>docs/coordination/reports/roadmap-v2-ops-automation-verification.md</code></p>
+<hr />
+<h2 id="7">7. 当前结论</h2>
+<p>当前 <code>B 自动化运营增强包</code> 已完成方向定义；
+这份计划的作用是让它进入下一状态：</p>
+<blockquote>
+<p><strong>可执行验证</strong></p>
+</blockquote>
+<p>只有完成这一步，<code>B 自动化运营增强包</code> 才能从“方向定义”走向“验证完成”。</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/xiongpinji/xiongbao" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
