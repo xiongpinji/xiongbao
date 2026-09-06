@@ -12,7 +12,7 @@ import {
   skillPackageFilePaths,
   type SkillPackageView,
 } from "../../api/skillPackages";
-import { SectionTitle } from "./GeneralSettings";
+import { btnDanger, btnGhost, btnOk, btnPrimary, btnWarn, SectionHeader, StatLine } from "./ui";
 import { useConfirm } from "../../hooks/useConfirm";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -226,49 +226,29 @@ export default function SkillsSettings() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <SectionTitle title="技能系统" description="Agent 可学习、匹配和执行的自进化技能。关键词触发自动注入 system prompt。" />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleRetireLow}
-            disabled={loading}
-            className="rounded-lg bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-400 transition hover:bg-orange-500/20 disabled:opacity-40"
-          >
-            淘汰低效
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowImport(!showImport); setShowForm(false); }}
-            className="rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
-          >
-            {showImport ? "取消" : "导入 SKILL.md"}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowForm(!showForm); setShowImport(false); }}
-            className="rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
-          >
-            {showForm ? "取消" : "+ 新建技能"}
-          </button>
-        </div>
-      </div>
+      <SectionHeader
+        title="skills"
+        desc="Agent 可学习、匹配和执行的自进化技能。关键词触发自动注入 system prompt。"
+        actions={
+          <>
+            <button type="button" onClick={handleRetireLow} disabled={loading} className={btnWarn}>淘汰低效</button>
+            <button type="button" onClick={() => { setShowImport(!showImport); setShowForm(false); }} className={btnGhost}>{showImport ? "取消" : "导入 SKILL.md"}</button>
+            <button type="button" onClick={() => { setShowForm(!showForm); setShowImport(false); }} className={btnPrimary}>{showForm ? "取消" : "+ 新建技能"}</button>
+          </>
+        }
+      />
 
       {/* 统计卡片 */}
       {stats && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { label: "活跃技能", value: stats.active, color: "text-emerald-400" },
-            { label: "自动提炼", value: stats.auto_extracted, color: "text-blue-400" },
-            { label: "已淘汰", value: stats.retired, color: "text-neutral-500" },
-            { label: "平均成功率", value: `${Math.round(stats.avg_success_rate * 100)}%`, color: "text-neutral-200" },
-          ].map((item) => (
-            <div key={item.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-center">
-              <div className={`text-lg font-semibold ${item.color}`}>{item.value}</div>
-              <div className="text-[11px] text-neutral-500">{item.label}</div>
-            </div>
-          ))}
-        </div>
+        <StatLine
+          items={[
+            { label: "活跃", value: stats.active, tone: "ok" },
+            { label: "自动提炼", value: stats.auto_extracted },
+            { label: "待审核进化", value: pending.length, tone: pending.length > 0 ? "warn" : "muted" },
+            { label: "已淘汰", value: stats.retired, tone: "muted" },
+            { label: "平均成功率", value: `${Math.round(stats.avg_success_rate * 100)}%` },
+          ]}
+        />
       )}
 
       {error && <div className="rounded-lg bg-red-500/10 px-4 py-2 text-xs text-red-400">{error}</div>}
@@ -278,7 +258,7 @@ export default function SkillsSettings() {
         <div className="space-y-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.04] p-5">
           <div className="text-sm font-medium text-purple-300">待审核进化（{pending.length}）</div>
           {pending.map((p) => (
-            <div key={p.pending_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <div key={p.pending_id} className="py-2">
               <div className="flex items-center justify-between">
                 <div className="text-xs text-neutral-300">
                   得分 {p.parent_eval?.score?.toFixed(2) ?? "?"} → {p.best_eval?.score?.toFixed(2) ?? "?"}
@@ -316,7 +296,7 @@ export default function SkillsSettings() {
 
       {/* SKILL.md 导入表单（V3-1 生态兼容） */}
       {showImport && (
-        <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className="space-y-3 p-1">
           <div className="space-y-3 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
             <div>
               <div className="text-sm font-medium text-emerald-300">完整技能包 ZIP</div>
@@ -334,7 +314,7 @@ export default function SkillsSettings() {
               type="button"
               onClick={handlePackageImport}
               disabled={loading || !packageFile}
-              className="rounded-lg bg-emerald-400 px-5 py-2 text-sm font-medium text-black transition hover:bg-emerald-300 disabled:opacity-40"
+              className="rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-neutral-100 transition hover:bg-white/[0.14] disabled:opacity-40"
             >
               {loading ? "导入中..." : "安全校验并导入 ZIP"}
             </button>
@@ -356,7 +336,7 @@ export default function SkillsSettings() {
             type="button"
             onClick={handleImport}
             disabled={loading || !importText.trim()}
-            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
+            className="rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-neutral-100 transition hover:bg-white/[0.14] disabled:opacity-40"
           >
             {loading ? "导入中..." : "过门禁并导入"}
           </button>
@@ -374,7 +354,7 @@ export default function SkillsSettings() {
           </div>
         )}
         {packages.map((pkg) => (
-          <div key={pkg.package_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+          <div key={pkg.package_id} className="py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-white">{pkg.name}</span>
@@ -405,7 +385,7 @@ export default function SkillsSettings() {
 
       {/* 创建表单 */}
       {showForm && (
-        <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className="space-y-3 p-1">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
               <span className="text-xs text-neutral-400">技能名称 *</span>
@@ -413,7 +393,7 @@ export default function SkillsSettings() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="代码审查"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
               />
             </label>
             <label className="space-y-1">
@@ -422,7 +402,7 @@ export default function SkillsSettings() {
                 value={form.trigger_pattern}
                 onChange={(e) => setForm({ ...form, trigger_pattern: e.target.value })}
                 placeholder="review,审查,代码质量"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
               />
             </label>
           </div>
@@ -433,7 +413,7 @@ export default function SkillsSettings() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="当用户要求代码审查时，按以下流程执行..."
               rows={3}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25 resize-none"
+              className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2] resize-none"
             />
           </label>
           <label className="space-y-1 block">
@@ -442,14 +422,14 @@ export default function SkillsSettings() {
               value={form.tags}
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
               placeholder="开发,质量"
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25"
+              className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]"
             />
           </label>
           <button
             type="button"
             onClick={handleCreate}
             disabled={loading || !form.name.trim()}
-            className="rounded-lg bg-neutral-100 px-5 py-2 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40"
+            className="rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-neutral-100 transition hover:bg-white/[0.14] disabled:opacity-40"
           >
             {loading ? "创建中..." : "创建技能"}
           </button>
@@ -478,110 +458,50 @@ export default function SkillsSettings() {
         {skills.map((skill) => (
           <div
             key={skill.skill_id}
-            className={`rounded-lg border p-4 transition ${
-              skill.retired
-                ? "border-white/[0.04] bg-white/[0.01] opacity-60"
-                : "border-white/[0.06] bg-white/[0.02]"
-            }`}
+            className={`border-b border-white/[0.05] py-3 ${skill.retired ? "opacity-50" : ""}`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-white">{skill.name}</span>
-                <span className="rounded-full bg-neutral-700/50 px-1.5 py-0.5 text-[10px] text-neutral-400">
-                  v{skill.version}
-                </span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                  skill.source === "auto_extracted" ? "bg-blue-500/10 text-blue-400"
-                  : skill.source === "evolved" ? "bg-purple-500/10 text-purple-400"
-                  : "bg-neutral-700/50 text-neutral-400"
-                }`}>
-                  {SOURCE_LABELS[skill.source] || skill.source}
-                </span>
+                <span className="font-mono text-[11px] text-neutral-500">v{skill.version}</span>
+                <span className="font-mono text-[11px] text-neutral-500">· {SOURCE_LABELS[skill.source] || skill.source}</span>
                 {skill.retired && (
-                  <span className="rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">已淘汰</span>
+                  <span className="font-mono text-[11px] text-red-400/80">· 已淘汰</span>
                 )}
                 {!skill.retired && skill.is_active === false && (
-                  <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">待启用</span>
+                  <span className="font-mono text-[11px] text-amber-400/90">· 待启用</span>
                 )}
-                {skill.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-neutral-400">{tag}</span>
-                ))}
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-0.5">
                 {skill.retired ? (
-                  <button
-                    type="button"
-                    onClick={() => handleRestore(skill.skill_id)}
-                    disabled={loading}
-                    className="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-400 transition hover:bg-emerald-500/20"
-                  >
-                    恢复
-                  </button>
+                  <button type="button" onClick={() => handleRestore(skill.skill_id)} disabled={loading} className={btnOk}>恢复</button>
                 ) : (
                   <>
                     {skill.is_active === false && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleEnabled(skill.skill_id, true)}
-                        disabled={loading}
-                        title="蒸馏技能默认停用；人工启用后才会注入到任务执行"
-                        className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs text-amber-400 transition hover:bg-amber-500/20"
-                      >
-                        启用
-                      </button>
+                      <button type="button" onClick={() => handleToggleEnabled(skill.skill_id, true)} disabled={loading} title="蒸馏技能默认停用；人工启用后才会注入到任务执行" className={btnWarn}>启用</button>
                     )}
                     {skill.is_active === true && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleEnabled(skill.skill_id, false)}
-                        disabled={loading}
-                        title="停用后保留技能但不再注入任务"
-                        className="rounded-lg bg-white/[0.06] px-2.5 py-1 text-xs text-neutral-400 transition hover:bg-white/[0.1]"
-                      >
-                        停用
-                      </button>
+                      <button type="button" onClick={() => handleToggleEnabled(skill.skill_id, false)} disabled={loading} title="停用后保留技能但不再注入任务" className={btnGhost}>停用</button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleEvolveAuto(skill.skill_id)}
-                      disabled={loading}
-                      title="生成改进变体并评测，优胜者进待审核队列"
-                      className="rounded-lg bg-purple-500/10 px-2.5 py-1 text-xs text-purple-400 transition hover:bg-purple-500/20"
-                    >
-                      自动进化
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRetire(skill.skill_id)}
-                      disabled={loading}
-                      className="rounded-lg bg-orange-500/10 px-2.5 py-1 text-xs text-orange-400 transition hover:bg-orange-500/20"
-                    >
-                      淘汰
-                    </button>
+                    <button type="button" onClick={() => handleEvolveAuto(skill.skill_id)} disabled={loading} title="生成改进变体并评测，优胜者进待审核队列" className={btnGhost}>进化</button>
+                    <button type="button" onClick={() => handleRetire(skill.skill_id)} disabled={loading} className={btnGhost}>淘汰</button>
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(skill.skill_id)}
-                  disabled={loading}
-                  className="rounded-lg bg-red-500/10 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-500/20"
-                >
-                  删除
-                </button>
+                <button type="button" onClick={() => handleDelete(skill.skill_id)} disabled={loading} className={btnDanger}>删除</button>
               </div>
             </div>
-            {skill.description && <div className="mt-2 text-xs text-neutral-400 line-clamp-2">{skill.description}</div>}
+            {skill.description && <div className="mt-1.5 text-[12px] leading-4 text-neutral-400">{skill.description}</div>}
             {skill.system_prompt_hint && (
-              <div className="mt-1 line-clamp-3 text-[11px] text-neutral-500 italic">
-                提示: {skill.system_prompt_hint}{skill.system_prompt_truncated ? "…" : ""}
+              <div className="mt-0.5 text-[11px] leading-4 text-neutral-600">
+                hint: {skill.system_prompt_hint}{skill.system_prompt_truncated ? "…" : ""}
               </div>
             )}
-            <div className="mt-2 flex items-center gap-4 text-[11px] text-neutral-500">
-              <span>触发: {skill.trigger_pattern || "—"}</span>
-              <span>使用 {skill.use_count} 次</span>
-              <span>成功率 {Math.round(skill.success_rate * 100)}%</span>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 font-mono text-[11px] text-neutral-600">
+              <span>trigger: {skill.trigger_pattern || "—"}</span>
+              <span>uses: {skill.use_count}</span>
+              <span>success: {Math.round(skill.success_rate * 100)}%</span>
               {skill.steps.length > 0 && (
-                <span>工具链: {skill.steps.map((s) => s.tool).join(" → ")}</span>
+                <span>tools: {skill.steps.map((s) => s.tool).join(" → ")}</span>
               )}
             </div>
           </div>

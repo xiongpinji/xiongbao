@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KeyRound, Plus, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { Plus, Trash2, UserPlus, XCircle } from "lucide-react";
+import { StatLine } from "./ui";
 import { api } from "../../api/client";
 import { useConfirm } from "../../hooks/useConfirm";
 
@@ -155,7 +156,7 @@ export default function TeamSettings() {
 
       {/* 新 Key 一次性提示 */}
       {newKey && (
-        <div className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-3">
+        <div className="border-b border-white/[0.05] py-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-neutral-200">API Key 已创建（仅显示一次）</span>
             <button onClick={() => setNewKey(null)} aria-label="关闭提示" className="text-neutral-400 hover:text-white"><XCircle size={16} /></button>
@@ -166,19 +167,13 @@ export default function TeamSettings() {
 
       {/* 租户概览 */}
       {info && (
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "租户 ID", value: info.tenant_id, icon: Shield },
-            { label: "用户数", value: String(info.user_count), icon: Users },
-            { label: "API Key", value: String(info.api_key_count), icon: KeyRound },
-          ].map((c) => (
-            <div key={c.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
-              <c.icon size={18} className="mb-2 text-neutral-500" />
-              <div className="text-lg font-semibold text-white">{c.value}</div>
-              <div className="text-xs text-neutral-500">{c.label}</div>
-            </div>
-          ))}
-        </div>
+        <StatLine
+          items={[
+            { label: "租户", value: info.tenant_id },
+            { label: "用户", value: info.user_count },
+            { label: "API Keys", value: info.api_key_count },
+          ]}
+        />
       )}
 
       {/* 用户管理 */}
@@ -194,18 +189,18 @@ export default function TeamSettings() {
         </div>
 
         {showUserForm && (
-          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="mb-4 flex flex-wrap items-end gap-3 py-2">
             <div>
               <label className="mb-1 block text-xs text-neutral-400">用户名</label>
-              <input value={uName} onChange={(e) => setUName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="username" />
+              <input value={uName} onChange={(e) => setUName(e.target.value)} className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]" placeholder="username" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">密码</label>
-              <input type="password" value={uPass} onChange={(e) => setUPass(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="••••••" />
+              <input type="password" value={uPass} onChange={(e) => setUPass(e.target.value)} className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]" placeholder="••••••" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">角色</label>
-              <select value={uRole} onChange={(e) => setURole(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none">
+              <select value={uRole} onChange={(e) => setURole(e.target.value)} className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]">
                 <option value="admin">admin</option>
                 <option value="member">member</option>
                 <option value="viewer">viewer</option>
@@ -254,14 +249,14 @@ export default function TeamSettings() {
         </div>
 
         {showKeyForm && (
-          <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="mb-4 flex flex-wrap items-end gap-3 py-2">
             <div>
               <label className="mb-1 block text-xs text-neutral-400">名称</label>
-              <input value={kName} onChange={(e) => setKName(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="my-integration" />
+              <input value={kName} onChange={(e) => setKName(e.target.value)} className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]" placeholder="my-integration" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-neutral-400">Scopes（逗号分隔）</label>
-              <input value={kScopes} onChange={(e) => setKScopes(e.target.value)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="*" />
+              <input value={kScopes} onChange={(e) => setKScopes(e.target.value)} className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[13px] text-neutral-100 outline-none transition focus:border-white/[0.2]" placeholder="*" />
             </div>
             <button onClick={createKey} disabled={submitting || !kName.trim()} className="rounded-lg bg-neutral-100 px-4 py-1.5 text-sm font-medium text-black transition hover:bg-white disabled:opacity-40">{submitting ? "创建中…" : "创建"}</button>
           </div>

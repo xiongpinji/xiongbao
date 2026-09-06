@@ -143,7 +143,7 @@ export default function KnowledgeSettings() {
         </div>
 
         {showForm && (
-          <div className="mb-4 space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="mb-4 space-y-3 py-2">
             <input value={title} onChange={e => setTitle(e.target.value)} className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="文档标题" />
             <textarea value={text} onChange={e => setText(e.target.value)} rows={5} className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-white/25" placeholder="文档内容（支持纯文本/Markdown）" />
             <div className="flex items-center gap-3">

@@ -153,7 +153,7 @@ export default function ModelSettings() {
             <Loader2 size={14} className="animate-spin" /> 加载中…
           </div>
         ) : (
-          <div className="space-y-5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="space-y-5 p-1">
             {/* 基本模型 */}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="默认模型" hint="如 gpt-4o-mini / claude-sonnet-4-20250514 / deepseek-chat">
@@ -301,7 +301,7 @@ export default function ModelSettings() {
         />
         <div className="grid gap-3">
           {mediaModels.map((m) => (
-            <div key={m.model_id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <div key={m.model_id} className="py-2">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium text-white">{m.name}</div>
                 <div className="font-mono text-xs text-neutral-500">{m.kind}</div>

@@ -1,7 +1,7 @@
 {
   "react_compiler_migration": {
     "count": 89,
-    "sha256": "5a375ecfc4e569b5860e0ac94ac5ecd06ee9cbff8d1e2c398860769085eee020",
+    "sha256": "b13e08d9fbffe6a6cacd6f25f088d10de36a7a6b8d86dea40e89e728e2a71c49",
     "owner": "web-platform",
     "reason": "React Hooks 7 compiler checks require component state-boundary refactoring and browser regression",
     "expires_on": "2026-09-30",
