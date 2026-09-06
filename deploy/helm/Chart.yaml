@@ -2,8 +2,8 @@ apiVersion: v2
 name: xagent
 description: X-Agent 企业级自主智能体框架 Helm Chart
 type: application
-version: 1.3.2
-appVersion: "1.3.2"
+version: 1.4.0
+appVersion: "1.4.0"
 keywords:
   - ai-agent
   - enterprise
