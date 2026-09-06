@@ -39,6 +39,8 @@ EXPECTED = {
                "16a0b647064fb161ea288adbb032efc655619f64"),
     "v1.3.2": ("4fd3d68aae7d5b22a7daad0a6161a063cb785bf6",
                "bc69f6759e68c5359fdffaa7c35e7cad2af0ec7e"),
+    "v1.4.0": ("191115740123c40cae47d2a0c3b121095e724a43",
+               "335bdf34aeb9542df97bbc7ae75d18d5cf7e5134"),
 }
 
 
