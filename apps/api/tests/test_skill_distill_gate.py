@@ -65,7 +65,10 @@ class TestAutoDistillFlow:
         assert skill.name == "短剧分镜关键帧生成"
         assert "auto_distilled" in skill.tags
         assert [s["tool"] for s in skill.steps] == _TOOLS
-        # 触发模式可被匹配器命中
+        # v1.3.2 契约：蒸馏技能默认停用（enabled=False），人工启用后才参与匹配注入
+        assert skill.enabled is False
+        assert store.match(_GOAL) == []
+        assert store.set_enabled(skill.skill_id, True) is True
         assert store.match(_GOAL)[0].skill_id == skill.skill_id
         # 统计口径
         assert store.stats()["auto_distilled"] == 1

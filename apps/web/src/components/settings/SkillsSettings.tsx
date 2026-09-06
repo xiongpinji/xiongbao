@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   approveEvolution, createSkill, deleteSkill, evolveAutoSkill, importSkillMd,
-  listPendingEvolutions, listSkills, rejectEvolution, retireSkill, restoreSkill,
+  disableSkill, enableSkill, listPendingEvolutions, listSkills, rejectEvolution, retireSkill, restoreSkill,
   retireLowPerformers, skillStats,
   type PendingEvolution, type SkillView, type SkillStats,
 } from "../../api";
@@ -114,6 +114,19 @@ export default function SkillsSettings() {
     setLoading(true);
     try {
       await restoreSkill(id);
+      await refresh();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleEnabled = async (id: string, next: boolean) => {
+    setLoading(true);
+    try {
+      if (next) await enableSkill(id);
+      else await disableSkill(id);
       await refresh();
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : String(e));
@@ -487,6 +500,9 @@ export default function SkillsSettings() {
                 {skill.retired && (
                   <span className="rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">已淘汰</span>
                 )}
+                {!skill.retired && skill.is_active === false && (
+                  <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">待启用</span>
+                )}
                 {skill.tags.map((tag) => (
                   <span key={tag} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-neutral-400">{tag}</span>
                 ))}
@@ -503,6 +519,28 @@ export default function SkillsSettings() {
                   </button>
                 ) : (
                   <>
+                    {skill.is_active === false && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEnabled(skill.skill_id, true)}
+                        disabled={loading}
+                        title="蒸馏技能默认停用；人工启用后才会注入到任务执行"
+                        className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs text-amber-400 transition hover:bg-amber-500/20"
+                      >
+                        启用
+                      </button>
+                    )}
+                    {skill.is_active === true && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEnabled(skill.skill_id, false)}
+                        disabled={loading}
+                        title="停用后保留技能但不再注入任务"
+                        className="rounded-lg bg-white/[0.06] px-2.5 py-1 text-xs text-neutral-400 transition hover:bg-white/[0.1]"
+                      >
+                        停用
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleEvolveAuto(skill.skill_id)}

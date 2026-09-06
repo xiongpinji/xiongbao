@@ -557,6 +557,8 @@ export const evolveSkill = (id: string, body: { description?: string; system_pro
   api.put(`/skills/${id}/evolve`, body).then((r) => r.data);
 export const retireSkill = (id: string) => api.post(`/skills/${id}/retire`).then((r) => r.data);
 export const restoreSkill = (id: string) => api.post(`/skills/${id}/restore`).then((r) => r.data);
+export const enableSkill = (id: string) => api.post(`/skills/${id}/enable`).then((r) => r.data);
+export const disableSkill = (id: string) => api.post(`/skills/${id}/disable`).then((r) => r.data);
 export const retireLowPerformers = () => api.post("/skills/retire-low-performers").then((r) => r.data);
 
 // ---- 技能导入与进化审核（V3-1/V3-2）----
