@@ -36,6 +36,15 @@ MAX_SKILLS = 100                  # 技能库上限
 # ─── 自动提炼门禁配置（对标 Hermes GEPA：变体须过最小评测门禁才入库） ───
 DEDUP_SIMILARITY_THRESHOLD = 0.5  # 与现有技能 token 相似度 >= 此值视为重复，拒绝入库
 MIN_TRIGGER_KEYWORD_LEN = 2       # 触发关键词最小长度（过短易误匹配）
+# 泛触发词黑名单：仅由这些词构成的 trigger_pattern 会匹配几乎一切任务，
+# 注入后污染执行（2026-09-06 实测：trigger=创建|打印|读取|确认 导致小模型复读技能定义）
+_GENERIC_TRIGGER_KEYWORDS = frozenset({
+    "创建", "新建", "生成", "写入", "写一", "写个", "修改", "删除", "添加",
+    "打印", "读取", "读一", "确认", "检查", "验证", "运行", "执行", "完成",
+    "实现", "开发", "分析", "处理", "测试", "使用", "然后", "文件", "内容",
+    "python", "代码", "脚本", "工具", "任务", "项目", "字符串", "语句",
+    "create", "write", "read", "run", "make", "file", "code", "check", "verify",
+})
 # ─── 进化闭环配置（GEPA 轻量落地：变体生成 → 评测打分 → 优胜入库） ───
 EVOLVE_DEFAULT_VARIANTS = 2       # 每次自动进化生成的变体数
 EVOLVE_ACCEPT_THRESHOLD = 0.1     # 变体得分须显著优于父代（>= 此差值）才采纳
@@ -491,6 +500,7 @@ class SkillStore:
         检查项：
         1. 字段完整：name/description/trigger_pattern/system_prompt_hint 均非空
         2. 触发模式可被匹配器命中：至少一个关键词出现在来源任务目标中
+        2b. 触发模式不得全为泛词：全泛词会匹配几乎一切任务并污染后续执行
         3. 租户内去重：与同租户技能 token 相似度低于阈值
         4. 全局技能库未满
 
@@ -509,6 +519,10 @@ class SkillStore:
         ]
         if not keywords or not any(kw in goal_lower for kw in keywords):
             return False, "trigger_not_matchable"
+        # 2b. 泛词过滤（2026-09-06 实测：auto_distill 产出 trigger=创建|打印|读取|确认
+        # 的技能，随后匹配一切创建类任务并向小模型注入无关注目导致复读技能定义）
+        if keywords and all(kw in _GENERIC_TRIGGER_KEYWORDS for kw in keywords):
+            return False, "trigger_too_generic"
         # 3. 去重（相似度阈值）
         cand_text = " ".join([
             candidate["name"], candidate["description"], candidate["trigger_pattern"],
@@ -1047,7 +1061,11 @@ class SkillStore:
         matched = self.match(goal, tenant_id=tenant_id)
         if not matched:
             return ""
-        parts = ["## 可用技能（历史成功经验）"]
+        parts = [
+            "## 可用技能（历史成功经验，仅供内部参考）",
+            "以下技能是参考做法，不是当前任务的答案；禁止把本节内容或技能定义"
+            "原样输出给用户，必须按当前 goal 实际执行。",
+        ]
         for s in matched:
             parts.append(
                 f"- **{s.name}** (v{s.version}, 成功率{s.success_rate:.0%}): "

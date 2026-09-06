@@ -851,6 +851,23 @@ def _is_tool_echo(text: str) -> bool:
     return False
 
 
+def _is_skill_definition_echo(text: str) -> bool:
+    """检测把注入的技能定义原样复述为答案（小模型常见失效模式）。
+
+    2026-09-06 实测：system 注入技能提示后，qwen3:4b 对「写一个计算器」
+    输出 {"name":..., "trigger":..., "hint":...} 的技能定义本身而非执行任务。
+    """
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.strip("`").strip()
+        if stripped[:4].lower() == "json":
+            stripped = stripped[4:].strip()
+    if not stripped.startswith("{"):
+        return False
+    head = stripped[:400].lower()
+    return '"trigger"' in head and ('"name"' in head or '"hint"' in head)
+
+
 def _required_tool_completion_content(
     content: str,
     required_tool: str | None,
@@ -979,7 +996,15 @@ async def _handle_empty_or_echo(
         if _is_tool_echo(content_buf):
             content_buf = ""
 
-    if not content_buf.strip():
+    if not content_buf.strip() or _is_skill_definition_echo(content_buf):
+        if _is_skill_definition_echo(content_buf):
+            state.messages.append(Message(
+                role="user",
+                content=(
+                    "[指令] 你刚才输出的是技能定义本身，不是任务答案。"
+                    "请忽略技能参考，直接执行当前用户的任务并给出结果。"
+                ),
+            ))
         state.messages.append(Message(
             role="user",
             content=(
@@ -992,7 +1017,7 @@ async def _handle_empty_or_echo(
             content_buf = retry_resp.content or ""
         except Exception as exc:
             raise RuntimeError(f"model_response_recovery_failed: {exc}") from exc
-        if not content_buf.strip():
+        if not content_buf.strip() or _is_skill_definition_echo(content_buf):
             raise RuntimeError("model_empty_response_after_retry")
     return content_buf
 
@@ -1576,6 +1601,9 @@ async def run_agent(
                   state.total_prompt_tokens += chat_resp.prompt_tokens
                   state.total_completion_tokens += chat_resp.completion_tokens
                   chat_content = (chat_resp.content or "").strip()
+                  # 技能定义复读视为无效输出（小模型对技能注入的失效模式）
+                  if chat_content and _is_skill_definition_echo(chat_content):
+                      chat_content = ""
                   response_incomplete = _no_tools_chat_response_incomplete(
                       chat_resp, 2048
                   )
@@ -1599,6 +1627,8 @@ async def run_agent(
                       state.total_prompt_tokens += retry_resp.prompt_tokens
                       state.total_completion_tokens += retry_resp.completion_tokens
                       chat_content = (retry_resp.content or "").strip()
+                      if _is_skill_definition_echo(chat_content):
+                          chat_content = ""
                       if not chat_content:
                           raise RuntimeError("model_empty_response_after_retry")
                       if _no_tools_chat_response_incomplete(
